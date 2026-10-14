@@ -76,7 +76,7 @@ export interface Trainer {
   walkPhase: number;
   party: Mon[];
   history: Array<{ x: number; y: number }>;
-  items: Array<string | null>;
+  items: Array<InventorySlot | null>;
   alive: boolean;
   stats: TrainerStats;
   /** Battle: who the lead is fighting. */
@@ -88,6 +88,15 @@ export interface Trainer {
   aiTarget: { x: number; y: number } | null;
   /** Ranger outpost heal progress. */
   healing: number;
+  /** Match time the trainer may next use an outpost. */
+  outpostReady: number;
+  /** Seconds until the AI's lead picks its next move. */
+  attackTimer: number;
+}
+
+export interface InventorySlot {
+  id: string;
+  count: number;
 }
 
 export interface GroundItem {

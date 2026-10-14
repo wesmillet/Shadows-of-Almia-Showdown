@@ -17,7 +17,9 @@ import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
-import { Hud, type HudState } from './hud';
+import { drawItemIcon, Hud, type HudState } from './hud';
+import { ITEMS } from '../sim/items';
+import { drawSoftShadow } from '../render/world';
 import { rgba, type GameContext, type Screen } from './screens';
 
 export class MatchScreen implements Screen {
@@ -28,6 +30,8 @@ export class MatchScreen implements Screen {
   private notice = '';
   private noticeT = 0;
   private selectedItem = -1;
+  private aimPower = 0;
+  private aiming = false;
   private readonly strips = new Map<string, HTMLImageElement | null>();
 
   constructor(
@@ -68,19 +72,73 @@ export class MatchScreen implements Screen {
     }
     for (let i = 0; i < 4; i++) {
       if (input.pressed(`Digit${i + 1}`) && !input.down('ShiftLeft') && !input.down('ShiftRight')) {
-        if (this.match.player.engaged || this.match.nearestEnemyMon(this.match.player, this.match.player.x, this.match.player.y, 3.5)) {
-          this.castFeedback(this.match.playerCast(i));
-        } else this.onItemSlot(i);
+        if (this.match.player.engaged) this.castFeedback(this.match.playerCast(i));
+        else this.onItemSlot(i);
       }
     }
     for (let i = 4; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.onItemSlot(i);
     for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`) && (input.down('ShiftLeft') || input.down('ShiftRight'))) this.onItemSlot(i);
+    // Hold Space to aim a throw, release to let fly.
+    const m = this.match;
+    if (input.down('Space')) {
+      if (!this.aiming) {
+        const slot = m.ballSlot(m.player, this.selectedItem);
+        if (slot < 0) {
+          if (input.pressed('Space')) this.say('No Poké Balls in the bag', 1);
+        } else {
+          this.selectedItem = slot;
+          this.aiming = true;
+          this.aimPower = 0;
+        }
+      } else this.aimPower = Math.min(1, this.aimPower + (1 / 60) / CONFIG.catch.aimSeconds);
+    } else if (this.aiming) {
+      this.aiming = false;
+      const slot = m.ballSlot(m.player, this.selectedItem);
+      if (slot >= 0) {
+        const to = this.aimPoint();
+        if (m.throwBall(m.player, slot, to)) this.say('Go, Poké Ball!', 0.8);
+        if (!m.player.items[slot]) this.selectedItem = m.ballSlot(m.player);
+      }
+      this.aimPower = 0;
+    }
     void v;
   }
 
-  /** Items arrive in milestone 3; for now the slot just reports itself. */
+  /** Where the aimed ball will land: toward the engaged enemy, else straight ahead; distance from the hold time. */
+  protected aimPoint(): { x: number; y: number } {
+    const p = this.match.player;
+    const dist = 0.8 + this.aimPower * (CONFIG.catch.aimMaxTiles - 0.8);
+    const enemy = p.engaged && !p.engaged.fainted ? p.engaged : this.match.nearestEnemyMon(p, p.x, p.y, 6);
+    let dx: number;
+    let dy: number;
+    if (enemy && enemy.wild) {
+      dx = enemy.x - p.x;
+      dy = enemy.y - p.y;
+    } else {
+      const d = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]][p.dir] as [number, number];
+      dx = d[0];
+      dy = d[1];
+    }
+    const n = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / n) * dist, y: p.y + (dy / n) * dist };
+  }
+
+  /** Number keys and clicks on the bag: balls arm themselves, anything else is used at once. */
   protected onItemSlot(index: number): void {
-    this.selectedItem = this.selectedItem === index ? -1 : index;
+    const p = this.match.player;
+    const entry = p.items[index];
+    if (!entry) {
+      this.selectedItem = -1;
+      return;
+    }
+    const def = ITEMS[entry.id];
+    if (def?.kind === 'ball') {
+      this.selectedItem = this.selectedItem === index ? -1 : index;
+      if (this.selectedItem === index) this.say(`${def.name} ready: hold Space to aim`, 1.2);
+      return;
+    }
+    const msg = this.match.useItem(p, index);
+    if (msg) this.say(msg, 1.4);
   }
 
   private castFeedback(r: ReturnType<Match['playerCast']>): void {
@@ -109,7 +167,7 @@ export class MatchScreen implements Screen {
       case 'engage':
         if (ev.trainer.isPlayer) {
           v.targetZoom = CONFIG.battle.engageZoom;
-          this.say(`A wild ${ev.enemy.name} wants to fight!`, 1.4);
+          this.say(ev.enemy.owner ? `${ev.enemy.owner.name} challenges you with ${ev.enemy.name}!` : `A wild ${ev.enemy.name} wants to fight!`, 1.4);
         }
         break;
       case 'disengage':
@@ -150,6 +208,27 @@ export class MatchScreen implements Screen {
         break;
       case 'text':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, ev.text, '#ffe76b', 14);
+        break;
+      case 'notice':
+        this.say(ev.text, ev.seconds ?? 1.4);
+        break;
+      case 'caught':
+        this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ffffff', 1.3));
+        this.vfx.add(new RingPulse(ev.mon.x, ev.mon.y, 1.2, '#ffd36b', 0.8));
+        if (ev.by.isPlayer) this.say(`Gotcha! ${ev.mon.name} joined the party!`, 2);
+        break;
+      case 'broke-free':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.2, 'Broke free!', '#ff9e9e', 16);
+        this.vfx.add(new StatusCloud(ev.mon.x, ev.mon.y, '#ffffff', 0.8));
+        break;
+      case 'pickup':
+        if (ev.trainer.isPlayer) {
+          this.floaters.add(ev.trainer.x, ev.trainer.y - 0.3, `Got ${ITEMS[ev.itemId]?.name ?? ev.itemId}`, '#ffe9a8', 14);
+          if (this.selectedItem < 0) this.selectedItem = this.match.ballSlot(this.match.player);
+        }
+        break;
+      case 'eliminated':
+        this.say(ev.trainer.isPlayer ? 'Your whole party fainted…' : `${ev.trainer.name} was eliminated!`, 2.5);
         break;
       default:
         break;
@@ -248,13 +327,136 @@ export class MatchScreen implements Screen {
     }
   }
 
-  protected drawGroundExtras(_v: View): void {}
+  protected drawGroundExtras(v: View): void {
+    const ctx = v.ctx;
+    const t = performance.now() / 1000;
+    // Outpost pads.
+    for (const o of this.match.outposts) {
+      const sx = v.toScreenX(o.x);
+      const sy = v.toScreenY(o.y);
+      const r = CONFIG.outpost.radius * v.pxPerTile;
+      const active = o.users.length > 0;
+      ctx.save();
+      const g = ctx.createRadialGradient(sx, sy, r * 0.2, sx, sy, r);
+      g.addColorStop(0, active ? 'rgba(120,255,190,0.45)' : 'rgba(90,220,160,0.22)');
+      g.addColorStop(1, 'rgba(90,220,160,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = active ? `rgba(160,255,210,${0.6 + 0.3 * Math.sin(t * 6)})` : 'rgba(120,230,180,0.55)';
+      ctx.lineWidth = 2 * v.baseScale;
+      ctx.setLineDash([8 * v.baseScale, 6 * v.baseScale]);
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 0.92, t * 0.4, t * 0.4 + Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    // Aim arc.
+    if (this.aiming) {
+      const p = this.match.player;
+      const to = this.aimPoint();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,230,150,0.9)';
+      ctx.lineWidth = 2 * v.baseScale;
+      ctx.setLineDash([5 * v.baseScale, 7 * v.baseScale]);
+      ctx.beginPath();
+      const steps = 16;
+      for (let i = 0; i <= steps; i++) {
+        const k = i / steps;
+        const x = p.x + (to.x - p.x) * k;
+        const y = p.y + (to.y - p.y) * k;
+        const h = Math.sin(k * Math.PI) * (0.6 + this.aimPower * 1.2);
+        const sx = v.toScreenX(x);
+        const sy = v.toScreenY(y) - h * v.pxPerTile;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,230,150,0.25)';
+      ctx.beginPath();
+      ctx.arc(v.toScreenX(to.x), v.toScreenY(to.y), 0.9 * v.pxPerTile, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /** Items on the ground: icon on a soft shadow, bobbing. */
+  private drawGroundItem(v: View, it: { itemId: string; x: number; y: number; bob: number }): void {
+    const def = ITEMS[it.itemId];
+    if (!def) return;
+    const sx = v.toScreenX(it.x);
+    const sy = v.toScreenY(it.y);
+    const lift = (Math.sin(it.bob * 3) * 0.5 + 0.5) * 6 * v.baseScale;
+    drawSoftShadow(v, sx, sy, 0.22, 0.3);
+    v.ctx.save();
+    v.ctx.shadowColor = 'rgba(255,240,200,0.6)';
+    v.ctx.shadowBlur = 8 * v.baseScale;
+    drawItemIcon(v.ctx, def.icon, sx, sy - 10 * v.baseScale - lift, 9 * v.baseScale);
+    v.ctx.restore();
+  }
+
+  private drawOutpostPost(v: View, o: { x: number; y: number; users: unknown[] }): void {
+    const ctx = v.ctx;
+    const sx = v.toScreenX(o.x);
+    const sy = v.toScreenY(o.y - 0.9);
+    const h = 1.3 * v.pxPerTile;
+    const s = v.baseScale;
+    ctx.save();
+    ctx.fillStyle = '#6b4a2b';
+    ctx.fillRect(sx - 3 * s, sy - h, 6 * s, h);
+    ctx.fillStyle = o.users.length ? '#7dffc0' : '#2fbf86';
+    ctx.beginPath();
+    ctx.moveTo(sx + 3 * s, sy - h);
+    ctx.lineTo(sx + 3 * s + 0.45 * v.pxPerTile, sy - h + 0.16 * v.pxPerTile);
+    ctx.lineTo(sx + 3 * s, sy - h + 0.32 * v.pxPerTile);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `800 ${Math.round(0.12 * v.pxPerTile)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('R', sx + 3 * s + 0.16 * v.pxPerTile, sy - h + 0.21 * v.pxPerTile);
+    ctx.restore();
+  }
+
+  private drawThrow(v: View, th: import('../sim/catching').Throw): void {
+    const ctx = v.ctx;
+    const sx = v.toScreenX(th.x);
+    const sy = v.toScreenY(th.y);
+    const r = 8 * v.baseScale;
+    drawSoftShadow(v, sx, sy, 0.2, 0.35);
+    ctx.save();
+    ctx.translate(sx, sy - th.z * v.pxPerTile - r);
+    let rot = th.t * 9;
+    if (th.roll) {
+      const wob = CONFIG.catch.wobbleSeconds;
+      const n = Math.floor(th.wobbleT / wob);
+      if (n < th.roll.wobbles) rot = Math.sin(((th.wobbleT % wob) / wob) * Math.PI * 2) * 0.45;
+      else rot = 0;
+    }
+    ctx.rotate(rot);
+    const def = ITEMS[th.ballId];
+    if (def) drawItemIcon(ctx, def.icon, 0, 0, r);
+    ctx.restore();
+    if (th.roll && th.done === false && th.wobbleT > th.roll.wobbles * CONFIG.catch.wobbleSeconds && th.roll.caught) {
+      ctx.save();
+      ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(th.wobbleT * 20)})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy - r, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
   protected drawLights(v: View): void {
     const p = this.match.player;
     drawPointLight(v, p.x, p.y, 1.6, '#ffd9a0', 0.18, 0.2);
     const first = lead(p);
     if (first) drawPointLight(v, first.x, first.y, 1.2, '#ffe8c0', 0.12);
+    for (const o of this.match.outposts) drawPointLight(v, o.x, o.y, 2.2, '#7dffc0', o.users.length ? 0.5 : 0.22, 0);
+    for (const it of this.match.items) drawPointLight(v, it.x, it.y, 0.5, '#ffe9a8', 0.25, 0.1);
     this.vfx.drawLights(v);
   }
 
@@ -272,13 +474,17 @@ export class MatchScreen implements Screen {
       nextPulseIn: -1,
       notice: this.notice,
       selectedItem: this.selectedItem,
-      aiming: 0,
+      aiming: this.aiming ? Math.max(0.02, this.aimPower) : 0,
       lightingMode: this.lighting.mode,
     };
   }
 
-  protected drawExtraWorld(_v: View): Array<{ y: number; draw: () => void }> {
-    return [];
+  protected drawExtraWorld(v: View): Array<{ y: number; draw: () => void }> {
+    const list: Array<{ y: number; draw: () => void }> = [];
+    for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
+    for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
+    for (const th of this.match.throws) list.push({ y: th.y + 0.01, draw: () => this.drawThrow(v, th) });
+    return list;
   }
 
   render(alpha: number, frameDt: number): void {

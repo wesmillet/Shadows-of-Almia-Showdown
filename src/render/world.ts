@@ -137,7 +137,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!inView(p.x, p.y)) continue;
     drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y), 0.42);
   }
-  for (const t of [match.player, ...match.trainers]) {
+  for (const t of [match.player, ...match.trainers, ...match.npcs]) {
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
     if (inView(p.x, p.y)) drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y + 0.02), 0.3);
@@ -161,7 +161,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!inView(p.x, p.y)) continue;
     list.push({ y: p.y, draw: () => drawMon(view, m, alpha) });
   }
-  for (const t of [match.player, ...match.trainers]) {
+  for (const t of [match.player, ...match.trainers, ...match.npcs]) {
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
     if (!inView(p.x, p.y)) continue;

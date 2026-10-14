@@ -8,11 +8,19 @@ import type { Input } from '../core/input';
 import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
+import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
+import { newThrow, rollCatch, stepThrow, type Throw } from './catching';
 import { CONFIG, SPAWNS, species, statsAtLevel } from './data';
-import type { GroundItem, Mon, Trainer } from './entities';
-import { lead } from './entities';
+import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
+import { activeParty, lead } from './entities';
+import { ITEM_LIST, ITEMS } from './items';
 import { canStand, pointBehind, tryMove } from './movement';
+
+const AI_NAMES: Array<[string, string]> = [
+  ['Sven', 'trainer_a'],
+  ['Wendy', 'trainer_b'],
+];
 
 export interface MatchDeps {
   ground: GroundRenderer;
@@ -34,9 +42,15 @@ export class Match {
   trainers: Trainer[] = [];
   wilds: Mon[] = [];
   items: GroundItem[] = [];
-  outposts: Array<{ x: number; y: number; users: Trainer[] }> = [];
+  outposts: Array<{ x: number; y: number; users: Trainer[]; beacon: number }> = [];
+  /** Patrolling Rangers: decorative trainers with routes and no party. */
+  npcs: Trainer[] = [];
+  routes = new Map<number, { points: Array<{ x: number; y: number }>; index: number; wait: number }>();
+  throws: Throw[] = [];
   darkrai: Mon | null = null;
   outcome: MatchOutcome = null;
+  /** Safe radius of the darkness in tiles (Infinity until the first pulse). */
+  darkRadius = Infinity;
   /** Centre of the map, where the Shadow Crystal stands. */
   readonly centerX: number;
   readonly centerY: number;
@@ -54,7 +68,438 @@ export class Match {
     const spawn = this.edgeSpawn();
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, CONFIG.player.level, this.player, spawn.x, spawn.y));
+    this.seedTrail(this.player);
     this.spawnWilds();
+    this.spawnTrainers();
+    this.placeOutposts();
+    this.scatterItems();
+  }
+
+  private spawnTrainers(): void {
+    const taken = [{ x: this.player.x, y: this.player.y }];
+    for (let i = 0; i < CONFIG.trainers.count; i++) {
+      const [name, role] = AI_NAMES[i % AI_NAMES.length] as [string, string];
+      const spot = this.edgeSpawn(taken);
+      taken.push(spot);
+      const t = this.makeTrainer(name, role, false, spot.x, spot.y);
+      const pool = this.rng.shuffle([...SPAWNS.trainerPool]);
+      for (let k = 0; k < CONFIG.trainers.partySize; k++) {
+        t.party.push(this.makeMon(pool[k % pool.length] as string, CONFIG.trainers.level, t, spot.x, spot.y));
+      }
+      t.items[0] = { id: 'potion', count: 1 };
+      t.aiTimer = this.rng.range(0.5, 2);
+      this.seedTrail(t);
+      this.trainers.push(t);
+    }
+  }
+
+  /** Two outposts on opposite sides, a third of the way out from the centre, each with a patrol Ranger. */
+  private placeOutposts(): void {
+    const base = this.rng.range(0, Math.PI * 2);
+    for (let i = 0; i < 2; i++) {
+      const ang = base + i * Math.PI;
+      let best: { x: number; y: number } | null = null;
+      for (let r = 9; r < 18 && !best; r += 0.5) {
+        for (let da = 0; da < 0.9 && !best; da += 0.15) {
+          for (const sgn of [1, -1]) {
+            const x = this.centerX + Math.cos(ang + da * sgn) * r;
+            const y = this.centerY + Math.sin(ang + da * sgn) * r;
+            const tx = Math.floor(x);
+            const ty = Math.floor(y);
+            let open = 0;
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (this.ground.reachable(tx + dx, ty + dy)) open++;
+            if (open === 9) {
+              best = { x: tx + 0.5, y: ty + 0.5 };
+              break;
+            }
+          }
+        }
+      }
+      if (!best) continue;
+      this.outposts.push({ ...best, users: [], beacon: 0 });
+      const npc = this.makeTrainer(`Ranger ${i + 1}`, 'ranger', false, best.x + 1.5, best.y + 1.2);
+      const pts = [
+        { x: best.x + 1.5, y: best.y + 1.2 },
+        { x: best.x - 1.5, y: best.y + 1.2 },
+        { x: best.x - 1.5, y: best.y - 1.4 },
+        { x: best.x + 1.5, y: best.y - 1.4 },
+      ].filter((p) => this.ground.reachable(Math.floor(p.x), Math.floor(p.y)));
+      this.npcs.push(npc);
+      this.routes.set(npc.id, { points: pts.length ? pts : [{ x: best.x, y: best.y }], index: 0, wait: 1 });
+    }
+  }
+
+  private scatterItems(): void {
+    const spots: Array<{ x: number; y: number }> = [];
+    for (let ty = 1; ty < this.ground.rows - 1; ty++) {
+      for (let tx = 1; tx < this.ground.cols - 1; tx++) {
+        if (!this.ground.reachable(tx, ty)) continue;
+        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 2.5) continue;
+        spots.push({ x: tx + 0.5, y: ty + 0.5 });
+      }
+    }
+    this.rng.shuffle(spots);
+    // Guarantee the player a few balls nearby, then weight the rest.
+    const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 7).slice(0, 3);
+    let id = 0;
+    for (const p of near) this.items.push({ id: nextId++, itemId: 'poke-ball', x: p.x, y: p.y, bob: id++ });
+    for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
+      const p = spots[i] as { x: number; y: number };
+      if (near.includes(p)) continue;
+      const def = this.rng.weighted(ITEM_LIST, (d) => d.weight);
+      this.items.push({ id: nextId++, itemId: def.id, x: p.x, y: p.y, bob: this.rng.next() * 6 });
+    }
+  }
+
+  /** Adds an item to a bag; returns false when it is full. */
+  giveItem(t: Trainer, itemId: string): boolean {
+    const def = ITEMS[itemId];
+    if (def?.stack) {
+      const slot = t.items.find((s) => s?.id === itemId);
+      if (slot) {
+        slot.count += def.stack;
+        return true;
+      }
+    }
+    const free = t.items.indexOf(null);
+    if (free < 0) return false;
+    t.items[free] = { id: itemId, count: def?.stack ?? 1 };
+    return true;
+  }
+
+  takeItem(t: Trainer, slot: number): InventorySlot | null {
+    const s = t.items[slot];
+    if (!s) return null;
+    s.count--;
+    if (s.count <= 0) t.items[slot] = null;
+    return s;
+  }
+
+  /** Uses a non-ball item from a bag slot. Returns a message for the HUD. */
+  useItem(t: Trainer, slot: number): string {
+    const entry = t.items[slot];
+    if (!entry) return '';
+    const def = ITEMS[entry.id];
+    if (!def) return '';
+    const m = lead(t);
+    switch (def.kind) {
+      case 'ball':
+        return 'Hold Space to aim, release to throw';
+      case 'heal': {
+        if (!m) return 'No Pokémon to heal';
+        if (m.hp >= m.maxHp) return `${m.name} is at full HP`;
+        m.hp = Math.min(m.maxHp, m.hp + (def.amount ?? 20));
+        this.takeItem(t, slot);
+        this.battle.events.push({ type: 'text', mon: m, text: `+${def.amount}` });
+        return `${m.name} recovered HP`;
+      }
+      case 'revive': {
+        const down = t.party.find((p) => p.fainted);
+        if (!down) return 'Nobody has fainted';
+        down.fainted = false;
+        down.hp = Math.max(1, Math.floor(down.maxHp * (def.fraction ?? 0.5)));
+        down.x = t.x;
+        down.y = t.y;
+        down.anim.play('Idle', { restart: true });
+        this.takeItem(t, slot);
+        return `${down.name} was revived!`;
+      }
+      case 'cure': {
+        const target = t.party.find((p) => !p.fainted && p.status) ?? m;
+        if (!target || !target.status) return 'No status to cure';
+        this.battle.cureStatus(target);
+        target.drowsy = 0;
+        this.takeItem(t, slot);
+        return `${target.name} is cured`;
+      }
+      case 'boost': {
+        if (!m) return 'No Pokémon';
+        this.battle.changeStage(m, def.stat ?? 'atk', def.stages ?? 2);
+        this.takeItem(t, slot);
+        return `${m.name}'s ${def.stat === 'def' ? 'Defense' : 'Attack'} rose sharply!`;
+      }
+      case 'hold': {
+        if (!m) return 'No Pokémon';
+        if (m.heldItem) return `${m.name} already holds ${ITEMS[m.heldItem]?.name ?? 'an item'}`;
+        m.heldItem = def.id;
+        this.takeItem(t, slot);
+        return `${m.name} holds the ${def.name}`;
+      }
+      case 'styler': {
+        if (activeParty(t).length >= CONFIG.player.partyCap) return `Party is full (${CONFIG.player.partyCap})`;
+        let best: Mon | null = null;
+        let bd = 3.5;
+        for (const o of this.allTrainers) {
+          if (o === t) continue;
+          for (const p of o.party) {
+            if (!p.fainted) continue;
+            const d = Math.hypot(p.x - t.x, p.y - t.y);
+            if (d < bd) {
+              bd = d;
+              best = p;
+            }
+          }
+        }
+        if (!best) return 'No fainted enemy Pokémon nearby to claim';
+        const owner = best.owner as Trainer;
+        owner.party.splice(owner.party.indexOf(best), 1);
+        best.owner = t;
+        best.wild = false;
+        best.fainted = false;
+        best.hp = Math.max(1, Math.floor(best.maxHp * 0.5));
+        best.status = null;
+        best.anim.play('Idle', { restart: true });
+        t.party.push(best);
+        t.stats.catches++;
+        this.takeItem(t, slot);
+        this.battle.events.push({ type: 'caught', mon: best, by: t });
+        return `Captured ${best.name} with the Styler!`;
+      }
+    }
+  }
+
+  /** First bag slot holding a ball, preferring the given slot. */
+  ballSlot(t: Trainer, preferred = -1): number {
+    const isBall = (i: number) => ITEMS[t.items[i]?.id ?? '']?.kind === 'ball';
+    if (preferred >= 0 && isBall(preferred)) return preferred;
+    for (let i = 0; i < t.items.length; i++) if (isBall(i)) return i;
+    return -1;
+  }
+
+  /** Throws the ball in `slot` toward a point; the ball is spent either way. */
+  throwBall(t: Trainer, slot: number, to: { x: number; y: number }): boolean {
+    const entry = t.items[slot];
+    const def = entry ? ITEMS[entry.id] : undefined;
+    if (!entry || !def || def.kind !== 'ball') return false;
+    if (activeParty(t).length >= CONFIG.player.partyCap) {
+      this.battle.events.push({ type: 'notice', text: `Party is full (${CONFIG.player.partyCap})` });
+      return false;
+    }
+    this.takeItem(t, slot);
+    this.throws.push(newThrow(t, { x: t.x, y: t.y }, to, def.id, def.tier ?? 1));
+    return true;
+  }
+
+  private stepThrows(dt: number): void {
+    for (const th of this.throws) {
+      const state = stepThrow(th, dt);
+      if (state === 'landed') {
+        let best: Mon | null = null;
+        let bd = 0.9;
+        for (const w of this.wilds) {
+          if (w.fainted) continue;
+          const d = Math.hypot(w.x - th.x, w.y - th.y);
+          if (d < bd) {
+            bd = d;
+            best = w;
+          }
+        }
+        if (!best) {
+          th.done = true;
+          this.battle.events.push({ type: 'notice', text: 'The ball missed', seconds: 1 });
+          continue;
+        }
+        if (best.aura) {
+          th.done = true;
+          this.battle.events.push({ type: 'text', mon: best, text: 'The darkness repels the ball!' });
+          continue;
+        }
+        th.target = best;
+        th.roll = rollCatch(this.rng, best, th.tier);
+        th.x = best.x;
+        th.y = best.y + 0.1;
+        best.flash = 0.06;
+        best.anim.play('Hurt', { restart: true, loop: false });
+        best.casting = null;
+        best.moving = false;
+      } else if (state === 'result' && th.target && th.roll && !th.target.fainted) {
+        const w = th.target;
+        if (th.roll.caught) {
+          this.wilds.splice(this.wilds.indexOf(w), 1);
+          w.owner = th.thrower;
+          w.wild = false;
+          w.aura = false;
+          th.thrower.party.push(w);
+          th.thrower.stats.catches++;
+          if (th.thrower.engaged === w) this.battle.disengage(th.thrower);
+          this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
+        } else {
+          this.battle.events.push({ type: 'broke-free', mon: w });
+          if (!th.thrower.engaged && th.thrower.isPlayer && lead(th.thrower)) this.battle.engage(th.thrower, w);
+        }
+        th.target = null;
+      }
+    }
+    this.throws = this.throws.filter((th) => !th.done);
+  }
+
+  private stepItems(dt: number): void {
+    for (const it of this.items) it.bob += dt;
+    for (const t of this.allTrainers) {
+      if (!t.alive) continue;
+      for (let i = this.items.length - 1; i >= 0; i--) {
+        const it = this.items[i] as GroundItem;
+        if (Math.hypot(it.x - t.x, it.y - t.y) > CONFIG.items.pickupRadius) continue;
+        if (this.giveItem(t, it.itemId)) {
+          this.items.splice(i, 1);
+          this.battle.events.push({ type: 'pickup', trainer: t, itemId: it.itemId });
+        } else if (t.isPlayer && it.bob % 3 < dt) {
+          this.battle.events.push({ type: 'notice', text: 'Bag is full', seconds: 0.8 });
+        }
+      }
+      // Leftovers regenerate the holder.
+      for (const m of t.party) {
+        if (m.fainted || m.heldItem !== 'leftovers' || m.hp >= m.maxHp) continue;
+        m.busy = (m.busy ?? 0) + dt;
+        if (m.owner && m.busy >= 3) {
+          m.busy = 0;
+          m.hp = Math.min(m.maxHp, m.hp + Math.max(1, Math.floor(m.maxHp / 16)));
+          this.battle.events.push({ type: 'text', mon: m, text: '+Leftovers' });
+        }
+      }
+    }
+  }
+
+  private stepOutposts(dt: number): void {
+    for (const o of this.outposts) {
+      o.users = [];
+      for (const t of this.allTrainers) {
+        if (!t.alive || this.time < t.outpostReady) continue;
+        if (Math.hypot(t.x - o.x, t.y - o.y) > CONFIG.outpost.radius) {
+          if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;
+          continue;
+        }
+        const needs = t.party.some((m) => m.fainted || m.hp < m.maxHp || m.status);
+        if (!needs) continue;
+        o.users.push(t);
+        t.healing += dt;
+        if (t.healing >= CONFIG.outpost.healSeconds) {
+          t.healing = 0;
+          t.outpostReady = this.time + 20;
+          for (const m of t.party) {
+            m.fainted = false;
+            m.hp = m.maxHp;
+            m.status = null;
+            m.drowsy = 0;
+            m.anim.play('Idle', { restart: true });
+            m.x = t.x;
+            m.y = t.y;
+          }
+          this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'Party fully healed!' : `${t.name} healed at the outpost`, seconds: 1.5 });
+        }
+      }
+      // The beacon broadcasts whoever is healing to every trainer.
+      o.beacon = o.users.length ? 1 : Math.max(0, o.beacon - dt * 0.5);
+    }
+  }
+
+  private stepNpcs(dt: number): void {
+    for (const n of this.npcs) {
+      const r = this.routes.get(n.id);
+      if (!r) continue;
+      const p = r.points[r.index] as { x: number; y: number };
+      const dx = p.x - n.x;
+      const dy = p.y - n.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 0.08) {
+        n.moving = false;
+        r.wait -= dt;
+        if (r.wait <= 0) {
+          r.index = (r.index + 1) % r.points.length;
+          r.wait = this.rng.range(0.8, 2);
+        }
+        continue;
+      }
+      const step = Math.min(d, 1.6 * dt);
+      const moved = tryMove(this.ground, n, (dx / d) * step, (dy / d) * step, 0.2);
+      n.dir = dirFromVector(dx, dy, n.dir);
+      this.afterTrainerMove(n, moved);
+      if (moved < step * 0.2) {
+        r.index = (r.index + 1) % r.points.length;
+      }
+    }
+  }
+
+  private aiWorld(): AiWorld {
+    return {
+      ground: this.ground,
+      rng: this.rng,
+      items: this.items,
+      outposts: this.outposts,
+      rivals: [],
+      darkRadius: this.darkRadius,
+      centerX: this.centerX,
+      centerY: this.centerY,
+    };
+  }
+
+  private stepAi(t: Trainer, dt: number): void {
+    const world = this.aiWorld();
+    world.rivals = this.allTrainers.filter((o) => o !== t && o.alive);
+    // Beacons draw healthy trainers in.
+    t.aiTimer -= dt;
+    if (t.aiTimer <= 0) {
+      t.aiTimer = this.rng.range(0.4, 0.9);
+      const d = decide(t, world);
+      t.ai = d.ai;
+      t.aiTarget = d.target;
+      if (d.ai === 'engage' && d.rival) {
+        const foe = lead(d.rival);
+        if (foe && t.engaged !== foe && Math.hypot(d.rival.x - t.x, d.rival.y - t.y) < 4.5) {
+          this.battle.engage(t, foe);
+          if (d.rival.isPlayer && d.rival.engaged !== lead(t)) {
+            const myLead = lead(t);
+            if (myLead) this.battle.engage(d.rival, myLead);
+          }
+        }
+      } else if (d.ai === 'roam' && !t.engaged) {
+        const beacon = this.outposts.find((o) => o.beacon > 0.5 && o.users.some((u) => u !== t));
+        if (beacon && Math.hypot(beacon.x - t.x, beacon.y - t.y) < 20) {
+          t.aiTarget = { x: beacon.x, y: beacon.y };
+          t.ai = 'engage';
+        }
+      }
+      // Use a potion when the lead is low.
+      const m = lead(t);
+      if (m && m.hp < m.maxHp * 0.5) {
+        const slot = t.items.findIndex((s) => s && ITEMS[s.id]?.kind === 'heal');
+        if (slot >= 0) this.useItem(t, slot);
+      }
+    }
+    // Movement toward the target.
+    let moved = 0;
+    const target = t.aiTarget;
+    if (target) {
+      let dx = target.x - t.x;
+      let dy = target.y - t.y;
+      const d = Math.hypot(dx, dy);
+      let stop = 0.35;
+      if (t.ai === 'engage' && t.engaged) stop = 2.1;
+      if (t.ai === 'heal') stop = 0.5;
+      if (d > stop) {
+        dx /= d;
+        dy /= d;
+        const speed = CONFIG.trainers.speed * (t.ai === 'flee' ? 1.1 : 1);
+        moved = tryMove(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius);
+        t.dir = dirFromVector(dx, dy, t.dir);
+        if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
+      } else if (t.engaged) {
+        t.dir = dirFromVector(t.engaged.x - t.x, t.engaged.y - t.y, t.dir);
+      }
+    }
+    this.separate(t);
+    this.afterTrainerMove(t, moved);
+    // Fighting: the lead attacks on its own timer.
+    const m = lead(t);
+    const foe = t.engaged;
+    if (m && foe && !foe.fainted && t.ai !== 'flee') {
+      t.attackTimer -= dt;
+      if (t.attackTimer <= 0) {
+        t.attackTimer = this.rng.range(0.8, 1.7);
+        const slot = this.battle.chooseMove(m, foe);
+        if (slot >= 0 && Math.hypot(foe.x - m.x, foe.y - m.y) < 4) this.battle.tryCast(m, slot, foe.x, foe.y, foe.id);
+      }
+    }
   }
 
   /** A reachable, open tile as far from the centre as possible: the map edge. */
@@ -79,12 +524,44 @@ export class Match {
     return best;
   }
 
+  /** Starts a trainer's position history with a short walkable trail so followers line up behind them. */
+  seedTrail(t: Trainer): void {
+    let bestDir: { x: number; y: number } | null = null;
+    let bestLen = 0;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const d = { x: Math.cos(a), y: Math.sin(a) };
+      let len = 0;
+      for (let k = 0.25; k <= 3.5; k += 0.25) {
+        if (!canStand(this.ground, t.x + d.x * k, t.y + d.y * k, 0.25)) break;
+        len = k;
+      }
+      // Prefer trails that point away from the centre (the player faces inward).
+      const away = (d.x * (t.x - this.centerX) + d.y * (t.y - this.centerY)) > 0 ? 0.5 : 0;
+      if (len + away > bestLen) {
+        bestLen = len + away;
+        bestDir = d;
+      }
+    }
+    if (!bestDir) return;
+    t.history = [];
+    for (let k = Math.min(3.5, bestLen); k > 0; k -= 0.25) t.history.push({ x: t.x + bestDir.x * k, y: t.y + bestDir.y * k });
+    t.history.push({ x: t.x, y: t.y });
+    t.dir = dirFromVector(-bestDir.x, -bestDir.y, t.dir);
+    t.party.forEach((m, i) => {
+      const p = pointBehind(t.history, CONFIG.player.followSpacingTiles * (i + 1)) ?? { x: t.x, y: t.y };
+      m.x = m.px = p.x;
+      m.y = m.py = p.y;
+      m.dir = t.dir;
+    });
+  }
+
   makeTrainer(name: string, role: string, isPlayer: boolean, x: number, y: number): Trainer {
     return {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
-      party: [], history: [{ x, y }], items: new Array<string | null>(CONFIG.items.inventorySize).fill(null), alive: true,
+      party: [], history: [{ x, y }], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
       stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
-      engaged: null, engagedTrainer: null, ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0,
+      engaged: null, engagedTrainer: null, ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1,
     };
   }
 
@@ -220,6 +697,8 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
+    for (const t of this.trainers) if (t.alive) this.stepAi(t, dt);
+    this.stepNpcs(dt);
     this.stepEngagement();
     for (const t of this.allTrainers) {
       if (!t.alive) continue;
@@ -227,6 +706,9 @@ export class Match {
       this.stepFollowers(t, dt);
     }
     for (const w of this.wilds) this.stepWild(w, dt);
+    this.stepItems(dt);
+    this.stepOutposts(dt);
+    this.stepThrows(dt);
     for (const m of this.mons()) {
       this.battle.stepMon(m, dt, () => this.mons());
       m.anim.dir = m.dir;
@@ -289,19 +771,36 @@ export class Match {
     }
   }
 
-  /** Touching a wild Pokémon starts a fight; distance ends it. */
+  /** Touching a wild Pokémon or an enemy lead starts a fight; distance or a knockout ends it. */
   private stepEngagement(): void {
-    const p = this.player;
-    if (p.engaged) {
-      const e = p.engaged;
-      const far = Math.hypot(e.x - p.x, e.y - p.y) > CONFIG.battle.disengageDistance;
-      if (e.fainted || far || !lead(p)) this.battle.disengage(p);
+    for (const t of this.allTrainers) {
+      if (!t.alive || !t.engaged) continue;
+      const e = t.engaged;
+      const far = Math.hypot(e.x - t.x, e.y - t.y) > CONFIG.battle.disengageDistance;
+      if (e.fainted || far || !lead(t) || (e.owner && !e.owner.alive)) {
+        const rival = t.engagedTrainer;
+        this.battle.disengage(t);
+        // A trainer fight continues against the rival's next Pokémon.
+        const next = rival && rival.alive ? lead(rival) : null;
+        if (next && !far && lead(t)) this.battle.engage(t, next);
+      }
     }
+    const p = this.player;
     if (!p.engaged && lead(p)) {
       for (const w of this.wilds) {
         if (w.fainted || w.status === 'sleep') continue;
         if (Math.hypot(w.x - p.x, w.y - p.y) < 0.8) {
           this.battle.engage(p, w);
+          break;
+        }
+      }
+      for (const t of this.trainers) {
+        const m = lead(t);
+        if (!t.alive || !m) continue;
+        if (Math.hypot(m.x - p.x, m.y - p.y) < 0.9 || Math.hypot(t.x - p.x, t.y - p.y) < 0.9) {
+          this.battle.engage(p, m);
+          const mine = lead(p);
+          if (mine && !t.engaged) this.battle.engage(t, mine);
           break;
         }
       }
@@ -448,12 +947,15 @@ export class Match {
     this.battle.disengage(t);
     for (const o of this.allTrainers) if (o.engagedTrainer === t) this.battle.disengage(o);
     // Dropped items are scattered around the trainer.
-    t.items.forEach((id, i) => {
-      if (!id) return;
+    t.items.forEach((entry, i) => {
+      if (!entry) return;
       const a = (i / t.items.length) * Math.PI * 2;
-      this.items.push({ id: nextId++, itemId: id, x: t.x + Math.cos(a) * 0.9, y: t.y + Math.sin(a) * 0.9, bob: this.rng.next() * 6 });
+      for (let k = 0; k < entry.count; k++) {
+        this.items.push({ id: nextId++, itemId: entry.id, x: t.x + Math.cos(a + k * 0.4) * (0.9 + k * 0.3), y: t.y + Math.sin(a + k * 0.4) * (0.9 + k * 0.3), bob: this.rng.next() * 6 });
+      }
       t.items[i] = null;
     });
+    this.battle.events.push({ type: 'eliminated', trainer: t });
   }
 }
 

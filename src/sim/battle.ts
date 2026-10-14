@@ -32,7 +32,12 @@ export type BattleEvent =
   | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' }
   | { type: 'faint'; mon: Mon; by: Mon | null }
   | { type: 'wake'; mon: Mon }
-  | { type: 'text'; mon: Mon; text: string };
+  | { type: 'text'; mon: Mon; text: string }
+  | { type: 'notice'; text: string; seconds?: number }
+  | { type: 'caught'; mon: Mon; by: Trainer }
+  | { type: 'broke-free'; mon: Mon }
+  | { type: 'pickup'; trainer: Trainer; itemId: string }
+  | { type: 'eliminated'; trainer: Trainer };
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 
@@ -270,6 +275,12 @@ export class BattleSystem {
 
   applyDamage(target: Mon, damage: number, by: Mon | null): void {
     if (target.fainted) return;
+    if (target.heldItem === 'focus-sash' && target.hp === target.maxHp && damage >= target.hp) {
+      target.hp = 1;
+      target.heldItem = null;
+      this.events.push({ type: 'text', mon: target, text: 'Hung on with Focus Sash!' });
+      return;
+    }
     target.hp = Math.max(0, target.hp - damage);
     if (target.hp === 0) this.faint(target, by);
   }

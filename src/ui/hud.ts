@@ -363,7 +363,8 @@ export class Hud {
     const y0 = v.height - 62 * s - 16 * s - slot - 20 * s;
     this.itemRects = [];
     this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12);
-    items.forEach((id, i) => {
+    items.forEach((entry, i) => {
+      const id = entry?.id ?? null;
       const x = x0 + i * (slot + gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, slot, slot);
       const selected = st.selectedItem === i;
@@ -382,6 +383,7 @@ export class Hud {
         if (def) {
           drawItemIcon(ctx, def.icon, x + slot / 2, y0 + slot / 2 - 2 * s, slot * 0.28);
           this.label(ctx, def.short, x + slot / 2, y0 + slot - 5 * s, 8.5, '#ffffff', 'center', '700');
+          if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 4 * s, y0 + 11 * s, 9, '#ffe9a8', 'right', '800');
         }
       }
       this.itemRects.push({ x, y: y0, w: slot, h: slot });

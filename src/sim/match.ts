@@ -19,8 +19,8 @@ import { ITEM_LIST, ITEMS } from './items';
 import { canStand, pointBehind, tryMove } from './movement';
 
 const AI_NAMES: Array<[string, string]> = [
-  ['Sven', 'trainer_a'],
-  ['Wendy', 'trainer_b'],
+  ['Rook', 'trainer_a'],
+  ['Marlo', 'trainer_b'],
 ];
 
 export interface MatchDeps {

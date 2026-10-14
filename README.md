@@ -128,7 +128,7 @@ are anchored bottom-centre and drawn at the same integer 3x as the Pokémon.
 | role | character | used for |
 | --- | --- | --- |
 | `player` | `union_00` | you |
-| `trainer_a`, `trainer_b` | `union_06`, `union_08` | the AI trainers Sven and Wendy |
+| `trainer_a`, `trainer_b` | `union_06`, `union_08` | the AI trainers Rook and Marlo |
 | `host` | `union_05` | the Ranger Union host on the title screen |
 | `staff_a`, `staff_b` | `civ_06`, `civ_09` | the staff patrolling the two outposts |
 | `grunt` | `dimsun_grunt` | Team Dim Sun; no sheet yet, so it is the labeled placeholder |

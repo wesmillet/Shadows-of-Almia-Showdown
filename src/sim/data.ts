@@ -3,6 +3,7 @@ import speciesJson from '../../data/species.json';
 import typesJson from '../../data/types.json';
 import spawnsJson from '../../data/spawns.json';
 import configJson from '../../data/config.json';
+import movesJson from '../../data/moves.json';
 import type { Biome } from '../ground/types';
 
 export interface StatBlock {
@@ -22,6 +23,36 @@ export interface SpeciesDef {
   tier: number;
   biome?: Biome;
   moves: string[];
+}
+
+export type MoveShape = 'single' | 'line' | 'cone' | 'ring' | 'self';
+export type VfxFamily = 'burst' | 'projectile' | 'beam' | 'ring' | 'cloud';
+export type StatusKind = 'sleep' | 'burn' | 'paralysis';
+
+export interface MoveDef {
+  id: string;
+  name: string;
+  type: string;
+  category: 'physical' | 'special' | 'status';
+  power: number;
+  shape: MoveShape;
+  cooldown: number;
+  cast?: number;
+  vfx: VfxFamily;
+  anim: 'Attack' | 'Shoot' | 'Charge';
+  size?: number;
+  status?: { kind: StatusKind; chance: number };
+  stages?: { self?: { atk?: number; def?: number }; target?: { atk?: number; def?: number }; chance: number };
+  strip?: string;
+}
+
+export const MOVES = new Map<string, MoveDef>();
+for (const m of (movesJson as { moves: MoveDef[] }).moves) MOVES.set(m.id, m);
+
+export function move(id: string): MoveDef {
+  const m = MOVES.get(id);
+  if (!m) throw new Error(`moves.json has no move ${id}`);
+  return m;
 }
 
 export const CONFIG = configJson;

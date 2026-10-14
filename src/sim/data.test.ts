@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveness, SPECIES, statsAtLevel, TYPE_CHART } from './data';
+import { effectiveness, MOVES, SPECIES, statsAtLevel, TYPE_CHART } from './data';
 import spawns from '../../data/spawns.json';
 
 describe('type chart', () => {
@@ -13,11 +13,28 @@ describe('type chart', () => {
   });
 });
 
+describe('moves data', () => {
+  it('has at least 20 moves across the five VFX families with valid types and shapes', () => {
+    expect(MOVES.size).toBeGreaterThanOrEqual(20);
+    const families = new Set<string>();
+    for (const m of MOVES.values()) {
+      expect(TYPE_CHART.types).toContain(m.type);
+      expect(['single', 'line', 'cone', 'ring', 'self']).toContain(m.shape);
+      expect(['burst', 'projectile', 'beam', 'ring', 'cloud']).toContain(m.vfx);
+      expect(m.cooldown).toBeGreaterThanOrEqual(1.5);
+      expect(m.cooldown).toBeLessThanOrEqual(6);
+      families.add(m.vfx);
+    }
+    expect(families.size).toBe(5);
+  });
+});
+
 describe('species data', () => {
   it('only uses known types and spawn tables reference known species', () => {
     for (const s of SPECIES.values()) {
       for (const t of s.types) expect(TYPE_CHART.types).toContain(t);
       expect(s.moves.length).toBe(4);
+      for (const id of s.moves) expect(MOVES.has(id), `${s.name} knows unknown move ${id}`).toBe(true);
     }
     for (const biome of Object.values(spawns.biomes)) {
       for (const row of biome.table) expect(SPECIES.has(row.dex)).toBe(true);

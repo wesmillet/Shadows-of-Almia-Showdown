@@ -16,8 +16,7 @@ export interface GameContext {
 }
 
 /** Shared modern-menu drawing helpers (no retro styling). */
-export function panel(view: View, x: number, y: number, w: number, h: number, radius = 14, fill = 'rgba(12,12,22,0.72)'): void {
-  const ctx = view.ctx;
+export function panel(view: View, x: number, y: number, w: number, h: number, radius = 14, fill = 'rgba(12,12,22,0.72)', ctx: CanvasRenderingContext2D = view.hud): void {
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, radius);
@@ -29,8 +28,8 @@ export function panel(view: View, x: number, y: number, w: number, h: number, ra
   ctx.restore();
 }
 
-export function text(view: View, s: string, x: number, y: number, size: number, opts: { color?: string; align?: CanvasTextAlign; weight?: string; shadow?: boolean; baseline?: CanvasTextBaseline } = {}): void {
-  const ctx = view.ctx;
+export function text(view: View, s: string, x: number, y: number, size: number, opts: { color?: string; align?: CanvasTextAlign; weight?: string; shadow?: boolean; baseline?: CanvasTextBaseline; ctx?: CanvasRenderingContext2D } = {}): void {
+  const ctx = opts.ctx ?? view.hud;
   ctx.save();
   ctx.font = `${opts.weight ?? '600'} ${Math.round(size * view.baseScale)}px "Segoe UI", Inter, system-ui, sans-serif`;
   ctx.textAlign = opts.align ?? 'left';
@@ -45,7 +44,7 @@ export function text(view: View, s: string, x: number, y: number, size: number, 
 }
 
 export function button(view: View, label: string, x: number, y: number, w: number, h: number, hover: boolean, accent = '#8a6cff'): void {
-  const ctx = view.ctx;
+  const ctx = view.hud;
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, h / 2);

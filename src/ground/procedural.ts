@@ -7,10 +7,11 @@
 import { Rng } from '../core/rng';
 import { Simplex2 } from '../core/noise';
 import { clamp, smoothstep } from '../core/math';
-import { CHUNK_TILES, ChunkedGround, type Biome, type DecorItem } from './types';
+import { CHUNK_PAD, CHUNK_TILES, ChunkedGround, type Biome, type DecorItem } from './types';
 
 /** Noise samples per tile edge in the blended base layer (upscaled smoothly). */
 const SAMPLES_PER_TILE = 8;
+
 
 interface Weights {
   water: number;
@@ -120,14 +121,16 @@ export class ProceduralGround extends ChunkedGround {
 
   private bakeChunk(cc: number, cr: number): HTMLCanvasElement {
     const ts = this.tileSize;
-    const px = CHUNK_TILES * ts;
+    const m = CHUNK_PAD;
+    const px = CHUNK_TILES * ts + 2 * m;
     const canvas = document.createElement('canvas');
     canvas.width = px;
     canvas.height = px;
     const g = canvas.getContext('2d')!;
 
     // 1. Blended base colours at low resolution, upscaled with smoothing.
-    const n = CHUNK_TILES * SAMPLES_PER_TILE;
+    const mt = m / ts; // margin in tiles
+    const n = Math.ceil((CHUNK_TILES + 2 * mt) * SAMPLES_PER_TILE);
     const base = document.createElement('canvas');
     base.width = n;
     base.height = n;
@@ -138,8 +141,8 @@ export class ProceduralGround extends ChunkedGround {
     const oy = cr * CHUNK_TILES;
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
-        const x = ox + (i + 0.5) / SAMPLES_PER_TILE;
-        const y = oy + (j + 0.5) / SAMPLES_PER_TILE;
+        const x = ox - mt + (i + 0.5) / SAMPLES_PER_TILE;
+        const y = oy - mt + (j + 0.5) / SAMPLES_PER_TILE;
         const w = this.weights(x, y);
         const e = this.elevation(x, y);
         const dn = this.detail.noise(x * 1.7, y * 1.7);
@@ -177,25 +180,27 @@ export class ProceduralGround extends ChunkedGround {
     g.imageSmoothingQuality = 'high';
     g.drawImage(base, 0, 0, px, px);
 
-    // 2. Painted detail strokes per tile.
-    const rng = new Rng((cc * 7919 + cr * 104729 + 17) >>> 0);
-    for (let ty = 0; ty < CHUNK_TILES; ty++) {
-      for (let tx = 0; tx < CHUNK_TILES; tx++) {
+    // 2. Painted detail strokes per tile (one extra ring so strokes continue into the margin).
+    //    Each tile's strokes are seeded by its map position, so neighbours bake identically.
+    for (let ty = -1; ty <= CHUNK_TILES; ty++) {
+      for (let tx = -1; tx <= CHUNK_TILES; tx++) {
         const gx = ox + tx;
         const gy = oy + ty;
-        if (gx >= this.cols || gy >= this.rows) continue;
+        if (gx < 0 || gy < 0 || gx >= this.cols || gy >= this.rows) continue;
+        const rng = new Rng((gx * 7919 + gy * 104729 + 17) >>> 0);
         const biome = this.biomeAt(gx, gy);
-        const x0 = tx * ts;
-        const y0 = ty * ts;
-        paintTile(g, rng, biome, x0, y0, ts);
+        paintTile(g, rng, biome, m + tx * ts, m + ty * ts, ts);
       }
     }
 
-    // 3. Canvas grain for a painted, not vector, feel.
+    // 3. Canvas grain for a painted, not vector, feel (aligned to map pixels).
     g.globalCompositeOperation = 'overlay';
     g.globalAlpha = 0.28;
-    for (let y = 0; y < px; y += this.grain.height) {
-      for (let x = 0; x < px; x += this.grain.width) g.drawImage(this.grain, x, y);
+    const gw = this.grain.width;
+    const startX = -(((ox * ts - m) % gw) + gw) % gw;
+    const startY = -(((oy * ts - m) % gw) + gw) % gw;
+    for (let y = startY; y < px; y += gw) {
+      for (let x = startX; x < px; x += gw) g.drawImage(this.grain, x, y);
     }
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';

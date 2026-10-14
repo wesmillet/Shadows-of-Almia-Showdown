@@ -13,19 +13,18 @@ import { text, type GameContext, type Screen } from './ui/screens';
 
 async function boot(): Promise<void> {
   const stage = document.getElementById('stage')!;
-  const canvas = document.createElement('canvas');
-  stage.appendChild(canvas);
-  const view = new View(canvas, CONFIG.map.tileSize);
-  const input = new Input(canvas);
+  const view = new View(stage, CONFIG.map.tileSize);
+  const input = new Input(view.hudCanvas);
   const assets = new Assets();
 
   let status = 'Loading…';
   const drawLoading = (): void => {
-    const ctx = view.ctx;
+    const ctx = view.hud;
+    ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, view.width, view.height);
-    text(view, 'NIGHTFALL ROYALE', view.width / 2, view.height / 2 - 20 * view.baseScale, 42, { align: 'center', weight: '800', color: '#cdbfff' });
-    text(view, status, view.width / 2, view.height / 2 + 24 * view.baseScale, 16, { align: 'center', color: '#b9b4cc' });
+    text(view, 'NIGHTFALL ROYALE', view.width / 2, view.height / 2 - 20 * view.baseScale, 42, { align: 'center', weight: '800', color: '#cdbfff', ctx });
+    text(view, status, view.width / 2, view.height / 2 + 24 * view.baseScale, 16, { align: 'center', color: '#b9b4cc', ctx });
   };
   drawLoading();
 
@@ -59,7 +58,7 @@ async function boot(): Promise<void> {
 
   const starters = (params.get('party') ?? '0025,0387,0133').split(',').filter((d) => SPECIES.has(d));
   const match = new Match({ ground, rng: new Rng(seed), sprites }, starters.length ? starters : ['0025']);
-  game.setScreen(new MatchScreen(game, match, rangers));
+  game.setScreen(new MatchScreen(game, match, rangers, assets));
   (window as unknown as { nightfall: unknown }).nightfall = { match, view, seed };
 
   const loop = new GameLoop({

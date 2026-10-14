@@ -6,7 +6,17 @@
 import { clamp, lerp } from '../core/math';
 
 export class View {
+  /** Offscreen world canvas (2D). Everything in the world is drawn here. */
+  readonly sceneCanvas: HTMLCanvasElement;
   readonly ctx: CanvasRenderingContext2D;
+  /** Offscreen additive light canvas, composed by the lighting pass. */
+  readonly lightCanvas: HTMLCanvasElement;
+  readonly lightCtx: CanvasRenderingContext2D;
+  /** Visible canvas the lighting pass renders into (WebGL). */
+  readonly outputCanvas: HTMLCanvasElement;
+  /** Visible transparent canvas above it for the HUD, menus and floating text. */
+  readonly hudCanvas: HTMLCanvasElement;
+  readonly hud: CanvasRenderingContext2D;
   width = 1280;
   height = 720;
   camX = 0;
@@ -18,8 +28,21 @@ export class View {
   private shakeAmp = 0;
   private shakeTime = 0;
 
-  constructor(readonly canvas: HTMLCanvasElement, readonly tileSize: number) {
-    this.ctx = canvas.getContext('2d', { alpha: false })!;
+  constructor(stage: HTMLElement, readonly tileSize: number) {
+    this.sceneCanvas = document.createElement('canvas');
+    this.ctx = this.sceneCanvas.getContext('2d', { alpha: false })!;
+    this.lightCanvas = document.createElement('canvas');
+    this.lightCtx = this.lightCanvas.getContext('2d')!;
+    this.outputCanvas = document.createElement('canvas');
+    this.hudCanvas = document.createElement('canvas');
+    this.hud = this.hudCanvas.getContext('2d')!;
+    for (const c of [this.outputCanvas, this.hudCanvas]) {
+      c.style.position = 'absolute';
+      c.style.left = '50%';
+      c.style.top = '50%';
+      c.style.transform = 'translate(-50%, -50%)';
+      stage.appendChild(c);
+    }
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -34,12 +57,22 @@ export class View {
       cssH = wh;
       cssW = (wh * 16) / 9;
     }
-    this.canvas.style.width = `${Math.floor(cssW)}px`;
-    this.canvas.style.height = `${Math.floor(cssH)}px`;
     this.width = Math.max(320, Math.round(cssW * dpr));
     this.height = Math.max(180, Math.round(cssH * dpr));
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    for (const c of [this.sceneCanvas, this.lightCanvas, this.outputCanvas, this.hudCanvas]) {
+      c.width = this.width;
+      c.height = this.height;
+      c.style.width = `${Math.floor(cssW)}px`;
+      c.style.height = `${Math.floor(cssH)}px`;
+    }
+  }
+
+  /** Clears the light canvas for a new frame. */
+  beginLights(): void {
+    this.lightCtx.globalCompositeOperation = 'source-over';
+    this.lightCtx.fillStyle = '#000';
+    this.lightCtx.fillRect(0, 0, this.width, this.height);
+    this.lightCtx.globalCompositeOperation = 'lighter';
   }
 
   /** 1 at a 720 px tall canvas. */

@@ -41,6 +41,8 @@ export interface GroundRenderer {
 }
 
 export const CHUNK_TILES = 8;
+/** Pixels of padding baked around each chunk canvas; `drawGround` crops it away. */
+export const CHUNK_PAD = 32;
 
 /** Shared chunk cache + draw for any ground that bakes to canvases once per match. */
 export abstract class ChunkedGround implements GroundRenderer {
@@ -137,8 +139,10 @@ export abstract class ChunkedGround implements GroundRenderer {
         if (!chunk) continue;
         const sx = view.toScreenX(c * CHUNK_TILES);
         const sy = view.toScreenY(r * CHUNK_TILES);
-        // A hair of overlap hides seams between smoothly scaled chunks.
-        ctx.drawImage(chunk, sx, sy, chunkPx + 0.6, chunkPx + 0.6);
+        const inner = CHUNK_TILES * this.tileSize;
+        const pad = (chunk.width - inner) / 2;
+        // Source rect excludes the baked padding, so filtering at the edges reads real neighbours.
+        ctx.drawImage(chunk, pad, pad, inner, inner, sx, sy, chunkPx + 0.5, chunkPx + 0.5);
       }
     }
   }

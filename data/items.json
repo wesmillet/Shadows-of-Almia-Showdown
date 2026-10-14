@@ -1,0 +1,16 @@
+{
+  "_comment": "Ground items. kind: ball (held throw, tier multiplies catch chance), heal (lead HP), revive (first fainted member), cure (removes status), boost (stat stage), hold (held item with a passive), styler (claims a fainted enemy Pokémon). weight scales how often the item is scattered.",
+  "items": [
+    { "id": "poke-ball", "name": "Poké Ball", "short": "Ball", "kind": "ball", "tier": 1, "weight": 10, "stack": 3, "icon": { "shape": "ball", "color": "#e53935" } },
+    { "id": "great-ball", "name": "Great Ball", "short": "Great", "kind": "ball", "tier": 1.5, "weight": 5, "stack": 1, "icon": { "shape": "ball", "color": "#1e88e5", "accent": "#ff5252" } },
+    { "id": "ultra-ball", "name": "Ultra Ball", "short": "Ultra", "kind": "ball", "tier": 2, "weight": 3, "stack": 1, "icon": { "shape": "ball", "color": "#2b2b2b", "accent": "#ffd600" } },
+    { "id": "potion", "name": "Potion", "short": "Potion", "kind": "heal", "amount": 20, "weight": 8, "icon": { "shape": "bottle", "color": "#9b59b6", "accent": "#f1c40f" } },
+    { "id": "super-potion", "name": "Super Potion", "short": "S.Potion", "kind": "heal", "amount": 50, "weight": 5, "icon": { "shape": "bottle", "color": "#e67e22", "accent": "#f1c40f" } },
+    { "id": "revive", "name": "Revive", "short": "Revive", "kind": "revive", "fraction": 0.5, "weight": 3, "icon": { "shape": "badge", "color": "#f7d04b", "accent": "#7a4a00" } },
+    { "id": "full-heal", "name": "Full Heal", "short": "F.Heal", "kind": "cure", "weight": 5, "icon": { "shape": "bottle", "color": "#2ecc71", "accent": "#ffffff" } },
+    { "id": "x-attack", "name": "X Attack", "short": "X Atk", "kind": "boost", "stat": "atk", "stages": 2, "weight": 4, "icon": { "shape": "badge", "color": "#e74c3c", "accent": "#ffffff" } },
+    { "id": "leftovers", "name": "Leftovers", "short": "Leftovrs", "kind": "hold", "effect": "regen", "weight": 3, "icon": { "shape": "bottle", "color": "#d4a373", "accent": "#8d5524" } },
+    { "id": "focus-sash", "name": "Focus Sash", "short": "Sash", "kind": "hold", "effect": "sash", "weight": 3, "icon": { "shape": "sash", "color": "#ff8fab" } },
+    { "id": "capture-styler", "name": "Capture Styler", "short": "Styler", "kind": "styler", "weight": 2, "icon": { "shape": "styler", "color": "#3f51b5", "accent": "#ffeb3b" } }
+  ]
+}

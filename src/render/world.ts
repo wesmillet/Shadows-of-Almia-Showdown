@@ -132,7 +132,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   const inView = (x: number, y: number, pad = 2) => x > vis.x0 - pad && x < vis.x1 + pad && y > vis.y0 - pad && y < vis.y1 + pad;
 
   // Soft shadows under everyone.
-  for (const m of match.mons()) {
+  for (const m of match.renderMons()) {
     const p = monPos(m, alpha);
     if (!inView(p.x, p.y)) continue;
     drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y), 0.42);
@@ -156,7 +156,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
       },
     });
   }
-  for (const m of match.mons()) {
+  for (const m of match.renderMons()) {
     const p = monPos(m, alpha);
     if (!inView(p.x, p.y)) continue;
     list.push({ y: p.y, draw: () => drawMon(view, m, alpha) });

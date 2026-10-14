@@ -2,7 +2,7 @@
 import json, numpy as np
 from PIL import Image
 import os
-ROOT=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT=os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 TS=json.load(open(f'{ROOT}/assets/tiles/sunnyside/sunnyside.json'))
 SHEET=np.array(Image.open(f'{ROOT}/assets/tiles/sunnyside/spr_tileset_sunnysideworld_16px.png').convert('RGBA'))
 FSHEET=np.array(Image.open(f'{ROOT}/assets/tiles/sunnyside/spr_tileset_sunnysideworld_forest_32px.png').convert('RGBA'))

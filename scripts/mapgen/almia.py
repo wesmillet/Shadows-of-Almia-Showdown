@@ -189,6 +189,7 @@ def quarry(b):
 
 def windmill_fields(b):
     if b.put('red_tower', 28, 33):
+        door_path(b, 'red_tower', 28, 33)
         b.objs.append({'kind': 'sprite', 'name': 'spr_deco_windmill', 'px': 29.5 * 16, 'py': 35.4375 * 16, 'z': 39.05})
     field(b, 12, 33, 22, 37, ['wheat_05', 'kale_05'])
     field(b, 32, 32, 38, 37, ['carrot_05', 'parsnip_05', 'radish_05'])
@@ -209,7 +210,12 @@ def terraces(b):
 
 def westbrook(b):
     houses(b, [('purple_manor', 17, 55), ('green_house', 24, 57), ('red_small', 28, 57), ('red_house', 37, 56),
-               ('green_house_b', 15, 61), ('green_small', 48, 59)], 'westbrook')
+               ('green_small', 48, 59)], 'westbrook')
+    # the village's outdoor oven, smoking
+    if b.sprite('spr_deco_cook_chinmney', 12, 61):
+        b.objs.append({'kind': 'sprite', 'name': 'chimneysmoke_02', 'px': 12 * 16 + 8 + 4, 'py': 61 * 16 + 15 - 36, 'z': 61.995})
+    for (x, y) in [(15, 62), (16, 62)]:
+        b.sprite('spr_deco_barrel_closed', x, y)
     b.sprite('spr_deco_well', 27, 66, check=False)
     b.put('statue', 21, 63, allow_path=True)
     flower_bed(b, 23, 31, 62)
@@ -232,6 +238,8 @@ def almia_town(b):
         if b.put(n, x, y):
             p = lib.PREFABS[n]; dx = content2.DOORS.get(n, p['w'] // 2)
             b.road([(x + dx, y + p['h']), (x + dx, 86)])
+            for ddx, t in ((-1, (398, 5)), (0, (334, 6)), (1, (398, 6))):
+                b.ground(x + dx + ddx, y + p['h'], *t)
         else: print('town: no room for', n, x, y)
     b.put('statue', 79, 77, allow_path=True)
     for (n, x, y) in [('stall_white', 72, 75), ('stall_white_b', 86, 75), ('stall_white_b', 72, 81), ('stall_white', 86, 81)]:
@@ -257,7 +265,7 @@ def almia_town(b):
             if any(abs(x - a) < 3 and abs(y - c) < 2 for a, c in spots): continue
             if b.sprite(name, x, y, flip=rng.random() < 0.5, frame=rng.randrange(4)): k += 1; spots.append((x, y))
     for k in range(5):
-        x, y = rng.randrange(99, 103), rng.randrange(73, 78)
+        x, y = rng.randrange(102, 104), rng.randrange(73, 78)
         b.sprite('spr_deco_chicken_01', x, y, flip=rng.random() < 0.5, frame=rng.randrange(4))
 
 

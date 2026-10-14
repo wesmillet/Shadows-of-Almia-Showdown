@@ -1,11 +1,200 @@
 {
-  "_comment": "Per-character slicing for the overworld sheets. layout 'grid' = one row per facing (Shadows of Almia style, 3-frame walk); 'column' = every frame stacked in one column (the Platinum stand-ins shipped here). Drop a Pokémon Ranger: Shadows of Almia sheet in and point the entry at it: frame sizes vary per character, so set frameWidth/frameHeight/footY per entry.",
-  "characters": {
-    "player": { "file": "player.png", "name": "Player Ranger (stand-in: Platinum Lucas)", "standIn": true, "layout": "column", "frameWidth": 32, "frameHeight": 32, "facings": ["up", "down", "left", "right"], "framesPerFacing": 4, "walkCycle": [0, 1, 2, 3], "idleFrame": 0, "footY": 31 },
-    "trainer_a": { "file": "trainer_a.png", "name": "Top Ranger Sven (stand-in: Platinum Ace Trainer)", "standIn": true, "layout": "column", "frameWidth": 32, "frameHeight": 32, "facings": ["up", "down", "left", "right"], "framesPerFacing": 4, "walkCycle": [0, 1, 2, 3], "idleFrame": 0, "footY": 31 },
-    "trainer_b": { "file": "trainer_b.png", "name": "Top Ranger Wendy (stand-in: Platinum Ace Trainer)", "standIn": true, "layout": "column", "frameWidth": 32, "frameHeight": 32, "facings": ["up", "down", "left", "right"], "framesPerFacing": 4, "walkCycle": [0, 1, 2, 3], "idleFrame": 0, "footY": 31 },
-    "ranger": { "file": "ranger.png", "name": "Patrol Ranger (stand-in: Platinum Camper)", "standIn": true, "layout": "column", "frameWidth": 32, "frameHeight": 32, "facings": ["up", "down", "left", "right"], "framesPerFacing": 4, "walkCycle": [0, 1, 2, 3], "idleFrame": 0, "footY": 31 },
-    "grunt": { "file": "grunt.png", "name": "Team Dim Sun Grunt (no sheet shipped: placeholder)", "layout": "grid", "frameWidth": 20, "frameHeight": 38, "facings": ["down", "left", "right", "up"], "framesPerFacing": 3, "walkCycle": [0, 1, 2, 1], "idleFrame": 1, "footY": 36 },
-    "host": { "file": "host.png", "name": "Ranger Union host (stand-in: Platinum Picnicker)", "standIn": true, "layout": "column", "frameWidth": 32, "frameHeight": 32, "facings": ["up", "down", "left", "right"], "framesPerFacing": 4, "walkCycle": [0, 1, 2, 3], "idleFrame": 0, "footY": 31 }
+ "source": "The Spriters Resource, Pok\u00e9mon Ranger 2: Shadows of Almia, NPCs (Set 1) and Ranger Union NPCs, ripped by Lemon",
+ "frame_layout": "one packed PNG per character, frames left to right, uniform cell size, sprite anchored bottom-center, orange key made transparent",
+ "animations": {
+  "idle_down": [
+   0
+  ],
+  "idle_left": [
+   1
+  ],
+  "idle_up": [
+   2
+  ],
+  "walk_left": [
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "walk_down": [
+   9,
+   10,
+   11
+  ],
+  "walk_up": [
+   12,
+   13,
+   14
+  ]
+ },
+ "mirror": {
+  "idle_right": "idle_left",
+  "walk_right": "walk_left"
+ },
+ "characters": {
+  "civ_00": {
+   "file": "civ_00.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_01": {
+   "file": "civ_01.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_02": {
+   "file": "civ_02.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_03": {
+   "file": "civ_03.png",
+   "frame_w": 26,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_04": {
+   "file": "civ_04.png",
+   "frame_w": 20,
+   "frame_h": 32,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_05": {
+   "file": "civ_05.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_06": {
+   "file": "civ_06.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_07": {
+   "file": "civ_07.png",
+   "frame_w": 22,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_08": {
+   "file": "civ_08.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_09": {
+   "file": "civ_09.png",
+   "frame_w": 22,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_10": {
+   "file": "civ_10.png",
+   "frame_w": 20,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_11": {
+   "file": "civ_11.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "civ_12": {
+   "file": "civ_12.png",
+   "frame_w": 18,
+   "frame_h": 32,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_00": {
+   "file": "union_00.png",
+   "frame_w": 22,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_01": {
+   "file": "union_01.png",
+   "frame_w": 20,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_02": {
+   "file": "union_02.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_03": {
+   "file": "union_03.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_04": {
+   "file": "union_04.png",
+   "frame_w": 20,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_05": {
+   "file": "union_05.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_06": {
+   "file": "union_06.png",
+   "frame_w": 22,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_07": {
+   "file": "union_07.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_08": {
+   "file": "union_08.png",
+   "frame_w": 22,
+   "frame_h": 36,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
+  "union_09": {
+   "file": "union_09.png",
+   "frame_w": 20,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
   }
+ }
 }

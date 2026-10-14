@@ -243,6 +243,11 @@ export class StaticGround implements GroundRenderer {
     return BIOME_CODES[this.biomes[this.idx(tx, ty)] ?? 0] ?? 'water';
   }
 
+  inWater(tx: number, ty: number): boolean {
+    if (!this.inBounds(tx, ty)) return true;
+    return this.biomeAt(tx, ty) === 'water' || this.riverFill[this.idx(tx, ty)] === 1;
+  }
+
   walkable(tx: number, ty: number): boolean {
     return this.inBounds(tx, ty) && this.walk[this.idx(tx, ty)] === 1;
   }

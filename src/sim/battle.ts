@@ -3,11 +3,10 @@
  * status and knockouts. Pure simulation; it reports what happened through
  * `events`, which the renderer turns into VFX, numbers, shake and hit-stop.
  */
-import { dirFromVector, type Dir8 } from '../core/math';
+import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG, effectiveness, move, type MoveDef, type StatusKind } from './data';
 import type { Mon, Trainer } from './entities';
-import { lead } from './entities';
 
 export interface Area {
   shape: MoveDef['shape'];
@@ -22,8 +21,6 @@ export interface Area {
 }
 
 export type BattleEvent =
-  | { type: 'engage'; trainer: Trainer; enemy: Mon }
-  | { type: 'disengage'; trainer: Trainer }
   | { type: 'cast'; attacker: Mon; move: MoveDef; area: Area }
   | { type: 'resolve'; attacker: Mon; move: MoveDef; area: Area; hits: Mon[] }
   | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean }
@@ -118,28 +115,56 @@ export class BattleSystem {
 
   constructor(private readonly rng: Rng) {}
 
-  engage(trainer: Trainer, enemy: Mon): void {
-    if (trainer.engaged === enemy) return;
-    trainer.engaged = enemy;
-    trainer.engagedTrainer = enemy.owner;
-    if (enemy.owner && !enemy.owner.engaged) {
-      const myLead = lead(trainer);
-      if (myLead) {
-        enemy.owner.engaged = myLead;
-        enemy.owner.engagedTrainer = trainer;
-      }
-    }
-    enemy.moving = false;
-    this.events.push({ type: 'engage', trainer, enemy });
+  /** Can `m` act and be hit right now? */
+  static active(m: Mon): boolean {
+    return !m.fainted && !m.captured;
   }
 
-  disengage(trainer: Trainer): void {
-    if (!trainer.engaged) return;
-    const other = trainer.engagedTrainer;
-    trainer.engaged = null;
-    trainer.engagedTrainer = null;
-    this.events.push({ type: 'disengage', trainer });
-    if (other && other.engagedTrainer === trainer) this.disengage(other);
+  /** Nearest hostile to `m` within `range` tiles; with `coneDeg` only those inside the facing cone. */
+  pickTarget(m: Mon, candidates: Iterable<Mon>, range: number, coneDeg?: number): Mon | null {
+    const f = DIR_VECTORS[m.dir] as { x: number; y: number };
+    const fl = Math.hypot(f.x, f.y) || 1;
+    let best: Mon | null = null;
+    let bd = range;
+    for (const c of candidates) {
+      if (c === m || !BattleSystem.active(c) || !this.isEnemy(m, c)) continue;
+      const dx = c.x - m.x;
+      const dy = c.y - m.y;
+      const d = Math.hypot(dx, dy);
+      if (d >= bd) continue;
+      if (coneDeg !== undefined && d > 0.3) {
+        const cos = (dx * f.x + dy * f.y) / (d * fl);
+        if (cos < Math.cos((coneDeg * Math.PI) / 180)) continue;
+      }
+      bd = d;
+      best = c;
+    }
+    return best;
+  }
+
+  /**
+   * Free-aim cast: resolves the move's shape from the caster's position and
+   * facing. A single-target move aims at the nearest hostile inside the
+   * facing cone (within `range`), or straight ahead when nothing is there.
+   */
+  castAt(attacker: Mon, slot: number, candidates: Iterable<Mon>, range = 3.5): boolean {
+    const id = attacker.moves[slot];
+    if (!id) return false;
+    const m = move(id);
+    const f = DIR_VECTORS[attacker.dir] as { x: number; y: number };
+    const fl = Math.hypot(f.x, f.y) || 1;
+    let tx = attacker.x + (f.x / fl) * 1.5;
+    let ty = attacker.y + (f.y / fl) * 1.5;
+    let tid: number | null = null;
+    if (m.shape === 'single') {
+      const t = this.pickTarget(attacker, candidates, range, 70);
+      if (t) {
+        tx = t.x;
+        ty = t.y;
+        tid = t.id;
+      }
+    }
+    return this.tryCast(attacker, slot, tx, ty, tid);
   }
 
   /** Begins a cast if the move is ready and the mon can act. */
@@ -206,7 +231,7 @@ export class BattleSystem {
     if (m.shape === 'self') hits.push(attacker);
     else {
       for (const c of candidates) {
-        if (c === attacker || c.fainted) continue;
+        if (c === attacker || !BattleSystem.active(c)) continue;
         if (!this.isEnemy(attacker, c)) continue;
         if (areaContains(area, c.x, c.y)) hits.push(c);
       }

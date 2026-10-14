@@ -1,0 +1,11 @@
+Item icons and Poké Ball graphics: Pokémon Platinum, by Game Freak / The
+Pokémon Company / Nintendo, taken from the pret/pokeplatinum decompilation
+(https://github.com/pret/pokeplatinum) by scripts/fetch-items.py (icons
+recoloured with their JASC palettes, palette index 0 keyed out; ball frames
+cut from res/graphics/battle/ball_throws). Non-commercial fan project use
+only.
+
+<item>.png            32x32 Gen 4 bag icon
+tm-<type>.png         the TM disc in that type's colour
+ball-<kind>-closed.png  16x16 closed ball (frame 0 of the throw sheet)
+ball-<kind>-open.png    32x32 open ball (the capture burst frame)

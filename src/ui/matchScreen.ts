@@ -85,14 +85,13 @@ export class MatchScreen implements Screen {
         if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
     }
-    for (let i = 0; i < 4; i++) {
-      if (input.pressed(`Digit${i + 1}`) && !input.down('ShiftLeft') && !input.down('ShiftRight')) {
-        if (this.match.player.engaged) this.castFeedback(this.match.playerCast(i));
-        else this.onItemSlot(i);
-      }
+    // 1-4 always cast; Shift+1-6 (or the bag panel) uses items.
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    for (let i = 0; i < 6; i++) {
+      if (!input.pressed(`Digit${i + 1}`)) continue;
+      if (shift) this.onItemSlot(i);
+      else if (i < 4) this.castFeedback(this.match.playerCast(i));
     }
-    for (let i = 4; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.onItemSlot(i);
-    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`) && (input.down('ShiftLeft') || input.down('ShiftRight'))) this.onItemSlot(i);
     // Hold Space to aim a throw, release to let fly.
     const m = this.match;
     if (input.down('Space')) {
@@ -123,7 +122,7 @@ export class MatchScreen implements Screen {
   protected aimPoint(): { x: number; y: number } {
     const p = this.match.player;
     const dist = 0.8 + this.aimPower * (CONFIG.catch.aimMaxTiles - 0.8);
-    const enemy = p.engaged && !p.engaged.fainted ? p.engaged : this.match.nearestEnemyMon(p, p.x, p.y, 6);
+    const enemy = this.match.nearestEnemyMon(p, p.x, p.y, 6);
     let dx: number;
     let dy: number;
     if (enemy && enemy.wild) {
@@ -179,15 +178,6 @@ export class MatchScreen implements Screen {
 
   protected onEvent(ev: BattleEvent, v: View): void {
     switch (ev.type) {
-      case 'engage':
-        if (ev.trainer.isPlayer) {
-          v.targetZoom = CONFIG.battle.engageZoom;
-          this.say(ev.enemy.owner ? `${ev.enemy.owner.name} challenges you with ${ev.enemy.name}!` : `A wild ${ev.enemy.name} wants to fight!`, 1.4);
-        }
-        break;
-      case 'disengage':
-        if (ev.trainer.isPlayer) v.targetZoom = 1;
-        break;
       case 'resolve':
         this.spawnMoveVfx(ev.attacker, ev.move, ev.area, ev.hits);
         break;

@@ -327,11 +327,10 @@ export class Match {
           w.aura = false;
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
-          if (th.thrower.engaged === w) this.battle.disengage(th.thrower);
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
         } else {
           this.battle.events.push({ type: 'broke-free', mon: w });
-          if (!th.thrower.engaged && th.thrower.isPlayer && lead(th.thrower)) this.battle.engage(th.thrower, w);
+          w.target = lead(th.thrower);
         }
         th.target = null;
       }
@@ -450,16 +449,7 @@ export class Match {
       const d = decide(t, world);
       t.ai = d.ai;
       t.aiTarget = d.target;
-      if (d.ai === 'engage' && d.rival) {
-        const foe = lead(d.rival);
-        if (foe && t.engaged !== foe && Math.hypot(d.rival.x - t.x, d.rival.y - t.y) < 4.5) {
-          this.battle.engage(t, foe);
-          if (d.rival.isPlayer && d.rival.engaged !== lead(t)) {
-            const myLead = lead(t);
-            if (myLead) this.battle.engage(d.rival, myLead);
-          }
-        }
-      } else if (d.ai === 'roam' && !t.engaged) {
+      if (d.ai === 'roam') {
         const beacon = this.outposts.find((o) => o.beacon > 0.5 && o.users.some((u) => u !== t));
         if (beacon && Math.hypot(beacon.x - t.x, beacon.y - t.y) < 20) {
           t.aiTarget = { x: beacon.x, y: beacon.y };
@@ -481,7 +471,7 @@ export class Match {
       let dy = target.y - t.y;
       const d = Math.hypot(dx, dy);
       let stop = 0.35;
-      if (t.ai === 'engage' && t.engaged) stop = 2.1;
+      if (t.ai === 'engage') stop = 2.4;
       if (t.ai === 'heal') stop = 0.5;
       if (d > stop) {
         dx /= d;
@@ -490,23 +480,13 @@ export class Match {
         moved = tryMove(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius);
         t.dir = dirFromVector(dx, dy, t.dir);
         if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
-      } else if (t.engaged) {
-        t.dir = dirFromVector(t.engaged.x - t.x, t.engaged.y - t.y, t.dir);
       }
     }
     this.separate(t);
     this.afterTrainerMove(t, moved);
-    // Fighting: the lead attacks on its own timer.
+    // The lead fights whatever hostile is close, unless the trainer is running.
     const m = lead(t);
-    const foe = t.engaged;
-    if (m && foe && !foe.fainted && t.ai !== 'flee') {
-      t.attackTimer -= dt;
-      if (t.attackTimer <= 0) {
-        t.attackTimer = this.rng.range(0.8, 1.7);
-        const slot = this.battle.chooseMove(m, foe);
-        if (slot >= 0 && Math.hypot(foe.x - m.x, foe.y - m.y) < 4) this.battle.tryCast(m, slot, foe.x, foe.y, foe.id);
-      }
-    }
+    if (m && t.ai !== 'flee') this.stepHostile(m, dt, CONFIG.trainers.aggroRange);
   }
 
   /** A reachable, open tile as far from the centre as possible: the map edge. */
@@ -568,7 +548,7 @@ export class Match {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
       party: [], history: [{ x, y }], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
       stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
-      engaged: null, engagedTrainer: null, ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1,
+      ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1,
     };
   }
 
@@ -582,7 +562,7 @@ export class Match {
       x, y, px: x, py: y, dir: 0, anim: new AnimPlayer(sprites), sprites, owner, wild: owner === null, boss: false,
       fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y,
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
-      heldItem: null, busy: 0, casting: null,
+      heldItem: null, busy: 0, casting: null, target: null, captured: false,
     };
   }
 
@@ -592,8 +572,8 @@ export class Match {
     for (let ty = 0; ty < g.rows; ty++) {
       for (let tx = 0; tx < g.cols; tx++) {
         if (!g.reachable(tx, ty)) continue;
-        if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 5) continue;
-        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 4) continue;
+        if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 1.5) continue;
+        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 3) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
         if (b !== 'water') {
@@ -651,7 +631,11 @@ export class Match {
     return best;
   }
 
-  /** Player input: cast the lead's move in `slot` at the engaged enemy (or straight ahead). */
+  /**
+   * Player input: the lead casts move `slot` from where it stands, aimed by
+   * its facing. The lead faces the nearest threat when one is close, else
+   * the way the trainer faces.
+   */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
     const m = lead(p);
@@ -659,20 +643,27 @@ export class Match {
     if (m.status === 'sleep') return 'asleep';
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
-    let tx: number;
-    let ty: number;
-    let tid: number | null = null;
-    const enemy = p.engaged && !p.engaged.fainted ? p.engaged : this.nearestEnemyMon(p, m.x, m.y, 3.5);
-    if (enemy) {
-      tx = enemy.x;
-      ty = enemy.y;
-      tid = enemy.id;
-    } else {
-      const d = dirVec(p.dir);
-      tx = m.x + d.x * 1.5;
-      ty = m.y + d.y * 1.5;
+    const threat = this.battle.pickTarget(m, this.mons(), 6);
+    m.dir = threat ? dirFromVector(threat.x - m.x, threat.y - m.y, m.dir) : p.dir;
+    m.anim.dir = m.dir;
+    return this.battle.castAt(m, slot, this.mons()) ? 'cast' : 'cooldown';
+  }
+
+  /** Hostile Pokémon pick their own targets: nearest enemy within `aggro`, then cast on cooldown. */
+  private stepHostile(m: Mon, dt: number, aggro: number): boolean {
+    if (!BattleSystem.active(m) || m.casting || m.status === 'sleep') return false;
+    if (m.target && (!BattleSystem.active(m.target) || Math.hypot(m.target.x - m.x, m.target.y - m.y) > aggro + 1.5)) m.target = null;
+    if (!m.target) m.target = this.battle.pickTarget(m, this.mons(), aggro);
+    const t = m.target;
+    if (!t) return false;
+    m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
+    m.busy -= dt;
+    if (m.busy <= 0) {
+      m.busy = this.rng.range(0.7, 1.6);
+      const slot = this.battle.chooseMove(m, t);
+      if (slot >= 0 && Math.hypot(t.x - m.x, t.y - m.y) < 4) this.battle.castAt(m, slot, this.mons(), 4);
     }
-    return this.battle.tryCast(m, slot, tx, ty, tid) ? 'cast' : 'cooldown';
+    return true;
   }
 
   /** Makes party member `index` the lead (fainted members cannot lead). */
@@ -706,10 +697,8 @@ export class Match {
     this.stepPlayer(dt);
     for (const t of this.trainers) if (t.alive) this.stepAi(t, dt);
     this.stepNpcs(dt);
-    this.stepEngagement();
     for (const t of this.allTrainers) {
       if (!t.alive) continue;
-      this.stepLead(t, dt);
       this.stepFollowers(t, dt);
     }
     for (const w of this.wilds) this.stepWild(w, dt);
@@ -780,90 +769,12 @@ export class Match {
     }
   }
 
-  /** Touching a wild Pokémon or an enemy lead starts a fight; distance or a knockout ends it. */
-  private stepEngagement(): void {
-    for (const t of this.allTrainers) {
-      if (!t.alive || !t.engaged) continue;
-      const e = t.engaged;
-      const far = Math.hypot(e.x - t.x, e.y - t.y) > CONFIG.battle.disengageDistance;
-      if (e.fainted || far || !lead(t) || (e.owner && !e.owner.alive)) {
-        const rival = t.engagedTrainer;
-        this.battle.disengage(t);
-        // A trainer fight continues against the rival's next Pokémon.
-        const next = rival && rival.alive ? lead(rival) : null;
-        if (next && !far && lead(t)) this.battle.engage(t, next);
-      }
-    }
-    const p = this.player;
-    if (!p.engaged && lead(p)) {
-      for (const w of this.wilds) {
-        if (w.fainted || w.status === 'sleep') continue;
-        if (Math.hypot(w.x - p.x, w.y - p.y) < 0.8) {
-          this.battle.engage(p, w);
-          break;
-        }
-      }
-      for (const t of this.trainers) {
-        const m = lead(t);
-        if (!t.alive || !m) continue;
-        if (Math.hypot(m.x - p.x, m.y - p.y) < 0.9 || Math.hypot(t.x - p.x, t.y - p.y) < 0.9) {
-          this.battle.engage(p, m);
-          const mine = lead(p);
-          if (mine && !t.engaged) this.battle.engage(t, mine);
-          break;
-        }
-      }
-    }
-  }
-
-  /** The lead mirrors its trainer at a one-tile offset toward the enemy while engaged. */
-  private stepLead(t: Trainer, dt: number): void {
-    const m = lead(t);
-    if (!m || !t.engaged) return;
-    const e = t.engaged;
-    let fx = e.x - t.x;
-    let fy = e.y - t.y;
-    const d = Math.hypot(fx, fy) || 1;
-    fx /= d;
-    fy /= d;
-    const off = Math.min(CONFIG.battle.leadOffsetTiles, Math.max(0.35, d - 0.7));
-    let tx = t.x + fx * off;
-    let ty = t.y + fy * off;
-    if (!canStand(this.ground, tx, ty, 0.2)) {
-      // Blocked ahead: stand beside the trainer instead.
-      tx = t.x - fy * 0.6;
-      ty = t.y + fx * 0.6;
-      if (!canStand(this.ground, tx, ty, 0.2)) {
-        tx = t.x;
-        ty = t.y;
-      }
-    }
-    const dx = tx - m.x;
-    const dy = ty - m.y;
-    const dist = Math.hypot(dx, dy);
-    const maxStep = 8 * dt;
-    if (dist > 0.02 && m.status !== 'sleep') {
-      const k = Math.min(1, maxStep / dist);
-      m.x += dx * k;
-      m.y += dy * k;
-    }
-    const movedNow = dist > 0.08;
-    if (!m.casting && m.status !== 'sleep' && m.anim.action !== 'Hurt') {
-      if (movedNow !== m.moving) {
-        m.moving = movedNow;
-        m.anim.play(movedNow ? 'Walk' : 'Idle');
-      }
-    }
-    if (!m.casting) m.dir = dirFromVector(e.x - m.x, e.y - m.y, m.dir);
-  }
-
   /** Party members trail the trainer along the position history. */
   stepFollowers(t: Trainer, dt: number): void {
     const spacing = CONFIG.player.followSpacingTiles;
     const active = t.party.filter((m) => !m.fainted);
-    const first = lead(t);
     active.forEach((m, i) => {
-      if (m.casting || (t.engaged && m === first) || m.status === 'sleep') return;
+      if (m.casting || m.status === 'sleep' || m.captured) return;
       const target = pointBehind(t.history, spacing * (i + 1)) ?? { x: t.x, y: t.y };
       const dx = target.x - m.x;
       const dy = target.y - m.y;
@@ -884,17 +795,12 @@ export class Match {
   }
 
   private stepWild(w: Mon, dt: number): void {
-    if (w.fainted || w.casting || w.status === 'sleep') return;
-    // In a fight: face the opponent's lead and attack on cooldown.
-    const foe = this.opponentOf(w);
-    if (foe) {
-      w.moving = false;
-      w.dir = dirFromVector(foe.x - w.x, foe.y - w.y, w.dir);
-      w.busy -= dt;
-      if (w.busy <= 0) {
-        w.busy = this.rng.range(0.7, 1.6);
-        const slot = this.battle.chooseMove(w, foe);
-        if (slot >= 0) this.battle.tryCast(w, slot, foe.x, foe.y, foe.id);
+    if (w.fainted || w.captured || w.casting || w.status === 'sleep') return;
+    // Anything hostile that wanders close gets attacked.
+    if (this.stepHostile(w, dt, CONFIG.wild.aggroRange)) {
+      if (w.moving) {
+        w.moving = false;
+        w.anim.play('Idle');
       }
       return;
     }
@@ -933,14 +839,6 @@ export class Match {
       w.moving = false;
       w.anim.play('Idle');
     }
-  }
-
-  /** The lead Pokémon of whichever trainer is fighting this wild one. */
-  opponentOf(w: Mon): Mon | null {
-    for (const t of this.allTrainers) {
-      if (t.alive && t.engaged === w) return lead(t);
-    }
-    return null;
   }
 
   private checkElimination(): void {
@@ -1063,14 +961,12 @@ export class Match {
       d.busy = this.rng.range(1.8, 3);
       // Dark Void (ring) when the target is close, otherwise Dark Pulse (line).
       const slot = bd < 2.3 && (d.cooldowns[0] ?? 0) <= 0 ? 0 : (d.cooldowns[1] ?? 0) <= 0 ? 1 : this.battle.chooseMove(d, target);
-      if (slot >= 0) this.battle.tryCast(d, slot, target.x, target.y, target.id);
+      if (slot >= 0) this.battle.castAt(d, slot, this.mons(), 10);
     }
   }
 
   eliminate(t: Trainer): void {
     t.alive = false;
-    this.battle.disengage(t);
-    for (const o of this.allTrainers) if (o.engagedTrainer === t) this.battle.disengage(o);
     // Dropped items are scattered around the trainer.
     t.items.forEach((entry, i) => {
       if (!entry) return;

@@ -50,6 +50,10 @@ export interface Mon {
   busy: number;
   /** Fired when an attack animation should resolve (set by the battle system). */
   casting: null | { moveId: string; t: number; targetX: number; targetY: number; targetId: number | null };
+  /** Current hostile this Pokémon is focused on (its own targeting). */
+  target: Mon | null;
+  /** True while shut inside a Poké Ball: cannot act or be targeted. */
+  captured: boolean;
 }
 
 export interface TrainerStats {
@@ -79,9 +83,6 @@ export interface Trainer {
   items: Array<InventorySlot | null>;
   alive: boolean;
   stats: TrainerStats;
-  /** Battle: who the lead is fighting. */
-  engaged: Mon | null;
-  engagedTrainer: Trainer | null;
   /** AI brain. */
   ai: TrainerAi;
   aiTimer: number;

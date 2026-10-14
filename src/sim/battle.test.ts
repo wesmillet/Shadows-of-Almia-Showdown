@@ -12,7 +12,7 @@ function mon(dex: string, x = 0, y = 0): Mon {
     types: sp.types, moves: sp.moves, cooldowns: [0, 0, 0, 0], x, y, px: x, py: y, dir: 0,
     anim: null as unknown as Mon['anim'], sprites: null as unknown as Mon['sprites'], owner: null, wild: true, boss: false,
     fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y, idleTimer: 0,
-    moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false, heldItem: null, busy: 0, casting: null,
+    moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false, heldItem: null, busy: 0, casting: null, target: null, captured: false,
   };
 }
 

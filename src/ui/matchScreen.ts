@@ -303,9 +303,12 @@ export class MatchScreen implements Screen {
           this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
           if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
           else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
-          const frac = ev.damage / ev.target.maxHp;
-          v.shake(clamp(4 + frac * 40, 4, 20), 0.22 + frac * 0.2);
-          this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
+          // Shake and hit-stop only for hits the player is part of; distant AI fights stay quiet.
+          if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
+            const frac = ev.damage / ev.target.maxHp;
+            v.shake(clamp(4 + frac * 40, 4, 20), 0.22 + frac * 0.2);
+            this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
+          }
         }
         break;
       }
@@ -603,9 +606,9 @@ export class MatchScreen implements Screen {
   private drawGroundItem(v: View, it: GroundItem): void {
     const sx = Math.round(v.toScreenX(it.x));
     const sy = Math.round(v.toScreenY(it.y));
-    const s = v.spriteScale;
+    const s = Math.max(1, v.spriteScale - 1); // item balls sit a step smaller than the characters
     const lift = Math.round((Math.sin(it.bob * 1.8) * 0.5 + 0.5) * 2) * s;
-    drawSoftShadow(v, sx, sy, 0.22, 0.3);
+    drawSoftShadow(v, sx, sy, 0.16, 0.3);
     const img = this.icons.ball(it.ball);
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;

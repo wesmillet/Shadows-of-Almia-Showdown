@@ -17,6 +17,10 @@ import { TitleScreen } from './ui/titleScreen';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
 
+/** The title screen's demo team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton at level 100. */
+const DEMO_PARTY = ['0392', '0384-shiny', '0381', '0385-shiny', '0959'];
+const DEMO_LEVEL = 100;
+
 async function boot(): Promise<void> {
   const stage = document.getElementById('stage')!;
   const view = new View(stage, CONFIG.map.tileSize);
@@ -74,8 +78,8 @@ async function boot(): Promise<void> {
   let currentGround: GroundRenderer = ground;
   let currentSeed = seed;
 
-  const startMatch = (starters: string[]): void => {
-    const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters);
+  const startMatch = (starters: string[], opts: { level?: number; partyCap?: number } = {}): void => {
+    const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters, opts);
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
@@ -83,6 +87,12 @@ async function boot(): Promise<void> {
     debug.showdown.screen = screen;
     game.setScreen(screen);
     console.info(`[showdown] match started with ${starters.join(', ')}`);
+  };
+
+  /** Demo mode: a max-level showcase team, no starter roll (title button, D, or ?demo=1). */
+  const startDemo = (): void => {
+    const team = DEMO_PARTY.filter((d) => SPECIES.has(d));
+    startMatch(team.length ? team : ['0025'], { level: DEMO_LEVEL, partyCap: team.length });
   };
 
   const showRoll = (): void => {
@@ -99,12 +109,14 @@ async function boot(): Promise<void> {
         drawLoading();
       });
     }
-    game.setScreen(new TitleScreen(game, currentGround, rangers, showRoll));
+    game.setScreen(new TitleScreen(game, currentGround, rangers, showRoll, startDemo));
   };
 
-  // ?party=0025,0387 skips the title and roll with that party (debugging).
+  // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).
   const party = params.get('party');
-  if (party) {
+  if (params.get('demo')) {
+    startDemo();
+  } else if (party) {
     const starters = party.split(',').filter((d) => SPECIES.has(d));
     startMatch(starters.length ? starters : ['0025']);
   } else {

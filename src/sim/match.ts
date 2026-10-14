@@ -68,7 +68,11 @@ export class Match {
   moveX = 0;
   moveY = 0;
 
-  constructor(deps: MatchDeps, starterDexes: string[]) {
+  /** Player party size limit (demo teams may start above the normal cap). */
+  readonly partyCap: number;
+
+  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number } = {}) {
+    this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
     this.rng = deps.rng;
     this.sprites = deps.sprites;
@@ -77,7 +81,7 @@ export class Match {
     this.centerY = this.ground.rows / 2;
     const spawn = this.ground.spawns[0] ? { x: this.ground.spawns[0].x + 0.5, y: this.ground.spawns[0].y + 0.5 } : this.edgeSpawn();
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
-    for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, CONFIG.player.level, this.player, spawn.x, spawn.y));
+    for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, this.player, spawn.x, spawn.y));
     this.placeParty(this.player);
     this.spawnWilds();
     this.spawnTrainers();
@@ -269,7 +273,7 @@ export class Match {
         return '';
       }
       case 'styler': {
-        if (activeParty(t).length >= CONFIG.player.partyCap) return `Party is full (${CONFIG.player.partyCap})`;
+        if (activeParty(t).length >= this.partyCap) return `Party is full (${this.partyCap})`;
         let best: Mon | null = null;
         let bd = 3.5;
         for (const o of this.allTrainers) {
@@ -314,8 +318,8 @@ export class Match {
     const entry = t.items[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
     if (!entry || !def || def.kind !== 'ball') return false;
-    if (activeParty(t).length >= CONFIG.player.partyCap) {
-      this.battle.events.push({ type: 'notice', text: `Party is full (${CONFIG.player.partyCap})` });
+    if (activeParty(t).length >= this.partyCap) {
+      this.battle.events.push({ type: 'notice', text: `Party is full (${this.partyCap})` });
       return false;
     }
     this.takeItem(t, slot);

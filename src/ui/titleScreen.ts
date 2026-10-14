@@ -18,6 +18,7 @@ export class TitleScreen implements Screen {
     private readonly ground: GroundRenderer,
     private readonly rangers: RangerSprites,
     private readonly onStart: () => void,
+    private readonly onDemo: () => void,
   ) {
     this.lighting = new Lighting(ctx.view);
     const v = ctx.view;
@@ -31,6 +32,13 @@ export class TitleScreen implements Screen {
     return { x: v.width / 2 - 120 * s, y: v.height * 0.64, w: 240 * s, h: 56 * s };
   }
 
+  /** Demo mode: skip the roll and start with a max-level showcase team. */
+  private demoRect(): { x: number; y: number; w: number; h: number } {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    return { x: v.width / 2 - 120 * s, y: v.height * 0.64 + 68 * s, w: 240 * s, h: 44 * s };
+  }
+
   step(dt: number, input: Input): void {
     this.t += dt;
     const v = this.ctx.view;
@@ -41,8 +49,13 @@ export class TitleScreen implements Screen {
     this.hostPhase = (this.hostPhase + dt * 1.4) % 1;
     v.camX = this.ground.cols / 2 + Math.sin(this.t * 0.1) * 1.5;
     const b = this.buttonRect();
-    for (const c of input.takeClicks()) if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.onStart();
+    const d = this.demoRect();
+    for (const c of input.takeClicks()) {
+      if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.onStart();
+      else if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) this.onDemo();
+    }
     if (input.pressed('Enter') || input.pressed('Space')) this.onStart();
+    if (input.pressed('KeyD')) this.onDemo();
   }
 
   render(): void {
@@ -76,6 +89,9 @@ export class TitleScreen implements Screen {
     const b = this.buttonRect();
     const hover = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
     button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hover);
+    const d = this.demoRect();
+    button(v, 'Demo Team (D)', d.x, d.y, d.w, d.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, d.x, d.y, d.w, d.h));
+    text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, `Host: ${sheet.name} (${sheet.character})`, v.width / 2, v.height - 38 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, 'WASD move · 1-4 moves · 1-6 items · hold Space to throw · click portraits to swap', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
   }

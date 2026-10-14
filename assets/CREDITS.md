@@ -44,11 +44,34 @@ license, sheets). The current artists per folder, resolved through
 ### 0278 Wingull
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,QuickStrike,Shoot,Hover,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0381 Latios
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,SpAttack,RearUp,Swing,Double,Rotate,Hop
+
+### 0384 Rayquaza
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,QuickStrike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0384-shiny Rayquaza (shiny)
+- <@!232091727094218752>: Walk,Attack,QuickStrike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0385 Jirachi
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,Hover
+- <@!217653022094786560>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!217653022094786560>: Pose,Nod
+- <@!217653022094786560>: Pose,DeepBreath,Nod,LookUp
+
+### 0385-shiny Jirachi (shiny)
+- <@!593113130213572610> (earlier version): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,Hover,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop,Hover,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
 ### 0387 Turtwig
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Rumble,Withdraw,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,Faint,HitGround
 
 ### 0390 Chimchar
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,MultiStrike,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,Faint,HitGround
+
+### 0392 Infernape
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,MultiStrike,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!330751862590406656>: DeepBreath,Nod,LookUp,Cringe
 
 ### 0393 Piplup
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Appeal,Hover,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,Faint,HitGround
@@ -85,6 +108,9 @@ license, sheets). The current artists per folder, resolved through
 ### 0491 Darkrai
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,SpAttack,RearUp,Swing,Double,Rotate,Hop,QuickStrike
 - <@!544245909639397378>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
+### 0959 Tinkaton
+- <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop,EventSleep,Float,Laying,Cringe
 
 ## Portraits
 
@@ -132,6 +158,34 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!188463527089012737>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
+### 0381 Latios
+- CHUNSOFT (https://www.spike-chunsoft.com/): Happy,Normal
+- <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0384 Rayquaza
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!533406104256905257> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!533406104256905257> (earlier version): Crying,Determined,Dizzy,Happy,Inspired,Joyous,Pain,Sad,Shouting,Sigh,Special1,Stunned,Surprised,Teary-Eyed,Worried,Normal
+- <@!276369635304275968>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special3
+
+### 0384-shiny Rayquaza (shiny)
+- <@!117780585635643396>: Normal
+- <@!533406104256905257>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!533406104256905257>: Special1,Teary-Eyed,Normal
+- <@!276369635304275968>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special3
+
+### 0385 Jirachi
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Special0
+- <@!314519507869761556> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Stunned,Surprised,Teary-Eyed,Worried
+- <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Stunned,Surprised,Teary-Eyed,Worried
+- CHUNSOFT (https://www.spike-chunsoft.com/): Special1
+
+### 0385-shiny Jirachi (shiny)
+- <@!95638225439166464>: Normal,Special0
+- <@!237286997645983744>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Stunned,Surprised,Teary-Eyed,Worried
+- <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Stunned,Surprised,Teary-Eyed,Worried
+- <@!217899432652308480>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Special1,Stunned,Surprised,Teary-Eyed,Worried
+
 ### 0387 Turtwig
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Happy,Pain,Angry,Worried,Sad,Crying,Shouting,Teary-Eyed,Determined,Joyous,Inspired,Surprised,Dizzy,Sigh,Stunned
 
@@ -139,6 +193,10 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,TearyEyed^,Worried,Worried^
 - <@!356635814668664832> (earlier version): Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^
 - CHUNSOFT (https://www.spike-chunsoft.com/): Teary-Eyed^
+
+### 0392 Infernape
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
+- <@!356635814668664832>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^
 
 ### 0393 Piplup
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Happy,Pain,Angry,Worried,Sad,Crying,Shouting,Teary-Eyed,Determined,Joyous,Inspired,Surprised,Dizzy,Sigh,Stunned
@@ -182,6 +240,11 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
 - <@!288067476963721216> (earlier version): Angry,Crying,Determined,Dizzy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!544245909639397378>: Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Special0,Special0^,Special1,Special1^,Special2,Special2^,Special3,Special3^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^,Normal
+
+### 0959 Tinkaton
+- <@!356635814668664832>: Normal,Normal^
+- <@!356635814668664832>: Normal,Sad,Joyous,Normal^,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^
+- <@!356635814668664832>: Sad,Sad^,Crying,Sigh,Crying^,Sigh^,Pain,Shouting,Pain^,Shouting^,Surprised^,Stunned^,Angry^,Dizzy^,Determined,Determined^
 
 ## Trainer and NPC sheets
 

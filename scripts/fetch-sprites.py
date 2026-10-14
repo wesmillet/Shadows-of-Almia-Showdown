@@ -4,14 +4,16 @@
 
 Usage:
   python3 scripts/fetch-sprites.py 0025 0491
+  python3 scripts/fetch-sprites.py 0384:shiny     # the shiny set -> assets/pokemon/0384-shiny
   python3 scripts/fetch-sprites.py --list scripts/species-list.txt
   python3 scripts/fetch-sprites.py --credits      # only rebuild assets/CREDITS.md
 
 For each dex number the top-level files of sprite/<dex>/ (AnimData.xml,
 credits.txt and every *-Anim.png, *-Offsets.png, *-Shadow.png) are copied to
 assets/pokemon/<dex>/, and the top-level files of portrait/<dex>/ (one 40x40
-PNG per emotion plus credits.txt) to assets/portraits/<dex>/. Alternate forms
-and shinies (the numbered subfolders) are not fetched.
+PNG per emotion plus credits.txt) to assets/portraits/<dex>/. `<dex>:shiny`
+fetches the shiny set (subfolder 0000/0001) into assets/pokemon/<dex>-shiny/
+and assets/portraits/<dex>-shiny/; other alternate forms are not fetched.
 
 assets/CREDITS.md is regenerated from every credits.txt, with artist names
 resolved through SpriteCollab's credit_names.txt.
@@ -112,7 +114,10 @@ def build_credits(tracker=None):
             cpath = os.path.join(base, dex, 'credits.txt')
             if not os.path.isfile(cpath):
                 continue
-            label = tracker.get(dex, {}).get('name', '')
+            base_dex, _, variant = dex.partition('-')
+            label = tracker.get(base_dex, {}).get('name', '')
+            if variant:
+                label = f'{label} ({variant})'.strip()
             lines.append(f'### {dex} {label}'.rstrip())
             for row in parse_credits(cpath):
                 who = names.get(row['id'], {'name': row['id'], 'contact': ''})
@@ -155,47 +160,58 @@ def main(argv):
     if not specs:
         sys.exit(__doc__)
 
-    dexes = []
+    # (dest folder name, source subpath under sprite/ and portrait/, display name)
+    targets = []
     for s in specs:
-        dex = s.zfill(4)
+        dex, _, variant = s.partition(':')
+        dex = dex.zfill(4)
         node = tracker.get(dex)
         if node is None:
             print(f'!! {dex}: not in tracker.json', file=sys.stderr)
+            continue
+        if variant == 'shiny':
+            node = node.get('subgroups', {}).get('0000', {}).get('subgroups', {}).get('0001')
+            if not node or node.get('sprite_complete', 0) == 0:
+                print(f'!! {dex}: no shiny sprites drawn yet', file=sys.stderr)
+                continue
+            targets.append((f'{dex}-shiny', f'{dex}/0000/0001', f'{tracker[dex]["name"]} (shiny)'))
+        elif variant:
+            print(f'!! {s}: unknown variant (only :shiny is supported)', file=sys.stderr)
         elif node.get('sprite_complete', 0) == 0:
             print(f'!! {dex} ({node.get("name")}): no sprites drawn yet', file=sys.stderr)
         else:
-            dexes.append(dex)
+            targets.append((dex, dex, node['name']))
 
     plan = {}
     pats = []
-    for d in dexes:
-        sheets = top_level_files(f'sprite/{d}')
-        ports = top_level_files(f'portrait/{d}')
-        plan[d] = (sheets, ports)
-        pats += [f'/sprite/{d}/{f}' for f in sheets]
-        pats += [f'/portrait/{d}/{f}' for f in ports]
+    for dest_name, src, label in targets:
+        sheets = top_level_files(f'sprite/{src}')
+        ports = top_level_files(f'portrait/{src}')
+        plan[dest_name] = (src, label, sheets, ports)
+        pats += [f'/sprite/{src}/{f}' for f in sheets]
+        pats += [f'/portrait/{src}/{f}' for f in ports]
     sparse_add(pats)
 
-    for d, (sheets, ports) in plan.items():
-        dest = os.path.join(SPRITES, d)
+    for dest_name, (src, label, sheets, ports) in plan.items():
+        dest = os.path.join(SPRITES, dest_name)
         os.makedirs(dest, exist_ok=True)
         n = 0
         for f in sheets:
-            src = os.path.join(WORK, 'sprite', d, f)
-            if os.path.isfile(src):
-                shutil.copyfile(src, os.path.join(dest, f))
+            path = os.path.join(WORK, 'sprite', src, f)
+            if os.path.isfile(path):
+                shutil.copyfile(path, os.path.join(dest, f))
                 n += 1
         p = 0
         if ports:
-            pdest = os.path.join(PORTRAITS, d)
+            pdest = os.path.join(PORTRAITS, dest_name)
             os.makedirs(pdest, exist_ok=True)
             for f in ports:
-                src = os.path.join(WORK, 'portrait', d, f)
-                if os.path.isfile(src):
-                    shutil.copyfile(src, os.path.join(pdest, f))
+                path = os.path.join(WORK, 'portrait', src, f)
+                if os.path.isfile(path):
+                    shutil.copyfile(path, os.path.join(pdest, f))
                     p += 1
         anims = sorted(f[:-9] for f in sheets if f.endswith('-Anim.png'))
-        print(f'{d} {tracker[d]["name"]}: {n} files, {len(anims)} actions, {p} portrait files')
+        print(f'{dest_name} {label}: {n} files, {len(anims)} actions, {p} portrait files')
 
     names = os.path.join(WORK, 'credit_names.txt')
     if os.path.isfile(names):

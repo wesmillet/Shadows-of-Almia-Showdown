@@ -1,17 +1,16 @@
 {
-  "name": "nightfall-royale",
+  "name": "shadows-of-almia-showdown",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Nightfall Royale: a Pokémon battle royale demo with PMD SpriteCollab sprites on painted terrain.",
+  "description": "Shadows of Almia Showdown: a Pokémon battle royale demo with PMD SpriteCollab sprites and Pokémon Ranger overworld NPCs on painted terrain.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "fetch-sprites": "python3 scripts/fetch-sprites.py --list scripts/species-list.txt",
-    "fetch-rangers": "python3 scripts/fetch-rangers.py"
+    "fetch-sprites": "python3 scripts/fetch-sprites.py --list scripts/species-list.txt"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

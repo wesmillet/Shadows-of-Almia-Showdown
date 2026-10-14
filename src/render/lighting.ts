@@ -97,7 +97,7 @@ export class Lighting {
       this.gl = gl;
       this.mode = 'webgl';
     } else {
-      console.warn('[nightfall] WebGL unavailable; lighting falls back to Canvas 2D');
+      console.warn('[showdown] WebGL unavailable; lighting falls back to Canvas 2D');
       this.fallback = view.outputCanvas.getContext('2d')!;
       this.mode = 'canvas';
     }
@@ -110,7 +110,7 @@ export class Lighting {
       gl.shaderSource(sh, src);
       gl.compileShader(sh);
       if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-        console.error('[nightfall] shader error', gl.getShaderInfoLog(sh));
+        console.error('[showdown] shader error', gl.getShaderInfoLog(sh));
         return null;
       }
       return sh;
@@ -123,7 +123,7 @@ export class Lighting {
     gl.attachShader(prog, fs);
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.error('[nightfall] program link error', gl.getProgramInfoLog(prog));
+      console.error('[showdown] program link error', gl.getProgramInfoLog(prog));
       return false;
     }
     gl.useProgram(prog);

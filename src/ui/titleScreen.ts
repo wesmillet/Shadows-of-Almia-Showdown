@@ -1,8 +1,8 @@
-/** Title: the Ranger host paces a painted strip of ground under the logo; "Roll Starter" begins. */
+/** Title: the Ranger Union host paces a painted strip of ground under the logo; "Roll Starter" begins. */
 import type { Input } from '../core/input';
 import type { GroundRenderer } from '../ground/types';
 import { Lighting } from '../render/lighting';
-import { drawSoftShadow } from '../render/world';
+import { drawSheetFrame, drawSoftShadow } from '../render/world';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { button, hit, text, type GameContext, type Screen } from './screens';
 
@@ -57,9 +57,7 @@ export class TitleScreen implements Screen {
     drawSoftShadow(v, hx, hy, 0.3);
     const sheet = this.rangers.get('host');
     const f = sheet.frame(this.hostDir, this.hostPhase, true);
-    const sc = v.rangerScale;
-    v.ctx.imageSmoothingEnabled = false;
-    v.ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(hx - (f.w * sc) / 2), Math.round(hy - f.footY * sc), f.w * sc, f.h * sc);
+    drawSheetFrame(v.ctx, f, Math.round(hx), Math.round(hy), v.rangerScale);
     v.beginLights();
     v.lightCtx.fillStyle = 'rgba(255,220,170,0.08)';
     v.lightCtx.fillRect(0, 0, v.width, v.height);
@@ -72,13 +70,13 @@ export class TitleScreen implements Screen {
     grad.addColorStop(1, 'rgba(8,4,20,0)');
     h.fillStyle = grad;
     h.fillRect(0, 0, v.width, v.height * 0.55);
-    text(v, 'NIGHTFALL', v.width / 2, v.height * 0.3, 92, { align: 'center', weight: '900', color: '#e9ddff' });
-    text(v, 'ROYALE', v.width / 2, v.height * 0.3 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
+    text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.3, 72, { align: 'center', weight: '900', color: '#e9ddff' });
+    text(v, 'SHOWDOWN', v.width / 2, v.height * 0.3 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
     text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, v.height * 0.3 + 104 * s, 15, { align: 'center', weight: '500', color: '#cfc6ea' });
     const b = this.buttonRect();
     const hover = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
     button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hover);
-    text(v, 'Host: ' + sheet.slice.name, v.width / 2, v.height - 38 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
+    text(v, `Host: ${sheet.name} (${sheet.character})`, v.width / 2, v.height - 38 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, 'WASD move · 1-4 moves · 1-6 items · hold Space to throw · click portraits to swap', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
   }
 }

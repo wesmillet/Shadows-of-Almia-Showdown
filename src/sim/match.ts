@@ -99,7 +99,7 @@ export class Match {
     }
   }
 
-  /** Two outposts on opposite sides, a third of the way out from the centre, each with a patrol Ranger. */
+  /** Two outposts on opposite sides, a third of the way out from the centre, each with a member of staff on patrol. */
   private placeOutposts(): void {
     const base = this.rng.range(0, Math.PI * 2);
     for (let i = 0; i < 2; i++) {
@@ -123,7 +123,7 @@ export class Match {
       }
       if (!best) continue;
       this.outposts.push({ ...best, users: [], beacon: 0 });
-      const npc = this.makeTrainer(`Ranger ${i + 1}`, 'ranger', false, best.x + 1.5, best.y + 1.2);
+      const npc = this.makeTrainer(i === 0 ? 'Outpost staff' : 'Outpost staff', i === 0 ? 'staff_a' : 'staff_b', false, best.x + 1.5, best.y + 1.2);
       const pts = [
         { x: best.x + 1.5, y: best.y + 1.2 },
         { x: best.x - 1.5, y: best.y + 1.2 },

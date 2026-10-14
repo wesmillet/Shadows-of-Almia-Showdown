@@ -118,8 +118,25 @@ export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alph
   const s = view.rangerScale;
   const sheet = rangers.get(t.role);
   const f = sheet.frame(dir8To4(t.dir), t.walkPhase, t.moving);
+  drawSheetFrame(ctx, f, sx, sy, s);
+}
+
+/** Draws an overworld frame with its feet at (sx, sy), mirrored when the manifest says so. */
+export function drawSheetFrame(ctx: CanvasRenderingContext2D, f: { image: CanvasImageSource; sx: number; sy: number; w: number; h: number; footY: number; flip: boolean }, sx: number, sy: number, s: number): void {
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, sx - Math.round((f.w * s) / 2), sy - f.footY * s, f.w * s, f.h * s);
+  const dw = f.w * s;
+  const dh = f.h * s;
+  const dx = sx - Math.round(dw / 2);
+  const dy = sy - f.footY * s;
+  if (f.flip) {
+    ctx.save();
+    ctx.translate(dx + dw, dy);
+    ctx.scale(-1, 1);
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, 0, 0, dw, dh);
+    ctx.restore();
+  } else {
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, dw, dh);
+  }
 }
 
 export function renderWorld(view: View, match: Match, opts: WorldRenderOptions): void {

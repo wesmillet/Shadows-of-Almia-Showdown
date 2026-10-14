@@ -47,7 +47,7 @@ export function stepDarkness(d: DarknessState, dt: number, mapRadius: number): v
 }
 
 export function phaseLabel(d: DarknessState): string {
-  if (d.finale) return 'NIGHTFALL: Darkrai is here';
+  if (d.finale) return 'SHOWDOWN: Darkrai is here';
   if (d.phase === 0) return 'daylight';
   return `darkness phase ${d.phase}`;
 }

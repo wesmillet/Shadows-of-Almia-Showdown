@@ -1,0 +1,12 @@
+{
+  "_comment": "Which character from assets/rangers/manifest.json plays each role. A role whose character is missing from the manifest draws the labeled placeholder (the Team Dim Sun grunt has no sheet yet).",
+  "roles": {
+    "player": { "character": "union_00", "name": "Player Ranger" },
+    "trainer_a": { "character": "union_06", "name": "Sven" },
+    "trainer_b": { "character": "union_08", "name": "Wendy" },
+    "host": { "character": "union_05", "name": "Ranger Union host" },
+    "staff_a": { "character": "civ_06", "name": "Outpost staff" },
+    "staff_b": { "character": "civ_09", "name": "Outpost staff" },
+    "grunt": { "character": "dimsun_grunt", "name": "Team Dim Sun Grunt (placeholder)" }
+  }
+}

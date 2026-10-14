@@ -1,4 +1,4 @@
-# Nightfall Royale: build plan
+# Shadows of Almia Showdown: build plan
 
 A standalone browser demo: a Pokémon battle royale with PMD SpriteCollab
 character sprites over hi-res painted terrain. TypeScript, Vite, one HTML
@@ -10,17 +10,17 @@ lighting. No game framework.
 ```
 assets/pokemon/<dex>/     SpriteCollab folder (AnimData.xml, *-Anim/-Offsets/-Shadow.png, credits.txt)
 assets/portraits/<dex>/   SpriteCollab portraits (Normal.png and the other emotions)
-assets/rangers/           overworld walking sheets + manifest.json (per-character slicing)
+assets/rangers/           Shadows of Almia overworld NPC sheets + manifest.json (shared 15-frame table)
 assets/tiles/             painted 128 px tilesets + Tiled JSON maps (optional; procedural fallback)
 assets/CREDITS.md         generated from every credits.txt
-data/*.json               species, moves, items, types, spawns, config
+data/*.json               species, moves, items, types, spawns, characters (roles), config
 src/core                  loop (fixed step + interpolation), input, rng, noise, math
 src/sprites               AnimData parser, Offsets parser, sprite loader, animation player, ranger sheets, placeholders
 src/ground                GroundRenderer interface, ProceduralGround, TiledGround, decor
 src/render                view/camera, world drawing, WebGL lighting pass, VFX families, floating text
 src/sim                   types chart, damage, entities, battle, AI, wild, items, catching, darkness, match
 src/ui                    screens (title, roll, match, end) and the HUD
-scripts/                  fetch-sprites.py, fetch-rangers.py
+scripts/                  fetch-sprites.py
 ```
 
 ## Fixed decisions

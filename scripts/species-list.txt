@@ -1,4 +1,4 @@
-# Nightfall Royale cast. One SpriteCollab dex number per line; "#" starts a comment.
+# Shadows of Almia Showdown cast. One SpriteCollab dex number per line; "#" starts a comment.
 # Starter pool (tier 1)
 0387  # Turtwig
 0390  # Chimchar

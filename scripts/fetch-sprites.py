@@ -99,7 +99,7 @@ def build_credits(tracker=None):
              'Pokémon sprites and portraits are from the PMDCollab SpriteCollab project',
              '(https://github.com/PMDCollab/SpriteCollab), licensed CC BY-NC 4.0',
              '(https://creativecommons.org/licenses/by-nc/4.0/). Pokémon is a trademark of',
-             'Nintendo / Creatures Inc. / GAME FREAK inc. Nightfall Royale is a',
+             'Nintendo / Creatures Inc. / GAME FREAK inc. Shadows of Almia Showdown is a',
              'non-commercial fan demo.', '',
              'Each folder keeps its original `credits.txt` (date, artist id, current/old,',
              'license, sheets). The current artists per folder, resolved through',
@@ -120,9 +120,10 @@ def build_credits(tracker=None):
                 tag = ' (earlier version)' if row['status'] == 'OLD' else ''
                 lines.append(f"- {who['name']}{contact}{tag}: {row['items'] or 'all'}")
             lines.append('')
-    rangers = os.path.join(ASSETS, 'rangers', 'CREDITS.txt')
+    rangers = os.path.join(ASSETS, 'rangers', 'README.md')
     if os.path.isfile(rangers):
-        lines += ['## Trainer and NPC sheets', '', 'See `assets/rangers/CREDITS.txt`.', '']
+        lines += ['## Trainer and NPC sheets', '', 'Pokémon Ranger 2: Shadows of Almia overworld NPCs ripped by Lemon for The',
+                  'Spriters Resource; see `assets/rangers/README.md` and the root `CREDITS.md`.', '']
     tiles = os.path.join(ASSETS, 'tiles', 'CREDITS.txt')
     if os.path.isfile(tiles):
         lines += ['## Terrain', '', 'See `assets/tiles/CREDITS.txt`.', '']

@@ -18,7 +18,7 @@ function assetsPlugin(): Plugin {
     '.ttf': 'font/ttf',
   };
   return {
-    name: 'nightfall-assets',
+    name: 'showdown-assets',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = (req.url ?? '').split('?')[0] ?? '';

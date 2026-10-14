@@ -1,10 +1,11 @@
-# Nightfall Royale
+# Shadows of Almia Showdown
 
 A browser demo: a Pokémon battle royale with Pokémon Mystery Dungeon
-(PMDCollab SpriteCollab) character sprites over hi-res painted terrain.
-Single HTML entry, TypeScript, Vite, Canvas 2D for the world and a WebGL
-lighting pass on top. Non-commercial fan project; every artist is listed in
-`assets/CREDITS.md`.
+(PMDCollab SpriteCollab) Pokémon sprites and Pokémon Ranger: Shadows of
+Almia overworld NPCs over hi-res painted terrain. Single HTML entry,
+TypeScript, Vite, Canvas 2D for the world and a WebGL lighting pass on top.
+Non-commercial fan project; see `CREDITS.md` (sources) and
+`assets/CREDITS.md` (generated per-sprite SpriteCollab credits).
 
 ```
 npm install
@@ -41,7 +42,7 @@ crystal and hunts the remaining trainers with Dark Void rings and Dark
 Pulse lines.
 
 URL flags for testing: `?seed=<text>` fixes the island, `?party=0025,0387`
-skips the title and roll with that party. `window.nightfall` exposes the
+skips the title and roll with that party. `window.showdown` exposes the
 live match in the console.
 
 ## Asset layout
@@ -56,8 +57,8 @@ assets/
                           <Action>-Anim.png, -Shadow.png, -Offsets.png
   portraits/<dex>/        SpriteCollab portraits (Normal.png and the other
                           emotions) for the HUD
-  rangers/                overworld walking sheets + manifest.json (per-character
-                          slicing) + CREDITS.txt
+  rangers/                Shadows of Almia overworld NPC sheets (civ_00-12,
+                          union_00-09) + manifest.json + README.md
   tiles/                  optional painted tileset + Tiled JSON map (see below)
   vfx/                    optional hand-made effect strips (see moves.json)
   CREDITS.md              generated: SpriteCollab license and per-folder artists
@@ -67,6 +68,7 @@ data/
   items.json              the ground items and what they do
   types.json              the 18-type chart and type colours
   spawns.json             wild spawn tables per biome, starter and trainer pools
+  characters.json         which manifest character plays each role (player, AI trainers, host, staff, grunt)
   config.json             every tunable (speeds, darkness schedule, catch, outposts…)
 ```
 
@@ -112,24 +114,28 @@ No code changes: the registry preloads every species listed in
 
 ### Trainers and NPCs
 
-`assets/rangers/manifest.json` slices each character's sheet because frame
-sizes differ per sheet:
+The humans are generic overworld NPCs from Pokémon Ranger 2: Shadows of
+Almia (ripped by Lemon for The Spriters Resource), one packed PNG per
+character under `assets/rangers/`. `assets/rangers/manifest.json` gives
+each character's cell size (`frame_w`, `frame_h`, 20-26 by 32-36 px) and
+the shared 15-frame table: `idle_down` (0), `idle_left` (1), `idle_up`
+(2), `walk_left` (3-8, a six-frame cycle), `walk_down` (9-11), `walk_up`
+(12-14); right-facing poses are the left ones mirrored (`mirror`). Sprites
+are anchored bottom-centre and drawn at the same integer 3x as the Pokémon.
 
-```json
-"player": { "file": "player.png", "layout": "grid", "frameWidth": 20, "frameHeight": 38,
-            "facings": ["down", "left", "right", "up"], "framesPerFacing": 3,
-            "walkCycle": [0, 1, 2, 1], "idleFrame": 1, "footY": 36 }
-```
+`data/characters.json` says who plays which role:
 
-`layout: "grid"` is one row per facing (the Pokémon Ranger: Shadows of
-Almia 3-frame walk); `layout: "column"` stacks every frame in one column.
-The roles are `player`, `trainer_a`, `trainer_b` (the two AI Top Rangers),
-`ranger` (patrols), `grunt` (Team Dim Sun) and `host` (title screen). The
-Almia sheets are not in any open repository, so `scripts/fetch-rangers.py`
-fills the roles with Pokémon Platinum field sprites from the
-pret/pokeplatinum decompilation as stand-ins (marked `standIn: true`); the
-`grunt` role ships without a sheet and shows the labeled placeholder. Drop
-the real sheets over the same file names and update the slicing entries.
+| role | character | used for |
+| --- | --- | --- |
+| `player` | `union_00` | you |
+| `trainer_a`, `trainer_b` | `union_06`, `union_08` | the AI trainers Sven and Wendy |
+| `host` | `union_05` | the Ranger Union host on the title screen |
+| `staff_a`, `staff_b` | `civ_06`, `civ_09` | the staff patrolling the two outposts |
+| `grunt` | `dimsun_grunt` | Team Dim Sun; no sheet yet, so it is the labeled placeholder |
+
+To recast a role, change its `character` to any key in the manifest. To
+add a sheet, pack its 15 frames left to right in the same order, add an
+entry to the manifest with its cell size, and point a role at it.
 
 ### Swapping in a painted tileset
 
@@ -167,13 +173,13 @@ Every move names one of five procedural VFX families (`burst`,
 
 ```
 src/core       fixed 60 Hz loop with render interpolation, input, seeded RNG, simplex noise
-src/sprites    AnimData/Offsets parsers, sprite registry and animation player, ranger sheets, placeholders
+src/sprites    AnimData/Offsets parsers, sprite registry and animation player, Almia NPC sheets, placeholders
 src/ground     GroundRenderer, procedural painter, Tiled loader
 src/render     view/camera (continuous ground scale, integer sprite scale), world drawing, WebGL lighting pass
 src/sim        pure simulation: data accessors, battle (areas, damage, status), AI, catching, darkness, items, match
 src/vfx        the five VFX families, sprite strips, lights, floating numbers
 src/ui         title, starter roll, match screen (events → VFX/shake/hit-stop), HUD, results
-scripts/       fetch-sprites.py (sparse checkout + credits), fetch-rangers.py (Platinum stand-ins)
+scripts/       fetch-sprites.py (sparse checkout + credits)
 ```
 
 The simulation never touches a canvas; the battle system emits events

@@ -3,7 +3,7 @@
 Pokémon sprites and portraits are from the PMDCollab SpriteCollab project
 (https://github.com/PMDCollab/SpriteCollab), licensed CC BY-NC 4.0
 (https://creativecommons.org/licenses/by-nc/4.0/). Pokémon is a trademark of
-Nintendo / Creatures Inc. / GAME FREAK inc. Nightfall Royale is a
+Nintendo / Creatures Inc. / GAME FREAK inc. Shadows of Almia Showdown is a
 non-commercial fan demo.
 
 Each folder keeps its original `credits.txt` (date, artist id, current/old,
@@ -185,4 +185,5 @@ license, sheets). The current artists per folder, resolved through
 
 ## Trainer and NPC sheets
 
-See `assets/rangers/CREDITS.txt`.
+Pokémon Ranger 2: Shadows of Almia overworld NPCs ripped by Lemon for The
+Spriters Resource; see `assets/rangers/README.md` and the root `CREDITS.md`.

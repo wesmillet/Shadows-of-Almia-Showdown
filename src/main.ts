@@ -27,7 +27,7 @@ async function boot(): Promise<void> {
     ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, view.width, view.height);
-    text(view, 'NIGHTFALL ROYALE', view.width / 2, view.height / 2 - 20 * view.baseScale, 42, { align: 'center', weight: '800', color: '#cdbfff', ctx });
+    text(view, 'SHADOWS OF ALMIA SHOWDOWN', view.width / 2, view.height / 2 - 20 * view.baseScale, 42, { align: 'center', weight: '800', color: '#cdbfff', ctx });
     text(view, status, view.width / 2, view.height / 2 + 24 * view.baseScale, 16, { align: 'center', color: '#b9b4cc', ctx });
   };
   drawLoading();
@@ -60,20 +60,20 @@ async function boot(): Promise<void> {
     },
   };
 
-  const debug = window as unknown as { nightfall: Record<string, unknown> };
-  debug.nightfall = { view, seed };
+  const debug = window as unknown as { showdown: Record<string, unknown> };
+  debug.showdown = { view, seed };
 
   let currentGround: GroundRenderer = ground;
   let currentSeed = seed;
 
   const startMatch = (starters: string[]): void => {
     const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters);
-    debug.nightfall.match = match;
+    debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
     });
     game.setScreen(screen);
-    console.info(`[nightfall] match started with ${starters.join(', ')}`);
+    console.info(`[showdown] match started with ${starters.join(', ')}`);
   };
 
   const showRoll = (): void => {
@@ -112,10 +112,10 @@ async function boot(): Promise<void> {
     },
   });
   loop.start();
-  console.info(`[nightfall] seed ${seed}; ground: ${ground.label}; sprites ${Math.round(t1 - t0)} ms, terrain ${Math.round(performance.now() - t1)} ms`);
+  console.info(`[showdown] seed ${seed}; ground: ${ground.label}; sprites ${Math.round(t1 - t0)} ms, terrain ${Math.round(performance.now() - t1)} ms`);
 }
 
 boot().catch((e) => {
   console.error(e);
-  document.body.innerHTML = `<pre style="color:#fff;padding:2em">Nightfall Royale failed to start:\n${String(e?.stack ?? e)}</pre>`;
+  document.body.innerHTML = `<pre style="color:#fff;padding:2em">Shadows of Almia Showdown failed to start:\n${String(e?.stack ?? e)}</pre>`;
 });

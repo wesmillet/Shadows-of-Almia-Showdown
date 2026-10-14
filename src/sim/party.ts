@@ -19,6 +19,7 @@ import type { GroundRenderer } from '../ground/types';
 import { CONFIG, statsAtLevel } from './data';
 import type { Mon, Trainer } from './entities';
 import { canStand, tryMove } from './movement';
+import type { Nav } from './nav';
 
 export type Behavior = 'aggressive' | 'guard' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
 export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'passive', 'hold', 'roam', 'roam-aggressive'];
@@ -66,6 +67,8 @@ export interface PartyWorld {
   attack: (m: Mon, target: Mon, range: number) => void;
   centerX: number;
   centerY: number;
+  /** Routes around cliffs and water when the way to the goal is not a straight line. */
+  nav?: Nav;
 }
 
 function nearestHostile(m: Mon, w: PartyWorld, range: number, from = { x: m.x, y: m.y }, wildOnly = false): Mon | null {
@@ -110,8 +113,17 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, speed:
   let vx = 0;
   let vy = 0;
   if (d > stopAt) {
-    vx = (dx / d) * speed;
-    vy = (dy / d) * speed;
+    let ux = dx / d;
+    let uy = dy / d;
+    if (w.nav && d > 1.2 && !w.nav.clearLine(m.x, m.y, px, py)) {
+      const step = w.nav.dir(m.x, m.y, px, py);
+      if (step) {
+        ux = step.x;
+        uy = step.y;
+      }
+    }
+    vx = ux * speed;
+    vy = uy * speed;
   }
   const s = separation(m, t, w);
   vx += s.x * CONFIG.party.separationForce;

@@ -17,6 +17,7 @@ import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type LootTier } from './items';
 import { canStand, tryMove } from './movement';
+import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
 
@@ -70,10 +71,13 @@ export class Match {
 
   /** Player party size limit (demo teams may start above the normal cap). */
   readonly partyCap: number;
+  /** Routes around cliffs, water and buildings (ladders and bridges are the only crossings). */
+  readonly nav: Nav;
 
   constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
+    this.nav = new Nav(this.ground);
     this.rng = deps.rng;
     this.sprites = deps.sprites;
     this.battle = new BattleSystem(this.rng);
@@ -562,6 +566,13 @@ export class Match {
       if (d > stop) {
         dx /= d;
         dy /= d;
+        if (!this.nav.clearLine(t.x, t.y, target.x, target.y)) {
+          const step = this.nav.dir(t.x, t.y, target.x, target.y);
+          if (step) {
+            dx = step.x;
+            dy = step.y;
+          }
+        }
         const speed = CONFIG.trainers.speed * (t.ai === 'flee' ? 1.1 : 1);
         moved = tryMove(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius);
         t.dir = dirFromVector(dx, dy, t.dir);
@@ -765,6 +776,7 @@ export class Match {
     }
     this.time += dt;
     this.ground.update(dt);
+    this.nav.tick(dt);
     for (const m of this.renderMons()) {
       m.px = m.x;
       m.py = m.y;
@@ -864,6 +876,7 @@ export class Match {
       active: (m) => BattleSystem.active(m),
       inHostileTelegraph: (m) => this.inHostileTelegraph(m),
       attack: (m, target, range) => this.autoAttack(m, target, range),
+      nav: this.nav,
       centerX: this.centerX,
       centerY: this.centerY,
     };

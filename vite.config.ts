@@ -41,11 +41,14 @@ function assetsPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
-  base: './',
+/** Served from https://wesmillet.github.io/Shadows-of-Almia-Showdown/ on GitHub Pages. */
+const PAGES_BASE = '/Shadows-of-Almia-Showdown/';
+
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? PAGES_BASE : '/',
   publicDir: false,
   plugins: [assetsPlugin()],
   server: { port: 5173, host: true },
   build: { target: 'es2022', assetsInlineLimit: 0 },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
-});
+}));

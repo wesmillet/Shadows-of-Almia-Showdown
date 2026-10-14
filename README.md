@@ -14,6 +14,12 @@ npm test           # Vitest unit tests for the simulation and the loaders
 npm run build      # typecheck + production build into dist/ (assets copied)
 ```
 
+Every push to `main` runs `.github/workflows/deploy.yml`, which installs,
+tests, builds and publishes `dist/` to GitHub Pages at
+https://wesmillet.github.io/Shadows-of-Almia-Showdown/ (one-time setting:
+Settings → Pages → Source: "GitHub Actions"). Production builds use that
+repository path as the Vite base; the dev server stays at `/`.
+
 ## Playing
 
 Title → **Roll Starter** → a vertical reel of four candidates spins and

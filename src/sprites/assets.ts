@@ -5,7 +5,8 @@
  * placeholder from `placeholder()` instead. Nothing here ever throws for a
  * missing asset.
  */
-export const ASSET_ROOT = 'assets/';
+/** Asset URLs follow Vite's base path (/ in dev, the repository path on GitHub Pages). */
+export const ASSET_ROOT = `${import.meta.env.BASE_URL}assets/`;
 
 const warned = new Set<string>();
 

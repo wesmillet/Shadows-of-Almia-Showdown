@@ -70,7 +70,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.restore();
   }
   ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
-  if (m.flash > 0) {
+  if (m.flash > 0 && !m.fainted) {
     // Two-frame white flash: draw the frame again through a white tint.
     ctx.save();
     ctx.globalCompositeOperation = 'source-atop';

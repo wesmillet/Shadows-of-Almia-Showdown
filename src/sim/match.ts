@@ -12,6 +12,7 @@ import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { newThrow, rollCatch, stepThrow, type Throw } from './catching';
 import { CONFIG, SPAWNS, species, statsAtLevel } from './data';
+import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
 import { ITEM_LIST, ITEMS } from './items';
@@ -49,8 +50,13 @@ export class Match {
   throws: Throw[] = [];
   darkrai: Mon | null = null;
   outcome: MatchOutcome = null;
+  readonly darkness: DarknessState = newDarkness();
   /** Safe radius of the darkness in tiles (Infinity until the first pulse). */
-  darkRadius = Infinity;
+  get darkRadius(): number {
+    return this.darkness.radius;
+  }
+  /** Drifting motes in the dark, in world tiles (render-only state kept here so it is deterministic). */
+  motes: Array<{ x: number; y: number; vx: number; vy: number; life: number; size: number }> = [];
   /** Centre of the map, where the Shadow Crystal stands. */
   readonly centerX: number;
   readonly centerY: number;
@@ -372,6 +378,7 @@ export class Match {
         const needs = t.party.some((m) => m.fainted || m.hp < m.maxHp || m.status);
         if (!needs) continue;
         o.users.push(t);
+        if (t.healing === 0 && !t.isPlayer) this.battle.events.push({ type: 'notice', text: `Beacon: ${t.name} is healing at an outpost`, seconds: 2 });
         t.healing += dt;
         if (t.healing >= CONFIG.outpost.healSeconds) {
           t.healing = 0;
@@ -709,6 +716,8 @@ export class Match {
     this.stepItems(dt);
     this.stepOutposts(dt);
     this.stepThrows(dt);
+    this.stepDarkness(dt);
+    if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     for (const m of this.mons()) {
       this.battle.stepMon(m, dt, () => this.mons());
       m.anim.dir = m.dir;
@@ -940,6 +949,122 @@ export class Match {
     }
     if (!this.player.alive) this.outcome = 'loss';
     else if (this.trainers.length > 0 && this.trainers.every((t) => !t.alive)) this.outcome = 'win';
+  }
+
+  private stepDarkness(dt: number): void {
+    const d = this.darkness;
+    const mapRadius = Math.hypot(this.centerX, this.centerY) + 1;
+    const wasPhase = d.phase;
+    stepDarkness(d, dt, mapRadius);
+    if (d.pulsed) {
+      this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
+      if (d.finale && !this.darkrai) this.spawnDarkrai();
+    }
+    void wasPhase;
+    if (!Number.isFinite(d.radius)) return;
+    const c = CONFIG.darkness;
+    for (const m of this.mons()) {
+      if (m.boss) continue;
+      const dark = inDarkness(d, m.x, m.y, this.centerX, this.centerY);
+      m.inDark = dark;
+      if (m.wild) m.aura = dark;
+      if (dark) {
+        m.outsideDark = 0;
+        if (m.status === null) {
+          m.drowsy += dt;
+          if (m.drowsy >= c.drowsySeconds) {
+            m.drowsy = 0;
+            this.battle.applyStatus(m, 'sleep');
+            m.statusTimer = 1e9; // only Full Heal or the light wakes a darkness sleeper
+            this.battle.events.push({ type: 'text', mon: m, text: 'The darkness lulls it to sleep…' });
+          }
+        }
+        if (m.status === 'sleep') {
+          m.busy -= dt;
+          if (m.busy <= 0) {
+            m.busy = 1;
+            const dmg = Math.max(1, Math.floor(m.maxHp * c.badDreamsFraction));
+            this.battle.applyDamage(m, dmg, this.darkrai);
+            this.battle.events.push({ type: 'tick', target: m, damage: dmg, source: 'dreams' });
+          }
+        }
+      } else {
+        m.drowsy = Math.max(0, m.drowsy - dt * 2);
+        if (m.status === 'sleep' && m.statusTimer > 1e8) {
+          m.outsideDark += dt;
+          if (m.outsideDark >= c.wakeAfterSecondsOutside) this.battle.cureStatus(m);
+        }
+      }
+    }
+    // Motes drift through the dark part of the screen around the player.
+    const p = this.player;
+    for (let i = this.motes.length - 1; i >= 0; i--) {
+      const mo = this.motes[i] as (typeof this.motes)[number];
+      mo.x += mo.vx * dt;
+      mo.y += mo.vy * dt;
+      mo.life -= dt;
+      if (mo.life <= 0 || !inDarkness(d, mo.x, mo.y, this.centerX, this.centerY)) this.motes.splice(i, 1);
+    }
+    if (this.motes.length < 90) {
+      for (let k = 0; k < 3; k++) {
+        const x = p.x + this.rng.range(-7, 7);
+        const y = p.y + this.rng.range(-4, 4);
+        if (inDarkness(d, x, y, this.centerX, this.centerY)) {
+          this.motes.push({ x, y, vx: this.rng.range(-0.25, 0.25), vy: this.rng.range(-0.35, -0.05), life: this.rng.range(2, 5), size: this.rng.range(0.03, 0.09) });
+        }
+      }
+    }
+  }
+
+  private spawnDarkrai(): void {
+    const d = this.makeMon('0491', CONFIG.battle.bossLevel, null, this.centerX, this.centerY - 0.6);
+    d.boss = true;
+    d.wild = false;
+    d.maxHp = d.hp = d.stats.hp * CONFIG.battle.bossHpMultiplier;
+    d.busy = 2.5;
+    this.darkrai = d;
+  }
+
+  /** Darkrai hovers by the crystal and punishes whoever is closest: Dark Void rings, Dark Pulse lines. */
+  private stepDarkrai(d: Mon, dt: number): void {
+    if (d.fainted) return;
+    let target: Mon | null = null;
+    let bd = 10;
+    for (const t of this.allTrainers) {
+      const m = lead(t);
+      if (!t.alive || !m) continue;
+      const dist = Math.hypot(m.x - d.x, m.y - d.y);
+      if (dist < bd) {
+        bd = dist;
+        target = m;
+      }
+    }
+    if (!target) {
+      d.anim.dir = d.dir;
+      return;
+    }
+    // Drift toward the target, never far from the crystal.
+    const toC = Math.hypot(d.x - this.centerX, d.y - this.centerY);
+    if (bd > 2.6 && toC < 4 && !d.casting) {
+      const k = (1.4 * dt) / bd;
+      d.x += (target.x - d.x) * k;
+      d.y += (target.y - d.y) * k;
+      if (!d.moving) {
+        d.moving = true;
+        d.anim.play('Walk');
+      }
+    } else if (d.moving && !d.casting) {
+      d.moving = false;
+      d.anim.play('Idle');
+    }
+    d.dir = dirFromVector(target.x - d.x, target.y - d.y, d.dir);
+    d.busy -= dt;
+    if (d.busy <= 0 && !d.casting) {
+      d.busy = this.rng.range(1.8, 3);
+      // Dark Void (ring) when the target is close, otherwise Dark Pulse (line).
+      const slot = bd < 2.3 && (d.cooldowns[0] ?? 0) <= 0 ? 0 : (d.cooldowns[1] ?? 0) <= 0 ? 1 : this.battle.chooseMove(d, target);
+      if (slot >= 0) this.battle.tryCast(d, slot, target.x, target.y, target.id);
+    }
   }
 
   eliminate(t: Trainer): void {

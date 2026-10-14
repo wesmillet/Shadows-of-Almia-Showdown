@@ -16,6 +16,7 @@ import type { Match } from '../sim/match';
 import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
+import { phaseLabel } from '../sim/darkness';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
 import { drawItemIcon, Hud, type HudState } from './hud';
 import { ITEMS } from '../sim/items';
@@ -34,11 +35,14 @@ export class MatchScreen implements Screen {
   private aiming = false;
   private readonly strips = new Map<string, HTMLImageElement | null>();
 
+  private endTimer = -1;
+
   constructor(
     protected readonly ctx: GameContext,
     readonly match: Match,
     protected readonly rangers: RangerSprites,
     protected readonly assets: Assets,
+    private readonly onEnd?: () => void,
   ) {
     this.lighting = new Lighting(ctx.view);
     this.hud = new Hud(ctx.view);
@@ -52,6 +56,17 @@ export class MatchScreen implements Screen {
   }
 
   step(dt: number, input: Input): void {
+    if (this.match.outcome) {
+      // Let the last hit land and the camera settle before the results.
+      if (this.endTimer < 0) this.endTimer = 1.6;
+      this.endTimer -= dt;
+      this.vfx.update(dt);
+      if (this.endTimer <= 0 && this.onEnd) {
+        this.onEnd();
+        this.endTimer = 99;
+      }
+      return;
+    }
     this.handleInput(input);
     this.match.step(dt, input);
     this.consumeEvents();
@@ -457,21 +472,90 @@ export class MatchScreen implements Screen {
     if (first) drawPointLight(v, first.x, first.y, 1.2, '#ffe8c0', 0.12);
     for (const o of this.match.outposts) drawPointLight(v, o.x, o.y, 2.2, '#7dffc0', o.users.length ? 0.5 : 0.22, 0);
     for (const it of this.match.items) drawPointLight(v, it.x, it.y, 0.5, '#ffe9a8', 0.25, 0.1);
+    // The Shadow Crystal pulses; brighter as the night deepens.
+    const t = this.match.time;
+    const d = this.match.darkness;
+    const crystalGlow = 0.25 + 0.15 * Math.sin(t * 2) + (Number.isFinite(d.radius) ? 0.25 : 0);
+    drawPointLight(v, this.match.centerX, this.match.centerY, 2.8, '#b36bff', crystalGlow, 0.6);
+    // Drifting motes in the dark and purple auras on wild Pokémon.
+    for (const mo of this.match.motes) drawPointLight(v, mo.x, mo.y, mo.size * 6, '#8a4dff', 0.35 * Math.min(1, mo.life), 0);
+    for (const m of this.match.mons()) if (m.aura) drawPointLight(v, m.x, m.y, 0.9, '#9b5cff', 0.45, 0.25);
+    if (this.match.darkrai && !this.match.darkrai.fainted) drawPointLight(v, this.match.darkrai.x, this.match.darkrai.y, 2.2, '#6a2cff', 0.5, 0.5);
+    for (const o of this.match.outposts) if (o.users.length) drawPointLight(v, o.x, o.y, 5, '#7dffc0', 0.12, 0);
     this.vfx.drawLights(v);
   }
 
+  /** The Shadow Crystal at the map centre: a faceted procedural gem on a dark pedestal. */
+  private drawCrystal(v: View): void {
+    const ctx = v.ctx;
+    const cx = v.toScreenX(this.match.centerX);
+    const cy = v.toScreenY(this.match.centerY);
+    const ppt = v.pxPerTile;
+    const t = this.match.time;
+    const finale = this.match.darkness.finale;
+    drawSoftShadow(v, cx, cy, 0.7, 0.4);
+    ctx.save();
+    // pedestal
+    ctx.fillStyle = '#2a2140';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 0.55 * ppt, 0.25 * ppt, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(190,140,255,0.5)';
+    ctx.lineWidth = 2 * v.baseScale;
+    ctx.stroke();
+    const bob = Math.sin(t * 1.5) * 0.04 * ppt;
+    const h = (finale ? 0.7 : 1.2) * ppt;
+    const w = 0.42 * ppt;
+    const top = cy - 0.2 * ppt - h - bob;
+    const mid = cy - 0.2 * ppt - h * 0.35 - bob;
+    const bottom = cy - 0.15 * ppt - bob;
+    const facets: Array<[number[], string]> = [
+      [[cx, top, cx - w * 0.5, mid, cx, bottom], finale ? '#4a2a66' : '#8d5cff'],
+      [[cx, top, cx + w * 0.5, mid, cx, bottom], finale ? '#2f1b44' : '#5a2fd1'],
+      [[cx - w * 0.5, mid, cx - w * 0.2, mid + h * 0.1, cx, bottom], finale ? '#3a2255' : '#6b3fe0'],
+      [[cx + w * 0.5, mid, cx + w * 0.2, mid + h * 0.1, cx, bottom], finale ? '#241535' : '#4320a8'],
+    ];
+    for (const [pts, color] of facets) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(pts[0] as number, pts[1] as number);
+      ctx.lineTo(pts[2] as number, pts[3] as number);
+      ctx.lineTo(pts[4] as number, pts[5] as number);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.strokeStyle = `rgba(230,200,255,${0.5 + 0.3 * Math.sin(t * 3)})`;
+    ctx.lineWidth = 1.5 * v.baseScale;
+    ctx.beginPath();
+    ctx.moveTo(cx, top);
+    ctx.lineTo(cx, bottom);
+    ctx.stroke();
+    if (finale) {
+      // cracks
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.2, mid);
+      ctx.lineTo(cx + w * 0.1, mid + h * 0.2);
+      ctx.lineTo(cx - w * 0.05, bottom - h * 0.1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   protected lightingParams(v: View): { cold: number; darkRadius: number; darkFeather: number; darkAmount: number } {
-    void v;
-    return { cold: clamp(this.match.time / CONFIG.lighting.dayToColdSeconds, 0, 1), darkRadius: 1e6, darkFeather: 1, darkAmount: 0 };
+    const d = this.match.darkness;
+    const cold = clamp(this.match.time / CONFIG.lighting.dayToColdSeconds, 0, 1);
+    if (!Number.isFinite(d.radius)) return { cold, darkRadius: 1e6, darkFeather: 1, darkAmount: 0 };
+    return { cold: Math.max(cold, 0.4), darkRadius: d.radius * v.pxPerTile, darkFeather: 1.6 * v.pxPerTile, darkAmount: 0.92 };
   }
 
   protected hudState(v: View): HudState {
     return {
       mouseX: this.ctx.input.mouseX,
       mouseY: this.ctx.input.mouseY,
-      darkRadius: Infinity,
-      darkPhaseLabel: 'daylight',
-      nextPulseIn: -1,
+      darkRadius: this.match.darkness.radius,
+      darkPhaseLabel: phaseLabel(this.match.darkness),
+      nextPulseIn: this.match.darkness.nextPulseIn,
       notice: this.notice,
       selectedItem: this.selectedItem,
       aiming: this.aiming ? Math.max(0.02, this.aimPower) : 0,
@@ -484,6 +568,7 @@ export class MatchScreen implements Screen {
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
     for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
     for (const th of this.match.throws) list.push({ y: th.y + 0.01, draw: () => this.drawThrow(v, th) });
+    list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
     return list;
   }
 
@@ -506,6 +591,7 @@ export class MatchScreen implements Screen {
       extra: this.drawExtraWorld(v),
     });
     this.vfx.draw(v);
+    this.drawMotes(v);
     v.beginLights();
     this.drawLights(v);
     const lp = this.lightingParams(v);
@@ -521,6 +607,19 @@ export class MatchScreen implements Screen {
     this.hud.draw(this.match, this.hudState(v));
     this.floaters.draw(v, v.hud);
     this.drawOverlay(v);
+  }
+
+  private drawMotes(v: View): void {
+    const ctx = v.ctx;
+    ctx.save();
+    for (const mo of this.match.motes) {
+      const a = 0.35 * Math.min(1, mo.life);
+      ctx.fillStyle = `rgba(200,160,255,${a})`;
+      ctx.beginPath();
+      ctx.arc(v.toScreenX(mo.x), v.toScreenY(mo.y), Math.max(1, mo.size * v.pxPerTile), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   protected drawOverlay(_v: View): void {}

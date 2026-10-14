@@ -14,14 +14,17 @@
     "burnDamageFraction": 0.0625,
     "paralysisSkipChance": 0.25,
     "paralysisSpeed": 0.5,
-    "sleepSeconds": [3, 6]
+    "sleepSeconds": [3, 6],
+    "bossDamageScale": 0.55,
+    "bossLevel": 11,
+    "bossHpMultiplier": 6
   },
   "items": { "inventorySize": 6, "groundItems": 44, "pickupRadius": 0.6 },
   "catch": { "aimMaxTiles": 5, "aimSeconds": 1.2, "wobbleSeconds": 0.55, "statusBonus": { "sleep": 2, "paralysis": 1.5, "burn": 1.5 } },
   "outpost": { "healSeconds": 3, "radius": 1.3 },
   "darkness": {
     "pulseSeconds": 90,
-    "radiiTiles": [34, 20, 12, 6, 3],
+    "radiiTiles": [22, 13, 7, 3],
     "sweepSeconds": 12,
     "drowsySeconds": 4,
     "badDreamsFraction": 0.0625,

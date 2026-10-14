@@ -94,6 +94,7 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   const crit = rng.chance(CONFIG.battle.critChance);
   if (crit) dmg *= 1.5;
   if (attacker.status === 'burn' && m.category === 'physical') dmg *= 0.5;
+  if (attacker.boss) dmg *= CONFIG.battle.bossDamageScale;
   dmg *= rng.range(0.85, 1);
   return { damage: Math.max(1, Math.floor(dmg)), effectiveness: eff, crit };
 }
@@ -291,6 +292,8 @@ export class BattleSystem {
     mon.casting = null;
     mon.status = null;
     mon.moving = false;
+    mon.flash = 0;
+    mon.aura = false;
     mon.anim.play('Faint', { restart: true, loop: false });
     this.fainting.push({ mon, t: 1.1 });
     if (by?.owner && by.owner !== mon.owner) by.owner.stats.knockouts++;

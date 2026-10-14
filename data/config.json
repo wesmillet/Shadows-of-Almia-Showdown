@@ -1,6 +1,16 @@
 {
   "map": { "cols": 48, "rows": 48, "tileSize": 128 },
-  "player": { "speedTilesPerSec": 4, "radius": 0.28, "followSpacingTiles": 0.85, "partyCap": 4, "level": 15 },
+  "player": { "speedTilesPerSec": 4, "radius": 0.28, "partyCap": 4, "level": 15 },
+  "party": {
+    "leashLead": 2.0, "leash": 3.2, "leashPassive": 1.6,
+    "separation": 0.75, "separationForce": 2.2,
+    "followSpeed": 4.4, "hurrySpeed": 6.0, "chaseSpeed": 4.8, "wanderSpeed": 1.1,
+    "pauseMin": 0.4, "pauseMax": 1.1,
+    "aggressiveRange": 8, "guardRange": 3, "roamHuntRange": 8, "roamFleeFraction": 0.25,
+    "xpShareRange": 8, "xpBase": 40, "xpPerLevel": 15, "xpKoBase": 20, "xpKoPerLevel": 12,
+    "aiRoamEverySeconds": 45, "aiRoamChance": 0.4, "aiRoamSeconds": 40,
+    "wildDropChance": 0.4
+  },
   "wild": { "wanderSpeed": 1.6, "idleMin": 1.5, "idleMax": 4.5, "wanderRadius": 3, "aggroRange": 3.5 },
   "trainers": { "count": 2, "speed": 3.4, "fleeHpFraction": 0.3, "partySize": 3, "level": 14, "aggroRange": 4.5 },
   "battle": {

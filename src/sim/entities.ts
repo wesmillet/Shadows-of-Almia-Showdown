@@ -1,6 +1,7 @@
 import type { Dir8 } from '../core/math';
 import type { AnimPlayer, PokemonSprites } from '../sprites/pokemonSprite';
 import type { SpeciesDef, StatBlock } from './data';
+import type { Behavior } from './party';
 
 export type Status = 'sleep' | 'burn' | 'paralysis' | null;
 
@@ -54,6 +55,17 @@ export interface Mon {
   target: Mon | null;
   /** True while shut inside a Poké Ball: cannot act or be targeted. */
   captured: boolean;
+  /** Party behaviour (see sim/party.ts). */
+  behavior: Behavior;
+  xp: number;
+  /** Formation wandering state. */
+  wander: { x: number; y: number; t: number } | null;
+  wanderPause: number;
+  /** Roaming: current destination, and whether it has been told to come back. */
+  roamTarget: { x: number; y: number } | null;
+  recall: boolean;
+  /** Seconds since this Pokémon last took damage (info bars show after a hit). */
+  sinceHit: number;
 }
 
 export interface TrainerStats {
@@ -79,7 +91,6 @@ export interface Trainer {
   moving: boolean;
   walkPhase: number;
   party: Mon[];
-  history: Array<{ x: number; y: number }>;
   items: Array<InventorySlot | null>;
   alive: boolean;
   stats: TrainerStats;
@@ -93,6 +104,8 @@ export interface Trainer {
   outpostReady: number;
   /** Seconds until the AI's lead picks its next move. */
   attackTimer: number;
+  /** AI: seconds until it reconsiders sending a member roaming. */
+  roamTimer: number;
 }
 
 export interface InventorySlot {
@@ -108,8 +121,9 @@ export interface GroundItem {
   bob: number;
 }
 
+/** The lead: the first member that is standing and with the trainer (not roaming, not in a ball). */
 export function lead(t: Trainer): Mon | null {
-  return t.party.find((m) => !m.fainted) ?? null;
+  return t.party.find((m) => !m.fainted && !m.captured && m.behavior !== 'roam' && m.behavior !== 'roam-aggressive') ?? null;
 }
 
 export function activeParty(t: Trainer): Mon[] {

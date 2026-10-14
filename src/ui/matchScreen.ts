@@ -17,6 +17,7 @@ import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
+import { isRoaming, nextBehavior } from '../sim/party';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
 import { drawItemIcon, Hud, type HudState } from './hud';
 import { ITEMS } from '../sim/items';
@@ -81,10 +82,30 @@ export class MatchScreen implements Screen {
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
-      else if (h?.kind === 'portrait') {
-        if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
+      else if (h?.kind === 'behavior') {
+        const m = this.match.player.party[h.index];
+        if (m && !m.fainted) {
+          m.behavior = nextBehavior(m.behavior);
+          m.recall = false;
+          this.say(`${m.name}: ${m.behavior.replace('-', ' ')}`, 1);
+        }
+      } else if (h?.kind === 'portrait') {
+        const m = this.match.player.party[h.index];
+        if (m && isRoaming(m)) {
+          this.hud.ping = { mon: m, t: 3 };
+          this.say(`${m.name} is ${Math.hypot(m.x - this.match.player.x, m.y - this.match.player.y).toFixed(0)} tiles away (see minimap)`, 1.5);
+        } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
     }
+    if (input.pressed('KeyR')) {
+      const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
+      const m = i >= 0 ? this.match.player.party[i] : undefined;
+      if (m && isRoaming(m)) {
+        m.recall = true;
+        this.say(`${m.name} is coming back`, 1.2);
+      }
+    }
+    if (this.hud.ping) this.hud.ping.t -= 1 / 60;
     // 1-4 always cast; Shift+1-6 (or the bag panel) uses items.
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
     for (let i = 0; i < 6; i++) {
@@ -118,7 +139,7 @@ export class MatchScreen implements Screen {
     void v;
   }
 
-  /** Where the aimed ball will land: toward the engaged enemy, else straight ahead; distance from the hold time. */
+  /** Where the aimed ball will land: toward the nearest wild Pokémon, else straight ahead; distance from the hold time. */
   protected aimPoint(): { x: number; y: number } {
     const p = this.match.player;
     const dist = 0.8 + this.aimPower * (CONFIG.catch.aimMaxTiles - 0.8);
@@ -230,6 +251,12 @@ export class MatchScreen implements Screen {
         if (ev.trainer.isPlayer) {
           this.floaters.add(ev.trainer.x, ev.trainer.y - 0.3, `Got ${ITEMS[ev.itemId]?.name ?? ev.itemId}`, '#ffe9a8', 14);
           if (this.selectedItem < 0) this.selectedItem = this.match.ballSlot(this.match.player);
+        }
+        break;
+      case 'xp':
+        if (ev.mon.owner?.isPlayer) {
+          this.floaters.add(ev.mon.x, ev.mon.y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
+          if (ev.levels > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.9, `Level ${ev.mon.level}!`, '#ffe76b', 18);
         }
         break;
       case 'eliminated':

@@ -6,12 +6,13 @@
 import { clamp } from '../core/math';
 import type { View } from '../render/view';
 import { lead } from '../sim/entities';
+import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
 import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS } from '../sim/items';
 import { darken, hit, lighten, rgba } from './screens';
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number };
 
 interface Rect {
   x: number;
@@ -37,6 +38,9 @@ const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d
 
 export class Hud {
   private portraitRects: Rect[] = [];
+  private behaviorRects: Rect[] = [];
+  /** Minimap ping for a roaming member (set by the screen). */
+  ping: { mon: import('../sim/entities').Mon; t: number } | null = null;
   private moveRects: Rect[] = [];
   private itemRects: Rect[] = [];
   private minimap: HTMLCanvasElement | null = null;
@@ -44,6 +48,10 @@ export class Hud {
   constructor(private readonly view: View) {}
 
   hitTest(x: number, y: number): HudHit | null {
+    for (let i = 0; i < this.behaviorRects.length; i++) {
+      const r = this.behaviorRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'behavior', index: i };
+    }
     for (let i = 0; i < this.moveRects.length; i++) {
       const r = this.moveRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'move', index: i };
@@ -185,6 +193,23 @@ export class Hud {
       ctx.fillStyle = '#5ef0a8';
       ctx.fillRect(x + o.x * k - 2 * s, y + o.y * k - 2 * s, 4 * s, 4 * s);
     }
+    // Roaming party members and the ping.
+    for (const m of match.player.party) {
+      if (m.fainted || !isRoaming(m)) continue;
+      ctx.fillStyle = '#ffd36b';
+      ctx.beginPath();
+      ctx.arc(x + m.x * k, y + m.y * k, 2.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (this.ping && this.ping.t > 0) {
+      const pm = this.ping.mon;
+      const r = (4 + ((this.ping.t * 3) % 1) * 10) * s;
+      ctx.strokeStyle = `rgba(255,220,120,${0.9 - ((this.ping.t * 3) % 1) * 0.8})`;
+      ctx.lineWidth = 2 * s;
+      ctx.beginPath();
+      ctx.arc(x + pm.x * k, y + pm.y * k, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     for (const t of match.trainers) {
       if (!t.alive) continue;
       ctx.fillStyle = '#ff5c5c';
@@ -208,11 +233,21 @@ export class Hud {
     ctx.restore();
   }
 
+  /** Index of the party card under the mouse, for the R (recall) key. */
+  hoveredPortrait(x: number, y: number): number {
+    for (let i = 0; i < this.portraitRects.length; i++) {
+      const r = this.portraitRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return i;
+    }
+    return -1;
+  }
+
   private drawParty(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
     const p = match.player;
     const cardW = 176 * s;
-    const cardH = 62 * s;
+    const cardH = 74 * s;
+    this.behaviorRects = [];
     const gap = 8 * s;
     const x0 = 16 * s;
     const y0 = v.height - cardH - 16 * s;
@@ -271,6 +306,44 @@ export class Hud {
         ctx.fill();
       }
       this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 22 * s, 11, '#e8e4f8', 'left', '500');
+      // XP bar
+      const xf = clamp(m.xp / xpToNext(m.level), 0, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(bx, by + 26 * s, bw, 3 * s);
+      ctx.fillStyle = '#7fb3ff';
+      ctx.fillRect(bx, by + 26 * s, bw * xf, 3 * s);
+      // behaviour chip
+      const roaming = isRoaming(m);
+      const chipW = 66 * s;
+      const chipX = x + cardW - chipW - 8 * s;
+      const chipY = y0 + cardH - 18 * s;
+      const chipHover = hit(st.mouseX, st.mouseY, chipX, chipY, chipW, 14 * s);
+      ctx.fillStyle = roaming ? (chipHover ? 'rgba(255,170,90,0.9)' : 'rgba(230,140,60,0.8)') : chipHover ? 'rgba(170,150,255,0.9)' : 'rgba(110,90,200,0.75)';
+      ctx.beginPath();
+      ctx.roundRect(chipX, chipY, chipW, 14 * s, 7);
+      ctx.fill();
+      this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + 10.5 * s, 8.5, '#ffffff', 'center', '800');
+      this.behaviorRects.push({ x: chipX, y: chipY, w: chipW, h: 14 * s });
+      if (roaming) {
+        const dist = Math.hypot(m.x - p.x, m.y - p.y);
+        // map pin + distance
+        const pinX = px + ps - 6 * s;
+        const pinY = py + 8 * s;
+        ctx.fillStyle = '#ff6b6b';
+        ctx.beginPath();
+        ctx.arc(pinX, pinY, 5 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(pinX - 4 * s, pinY + 3 * s);
+        ctx.lineTo(pinX + 4 * s, pinY + 3 * s);
+        ctx.lineTo(pinX, pinY + 10 * s);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(pinX, pinY, 2 * s, 0, Math.PI * 2);
+        ctx.fill();
+        this.label(ctx, `${dist.toFixed(0)} tiles away · R to recall`, x + 8 * s, y0 + cardH - 7 * s, 8.5, '#ffd3a8', 'left', '600');
+      }
       if (m.status) {
         const color = STATUS_COLORS[m.status] ?? '#fff';
         const tag = m.status === 'paralysis' ? 'PAR' : m.status === 'burn' ? 'BRN' : 'SLP';

@@ -11,12 +11,14 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { newThrow, rollCatch, stepThrow, type Throw } from './catching';
-import { CONFIG, SPAWNS, species, statsAtLevel } from './data';
+import { CONFIG, SPAWNS, move, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
 import { ITEM_LIST, ITEMS } from './items';
-import { canStand, pointBehind, tryMove } from './movement';
+import { canStand, tryMove } from './movement';
+import { areaContains, makeArea } from './battle';
+import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
@@ -74,7 +76,7 @@ export class Match {
     const spawn = this.edgeSpawn();
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, CONFIG.player.level, this.player, spawn.x, spawn.y));
-    this.seedTrail(this.player);
+    this.placeParty(this.player);
     this.spawnWilds();
     this.spawnTrainers();
     this.placeOutposts();
@@ -94,7 +96,8 @@ export class Match {
       }
       t.items[0] = { id: 'potion', count: 1 };
       t.aiTimer = this.rng.range(0.5, 2);
-      this.seedTrail(t);
+      t.roamTimer = CONFIG.party.aiRoamEverySeconds * this.rng.range(0.6, 1.2);
+      this.placeParty(t);
       this.trainers.push(t);
     }
   }
@@ -206,6 +209,7 @@ export class Match {
         down.hp = Math.max(1, Math.floor(down.maxHp * (def.fraction ?? 0.5)));
         down.x = t.x;
         down.y = t.y;
+        down.behavior = 'guard';
         down.anim.play('Idle', { restart: true });
         this.takeItem(t, slot);
         return `${down.name} was revived!`;
@@ -374,7 +378,7 @@ export class Match {
           if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;
           continue;
         }
-        const needs = t.party.some((m) => m.fainted || m.hp < m.maxHp || m.status);
+        const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
         if (!needs) continue;
         o.users.push(t);
         if (t.healing === 0 && !t.isPlayer) this.battle.events.push({ type: 'notice', text: `Beacon: ${t.name} is healing at an outpost`, seconds: 2 });
@@ -383,6 +387,7 @@ export class Match {
           t.healing = 0;
           t.outpostReady = this.time + 20;
           for (const m of t.party) {
+            if (isRoaming(m)) continue;
             m.fainted = false;
             m.hp = m.maxHp;
             m.status = null;
@@ -484,9 +489,18 @@ export class Match {
     }
     this.separate(t);
     this.afterTrainerMove(t, moved);
-    // The lead fights whatever hostile is close, unless the trainer is running.
-    const m = lead(t);
-    if (m && t.ai !== 'flee') this.stepHostile(m, dt, CONFIG.trainers.aggroRange);
+    // Occasionally send one member roaming so lone enemy Pokémon can be met on the map.
+    t.roamTimer -= dt;
+    if (t.roamTimer <= 0) {
+      t.roamTimer = CONFIG.party.aiRoamEverySeconds;
+      const standing = t.party.filter((m) => BattleSystem.active(m) && !isRoaming(m));
+      const roamer = t.party.find((m) => isRoaming(m));
+      if (roamer) roamer.recall = true;
+      else if (standing.length >= 2 && this.rng.chance(CONFIG.party.aiRoamChance)) {
+        const pick = standing[standing.length - 1] as Mon;
+        pick.behavior = 'roam';
+      }
+    }
   }
 
   /** A reachable, open tile as far from the centre as possible: the map edge. */
@@ -511,34 +525,16 @@ export class Match {
     return best;
   }
 
-  /** Starts a trainer's position history with a short walkable trail so followers line up behind them. */
-  seedTrail(t: Trainer): void {
-    let bestDir: { x: number; y: number } | null = null;
-    let bestLen = 0;
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const d = { x: Math.cos(a), y: Math.sin(a) };
-      let len = 0;
-      for (let k = 0.25; k <= 3.5; k += 0.25) {
-        if (!canStand(this.ground, t.x + d.x * k, t.y + d.y * k, 0.25)) break;
-        len = k;
-      }
-      // Prefer trails that point away from the centre (the player faces inward).
-      const away = (d.x * (t.x - this.centerX) + d.y * (t.y - this.centerY)) > 0 ? 0.5 : 0;
-      if (len + away > bestLen) {
-        bestLen = len + away;
-        bestDir = d;
-      }
-    }
-    if (!bestDir) return;
-    t.history = [];
-    for (let k = Math.min(3.5, bestLen); k > 0; k -= 0.25) t.history.push({ x: t.x + bestDir.x * k, y: t.y + bestDir.y * k });
-    t.history.push({ x: t.x, y: t.y });
-    t.dir = dirFromVector(-bestDir.x, -bestDir.y, t.dir);
+  /** Drops party members onto their formation spots (or the trainer's tile when blocked). */
+  placeParty(t: Trainer): void {
     t.party.forEach((m, i) => {
-      const p = pointBehind(t.history, CONFIG.player.followSpacingTiles * (i + 1)) ?? { x: t.x, y: t.y };
-      m.x = m.px = p.x;
-      m.y = m.py = p.y;
+      const ang = (i / Math.max(1, t.party.length)) * Math.PI * 2;
+      const r = 0.9 + i * 0.3;
+      const x = t.x + Math.cos(ang) * r;
+      const y = t.y + Math.sin(ang) * r;
+      const ok = canStand(this.ground, x, y, 0.22);
+      m.x = m.px = ok ? x : t.x;
+      m.y = m.py = ok ? y : t.y;
       m.dir = t.dir;
     });
   }
@@ -546,9 +542,9 @@ export class Match {
   makeTrainer(name: string, role: string, isPlayer: boolean, x: number, y: number): Trainer {
     return {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
-      party: [], history: [{ x, y }], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
+      party: [], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
       stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
-      ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1,
+      ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0,
     };
   }
 
@@ -563,6 +559,8 @@ export class Match {
       fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y,
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
       heldItem: null, busy: 0, casting: null, target: null, captured: false,
+      behavior: owner ? (owner.party.length === 0 ? 'aggressive' : 'guard') : 'guard', xp: 0, wander: null, wanderPause: 0,
+      roamTarget: null, recall: false, sinceHit: 999,
     };
   }
 
@@ -670,7 +668,7 @@ export class Match {
   swapLead(index: number): boolean {
     const p = this.player;
     const m = p.party[index];
-    if (!m || m.fainted) return false;
+    if (!m || m.fainted || isRoaming(m) || m.captured) return false;
     p.party.splice(index, 1);
     p.party.unshift(m);
     return true;
@@ -697,11 +695,19 @@ export class Match {
     this.stepPlayer(dt);
     for (const t of this.trainers) if (t.alive) this.stepAi(t, dt);
     this.stepNpcs(dt);
+    const pw = this.partyWorld();
     for (const t of this.allTrainers) {
       if (!t.alive) continue;
-      this.stepFollowers(t, dt);
+      for (const m of t.party) {
+        if (m.busy > 0) m.busy -= dt;
+        m.sinceHit += dt;
+      }
+      stepParty(t, lead(t), dt, pw);
     }
-    for (const w of this.wilds) this.stepWild(w, dt);
+    for (const w of this.wilds) {
+      w.sinceHit += dt;
+      this.stepWild(w, dt);
+    }
     this.stepItems(dt);
     this.stepOutposts(dt);
     this.stepThrows(dt);
@@ -716,6 +722,7 @@ export class Match {
       const i = this.wilds.indexOf(gone);
       if (i >= 0) this.wilds.splice(i, 1);
     }
+    this.handleKnockouts();
     this.checkElimination();
   }
 
@@ -752,46 +759,50 @@ export class Match {
     for (const o of this.allTrainers) {
       if (o === t || !o.alive) continue;
       push(o.x, o.y);
-      for (const m of o.party) if (!m.fainted) push(m.x, m.y);
+      for (const m of o.party) if (!m.fainted && !m.captured) push(m.x, m.y);
     }
     if (this.darkrai && !this.darkrai.fainted) push(this.darkrai.x, this.darkrai.y);
   }
 
-  /** Walk-cycle phase and the position history every trainer shares. */
+  /** Walk-cycle phase for the overworld sheet. */
   afterTrainerMove(t: Trainer, moved: number): void {
     t.moving = moved > 1e-4;
-    if (!t.moving) return;
-    t.walkPhase = (t.walkPhase + moved / 0.9) % 1;
-    const last = t.history[t.history.length - 1];
-    if (!last || Math.hypot(t.x - last.x, t.y - last.y) >= 0.05) {
-      t.history.push({ x: t.x, y: t.y });
-      if (t.history.length > 400) t.history.shift();
-    }
+    if (t.moving) t.walkPhase = (t.walkPhase + moved / 0.9) % 1;
   }
 
-  /** Party members trail the trainer along the position history. */
-  stepFollowers(t: Trainer, dt: number): void {
-    const spacing = CONFIG.player.followSpacingTiles;
-    const active = t.party.filter((m) => !m.fainted);
-    active.forEach((m, i) => {
-      if (m.casting || m.status === 'sleep' || m.captured) return;
-      const target = pointBehind(t.history, spacing * (i + 1)) ?? { x: t.x, y: t.y };
-      const dx = target.x - m.x;
-      const dy = target.y - m.y;
-      const d = Math.hypot(dx, dy);
-      const maxStep = CONFIG.player.speedTilesPerSec * 1.3 * dt;
-      if (d > 0.01) {
-        const k = Math.min(1, maxStep / d);
-        m.x += dx * k;
-        m.y += dy * k;
-        m.dir = dirFromVector(dx, dy, m.dir);
-      }
-      const movedNow = d > 0.03;
-      if (movedNow !== m.moving && m.anim.action !== 'Hurt') {
-        m.moving = movedNow;
-        m.anim.play(movedNow ? 'Walk' : 'Idle');
-      }
-    });
+  /** The world a party sees when it steers and fights. */
+  private partyWorld(): PartyWorld {
+    return {
+      ground: this.ground,
+      rng: this.rng,
+      mons: () => this.mons(),
+      isEnemy: (a, b) => this.battle.isEnemy(a, b),
+      active: (m) => BattleSystem.active(m),
+      inHostileTelegraph: (m) => this.inHostileTelegraph(m),
+      attack: (m, target, range) => this.autoAttack(m, target, range),
+      centerX: this.centerX,
+      centerY: this.centerY,
+    };
+  }
+
+  private inHostileTelegraph(m: Mon): boolean {
+    for (const o of this.mons()) {
+      if (!o.casting || o === m || !this.battle.isEnemy(o, m)) continue;
+      const def = move(o.casting.moveId);
+      if (areaContains(makeArea(def, o, o.casting.targetX, o.casting.targetY), m.x, m.y)) return true;
+    }
+    return false;
+  }
+
+  /** A party member attacks on its own timer (the player's 1-4 casts bypass this). */
+  private autoAttack(m: Mon, target: Mon, range: number): void {
+    if (m.casting || m.status === 'sleep') return;
+    if (Math.hypot(target.x - m.x, target.y - m.y) > range) return;
+    if (m.busy > 0) return;
+    const slot = this.battle.chooseMove(m, target);
+    if (slot < 0) return;
+    m.dir = dirFromVector(target.x - m.x, target.y - m.y, m.dir);
+    if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = this.rng.range(0.8, 1.6);
   }
 
   private stepWild(w: Mon, dt: number): void {
@@ -838,6 +849,23 @@ export class Match {
     if (moved < step * 0.2) {
       w.moving = false;
       w.anim.play('Idle');
+    }
+  }
+
+  /** XP for knockouts and item drops from wild Pokémon (read off this step's faint events). */
+  private handleKnockouts(): void {
+    for (const ev of this.battle.events) {
+      if (ev.type !== 'faint' || !ev.by || ev.by.boss) continue;
+      const owner = ev.by.owner;
+      if (owner) {
+        for (const r of shareKnockoutXp(ev.by, ev.mon, owner.party, CONFIG.party.xpShareRange)) {
+          this.battle.events.push({ type: 'xp', mon: r.mon, xp: r.xp, levels: r.levels });
+        }
+      }
+      if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) {
+        const def = this.rng.weighted(ITEM_LIST, (d) => d.weight);
+        this.items.push({ id: nextId++, itemId: def.id, x: ev.mon.x, y: ev.mon.y, bob: this.rng.next() * 6 });
+      }
     }
   }
 

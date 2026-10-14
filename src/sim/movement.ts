@@ -33,20 +33,3 @@ export function tryMove(ground: GroundRenderer, m: Mover, dx: number, dy: number
   }
   return Math.hypot(m.x - sx, m.y - sy);
 }
-
-/** A point `distance` tiles back along a position history (newest last). */
-export function pointBehind(history: ReadonlyArray<{ x: number; y: number }>, distance: number): { x: number; y: number } | null {
-  if (history.length === 0) return null;
-  let remaining = distance;
-  for (let i = history.length - 1; i > 0; i--) {
-    const a = history[i] as { x: number; y: number };
-    const b = history[i - 1] as { x: number; y: number };
-    const seg = Math.hypot(a.x - b.x, a.y - b.y);
-    if (seg >= remaining) {
-      const t = seg === 0 ? 0 : remaining / seg;
-      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-    }
-    remaining -= seg;
-  }
-  return history[0] ?? null;
-}

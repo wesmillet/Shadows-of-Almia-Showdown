@@ -34,7 +34,8 @@ export type BattleEvent =
   | { type: 'caught'; mon: Mon; by: Trainer }
   | { type: 'broke-free'; mon: Mon }
   | { type: 'pickup'; trainer: Trainer; itemId: string }
-  | { type: 'eliminated'; trainer: Trainer };
+  | { type: 'eliminated'; trainer: Trainer }
+  | { type: 'xp'; mon: Mon; xp: number; levels: number };
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 
@@ -308,6 +309,7 @@ export class BattleSystem {
       return;
     }
     target.hp = Math.max(0, target.hp - damage);
+    target.sinceHit = 0;
     if (target.hp === 0) this.faint(target, by);
   }
 

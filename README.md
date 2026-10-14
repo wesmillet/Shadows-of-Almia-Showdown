@@ -30,6 +30,7 @@ other edges. Last trainer standing wins.
 
 | Input | Action |
 | --- | --- |
+| title screen: Demo Team button, D, or `?demo=1` | skip the roll and start with a level 100 team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton (party cap 5) |
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
 | 1-4, or click the move wheel | the lead casts a move where you face (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |
 | Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
@@ -109,6 +110,7 @@ nearest-neighbour filtering; the ground scales freely with the window.
    whole SpriteCollab repo):
    ```
    python3 scripts/fetch-sprites.py 0448            # one or more dex numbers
+   python3 scripts/fetch-sprites.py 0384:shiny      # the shiny set, stored as assets/pokemon/0384-shiny
    python3 scripts/fetch-sprites.py --list scripts/species-list.txt
    ```
    This writes `assets/pokemon/0448/` and `assets/portraits/0448/` and

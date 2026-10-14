@@ -58,6 +58,22 @@ export class TitleScreen implements Screen {
     if (input.pressed('KeyD')) this.onDemo();
   }
 
+  /** The row the host paces on: just below the centre, but never on a cliff face or in water. */
+  private hostRow(): number {
+    if (this.row !== null) return this.row;
+    const cx = Math.floor(this.ground.cols / 2);
+    const base = Math.floor(this.ground.rows / 2 + 4);
+    const clear = (r: number) => [-3, -2, -1, 0, 1, 2].every((dx) => this.ground.walkable(cx + dx, r));
+    this.row = base;
+    for (let k = 0; k <= 6; k++) {
+      if (clear(base - k)) { this.row = base - k; break; }
+      if (clear(base + k)) { this.row = base + k; break; }
+    }
+    return this.row;
+  }
+
+  private row: number | null = null;
+
   render(): void {
     const v = this.ctx.view;
     const s = v.baseScale;
@@ -66,7 +82,7 @@ export class TitleScreen implements Screen {
     this.ground.drawGround(v);
     // Host on the ground.
     const hx = v.toScreenX(this.ground.cols / 2 + this.hostX);
-    const hy = v.toScreenY(this.ground.rows / 2 + 4.2);
+    const hy = v.toScreenY(this.hostRow() + 0.2);
     drawSoftShadow(v, hx, hy, 0.3);
     const sheet = this.rangers.get('host');
     const f = sheet.frame(this.hostDir, this.hostPhase, true);

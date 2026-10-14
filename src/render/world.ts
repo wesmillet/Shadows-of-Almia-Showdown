@@ -53,15 +53,23 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const p = monPos(m, alpha);
   const sx = Math.round(view.toScreenX(p.x));
   const sy = Math.round(view.toScreenY(p.y));
-  const s = view.spriteScale;
+  const vis = m.visual;
+  if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
+  const s = view.spriteScale * vis.scale;
   ctx.imageSmoothingEnabled = false;
+  const tween = vis.scale < 1 || vis.alpha < 1 || vis.flash > 0;
+  if (tween) {
+    ctx.save();
+    ctx.globalAlpha = vis.alpha;
+  }
   const shadow = m.anim.shadow();
   if (shadow) {
     ctx.drawImage(shadow.image, shadow.sx, shadow.sy, shadow.w, shadow.h, sx - (shadow.w * s) / 2, sy - (shadow.h * s) / 2, shadow.w * s, shadow.h * s);
   }
   const f = m.anim.current();
   const dx = sx - (f.w * s) / 2;
-  const dy = sy - (f.h * s) / 2;
+  // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet.
+  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * 0.15;
   if (m.aura) {
     ctx.save();
     ctx.shadowColor = 'rgba(150,60,255,0.95)';
@@ -79,7 +87,29 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
     ctx.drawImage(c, dx, dy, f.w * s, f.h * s);
   }
-  if (m.status === 'sleep') drawZzz(view, sx, sy - (f.h * s) / 2, m.anim.time);
+  if (vis.flash > 0) {
+    const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
+    ctx.save();
+    ctx.globalAlpha = vis.alpha * vis.flash;
+    ctx.drawImage(tint(c, '#ff3b3b'), dx, dy, f.w * s, f.h * s);
+    ctx.restore();
+  }
+  if (tween) ctx.restore();
+  if (m.status === 'sleep' && !tween) drawZzz(view, sx, sy - (f.h * s) / 2, m.anim.time);
+}
+
+const tintCache = document.createElement('canvas');
+function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
+  tintCache.width = src.width;
+  tintCache.height = src.height;
+  const g = tintCache.getContext('2d')!;
+  g.clearRect(0, 0, src.width, src.height);
+  g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color;
+  g.fillRect(0, 0, src.width, src.height);
+  g.globalCompositeOperation = 'source-over';
+  return tintCache;
 }
 
 const flashCache = document.createElement('canvas');

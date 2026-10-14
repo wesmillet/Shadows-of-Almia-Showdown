@@ -18,6 +18,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { isRoaming, nextBehavior } from '../sim/party';
+import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
 import { drawItemIcon, Hud, type HudState } from './hud';
 import { ITEMS } from '../sim/items';
@@ -37,6 +38,8 @@ export class MatchScreen implements Screen {
   private readonly strips = new Map<string, HTMLImageElement | null>();
 
   private endTimer = -1;
+  /** Poké Ball frames from assets/items (closed and open per kind). */
+  private balls = new Map<string, HTMLImageElement | null>();
 
   constructor(
     protected readonly ctx: GameContext,
@@ -47,6 +50,13 @@ export class MatchScreen implements Screen {
   ) {
     this.lighting = new Lighting(ctx.view);
     this.hud = new Hud(ctx.view);
+    for (const kind of ['poke', 'great', 'ultra']) {
+      for (const state of ['closed', 'open']) {
+        const key = `${kind}-${state}`;
+        this.balls.set(key, null);
+        void assets.loadImage(`items/ball-${key}.png`).then((img) => this.balls.set(key, img));
+      }
+    }
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -238,14 +248,23 @@ export class MatchScreen implements Screen {
       case 'notice':
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
+      case 'ball-hit':
+        this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ff6b6b', 0.6));
+        break;
+      case 'ball-click':
+        // Sparkle on the click.
+        this.vfx.add(new ImpactBurst(ev.x, ev.y, '#ffffff', 0.9));
+        this.vfx.add(new RingPulse(ev.x, ev.y, 0.9, '#ffd36b', 0.7));
+        break;
+      case 'ball-burst':
+        this.vfx.add(new StatusCloud(ev.x, ev.y, '#ffffff', 0.9));
+        this.vfx.add(new ImpactBurst(ev.x, ev.y, '#ffffff', 0.5));
+        break;
       case 'caught':
-        this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ffffff', 1.3));
-        this.vfx.add(new RingPulse(ev.mon.x, ev.mon.y, 1.2, '#ffd36b', 0.8));
         if (ev.by.isPlayer) this.say(`Gotcha! ${ev.mon.name} joined the party!`, 2);
         break;
       case 'broke-free':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, 'Broke free!', '#ff9e9e', 16);
-        this.vfx.add(new StatusCloud(ev.mon.x, ev.mon.y, '#ffffff', 0.8));
         break;
       case 'pickup':
         if (ev.trainer.isPlayer) {
@@ -453,30 +472,48 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  private drawThrow(v: View, th: import('../sim/catching').Throw): void {
+  /** The ball in flight, hanging over the target, dropping, wobbling, clicking or bursting open. */
+  private drawThrow(v: View, th: Throw): void {
     const ctx = v.ctx;
     const sx = v.toScreenX(th.x);
     const sy = v.toScreenY(th.y);
-    const r = 8 * v.baseScale;
+    const s = v.spriteScale;
+    const kind = ballKind(th.ballId);
+    const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
+    const img = this.balls.get(`${kind}-${open ? 'open' : 'closed'}`) ?? null;
     drawSoftShadow(v, sx, sy, 0.2, 0.35);
     ctx.save();
-    ctx.translate(sx, sy - th.z * v.pxPerTile - r);
-    let rot = th.t * 9;
-    if (th.roll) {
-      const wob = CONFIG.catch.wobbleSeconds;
-      const n = Math.floor(th.wobbleT / wob);
-      if (n < th.roll.wobbles) rot = Math.sin(((th.wobbleT % wob) / wob) * Math.PI * 2) * 0.45;
-      else rot = 0;
-    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(sx, sy - th.z * v.pxPerTile);
+    let rot = th.phase === 'flying' ? th.t * 9 : ballWobble(th);
+    if (th.phase === 'click') rot = Math.sin(th.phaseT * 60) * 0.06;
     ctx.rotate(rot);
-    const def = ITEMS[th.ballId];
-    if (def) drawItemIcon(ctx, def.icon, 0, 0, r);
+    if (img) {
+      const w = img.naturalWidth * s;
+      const h = img.naturalHeight * s;
+      ctx.drawImage(img, -w / 2, -h, w, h);
+    } else {
+      const ph = this.assets.placeholder(`ball ${kind}`, 16, 16);
+      ctx.drawImage(ph, -8 * s, -16 * s, 16 * s, 16 * s);
+    }
     ctx.restore();
-    if (th.roll && th.done === false && th.wobbleT > th.roll.wobbles * CONFIG.catch.wobbleSeconds && th.roll.caught) {
+    // Beam of light pulling the Pokémon in / letting it out.
+    if (th.phase === 'absorb' || th.phase === 'burst') {
+      const k = th.phase === 'absorb' ? 1 - th.phaseT / 0.3 : th.phaseT / 0.3;
       ctx.save();
-      ctx.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(th.wobbleT * 20)})`;
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(sx, sy - 0.3 * v.pxPerTile, 0, sx, sy - 0.3 * v.pxPerTile, 0.7 * v.pxPerTile);
+      g.addColorStop(0, `rgba(255,120,120,${0.55 * k})`);
+      g.addColorStop(1, 'rgba(255,120,120,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(sx - v.pxPerTile, sy - 1.3 * v.pxPerTile, v.pxPerTile * 2, v.pxPerTile * 2);
+      ctx.restore();
+    }
+    if (th.phase === 'click' && th.phaseT < 0.2) {
+      ctx.save();
+      ctx.fillStyle = `rgba(255,255,255,${1 - th.phaseT / 0.2})`;
       ctx.beginPath();
-      ctx.arc(sx, sy - r, r * 0.4, 0, Math.PI * 2);
+      ctx.arc(sx, sy - 8 * s, 3 * s, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -489,6 +526,7 @@ export class MatchScreen implements Screen {
     if (first) drawPointLight(v, first.x, first.y, 1.2, '#ffe8c0', 0.12);
     for (const o of this.match.outposts) drawPointLight(v, o.x, o.y, 2.2, '#7dffc0', o.users.length ? 0.5 : 0.22, 0);
     for (const it of this.match.items) drawPointLight(v, it.x, it.y, 0.5, '#ffe9a8', 0.25, 0.1);
+    for (const th of this.match.throws) if (th.phase === 'absorb' || th.phase === 'burst' || th.phase === 'click') drawPointLight(v, th.x, th.y, 1.2, '#ff8a8a', 0.6, 0.3);
     // The Shadow Crystal pulses; brighter as the night deepens.
     const t = this.match.time;
     const d = this.match.darkness;
@@ -584,7 +622,7 @@ export class MatchScreen implements Screen {
     const list: Array<{ y: number; draw: () => void }> = [];
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
     for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
-    for (const th of this.match.throws) list.push({ y: th.y + 0.01, draw: () => this.drawThrow(v, th) });
+    for (const th of this.match.throws) list.push({ y: th.y + 0.02, draw: () => this.drawThrow(v, th) });
     list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
     return list;
   }

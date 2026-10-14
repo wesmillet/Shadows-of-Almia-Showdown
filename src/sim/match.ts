@@ -10,7 +10,7 @@ import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
-import { newThrow, rollCatch, stepThrow, type Throw } from './catching';
+import { newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, SPAWNS, move, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
@@ -292,12 +292,13 @@ export class Match {
 
   private stepThrows(dt: number): void {
     for (const th of this.throws) {
-      const state = stepThrow(th, dt);
-      if (state === 'landed') {
+      const ev = stepThrow(th, dt);
+      if (th.target) th.target.visual = targetVisual(th);
+      if (ev === 'landed') {
         let best: Mon | null = null;
         let bd = 0.9;
         for (const w of this.wilds) {
-          if (w.fainted) continue;
+          if (!BattleSystem.active(w)) continue;
           const d = Math.hypot(w.x - th.x, w.y - th.y);
           if (d < bd) {
             bd = d;
@@ -305,41 +306,60 @@ export class Match {
           }
         }
         if (!best) {
-          th.done = true;
+          th.phase = 'done';
           this.battle.events.push({ type: 'notice', text: 'The ball missed', seconds: 1 });
           continue;
         }
         if (best.aura) {
-          th.done = true;
+          th.phase = 'done';
           this.battle.events.push({ type: 'text', mon: best, text: 'The darkness repels the ball!' });
           continue;
         }
+        // Hit: the target reels, then gets pulled into the ball.
         th.target = best;
         th.roll = rollCatch(this.rng, best, th.tier);
+        th.phase = 'hit';
+        th.phaseT = 0;
         th.x = best.x;
-        th.y = best.y + 0.1;
+        th.y = best.y + 0.05;
         best.flash = 0.06;
         best.anim.play('Hurt', { restart: true, loop: false });
         best.casting = null;
         best.moving = false;
-      } else if (state === 'result' && th.target && th.roll && !th.target.fainted) {
-        const w = th.target;
-        if (th.roll.caught) {
+        best.target = null;
+        this.battle.events.push({ type: 'ball-hit', mon: best });
+        continue;
+      }
+      if (!th.target) continue;
+      const w = th.target;
+      if (ev === 'absorb') {
+        w.captured = true; // inside the ball: no acting, no targeting, AI suspended
+      } else if (ev === 'click') {
+        this.battle.events.push({ type: 'ball-click', mon: w, x: th.x, y: th.y });
+      } else if (ev === 'burst') {
+        this.battle.events.push({ type: 'ball-burst', mon: w, x: th.x, y: th.y });
+      } else if (ev === 'done') {
+        w.visual = { scale: 1, alpha: 1, flash: 0 };
+        if (th.roll?.caught) {
           this.wilds.splice(this.wilds.indexOf(w), 1);
+          w.captured = false;
           w.owner = th.thrower;
           w.wild = false;
           w.aura = false;
+          w.behavior = 'guard';
+          w.target = null;
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
         } else {
-          this.battle.events.push({ type: 'broke-free', mon: w });
+          w.captured = false;
+          w.anim.play('Idle', { restart: true });
           w.target = lead(th.thrower);
+          this.battle.events.push({ type: 'broke-free', mon: w });
         }
-        th.target = null;
       }
     }
-    this.throws = this.throws.filter((th) => !th.done);
+    this.throws = this.throws.filter((th) => th.phase !== 'done');
   }
 
   private stepItems(dt: number): void {
@@ -560,7 +580,7 @@ export class Match {
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
       heldItem: null, busy: 0, casting: null, target: null, captured: false,
       behavior: owner ? (owner.party.length === 0 ? 'aggressive' : 'guard') : 'guard', xp: 0, wander: null, wanderPause: 0,
-      roamTarget: null, recall: false, sinceHit: 999,
+      roamTarget: null, recall: false, sinceHit: 999, visual: { scale: 1, alpha: 1, flash: 0 },
     };
   }
 

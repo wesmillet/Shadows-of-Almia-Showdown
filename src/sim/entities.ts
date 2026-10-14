@@ -66,6 +66,8 @@ export interface Mon {
   recall: boolean;
   /** Seconds since this Pokémon last took damage (info bars show after a hit). */
   sinceHit: number;
+  /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */
+  visual: { scale: number; alpha: number; flash: number };
 }
 
 export interface TrainerStats {

@@ -35,7 +35,10 @@ export type BattleEvent =
   | { type: 'broke-free'; mon: Mon }
   | { type: 'pickup'; trainer: Trainer; itemId: string }
   | { type: 'eliminated'; trainer: Trainer }
-  | { type: 'xp'; mon: Mon; xp: number; levels: number };
+  | { type: 'xp'; mon: Mon; xp: number; levels: number }
+  | { type: 'ball-hit'; mon: Mon }
+  | { type: 'ball-click'; mon: Mon; x: number; y: number }
+  | { type: 'ball-burst'; mon: Mon; x: number; y: number };
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 

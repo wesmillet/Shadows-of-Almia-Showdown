@@ -1,0 +1,31 @@
+# Nightfall Royale cast. One SpriteCollab dex number per line; "#" starts a comment.
+# Starter pool (tier 1)
+0387  # Turtwig
+0390  # Chimchar
+0393  # Piplup
+# Starter pool (tier 2)
+0025  # Pikachu
+0133  # Eevee
+0447  # Riolu
+# Starter pool (tier 3)
+0443  # Gible
+0147  # Dratini
+0246  # Larvitar
+# Wild: meadow
+0396  # Starly
+0399  # Bidoof
+0403  # Shinx
+# Wild: forest edge
+0406  # Budew
+0010  # Caterpie
+0401  # Kricketot
+# Wild: rocky shore
+0074  # Geodude
+0098  # Krabby
+0422  # Shellos
+# Wild: water
+0129  # Magikarp
+0054  # Psyduck
+0278  # Wingull
+# Finale
+0491  # Darkrai

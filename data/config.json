@@ -1,0 +1,31 @@
+{
+  "map": { "cols": 48, "rows": 48, "tileSize": 128 },
+  "player": { "speedTilesPerSec": 4, "radius": 0.28, "followSpacingTiles": 0.85, "partyCap": 4, "level": 15 },
+  "wild": { "wanderSpeed": 1.6, "idleMin": 1.5, "idleMax": 4.5, "wanderRadius": 3 },
+  "trainers": { "count": 2, "speed": 3.4, "fleeHpFraction": 0.3, "partySize": 3, "level": 14 },
+  "battle": {
+    "castSeconds": 0.3,
+    "engageZoom": 1.1,
+    "disengageDistance": 7,
+    "hitStopMs": 60,
+    "leadOffsetTiles": 1,
+    "stab": 1.5,
+    "critChance": 0.06,
+    "burnDamageFraction": 0.0625,
+    "paralysisSkipChance": 0.25,
+    "paralysisSpeed": 0.5,
+    "sleepSeconds": [3, 6]
+  },
+  "items": { "inventorySize": 6, "groundItems": 44, "pickupRadius": 0.6 },
+  "catch": { "aimMaxTiles": 5, "aimSeconds": 1.2, "wobbleSeconds": 0.55, "statusBonus": { "sleep": 2, "paralysis": 1.5, "burn": 1.5 } },
+  "outpost": { "healSeconds": 3, "radius": 1.3 },
+  "darkness": {
+    "pulseSeconds": 90,
+    "radiiTiles": [34, 20, 12, 6, 3],
+    "sweepSeconds": 12,
+    "drowsySeconds": 4,
+    "badDreamsFraction": 0.0625,
+    "wakeAfterSecondsOutside": 3
+  },
+  "lighting": { "dayToColdSeconds": 420 }
+}

@@ -1,0 +1,8 @@
+Overworld walking sheets in this folder are stand-ins for Pokémon Ranger
+sheets: Pokémon Platinum field sprites by Game Freak / The Pokémon Company /
+Nintendo, taken from the pret/pokeplatinum decompilation
+(https://github.com/pret/pokeplatinum) by scripts/fetch-rangers.py, which
+keys out palette index 0. Non-commercial fan project use only.
+
+Layout: one column of 32x32 frames, four per facing, facings up, down,
+left, right. manifest.json names which file plays which role.

@@ -1,0 +1,27 @@
+{
+  "_comment": "dex = SpriteCollab folder under assets/pokemon. Stats are the species' base stats. tier ranks starter candidates (3 = strongest; rerolls remove the top tier). biome places wild spawns (see spawns.json). moves are ids from moves.json (first four are the kit).",
+  "species": [
+    { "dex": "0387", "name": "Turtwig", "types": ["grass"], "stats": { "hp": 55, "atk": 68, "def": 64, "spa": 45, "spd": 55, "spe": 31 }, "tier": 1, "moves": ["tackle", "razor-leaf", "bite", "howl"] },
+    { "dex": "0390", "name": "Chimchar", "types": ["fire"], "stats": { "hp": 44, "atk": 58, "def": 44, "spa": 58, "spd": 44, "spe": 61 }, "tier": 1, "moves": ["scratch", "ember", "rock-smash", "will-o-wisp"] },
+    { "dex": "0393", "name": "Piplup", "types": ["water"], "stats": { "hp": 53, "atk": 51, "def": 53, "spa": 61, "spd": 56, "spe": 40 }, "tier": 1, "moves": ["tackle", "water-gun", "wing-attack", "ice-beam"] },
+    { "dex": "0025", "name": "Pikachu", "types": ["electric"], "stats": { "hp": 35, "atk": 55, "def": 40, "spa": 50, "spd": 50, "spe": 90 }, "tier": 2, "moves": ["thunder-shock", "quick-attack", "thunder-wave", "discharge"] },
+    { "dex": "0133", "name": "Eevee", "types": ["normal"], "stats": { "hp": 55, "atk": 55, "def": 50, "spa": 45, "spd": 65, "spe": 55 }, "tier": 2, "moves": ["tackle", "quick-attack", "bite", "shadow-ball"] },
+    { "dex": "0447", "name": "Riolu", "types": ["fighting"], "stats": { "hp": 40, "atk": 70, "def": 40, "spa": 35, "spd": 40, "spe": 60 }, "tier": 2, "moves": ["rock-smash", "quick-attack", "bite", "howl"] },
+    { "dex": "0443", "name": "Gible", "types": ["dragon", "ground"], "stats": { "hp": 58, "atk": 70, "def": 45, "spa": 40, "spd": 45, "spe": 42 }, "tier": 3, "moves": ["tackle", "bulldoze", "bite", "rock-throw"] },
+    { "dex": "0147", "name": "Dratini", "types": ["dragon"], "stats": { "hp": 41, "atk": 64, "def": 45, "spa": 50, "spd": 50, "spe": 50 }, "tier": 3, "moves": ["tackle", "thunder-wave", "ice-beam", "water-gun"] },
+    { "dex": "0246", "name": "Larvitar", "types": ["rock", "ground"], "stats": { "hp": 50, "atk": 64, "def": 50, "spa": 45, "spd": 50, "spe": 41 }, "tier": 3, "moves": ["rock-throw", "bite", "bulldoze", "howl"] },
+    { "dex": "0396", "name": "Starly", "types": ["normal", "flying"], "stats": { "hp": 40, "atk": 55, "def": 30, "spa": 30, "spd": 30, "spe": 60 }, "tier": 1, "biome": "meadow", "moves": ["tackle", "wing-attack", "quick-attack", "howl"] },
+    { "dex": "0399", "name": "Bidoof", "types": ["normal"], "stats": { "hp": 59, "atk": 45, "def": 40, "spa": 35, "spd": 40, "spe": 31 }, "tier": 1, "biome": "meadow", "moves": ["tackle", "bite", "howl", "rock-smash"] },
+    { "dex": "0403", "name": "Shinx", "types": ["electric"], "stats": { "hp": 45, "atk": 65, "def": 34, "spa": 40, "spd": 34, "spe": 45 }, "tier": 2, "biome": "meadow", "moves": ["tackle", "thunder-shock", "bite", "thunder-wave"] },
+    { "dex": "0406", "name": "Budew", "types": ["grass", "poison"], "stats": { "hp": 40, "atk": 30, "def": 35, "spa": 50, "spd": 70, "spe": 55 }, "tier": 1, "biome": "forest", "moves": ["razor-leaf", "sleep-powder", "tackle", "howl"] },
+    { "dex": "0010", "name": "Caterpie", "types": ["bug"], "stats": { "hp": 45, "atk": 30, "def": 35, "spa": 20, "spd": 20, "spe": 45 }, "tier": 1, "biome": "forest", "moves": ["tackle", "sleep-powder", "quick-attack", "howl"] },
+    { "dex": "0401", "name": "Kricketot", "types": ["bug"], "stats": { "hp": 37, "atk": 25, "def": 41, "spa": 25, "spd": 41, "spe": 25 }, "tier": 1, "biome": "forest", "moves": ["tackle", "bite", "howl", "razor-leaf"] },
+    { "dex": "0074", "name": "Geodude", "types": ["rock", "ground"], "stats": { "hp": 40, "atk": 80, "def": 100, "spa": 30, "spd": 30, "spe": 20 }, "tier": 2, "biome": "shore", "moves": ["rock-throw", "tackle", "bulldoze", "rock-smash"] },
+    { "dex": "0098", "name": "Krabby", "types": ["water"], "stats": { "hp": 30, "atk": 105, "def": 90, "spa": 25, "spd": 25, "spe": 50 }, "tier": 2, "biome": "shore", "moves": ["water-gun", "tackle", "rock-smash", "bite"] },
+    { "dex": "0422", "name": "Shellos", "types": ["water"], "stats": { "hp": 76, "atk": 48, "def": 48, "spa": 57, "spd": 62, "spe": 34 }, "tier": 1, "biome": "shore", "moves": ["water-gun", "tackle", "bulldoze", "howl"] },
+    { "dex": "0129", "name": "Magikarp", "types": ["water"], "stats": { "hp": 20, "atk": 10, "def": 55, "spa": 15, "spd": 20, "spe": 80 }, "tier": 1, "biome": "water", "moves": ["tackle", "water-gun", "howl", "quick-attack"] },
+    { "dex": "0054", "name": "Psyduck", "types": ["water"], "stats": { "hp": 50, "atk": 52, "def": 48, "spa": 65, "spd": 50, "spe": 55 }, "tier": 2, "biome": "water", "moves": ["water-gun", "psybeam", "scratch", "howl"] },
+    { "dex": "0278", "name": "Wingull", "types": ["water", "flying"], "stats": { "hp": 40, "atk": 30, "def": 30, "spa": 55, "spd": 30, "spe": 85 }, "tier": 1, "biome": "water", "moves": ["water-gun", "wing-attack", "quick-attack", "ice-beam"] },
+    { "dex": "0491", "name": "Darkrai", "types": ["dark"], "stats": { "hp": 70, "atk": 90, "def": 90, "spa": 135, "spd": 90, "spe": 125 }, "tier": 9, "moves": ["dark-void", "dark-pulse", "shadow-ball", "bite"] }
+  ]
+}

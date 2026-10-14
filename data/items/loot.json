@@ -1,25 +1,22 @@
 {
-  "_comment": "Item balls on the ground roll their contents from these tiers when picked up. tier weights pick the tier (and the ball sprite: common = Pok\u00e9 Ball, uncommon = Great Ball, rare = Ultra Ball); entries are item ids with weights, 'tm' draws a random TM. Wild knockouts roll from the same table.",
+  "_comment": "Item balls on the ground roll their contents from these tiers when opened. tier weight picks the tier and the ball sprite (common = Poké Ball, uncommon = Great Ball, rare = Ultra Ball). Entries are item ids with weights and an optional count; 'tm' draws a random non-rare TM, 'rare-tm' a rare one. Wild knockouts roll from the same table. Master (crystal, final phase), Premier (eliminated trainers), Cherish (Darkrai) balls are placed by the match, not rolled.",
   "tiers": {
     "common": {
       "weight": 62,
       "ball": "poke",
       "entries": [
         {
-          "id": "poke-ball",
+          "id": "potion",
           "weight": 12
         },
         {
-          "id": "potion",
-          "weight": 10
+          "id": "poke-ball",
+          "weight": 12,
+          "count": 2
         },
         {
           "id": "super-potion",
-          "weight": 5
-        },
-        {
-          "id": "full-heal",
-          "weight": 4
+          "weight": 6
         },
         {
           "id": "x-attack",
@@ -31,7 +28,7 @@
         },
         {
           "id": "x-speed",
-          "weight": 3
+          "weight": 2
         }
       ]
     },
@@ -41,23 +38,95 @@
       "entries": [
         {
           "id": "great-ball",
-          "weight": 8
+          "weight": 8,
+          "count": 2
         },
         {
           "id": "hyper-potion",
           "weight": 5
         },
         {
+          "id": "full-heal",
+          "weight": 4
+        },
+        {
           "id": "revive",
           "weight": 4
         },
         {
+          "id": "tm",
+          "weight": 6
+        },
+        {
+          "id": "nest-ball",
+          "weight": 1
+        },
+        {
+          "id": "net-ball",
+          "weight": 1
+        },
+        {
+          "id": "dive-ball",
+          "weight": 1
+        },
+        {
+          "id": "dusk-ball",
+          "weight": 1
+        },
+        {
+          "id": "timer-ball",
+          "weight": 1
+        },
+        {
+          "id": "quick-ball",
+          "weight": 1
+        },
+        {
+          "id": "repeat-ball",
+          "weight": 1
+        },
+        {
+          "id": "heal-ball",
+          "weight": 1
+        }
+      ]
+    },
+    "rare": {
+      "weight": 10,
+      "ball": "ultra",
+      "entries": [
+        {
+          "id": "ultra-ball",
+          "weight": 6,
+          "count": 2
+        },
+        {
+          "id": "rare-tm",
+          "weight": 5
+        },
+        {
+          "id": "capture-styler",
+          "weight": 2
+        },
+        {
+          "id": "crystal-shard",
+          "weight": 2
+        },
+        {
           "id": "leftovers",
-          "weight": 3
+          "weight": 1
         },
         {
           "id": "focus-sash",
-          "weight": 3
+          "weight": 1
+        },
+        {
+          "id": "choice-band",
+          "weight": 1
+        },
+        {
+          "id": "life-orb",
+          "weight": 1
         },
         {
           "id": "charcoal",
@@ -124,34 +193,36 @@
           "weight": 1
         },
         {
-          "id": "tm",
-          "weight": 6
-        }
-      ]
-    },
-    "rare": {
-      "weight": 10,
-      "ball": "ultra",
-      "entries": [
-        {
-          "id": "ultra-ball",
-          "weight": 6
+          "id": "nest-ball",
+          "weight": 1
         },
         {
-          "id": "choice-band",
-          "weight": 3
+          "id": "net-ball",
+          "weight": 1
         },
         {
-          "id": "life-orb",
-          "weight": 3
+          "id": "dive-ball",
+          "weight": 1
         },
         {
-          "id": "capture-styler",
-          "weight": 3
+          "id": "dusk-ball",
+          "weight": 1
         },
         {
-          "id": "tm",
-          "weight": 5
+          "id": "timer-ball",
+          "weight": 1
+        },
+        {
+          "id": "quick-ball",
+          "weight": 1
+        },
+        {
+          "id": "repeat-ball",
+          "weight": 1
+        },
+        {
+          "id": "heal-ball",
+          "weight": 1
         }
       ]
     }

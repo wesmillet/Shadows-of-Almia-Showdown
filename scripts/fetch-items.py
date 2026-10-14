@@ -7,9 +7,9 @@ by the item's data JSON (several items share one sprite with their own
 palette: Super Potion is potion.png + super_potion.pal, every TM is tm.png +
 tm_<type>.pal). Palette index 0 is transparent.
 
-The item-ball sprites drawn on the ground and thrown in captures are the
-project's own assets/items/balls/ set (see its README); the open and wobble
-frames are built in code from the closed sprite.
+Every ball (bag icon, ground item, capture throw) uses the project's own
+assets/items/balls/ set (see its README); no Platinum ball art is fetched.
+The open and wobble frames are built in code from the closed sprite.
 
 Set POKEPLATINUM_DIR to reuse an existing sparse checkout (default
 /tmp/pokeplatinum).
@@ -33,7 +33,6 @@ DATA = os.path.join(WORK, 'res', 'items', 'data')
 
 # game item id -> decomp item name
 ITEMS = {
-    'poke-ball': 'poke_ball', 'great-ball': 'great_ball', 'ultra-ball': 'ultra_ball',
     'potion': 'potion', 'super-potion': 'super_potion', 'hyper-potion': 'hyper_potion',
     'full-heal': 'full_heal', 'revive': 'revive',
     'x-attack': 'x_attack', 'x-defend': 'x_defense', 'x-speed': 'x_speed',
@@ -52,9 +51,9 @@ Nintendo, taken from the pret/pokeplatinum decompilation
 recoloured with their JASC palettes, palette index 0 keyed out).
 Non-commercial fan project use only.
 
-<item>.png            32x32 Gen 4 bag icon
+<item>.png            32x32 Gen 4 bag icon (medicine, X items, held items)
 tm-<type>.png         the TM disc in that type's colour
-balls/                overworld item-ball sprites: see balls/README.md
+balls/                every ball and the Crystal Shard vial: see balls/README.md
 """
 
 

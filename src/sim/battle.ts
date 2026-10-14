@@ -6,8 +6,8 @@
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG, effectiveness, move, type MoveDef, type StatusKind } from './data';
-import { ITEMS } from './items';
-import type { Mon, Trainer } from './entities';
+import { ITEMS, type BallKind } from './items';
+import type { InventorySlot, Mon, Trainer } from './entities';
 
 export interface Area {
   shape: MoveDef['shape'];
@@ -34,10 +34,11 @@ export type BattleEvent =
   | { type: 'notice'; text: string; seconds?: number }
   | { type: 'caught'; mon: Mon; by: Trainer }
   | { type: 'broke-free'; mon: Mon }
-  | { type: 'pickup'; trainer: Trainer; itemId: string }
+  | { type: 'pickup'; trainer: Trainer; items: InventorySlot[]; ball: BallKind; healed: boolean }
   | { type: 'eliminated'; trainer: Trainer }
   | { type: 'xp'; mon: Mon; xp: number; levels: number }
-  | { type: 'ball-hit'; mon: Mon }
+  | { type: 'ball-hit'; mon: Mon; x: number; y: number }
+  | { type: 'ball-absorb'; mon: Mon; x: number; y: number }
   | { type: 'ball-click'; mon: Mon; x: number; y: number }
   | { type: 'ball-burst'; mon: Mon; x: number; y: number };
 

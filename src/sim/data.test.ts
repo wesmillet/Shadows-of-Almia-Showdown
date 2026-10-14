@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import fxManifest from '../../assets/fx/guardian_signs/manifest.json';
 import { effectiveness, MOVES, SPECIES, statsAtLevel, TYPE_CHART } from './data';
 import spawns from '../../data/spawns.json';
+
+const FX_MANIFEST = (fxManifest as { effects: Record<string, { frames: number }> }).effects;
 
 describe('type chart', () => {
   it('has all 18 types with symmetric coverage', () => {
@@ -46,5 +49,22 @@ describe('species data', () => {
     const s = statsAtLevel({ hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90 }, 15);
     expect(s.hp).toBe(35);
     expect(s.atk).toBe(21);
+  });
+
+  it('every move lists Guardian Signs effects that exist, with valid anchors and modes', () => {
+    for (const m of MOVES.values()) {
+      expect(m.fx?.length, m.id).toBeGreaterThan(0);
+      for (const part of m.fx ?? []) {
+        expect(FX_MANIFEST[part.id], `${m.id}: ${part.id}`).toBeDefined();
+        expect(['target', 'attacker', 'projectile']).toContain(part.anchor);
+        if (part.mode) expect(['beam', 'stream', 'status']).toContain(part.mode);
+        if (part.anchor === 'projectile') expect((FX_MANIFEST[part.id]?.frames ?? 0) <= 8, `${m.id}: projectile ${part.id} should be a short loop`).toBe(true);
+      }
+    }
+    // Impacts prefer effects with four or more frames: every move with impacts has an animated one.
+    for (const m of MOVES.values()) {
+      const impacts = (m.fx ?? []).filter((p) => p.anchor === 'target' && !p.mode);
+      if (impacts.length) expect(Math.max(...impacts.map((p) => FX_MANIFEST[p.id]?.frames ?? 0)), `${m.id}`).toBeGreaterThanOrEqual(4);
+    }
   });
 });

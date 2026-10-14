@@ -40,6 +40,8 @@ export interface GroundRenderer {
   biomeAt(tx: number, ty: number): Biome;
   /** True when a character may stand on the tile (terrain only; decor is checked separately). */
   walkable(tx: number, ty: number): boolean;
+  /** Sea, lake or river at this tile (Dive Ball targets). */
+  inWater(tx: number, ty: number): boolean;
   /** Reachable from the map centre on foot (spawn points use this). */
   reachable(tx: number, ty: number): boolean;
   /** Under the forest canopy (characters there are drawn faded). */

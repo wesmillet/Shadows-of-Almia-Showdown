@@ -9,8 +9,8 @@ import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
-import { CONFIG, move, typeColor, type MoveDef } from '../sim/data';
-import type { Mon } from '../sim/entities';
+import { CONFIG, MOVES, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import type { GroundItem, InventorySlot, Mon } from '../sim/entities';
 import { lead } from '../sim/entities';
 import type { Match } from '../sim/match';
 import type { Assets } from '../sprites/assets';
@@ -23,9 +23,28 @@ import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVi
 import { drawInfoBar, Hud, type HudState } from './hud';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
-import { ballOfTier, ITEMS } from '../sim/items';
+import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
+import { FxLibrary } from '../vfx/fxLibrary';
+import { FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
 import { drawSoftShadow } from '../render/world';
 import { rgba, type GameContext, type Screen } from './screens';
+
+/** Effects used outside moves: the capture sequence, Bad Dreams and status icons. */
+export const EXTRA_FX = {
+  /** Poké Ball flash when the ball opens on impact. */
+  flash: 'fx_176',
+  /** The "sucked in" swirl on the target while it shrinks. */
+  swirl: 'fx_144',
+  /** Sparkle on the click of a successful catch. */
+  click: 'fx_014',
+  /** White puff when the target bursts free. */
+  burst: 'fx_066',
+  /** Darkrai's Bad Dreams, looping on sleeping Pokémon. */
+  dreams: 'fx_158',
+  sleep: 'fx_015',
+  burn: 'fx_134',
+  paralysis: 'fx_096',
+} as const;
 
 export class MatchScreen implements Screen {
   private readonly lighting: Lighting;
@@ -38,9 +57,12 @@ export class MatchScreen implements Screen {
   private aimPower = 0;
   private aiming = false;
   private gearTab = false;
-  private popup: { itemId: string; t: number } | null = null;
+  private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
   private readonly strips = new Map<string, HTMLImageElement | null>();
+  protected readonly fx: FxLibrary;
+  /** Sunnyside glint strip (6 frames of 7x7) that sparkles on ground balls. */
+  private glint: HTMLImageElement | null = null;
 
   private endTimer = -1;
   protected readonly icons: ItemIcons;
@@ -56,6 +78,12 @@ export class MatchScreen implements Screen {
     this.lighting = new Lighting(ctx.view);
     this.icons = new ItemIcons(assets);
     this.hud = new Hud(ctx.view, this.icons, ui);
+    this.fx = new FxLibrary(assets);
+    const ids = new Set<string>(Object.values(EXTRA_FX));
+    for (const m of MOVES.values()) for (const part of m.fx ?? []) ids.add(part.id);
+    this.fx.preload(ids);
+    this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard']);
+    void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -197,6 +225,16 @@ export class MatchScreen implements Screen {
     return { x: p.x + (dx / n) * dist, y: p.y + (dy / n) * dist };
   }
 
+  /** The next bag slot after `from` that holds a ball (wrapping), or `from` itself. */
+  private nextBallSlot(from: number): number {
+    const items = this.match.player.items;
+    for (let k = 1; k <= items.length; k++) {
+      const i = (from + k) % items.length;
+      if (ITEMS[items[i]?.id ?? '']?.kind === 'ball') return i;
+    }
+    return from;
+  }
+
   /** Number keys and clicks on the bag: balls arm themselves, anything else is used at once; the gear tab equips or teaches. */
   protected onItemSlot(index: number): void {
     const p = this.match.player;
@@ -222,8 +260,10 @@ export class MatchScreen implements Screen {
     }
     const def = ITEMS[entry.id];
     if (def?.kind === 'ball') {
-      this.selectedItem = this.selectedItem === index ? -1 : index;
-      if (this.selectedItem === index) this.say(`${def.name} ready: hold Space to aim`, 1.2);
+      // A ball's key arms it; the armed ball's key again cycles to the next ball type in the bag.
+      this.selectedItem = this.selectedItem === index ? this.nextBallSlot(index) : index;
+      const cur = ITEMS[p.items[this.selectedItem]?.id ?? ''];
+      if (cur) this.say(`${cur.name} ready: hold Space to aim${cur.desc ? ` · ${cur.desc}` : ''}`, 1.6);
       return;
     }
     const msg = this.match.useItem(p, index);
@@ -272,6 +312,7 @@ export class MatchScreen implements Screen {
       case 'status': {
         const label = ev.status === 'sleep' ? 'Fell asleep!' : ev.status === 'burn' ? 'Burned!' : 'Paralyzed!';
         this.floaters.add(ev.target.x, ev.target.y - 0.3, label, ev.status === 'sleep' ? '#b39dff' : ev.status === 'burn' ? '#ff8a65' : '#ffe76b', 16);
+        this.playFx(EXTRA_FX[ev.status], { x: ev.target.x, y: ev.target.y, lift: 1.15, scale: 2, fps: 12, loopSeconds: 1.6, follow: ev.target });
         break;
       }
       case 'stages':
@@ -279,6 +320,8 @@ export class MatchScreen implements Screen {
         break;
       case 'tick':
         this.floaters.add(ev.target.x, ev.target.y, String(ev.damage), ev.source === 'burn' ? '#ff8a65' : '#c38bff', 15);
+        // Bad Dreams: the nightmare cloud loops over the sleeper until the next tick.
+        if (ev.source === 'dreams') this.playFx(EXTRA_FX.dreams, { x: ev.target.x, y: ev.target.y, lift: 1.1, scale: 2, fps: 10, loopSeconds: 1.05, follow: ev.target });
         break;
       case 'faint':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, `${ev.mon.name} fainted`, '#ffffff', 15);
@@ -293,16 +336,22 @@ export class MatchScreen implements Screen {
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
       case 'ball-hit':
-        this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ff6b6b', 0.6));
+        // The ball opens: white flash over it.
+        if (!this.playFx(EXTRA_FX.flash, { x: ev.x, y: ev.y, lift: 0.85, scale: 2, fps: 20 })) this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ff6b6b', 0.6));
+        break;
+      case 'ball-absorb':
+        // The target is sucked in: swirl on it while it shrinks.
+        this.playFx(EXTRA_FX.swirl, { x: ev.mon.x, y: ev.mon.y, lift: 0.45, scale: 2, fps: 48, loopSeconds: 0.32, follow: ev.mon });
         break;
       case 'ball-click':
-        // Sparkle on the click.
-        this.vfx.add(new ImpactBurst(ev.x, ev.y, '#ffffff', 0.9));
-        this.vfx.add(new RingPulse(ev.x, ev.y, 0.9, '#ffd36b', 0.7));
+        if (!this.playFx(EXTRA_FX.click, { x: ev.x, y: ev.y, lift: 0.35, scale: 2, fps: 24 })) {
+          this.vfx.add(new ImpactBurst(ev.x, ev.y, '#ffffff', 0.9));
+          this.vfx.add(new RingPulse(ev.x, ev.y, 0.9, '#ffd36b', 0.7));
+        }
         break;
       case 'ball-burst':
-        this.vfx.add(new StatusCloud(ev.x, ev.y, '#ffffff', 0.9));
-        this.vfx.add(new ImpactBurst(ev.x, ev.y, '#ffffff', 0.5));
+        this.playFx(EXTRA_FX.flash, { x: ev.x, y: ev.y, lift: 0.4, scale: 2, fps: 20 });
+        if (!this.playFx(EXTRA_FX.burst, { x: ev.x, y: ev.y, lift: 0.5, scale: 2, fps: 24 })) this.vfx.add(new StatusCloud(ev.x, ev.y, '#ffffff', 0.9));
         break;
       case 'caught':
         if (ev.by.isPlayer) this.say(`Gotcha! ${ev.mon.name} joined the party!`, 2);
@@ -312,8 +361,9 @@ export class MatchScreen implements Screen {
         break;
       case 'pickup':
         if (ev.trainer.isPlayer) {
-          this.popup = { itemId: ev.itemId, t: 2.4 };
+          this.popup = { items: ev.items, ball: ev.ball, healed: ev.healed, t: 2.8 };
           this.vfx.add(new ImpactBurst(ev.trainer.x, ev.trainer.y, '#ffe9a8', 0.6));
+          if (ev.healed) this.say('The Cherish Ball restores your whole party!', 2.4);
           if (this.selectedItem < 0) this.selectedItem = this.match.ballSlot(this.match.player);
         }
         break;
@@ -331,7 +381,76 @@ export class MatchScreen implements Screen {
     }
   }
 
+  /** Plays one effect sheet when it is loaded; false means the caller should fall back. */
+  private playFx(id: string, o: FxAnimOptions): boolean {
+    const sheet = this.fx.sheet(id);
+    if (!sheet) return false;
+    this.vfx.add(new FxAnim(sheet, o));
+    return true;
+  }
+
+  /**
+   * A move's Guardian Signs effects, in order: attacker parts play on the user (beams and
+   * streams run to the aim point), target parts play on every Pokémon hit (or the aimed tile),
+   * a projectile flies to each target and the target parts listed after it play on arrival.
+   */
+  private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[]): void {
+    const from = { x: attacker.x, y: attacker.y };
+    const targets: Array<{ x: number; y: number; mon: Mon | null }> = hits.length
+      ? hits.map((h) => ({ x: h.x, y: h.y, mon: h }))
+      : [{ x: area.tx, y: area.ty, mon: null }];
+    const focus = hits[0] ? { x: hits[0].x, y: hits[0].y } : { x: area.fx, y: area.fy };
+    const playAt = (part: FxPart, t: { x: number; y: number; mon: Mon | null }): void => {
+      const sheet = this.fx.sheet(part.id);
+      if (!sheet) return;
+      if (part.mode === 'status') {
+        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: 1.15, scale: part.scale ?? 2, fps: part.fps ?? 15, loopSeconds: 1.6, follow: t.mon, tint: part.tint }));
+      } else {
+        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: 0.45, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
+      }
+    };
+    let projectile: FxPart | null = null;
+    const impacts: FxPart[] = [];
+    for (const part of parts) {
+      if (part.anchor === 'projectile') {
+        projectile = part;
+        continue;
+      }
+      if (part.anchor === 'attacker') {
+        const sheet = this.fx.sheet(part.id);
+        if (!sheet) continue;
+        if (part.mode === 'beam' || part.mode === 'stream') {
+          this.vfx.add(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: 0.5, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
+        } else playAt(part, { x: attacker.x, y: attacker.y, mon: attacker });
+        continue;
+      }
+      if (projectile) impacts.push(part);
+      else for (const t of targets) playAt(part, t);
+    }
+    if (projectile) {
+      const sheet = this.fx.sheet(projectile.id);
+      const proj = projectile;
+      for (const t of targets) {
+        if (!sheet) {
+          for (const p of impacts) playAt(p, t);
+          continue;
+        }
+        this.vfx.add(new FxProjectile(sheet, {
+          from, to: { x: t.x, y: t.y }, lift: 0.5, scale: proj.scale ?? 3, fps: proj.fps ?? 15, tint: proj.tint,
+          onHit: () => {
+            for (const p of impacts) playAt(p, t);
+          },
+        }));
+      }
+    }
+  }
+
   private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[]): void {
+    if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
+      this.spawnFx(attacker, m.fx, area, hits);
+      return;
+    }
+    // Procedural families: only for moves with no effect assigned (or one still loading).
     const color = typeColor(m.type);
     const size = m.size ?? 1;
     const from = this.anchorWorld(attacker);
@@ -480,14 +599,14 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** Items on the ground are item balls: a Poké Ball sprite that bobs and glints. */
-  private drawGroundItem(v: View, it: { tier: 'common' | 'uncommon' | 'rare'; itemId: string | null; x: number; y: number; bob: number }): void {
+  /** Items on the ground are item balls: the sprite of the ball that holds them, bobbing slowly with a periodic glint. */
+  private drawGroundItem(v: View, it: GroundItem): void {
     const sx = Math.round(v.toScreenX(it.x));
     const sy = Math.round(v.toScreenY(it.y));
     const s = v.spriteScale;
-    const lift = Math.round((Math.sin(it.bob * 3) * 0.5 + 0.5) * 2) * s;
+    const lift = Math.round((Math.sin(it.bob * 1.8) * 0.5 + 0.5) * 2) * s;
     drawSoftShadow(v, sx, sy, 0.22, 0.3);
-    const img = this.icons.ball(ballOfTier(it.tier));
+    const img = this.icons.ball(it.ball);
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;
     const w = (img ? img.width : 18) * s;
@@ -495,15 +614,12 @@ export class MatchScreen implements Screen {
     const x0 = sx - Math.floor(w / 2);
     const y0 = sy - h - lift;
     if (img) ctx.drawImage(img, x0, y0, w, h);
-    else ctx.drawImage(this.assets.placeholder('ball', 18, 18), x0, y0, w, h);
-    // Shine sweeping over the ball.
-    const k = (it.bob * 0.9) % 3;
-    if (k < 0.5) {
-      ctx.save();
-      ctx.globalAlpha = 0.8 * (1 - Math.abs(k - 0.25) * 4);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(x0 + 3 * s + Math.floor(k * (w / s - 6)) * s, y0 + 2 * s, s, 2 * s);
-      ctx.restore();
+    else ctx.drawImage(this.assets.placeholder(`${it.ball} ball`, 18, 18), x0, y0, w, h);
+    // Sunnyside glint: six 7x7 frames over the highlight, once every three seconds.
+    const k = it.bob % 3;
+    if (this.glint && k < 0.5) {
+      const frame = Math.min(5, Math.floor(k * 12));
+      ctx.drawImage(this.glint, frame * 7, 0, 7, 7, x0 + 2 * s, y0 + s, 7 * s, 7 * s);
     }
   }
 
@@ -584,6 +700,7 @@ export class MatchScreen implements Screen {
     if (first) drawPointLight(v, first.x, first.y, 1.2, '#ffe8c0', 0.12);
     for (const o of this.match.outposts) drawPointLight(v, o.x, o.y, 2.2, '#7dffc0', o.users.length ? 0.5 : 0.22, 0);
     for (const it of this.match.items) drawPointLight(v, it.x, it.y, 0.5, '#ffe9a8', 0.25, 0.1);
+    for (const z of this.match.lightZones) drawPointLight(v, z.x, z.y, z.r * 0.8, '#d9b8ff', 0.3 * Math.min(1, z.t / 1.5), 0);
     for (const th of this.match.throws) if (th.phase === 'absorb' || th.phase === 'burst' || th.phase === 'click') drawPointLight(v, th.x, th.y, 1.2, '#ff8a8a', 0.6, 0.3);
     // The Shadow Crystal pulses; brighter as the night deepens.
     const t = this.match.time;
@@ -673,6 +790,7 @@ export class MatchScreen implements Screen {
       selectedItem: this.selectedItem,
       gearTab: this.gearTab,
       popup: this.popup,
+      armedBall: this.selectedItem >= 0 ? ITEMS[this.match.player.items[this.selectedItem]?.id ?? '']?.name ?? null : null,
       teach: this.teach ? ((slot) => {
         const m = lead(this.match.player);
         const entry = this.match.player.held[slot];
@@ -716,6 +834,7 @@ export class MatchScreen implements Screen {
     v.beginLights();
     this.drawLights(v);
     const lp = this.lightingParams(v);
+    const zone = this.match.lightZones[this.match.lightZones.length - 1];
     this.lighting.render({
       cold: lp.cold,
       darkCx: v.toScreenX(this.match.centerX),
@@ -723,6 +842,9 @@ export class MatchScreen implements Screen {
       darkRadius: lp.darkRadius,
       darkFeather: lp.darkFeather,
       darkAmount: lp.darkAmount,
+      clearCx: zone ? v.toScreenX(zone.x) : 0,
+      clearCy: zone ? v.toScreenY(zone.y) : 0,
+      clearRadius: zone ? zone.r * v.pxPerTile * Math.min(1, zone.t / 1.5) : 0,
       time: this.match.time,
     });
     this.hud.draw(this.match, this.hudState(v));

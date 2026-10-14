@@ -1,9 +1,17 @@
 /** Item icons and ball sprites from assets/items, loaded once and shared by the HUD and the world. */
+import type { BallKind } from '../sim/items';
 import type { Assets } from './assets';
 
-export type BallKind = 'poke' | 'great' | 'ultra';
 /** A drawable with pixel dimensions: a loaded image or a composed canvas. */
 export type Drawable = HTMLImageElement | HTMLCanvasElement;
+
+/** Where an item's picture lives under assets/items/. Balls and the crystal shard use the overworld ball set. */
+export function iconPath(itemId: string, tmType?: string): string {
+  if (tmType) return `tm-${tmType}`;
+  if (itemId.endsWith('-ball')) return `balls/${itemId.replace(/-ball$/, '')}_ball`;
+  if (itemId === 'crystal-shard') return 'balls/vial';
+  return itemId;
+}
 
 export class ItemIcons {
   private icons = new Map<string, HTMLImageElement | null>();
@@ -12,9 +20,9 @@ export class ItemIcons {
 
   constructor(private readonly assets: Assets) {}
 
-  /** The 32x32 bag icon for an item id (TMs resolve to their type disc). Null until loaded or when missing. */
+  /** The icon for an item id (TMs resolve to their type disc, balls to their sprite). Null until loaded or when missing. */
   get(itemId: string, tmType?: string): HTMLImageElement | null {
-    const key = tmType ? `tm-${tmType}` : itemId;
+    const key = iconPath(itemId, tmType);
     if (!this.icons.has(key) && !this.pending.has(key)) {
       this.pending.add(key);
       void this.assets.loadImage(`items/${key}.png`).then((img) => {
@@ -25,13 +33,18 @@ export class ItemIcons {
     return this.icons.get(key) ?? null;
   }
 
+  /** Starts loading every icon in a list (bag and ground balls appear without a first-draw blink). */
+  preload(ids: Iterable<string>): void {
+    for (const id of ids) this.get(id);
+  }
+
   /**
    * The overworld item-ball sprite (assets/items/balls/<kind>_ball.png, 18x18, bottom-centre anchored).
-   * The open frame is composed from the closed sprite: the lid swings up and back on its hinge while
-   * the inside glows, as the ball README asks; the wobble is a rotation applied by the caller.
+   * The open frame is composed from the closed sprite: the top half lifted straight up with the inside
+   * glowing white, as the ball README asks; the white flash and the wobble are added by the caller.
    */
   ball(kind: BallKind, open = false): Drawable | null {
-    const img = this.get(`balls/${kind}_ball`);
+    const img = this.get(`${kind}-ball`);
     if (!img || !open) return img;
     let frame = this.openFrames.get(kind);
     if (!frame) {
@@ -41,22 +54,26 @@ export class ItemIcons {
     return frame;
   }
 
-  /** Draws an icon centred at (x, y) at an integer scale, or the labeled placeholder. */
-  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, scale: number, tmType?: string): void {
+  /**
+   * Draws an icon centred at (x, y), scaled by whole pixels to fit `fit` pixels (18 px balls draw
+   * larger than 32 px bag icons), or the labeled placeholder when the asset is missing.
+   */
+  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, fit: number, tmType?: string): void {
     const img = this.get(itemId, tmType);
     ctx.imageSmoothingEnabled = false;
     if (img) {
+      const scale = Math.max(1, Math.floor(fit / Math.max(img.naturalWidth, img.naturalHeight)));
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
       ctx.drawImage(img, Math.round(x - w / 2), Math.round(y - h / 2), w, h);
     } else {
       const ph = this.assets.placeholder(itemId, 32, 32);
-      ctx.drawImage(ph, Math.round(x - 16 * scale), Math.round(y - 16 * scale), 32 * scale, 32 * scale);
+      ctx.drawImage(ph, Math.round(x - fit / 2), Math.round(y - fit / 2), fit, fit);
     }
   }
 }
 
-/** Builds the open-ball frame from a closed sprite: lower half in place, lid lifted and tilted back, a glow in the gap. */
+/** Builds the open-ball frame from a closed sprite: lower half in place, top half offset upward, a white glow in the gap. */
 function composeOpenBall(img: HTMLImageElement): HTMLCanvasElement {
   const w = img.naturalWidth;
   const h = img.naturalHeight;
@@ -72,13 +89,8 @@ function composeOpenBall(img: HTMLImageElement): HTMLCanvasElement {
   ctx.beginPath();
   ctx.ellipse(w / 2, lift + half, w / 2 - 2, lift * 0.9, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Lower half, pushed down by the lift.
+  // Lower half, pushed down by the lift; top half offset straight up.
   ctx.drawImage(img, 0, half, w, h - half, 0, lift + half, w, h - half);
-  // Lid: hinged at its back edge, tilted up.
-  ctx.save();
-  ctx.translate(w - 1, lift + half - lift);
-  ctx.rotate(-0.55);
-  ctx.drawImage(img, 0, 0, w, half, -(w - 1), -half, w, half);
-  ctx.restore();
+  ctx.drawImage(img, 0, 0, w, half, 0, 0, w, half);
   return c;
 }

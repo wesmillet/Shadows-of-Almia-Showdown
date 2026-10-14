@@ -29,6 +29,16 @@ export type MoveShape = 'single' | 'line' | 'cone' | 'ring' | 'self';
 export type VfxFamily = 'burst' | 'projectile' | 'beam' | 'ring' | 'cloud';
 export type StatusKind = 'sleep' | 'burn' | 'paralysis';
 
+/** One Guardian Signs effect in a move's fx list (see data/moves.json `_fx`). */
+export interface FxPart {
+  id: string;
+  anchor: 'target' | 'attacker' | 'projectile';
+  mode?: 'beam' | 'stream' | 'status';
+  fps?: number;
+  scale?: number;
+  tint?: string;
+}
+
 export interface MoveDef {
   id: string;
   name: string;
@@ -44,6 +54,8 @@ export interface MoveDef {
   status?: { kind: StatusKind; chance: number };
   stages?: { self?: { atk?: number; def?: number }; target?: { atk?: number; def?: number }; chance: number };
   strip?: string;
+  /** Effect sheets played when the move resolves; absent = procedural family. */
+  fx?: FxPart[];
 }
 
 export const MOVES = new Map<string, MoveDef>();

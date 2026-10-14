@@ -11,7 +11,13 @@
       "cooldown": 1.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1
+      "size": 1,
+      "fx": [
+        {
+          "id": "fx_001",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "scratch",
@@ -23,7 +29,14 @@
       "cooldown": 1.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 0.9
+      "size": 0.9,
+      "fx": [
+        {
+          "id": "fx_116",
+          "anchor": "target",
+          "fps": 30
+        }
+      ]
     },
     {
       "id": "quick-attack",
@@ -35,7 +48,18 @@
       "cooldown": 1.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 0.8
+      "size": 0.8,
+      "fx": [
+        {
+          "id": "fx_131",
+          "anchor": "projectile",
+          "fps": 20
+        },
+        {
+          "id": "fx_001",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "bite",
@@ -47,7 +71,14 @@
       "cooldown": 2.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.1
+      "size": 1.1,
+      "fx": [
+        {
+          "id": "fx_118",
+          "anchor": "target",
+          "fps": 30
+        }
+      ]
     },
     {
       "id": "rock-smash",
@@ -65,7 +96,13 @@
           "def": -1
         },
         "chance": 0.5
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_148",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "wing-attack",
@@ -77,7 +114,13 @@
       "cooldown": 2.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_147",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "ember",
@@ -93,7 +136,17 @@
       "status": {
         "kind": "burn",
         "chance": 0.1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_134",
+          "anchor": "projectile"
+        },
+        {
+          "id": "fx_126",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "water-gun",
@@ -105,7 +158,17 @@
       "cooldown": 2,
       "vfx": "projectile",
       "anim": "Shoot",
-      "size": 1
+      "size": 1,
+      "fx": [
+        {
+          "id": "fx_162",
+          "anchor": "projectile"
+        },
+        {
+          "id": "fx_161",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "rock-throw",
@@ -117,7 +180,23 @@
       "cooldown": 2.5,
       "vfx": "projectile",
       "anim": "Shoot",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_150",
+          "anchor": "projectile"
+        },
+        {
+          "id": "fx_072",
+          "anchor": "target",
+          "fps": 20
+        },
+        {
+          "id": "fx_149",
+          "anchor": "target",
+          "fps": 4
+        }
+      ]
     },
     {
       "id": "shadow-ball",
@@ -129,7 +208,17 @@
       "cooldown": 4,
       "vfx": "projectile",
       "anim": "Charge",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_170",
+          "anchor": "projectile"
+        },
+        {
+          "id": "fx_187",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "thunder-shock",
@@ -145,7 +234,18 @@
       "status": {
         "kind": "paralysis",
         "chance": 0.1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_232",
+          "anchor": "attacker",
+          "mode": "beam"
+        },
+        {
+          "id": "fx_157",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "razor-leaf",
@@ -157,7 +257,18 @@
       "cooldown": 3,
       "vfx": "beam",
       "anim": "Shoot",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_153",
+          "anchor": "projectile",
+          "fps": 24
+        },
+        {
+          "id": "fx_202",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "psybeam",
@@ -169,7 +280,18 @@
       "cooldown": 3,
       "vfx": "beam",
       "anim": "Shoot",
-      "size": 1.1
+      "size": 1.1,
+      "fx": [
+        {
+          "id": "fx_101",
+          "anchor": "attacker",
+          "mode": "beam"
+        },
+        {
+          "id": "fx_041",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "ice-beam",
@@ -181,7 +303,18 @@
       "cooldown": 4.5,
       "vfx": "beam",
       "anim": "Charge",
-      "size": 1.3
+      "size": 1.3,
+      "fx": [
+        {
+          "id": "fx_109",
+          "anchor": "attacker",
+          "mode": "beam"
+        },
+        {
+          "id": "fx_204",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "dark-pulse",
@@ -193,7 +326,19 @@
       "cooldown": 4,
       "vfx": "beam",
       "anim": "Charge",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_113",
+          "anchor": "attacker",
+          "mode": "beam"
+        },
+        {
+          "id": "fx_177",
+          "anchor": "target",
+          "fps": 24
+        }
+      ]
     },
     {
       "id": "discharge",
@@ -209,7 +354,17 @@
       "status": {
         "kind": "paralysis",
         "chance": 0.3
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_090",
+          "anchor": "attacker"
+        },
+        {
+          "id": "fx_157",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "bulldoze",
@@ -221,7 +376,18 @@
       "cooldown": 4,
       "vfx": "ring",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_067",
+          "anchor": "attacker"
+        },
+        {
+          "id": "fx_072",
+          "anchor": "target",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "dark-void",
@@ -237,7 +403,23 @@
       "status": {
         "kind": "sleep",
         "chance": 1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_114",
+          "anchor": "attacker"
+        },
+        {
+          "id": "fx_186",
+          "anchor": "target"
+        },
+        {
+          "id": "fx_015",
+          "anchor": "target",
+          "mode": "status",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "sleep-powder",
@@ -253,7 +435,21 @@
       "status": {
         "kind": "sleep",
         "chance": 0.75
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_080",
+          "anchor": "attacker",
+          "mode": "stream",
+          "scale": 2
+        },
+        {
+          "id": "fx_015",
+          "anchor": "target",
+          "mode": "status",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "thunder-wave",
@@ -269,7 +465,20 @@
       "status": {
         "kind": "paralysis",
         "chance": 0.9
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_096",
+          "anchor": "projectile",
+          "fps": 20
+        },
+        {
+          "id": "fx_096",
+          "anchor": "target",
+          "mode": "status",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "will-o-wisp",
@@ -285,7 +494,19 @@
       "status": {
         "kind": "burn",
         "chance": 0.85
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_208",
+          "anchor": "projectile",
+          "fps": 12
+        },
+        {
+          "id": "fx_134",
+          "anchor": "target",
+          "mode": "status"
+        }
+      ]
     },
     {
       "id": "howl",
@@ -303,7 +524,18 @@
           "atk": 1
         },
         "chance": 1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_006",
+          "anchor": "attacker"
+        },
+        {
+          "id": "fx_167",
+          "anchor": "attacker",
+          "mode": "status"
+        }
+      ]
     },
     {
       "id": "flamethrower",
@@ -319,7 +551,19 @@
       "status": {
         "kind": "burn",
         "chance": 0.1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_040",
+          "anchor": "attacker",
+          "mode": "stream",
+          "scale": 1.5
+        },
+        {
+          "id": "fx_174",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "surf",
@@ -331,7 +575,19 @@
       "cooldown": 5,
       "vfx": "ring",
       "anim": "Charge",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_070",
+          "anchor": "attacker",
+          "scale": 4
+        },
+        {
+          "id": "fx_081",
+          "anchor": "target",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "thunderbolt",
@@ -347,7 +603,21 @@
       "status": {
         "kind": "paralysis",
         "chance": 0.1
-      }
+      },
+      "fx": [
+        {
+          "id": "fx_027",
+          "anchor": "attacker",
+          "mode": "beam",
+          "fps": 20,
+          "scale": 2
+        },
+        {
+          "id": "fx_044",
+          "anchor": "target",
+          "scale": 2
+        }
+      ]
     },
     {
       "id": "energy-ball",
@@ -359,7 +629,18 @@
       "cooldown": 3.5,
       "vfx": "projectile",
       "anim": "Shoot",
-      "size": 1.3
+      "size": 1.3,
+      "fx": [
+        {
+          "id": "fx_173",
+          "anchor": "projectile",
+          "scale": 2
+        },
+        {
+          "id": "fx_202",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "crunch",
@@ -371,7 +652,20 @@
       "cooldown": 3.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_118",
+          "anchor": "target",
+          "fps": 30,
+          "tint": "#7a3fd6"
+        },
+        {
+          "id": "fx_177",
+          "anchor": "target",
+          "fps": 24
+        }
+      ]
     },
     {
       "id": "brick-break",
@@ -383,7 +677,14 @@
       "cooldown": 3,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_017",
+          "anchor": "target",
+          "scale": 2
+        }
+      ]
     },
     {
       "id": "earthquake",
@@ -395,7 +696,19 @@
       "cooldown": 6,
       "vfx": "ring",
       "anim": "Attack",
-      "size": 1.6
+      "size": 1.6,
+      "fx": [
+        {
+          "id": "fx_067",
+          "anchor": "attacker",
+          "scale": 4
+        },
+        {
+          "id": "fx_072",
+          "anchor": "target",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "aerial-ace",
@@ -407,7 +720,18 @@
       "cooldown": 2,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.1
+      "size": 1.1,
+      "fx": [
+        {
+          "id": "fx_131",
+          "anchor": "projectile",
+          "fps": 20
+        },
+        {
+          "id": "fx_147",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "poison-jab",
@@ -419,7 +743,17 @@
       "cooldown": 3.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_038",
+          "anchor": "target"
+        },
+        {
+          "id": "fx_159",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "sludge-bomb",
@@ -431,7 +765,20 @@
       "cooldown": 4,
       "vfx": "projectile",
       "anim": "Shoot",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_170",
+          "anchor": "projectile",
+          "tint": "#b24fd6"
+        },
+        {
+          "id": "fx_068",
+          "anchor": "target",
+          "fps": 20,
+          "scale": 2
+        }
+      ]
     },
     {
       "id": "rock-slide",
@@ -443,7 +790,19 @@
       "cooldown": 5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_240",
+          "anchor": "projectile",
+          "scale": 2
+        },
+        {
+          "id": "fx_072",
+          "anchor": "target",
+          "fps": 20
+        }
+      ]
     },
     {
       "id": "dragon-pulse",
@@ -455,7 +814,19 @@
       "cooldown": 4,
       "vfx": "beam",
       "anim": "Shoot",
-      "size": 1.3
+      "size": 1.3,
+      "fx": [
+        {
+          "id": "fx_102",
+          "anchor": "attacker",
+          "mode": "beam"
+        },
+        {
+          "id": "fx_097",
+          "anchor": "target",
+          "scale": 2
+        }
+      ]
     },
     {
       "id": "stone-edge",
@@ -467,7 +838,17 @@
       "cooldown": 5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.4
+      "size": 1.4,
+      "fx": [
+        {
+          "id": "fx_243",
+          "anchor": "target"
+        },
+        {
+          "id": "fx_088",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "wild-charge",
@@ -479,7 +860,18 @@
       "cooldown": 4,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.3
+      "size": 1.3,
+      "fx": [
+        {
+          "id": "fx_073",
+          "anchor": "target",
+          "scale": 2
+        },
+        {
+          "id": "fx_090",
+          "anchor": "target"
+        }
+      ]
     },
     {
       "id": "x-scissor",
@@ -491,7 +883,15 @@
       "cooldown": 3.5,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.2
+      "size": 1.2,
+      "fx": [
+        {
+          "id": "fx_123",
+          "anchor": "target",
+          "fps": 30,
+          "tint": "#7bd13a"
+        }
+      ]
     },
     {
       "id": "return",
@@ -503,7 +903,19 @@
       "cooldown": 4,
       "vfx": "burst",
       "anim": "Attack",
-      "size": 1.3
+      "size": 1.3,
+      "fx": [
+        {
+          "id": "fx_152",
+          "anchor": "attacker",
+          "mode": "status"
+        },
+        {
+          "id": "fx_001",
+          "anchor": "target"
+        }
+      ]
     }
-  ]
+  ],
+  "_fx": "fx: Guardian Signs effects (assets/fx/guardian_signs/<id>.png) played when the move resolves, in order. anchor: target (at each Pokémon hit, or the aimed tile), attacker (centred on the user), projectile (travels user -> target, rotated to its travel direction; the target parts after it play on arrival). mode: beam (tiled from user to target), stream (stretched from user to target), status (loops above the head). fps default 15, scale default 3 (pixels per source pixel), tint optional. Moves without fx fall back to the procedural family in vfx."
 }

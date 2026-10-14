@@ -9,6 +9,7 @@ import { clamp } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG } from './data';
 import type { Mon, Trainer } from './entities';
+import { ballKindOf, ITEMS, type BallKind } from './items';
 
 export interface CatchRoll {
   chance: number;
@@ -16,16 +17,60 @@ export interface CatchRoll {
   wobbles: number;
 }
 
-export function catchChance(target: Mon, ballTier: number): number {
+/** What a ball's rule looks at when it lands. */
+export interface CatchContext {
+  target: Mon;
+  thrower: Trainer;
+  /** Seconds since the match started. */
+  matchTime: number;
+  /** The target stands on a water tile. */
+  inWater: boolean;
+  /** The target stands inside the darkness. */
+  inDark: boolean;
+}
+
+/**
+ * The ball's catch modifier: its base tier times its special rule.
+ * Master Ball returns Infinity (a guaranteed catch).
+ */
+export function ballModifier(ballId: string, ctx: CatchContext): number {
+  const def = ITEMS[ballId];
+  const base = def?.tier ?? 1;
+  const types = ctx.target.types;
+  switch (def?.special) {
+    case 'master':
+      return Infinity;
+    case 'net':
+      return base * (types.includes('bug') || types.includes('water') ? 3 : 1);
+    case 'dive':
+      return base * (ctx.inWater ? 3.5 : 1);
+    case 'nest':
+      return base * clamp((41 - ctx.target.level) / 10, 1, 4);
+    case 'repeat':
+      return base * (ctx.thrower.party.some((m) => m.dex === ctx.target.dex) ? 3 : 1);
+    case 'timer':
+      return base * clamp(1 + ctx.matchTime / 100, 1, 4);
+    case 'dusk':
+      return base * (ctx.inDark ? 3 : 1);
+    case 'quick':
+      return base * (ctx.matchTime < 90 ? 5 : 1);
+    case 'heal':
+    default:
+      return base;
+  }
+}
+
+export function catchChance(target: Mon, modifier: number): number {
+  if (!Number.isFinite(modifier)) return 1;
   const hpFrac = target.maxHp > 0 ? target.hp / target.maxHp : 1;
   const base = 0.12 + 0.78 * (1 - hpFrac);
   const statusBonus = target.status ? (CONFIG.catch.statusBonus as Record<string, number>)[target.status] ?? 1 : 1;
-  return clamp(base * ballTier * statusBonus, 0.03, 0.98);
+  return clamp(base * modifier * statusBonus, 0.03, 0.98);
 }
 
-export function rollCatch(rng: Rng, target: Mon, ballTier: number): CatchRoll {
-  const chance = catchChance(target, ballTier);
-  const caught = rng.chance(chance);
+export function rollCatch(rng: Rng, target: Mon, modifier: number): CatchRoll {
+  const chance = catchChance(target, modifier);
+  const caught = chance >= 1 || rng.chance(chance);
   const wobbles = caught ? 3 : clamp(1 + Math.floor(chance * 2.6 + rng.next() * 0.6), 1, 3);
   return { chance, caught, wobbles };
 }
@@ -54,7 +99,8 @@ export interface Throw {
   t: number;
   flight: number;
   ballId: string;
-  tier: number;
+  /** Catch modifier, decided when the ball lands (Infinity = Master Ball). */
+  modifier: number;
   thrower: Trainer;
   phase: ThrowPhase;
   /** Seconds into the current phase. */
@@ -66,20 +112,18 @@ export interface Throw {
   wobblesDone: number;
 }
 
-export function newThrow(thrower: Trainer, from: { x: number; y: number }, to: { x: number; y: number }, ballId: string, tier: number): Throw {
+export function newThrow(thrower: Trainer, from: { x: number; y: number }, to: { x: number; y: number }, ballId: string): Throw {
   const d = Math.hypot(to.x - from.x, to.y - from.y);
   return {
     x: from.x, y: from.y, z: 0, startX: from.x, startY: from.y, targetX: to.x, targetY: to.y,
-    t: 0, flight: Math.max(0.35, d / 7), ballId, tier, thrower, phase: 'flying', phaseT: 0,
+    t: 0, flight: Math.max(0.35, d / 7), ballId, modifier: ITEMS[ballId]?.tier ?? 1, thrower, phase: 'flying', phaseT: 0,
     target: null, roll: null, wobblesDone: 0,
   };
 }
 
 /** Kind of ball sprite for an item id (poke-ball -> poke). */
-export function ballKind(ballId: string): 'poke' | 'great' | 'ultra' {
-  if (ballId.startsWith('great')) return 'great';
-  if (ballId.startsWith('ultra')) return 'ultra';
-  return 'poke';
+export function ballKind(ballId: string): BallKind {
+  return ballKindOf(ballId);
 }
 
 /**
@@ -161,9 +205,10 @@ export function targetVisual(th: Throw): { scale: number; alpha: number; flash: 
   }
 }
 
-/** Ball rotation in radians for the wobble phase, 0 otherwise. */
+/** Ball rotation in radians for the wobble phase (±20°, easing out), 0 otherwise. */
+export const WOBBLE_RADIANS = (20 * Math.PI) / 180;
 export function ballWobble(th: Throw): number {
   if (th.phase !== 'wobble') return 0;
   const k = th.phaseT / PHASE_SECONDS.wobble;
-  return Math.sin(k * Math.PI * 2) * 0.5 * (1 - k * 0.3);
+  return Math.sin(k * Math.PI * 2) * WOBBLE_RADIANS * (1 - k * 0.3);
 }

@@ -11,7 +11,7 @@ function trainer(x: number, y: number, hp: number): Trainer {
 const world = (rivals: Trainer[], items: Array<{ x: number; y: number }> = []) => ({
   ground: { reachable: () => true } as never,
   rng: new Rng(3),
-  items: items.map((p, i) => ({ id: i, tier: 'common' as const, itemId: 'potion', x: p.x, y: p.y, bob: 0 })),
+  items: items.map((p, i) => ({ id: i, ball: 'poke' as const, tier: 'common' as const, contents: null, x: p.x, y: p.y, bob: 0 })),
   outposts: [{ x: 0, y: 0 }],
   rivals,
   darkRadius: Infinity,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { ballKind, catchChance, newThrow, rollCatch, stepThrow, targetVisual, type Throw, type ThrowPhase } from './catching';
+import { ballKind, ballModifier, ballWobble, catchChance, newThrow, rollCatch, stepThrow, targetVisual, WOBBLE_RADIANS, type CatchContext, type Throw, type ThrowPhase } from './catching';
 import type { Mon, Trainer } from './entities';
 
 const mon = (hp: number, maxHp: number, status: Mon['status'] = null): Mon => ({ hp, maxHp, status }) as Mon;
@@ -12,6 +12,45 @@ describe('catchChance', () => {
     expect(catchChance(mon(50, 100), 2)).toBeGreaterThan(catchChance(mon(50, 100), 1));
     expect(catchChance(mon(80, 100, 'sleep'), 1)).toBeCloseTo(catchChance(mon(80, 100), 1) * 2);
     expect(catchChance(mon(1, 100, 'sleep'), 2)).toBeLessThanOrEqual(0.98);
+  });
+
+  it('applies each ball\'s rule where it lands', () => {
+    const target = { hp: 50, maxHp: 100, status: null, level: 15, dex: '0403', types: ['electric'] } as unknown as Mon;
+    const ctx = (over: Partial<CatchContext> = {}): CatchContext => ({
+      target, thrower: { party: [] } as unknown as Trainer, matchTime: 200, inWater: false, inDark: false, ...over,
+    });
+    expect(ballModifier('poke-ball', ctx())).toBe(1);
+    expect(ballModifier('great-ball', ctx())).toBe(1.5);
+    expect(ballModifier('ultra-ball', ctx())).toBe(2);
+    expect(ballModifier('master-ball', ctx())).toBe(Infinity);
+    expect(catchChance(target, Infinity)).toBe(1);
+    expect(rollCatch(new Rng(1), target, Infinity)).toMatchObject({ caught: true, wobbles: 3 });
+    expect(ballModifier('net-ball', ctx())).toBe(1);
+    expect(ballModifier('net-ball', ctx({ target: { ...target, types: ['water'] } as Mon }))).toBe(3);
+    expect(ballModifier('dive-ball', ctx({ inWater: true }))).toBe(3.5);
+    expect(ballModifier('dive-ball', ctx())).toBe(1);
+    expect(ballModifier('nest-ball', ctx())).toBeCloseTo(2.6);
+    expect(ballModifier('nest-ball', ctx({ target: { ...target, level: 40 } as Mon }))).toBe(1);
+    expect(ballModifier('repeat-ball', ctx({ thrower: { party: [{ dex: '0403' }] } as unknown as Trainer }))).toBe(3);
+    expect(ballModifier('timer-ball', ctx({ matchTime: 0 }))).toBe(1);
+    expect(ballModifier('timer-ball', ctx({ matchTime: 600 }))).toBe(4);
+    expect(ballModifier('dusk-ball', ctx({ inDark: true }))).toBe(3);
+    expect(ballModifier('quick-ball', ctx({ matchTime: 30 }))).toBe(5);
+    expect(ballModifier('quick-ball', ctx({ matchTime: 120 }))).toBe(1);
+    for (const id of ['heal-ball', 'luxury-ball', 'premier-ball', 'cherish-ball']) expect(ballModifier(id, ctx())).toBe(1);
+    expect(ballKind('cherish-ball')).toBe('cherish');
+  });
+
+  it('wobbles by at most 20 degrees', () => {
+    const th = newThrow({} as Trainer, { x: 0, y: 0 }, { x: 1, y: 0 }, 'poke-ball');
+    th.phase = 'wobble';
+    let peak = 0;
+    for (let k = 0; k < 1; k += 0.01) {
+      th.phaseT = k * 0.55;
+      peak = Math.max(peak, Math.abs(ballWobble(th)));
+    }
+    expect(peak).toBeLessThanOrEqual(WOBBLE_RADIANS + 1e-9);
+    expect(peak).toBeGreaterThan(WOBBLE_RADIANS * 0.8);
   });
 
   it('wobbles one to three times and always three on a catch', () => {
@@ -27,7 +66,7 @@ describe('catchChance', () => {
 
 describe('throw sequence', () => {
   it('flies, hits, absorbs, drops, wobbles and clicks', () => {
-    const th = newThrow({} as Trainer, { x: 0, y: 0 }, { x: 2, y: 0 }, 'great-ball', 1.5);
+    const th = newThrow({} as Trainer, { x: 0, y: 0 }, { x: 2, y: 0 }, 'great-ball');
     expect(ballKind(th.ballId)).toBe('great');
     const seen: string[] = [];
     let landed = false;
@@ -52,7 +91,7 @@ describe('throw sequence', () => {
   });
 
   it('bursts open after a failed roll', () => {
-    const th: Throw = newThrow({} as Trainer, { x: 0, y: 0 }, { x: 1, y: 0 }, 'poke-ball', 1);
+    const th: Throw = newThrow({} as Trainer, { x: 0, y: 0 }, { x: 1, y: 0 }, 'poke-ball');
     th.target = mon(50, 50);
     th.roll = { chance: 0.2, caught: false, wobbles: 1 };
     th.phase = 'hit' as ThrowPhase;

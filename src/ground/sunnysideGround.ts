@@ -362,6 +362,12 @@ export class SunnysideGround implements GroundRenderer {
     return 'meadow';
   }
 
+  inWater(tx: number, ty: number): boolean {
+    if (!this.inBounds(tx, ty)) return true;
+    const i = this.idx(tx, ty);
+    return !this.grids.land[i] || !!this.grids.river[i];
+  }
+
   walkable(tx: number, ty: number): boolean {
     return this.inBounds(tx, ty) && this.grids.walkable[this.idx(tx, ty)] === 1;
   }

@@ -1,13 +1,14 @@
 {
-  "_comment": "Items. kind: ball (held throw, tier multiplies catch chance), heal (lead HP), revive, cure, boost (stat stage on the lead), hold (held item the lead equips; effect names in sim/battle), tm (teaches `move` to the lead when its type matches), styler. Held items and TMs live in the second bag tab. Icons are assets/items/<id>.png (TMs: tm-<type>.png).",
+  "_comment": "Items. kind: ball (tier = base catch modifier, special = rule in catching.ts ballModifier), heal, revive, cure, boost, hold, styler, shard. Icons: assets/items/<id>.png, balls assets/items/balls/<kind>_ball.png, the shard assets/items/balls/vial.png.",
   "items": [
     {
       "id": "poke-ball",
-      "name": "Pok\u00e9 Ball",
+      "name": "Poké Ball",
       "short": "Ball",
       "kind": "ball",
       "tier": 1,
-      "stack": 3
+      "stack": 1,
+      "desc": "Catch rate x1"
     },
     {
       "id": "great-ball",
@@ -15,7 +16,8 @@
       "short": "Great",
       "kind": "ball",
       "tier": 1.5,
-      "stack": 1
+      "stack": 1,
+      "desc": "Catch rate x1.5"
     },
     {
       "id": "ultra-ball",
@@ -23,7 +25,125 @@
       "short": "Ultra",
       "kind": "ball",
       "tier": 2,
-      "stack": 1
+      "stack": 1,
+      "desc": "Catch rate x2"
+    },
+    {
+      "id": "master-ball",
+      "name": "Master Ball",
+      "short": "Master",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Never fails",
+      "special": "master"
+    },
+    {
+      "id": "net-ball",
+      "name": "Net Ball",
+      "short": "Net",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "x3 on Bug and Water types",
+      "special": "net"
+    },
+    {
+      "id": "dive-ball",
+      "name": "Dive Ball",
+      "short": "Dive",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "x3.5 on targets standing in water",
+      "special": "dive"
+    },
+    {
+      "id": "nest-ball",
+      "name": "Nest Ball",
+      "short": "Nest",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Better on low-level targets",
+      "special": "nest"
+    },
+    {
+      "id": "repeat-ball",
+      "name": "Repeat Ball",
+      "short": "Repeat",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "x3 on species already in the party",
+      "special": "repeat"
+    },
+    {
+      "id": "timer-ball",
+      "name": "Timer Ball",
+      "short": "Timer",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Improves as the match goes on (up to x4)",
+      "special": "timer"
+    },
+    {
+      "id": "dusk-ball",
+      "name": "Dusk Ball",
+      "short": "Dusk",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "x3 inside the darkness",
+      "special": "dusk"
+    },
+    {
+      "id": "heal-ball",
+      "name": "Heal Ball",
+      "short": "Heal",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Fully heals what it catches",
+      "special": "heal"
+    },
+    {
+      "id": "quick-ball",
+      "name": "Quick Ball",
+      "short": "Quick",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "x5 in the first 90 s of the match",
+      "special": "quick"
+    },
+    {
+      "id": "luxury-ball",
+      "name": "Luxury Ball",
+      "short": "Luxury",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Catch rate x1 (cosmetic)"
+    },
+    {
+      "id": "premier-ball",
+      "name": "Premier Ball",
+      "short": "Premier",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Catch rate x1 (cosmetic)"
+    },
+    {
+      "id": "cherish-ball",
+      "name": "Cherish Ball",
+      "short": "Cherish",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 1,
+      "desc": "Catch rate x1 (cosmetic)"
     },
     {
       "id": "potion",
@@ -244,6 +364,15 @@
       "kind": "hold",
       "effect": "type-boost",
       "boostType": "normal"
+    },
+    {
+      "id": "crystal-shard",
+      "name": "Crystal Shard",
+      "short": "Shard",
+      "kind": "shard",
+      "radius": 5,
+      "seconds": 10,
+      "desc": "Clears the darkness around you for 10 s"
     }
   ]
 }

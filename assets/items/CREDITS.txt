@@ -4,6 +4,6 @@ Nintendo, taken from the pret/pokeplatinum decompilation
 recoloured with their JASC palettes, palette index 0 keyed out).
 Non-commercial fan project use only.
 
-<item>.png            32x32 Gen 4 bag icon
+<item>.png            32x32 Gen 4 bag icon (medicine, X items, held items)
 tm-<type>.png         the TM disc in that type's colour
-balls/                overworld item-ball sprites: see balls/README.md
+balls/                every ball and the Crystal Shard vial: see balls/README.md

@@ -20,6 +20,10 @@ export interface LightingParams {
   darkRadius: number;
   darkFeather: number;
   darkAmount: number;
+  /** A Crystal Shard's clearing: a circle the darkness leaves alone (radius 0 = none). */
+  clearCx: number;
+  clearCy: number;
+  clearRadius: number;
   time: number;
 }
 
@@ -42,6 +46,8 @@ uniform vec2 uDarkCenter;
 uniform float uDarkRadius;
 uniform float uDarkFeather;
 uniform float uDarkAmount;
+uniform vec2 uClearCenter;
+uniform float uClearRadius;
 uniform float uPixel;
 
 // 4x4 Bayer threshold for the dithered darkness edge.
@@ -69,6 +75,10 @@ void main() {
   float d = distance(frag, uDarkCenter);
   float t = clamp((d - uDarkRadius) / max(uDarkFeather, 1.0), 0.0, 1.0);
   float dark = (t > bayer(cell) ? 1.0 : 0.0) * uDarkAmount;
+  // A shard's clearing: dithered hole in the darkness.
+  float dc = distance(frag, uClearCenter);
+  float tc = clamp((uClearRadius - dc) / max(uDarkFeather, 1.0), 0.0, 1.0);
+  if (uClearRadius > 0.0 && tc > bayer(cell)) dark = 0.0;
   vec3 darkCol = mix(col * 0.12, vec3(0.11, 0.03, 0.17), 0.55);
   col = mix(col, darkCol, dark);
   // Move VFX glow.
@@ -128,7 +138,7 @@ export class Lighting {
     const aPos = gl.getAttribLocation(prog, 'aPos');
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-    for (const u of ['uScene', 'uLight', 'uRes', 'uCold', 'uDarkCenter', 'uDarkRadius', 'uDarkFeather', 'uDarkAmount', 'uPixel']) {
+    for (const u of ['uScene', 'uLight', 'uRes', 'uCold', 'uDarkCenter', 'uDarkRadius', 'uDarkFeather', 'uDarkAmount', 'uClearCenter', 'uClearRadius', 'uPixel']) {
       this.uniforms.set(u, gl.getUniformLocation(prog, u));
     }
     this.sceneTex = this.makeTexture(gl);
@@ -167,6 +177,8 @@ export class Lighting {
       gl.uniform1f(this.uniforms.get('uDarkRadius') ?? null, p.darkRadius);
       gl.uniform1f(this.uniforms.get('uDarkFeather') ?? null, p.darkFeather);
       gl.uniform1f(this.uniforms.get('uDarkAmount') ?? null, p.darkAmount);
+      gl.uniform2f(this.uniforms.get('uClearCenter') ?? null, p.clearCx, p.clearCy);
+      gl.uniform1f(this.uniforms.get('uClearRadius') ?? null, p.clearRadius);
       gl.uniform1f(this.uniforms.get('uPixel') ?? null, v.spriteScale);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       return;
@@ -184,6 +196,7 @@ export class Lighting {
       ctx.beginPath();
       ctx.rect(0, 0, v.width, v.height);
       ctx.arc(p.darkCx, p.darkCy, Math.max(0, p.darkRadius + p.darkFeather * 0.5), 0, Math.PI * 2, true);
+      if (p.clearRadius > 0) ctx.arc(p.clearCx, p.clearCy, p.clearRadius, 0, Math.PI * 2, true);
       ctx.fillStyle = `rgba(20,6,32,${0.88 * p.darkAmount})`;
       ctx.fill('evenodd');
       ctx.restore();

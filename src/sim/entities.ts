@@ -2,6 +2,7 @@ import type { Dir8 } from '../core/math';
 import type { AnimPlayer, PokemonSprites } from '../sprites/pokemonSprite';
 import type { SpeciesDef, StatBlock } from './data';
 import type { Behavior } from './party';
+import type { BallKind, LootTier } from './items';
 
 export type Status = 'sleep' | 'burn' | 'paralysis' | null;
 
@@ -120,9 +121,14 @@ export interface InventorySlot {
 
 export interface GroundItem {
   id: number;
-  /** Loot tier (decides the ball sprite). Contents roll on pickup unless already known. */
-  tier: 'common' | 'uncommon' | 'rare';
-  itemId: string | null;
+  /** Which ball sprite sits on the ground. */
+  ball: BallKind;
+  /** Loot tier the contents roll from when the ball is opened (null when the contents are fixed). */
+  tier: LootTier | null;
+  /** Known contents (an eliminated trainer's bag, a placed ball); null until rolled. */
+  contents: InventorySlot[] | null;
+  /** Cherish Ball: also heals the finder's party fully. */
+  heal?: boolean;
   x: number;
   y: number;
   bob: number;

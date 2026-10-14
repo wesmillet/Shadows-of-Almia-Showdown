@@ -10,12 +10,12 @@ import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
-import { newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
+import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, SPAWNS, move, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
-import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, tierOf, type LootTier } from './items';
+import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type LootTier } from './items';
 import { canStand, tryMove } from './movement';
 import { areaContains, makeArea } from './battle';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
@@ -50,6 +50,8 @@ export class Match {
   npcs: Trainer[] = [];
   routes = new Map<number, { points: Array<{ x: number; y: number }>; index: number; wait: number }>();
   throws: Throw[] = [];
+  /** Crystal Shard clearings: circles the darkness leaves alone while `t` > 0. */
+  lightZones: Array<{ x: number; y: number; r: number; t: number }> = [];
   darkrai: Mon | null = null;
   outcome: MatchOutcome = null;
   readonly darkness: DarknessState = newDarkness();
@@ -135,28 +137,39 @@ export class Match {
     // Guarantee the player a few balls nearby, then weight the rest.
     const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 9).slice(0, 3);
     let id = 0;
-    for (const p of near) this.items.push({ id: nextId++, tier: 'common', itemId: 'poke-ball', x: p.x, y: p.y, bob: id++ });
+    for (const p of near) this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 2 }], x: p.x, y: p.y, bob: id++ });
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };
       if (near.includes(p)) continue;
-      this.items.push({ id: nextId++, tier: rollTier(this.rng), itemId: null, x: p.x, y: p.y, bob: this.rng.next() * 6 });
+      this.dropLoot(p.x, p.y);
     }
   }
 
+  /** An unopened item ball of a rolled tier at a point. */
+  dropLoot(x: number, y: number): void {
+    const tier = rollTier(this.rng);
+    this.items.push({ id: nextId++, ball: ballOfTier(tier), tier, contents: null, x, y, bob: this.rng.next() * 6 });
+  }
+
+  /** A ball with known contents at a point (Master, Premier, Cherish and dropped bags). */
+  placeBall(ball: BallKind, contents: InventorySlot[], x: number, y: number, heal = false): void {
+    this.items.push({ id: nextId++, ball, tier: null, contents, heal, x, y, bob: this.rng.next() * 6 });
+  }
+
   /** Adds an item to the right tab (bag, or gear for held items and TMs); returns false when it is full. */
-  giveItem(t: Trainer, itemId: string): boolean {
+  giveItem(t: Trainer, itemId: string, count = 1): boolean {
     const def = ITEMS[itemId];
     const tab = isGear(itemId) ? t.held : t.items;
     if (def?.stack) {
       const slot = tab.find((s) => s?.id === itemId);
       if (slot) {
-        slot.count += def.stack;
+        slot.count += count;
         return true;
       }
     }
     const free = tab.indexOf(null);
     if (free < 0) return false;
-    tab[free] = { id: itemId, count: def?.stack ?? 1 };
+    tab[free] = { id: itemId, count };
     return true;
   }
 
@@ -248,6 +261,13 @@ export class Match {
         return this.equip(t, slot);
       case 'tm':
         return 'Pick a move slot to replace';
+      case 'shard': {
+        if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
+        this.lightZones.push({ x: t.x, y: t.y, r: def.radius ?? 5, t: def.seconds ?? 10 });
+        this.takeItem(t, slot);
+        this.battle.events.push({ type: 'notice', text: 'The shard blazes: the darkness pulls back', seconds: 2 });
+        return '';
+      }
       case 'styler': {
         if (activeParty(t).length >= CONFIG.player.partyCap) return `Party is full (${CONFIG.player.partyCap})`;
         let best: Mon | null = null;
@@ -299,7 +319,7 @@ export class Match {
       return false;
     }
     this.takeItem(t, slot);
-    this.throws.push(newThrow(t, { x: t.x, y: t.y }, to, def.id, def.tier ?? 1));
+    this.throws.push(newThrow(t, { x: t.x, y: t.y }, to, def.id));
     return true;
   }
 
@@ -328,9 +348,14 @@ export class Match {
           this.battle.events.push({ type: 'text', mon: best, text: 'The darkness repels the ball!' });
           continue;
         }
-        // Hit: the target reels, then gets pulled into the ball.
+        // Hit: the target reels, then gets pulled into the ball. The ball's rule is judged where it lands.
         th.target = best;
-        th.roll = rollCatch(this.rng, best, th.tier);
+        th.modifier = ballModifier(th.ballId, {
+          target: best, thrower: th.thrower, matchTime: this.time,
+          inWater: this.ground.inWater(Math.floor(best.x), Math.floor(best.y)),
+          inDark: this.isDark(best.x, best.y),
+        });
+        th.roll = rollCatch(this.rng, best, th.modifier);
         th.phase = 'hit';
         th.phaseT = 0;
         th.x = best.x;
@@ -340,13 +365,14 @@ export class Match {
         best.casting = null;
         best.moving = false;
         best.target = null;
-        this.battle.events.push({ type: 'ball-hit', mon: best });
+        this.battle.events.push({ type: 'ball-hit', mon: best, x: th.x, y: th.y });
         continue;
       }
       if (!th.target) continue;
       const w = th.target;
       if (ev === 'absorb') {
         w.captured = true; // inside the ball: no acting, no targeting, AI suspended
+        this.battle.events.push({ type: 'ball-absorb', mon: w, x: th.x, y: th.y });
       } else if (ev === 'click') {
         this.battle.events.push({ type: 'ball-click', mon: w, x: th.x, y: th.y });
       } else if (ev === 'burst') {
@@ -361,6 +387,10 @@ export class Match {
           w.aura = false;
           w.behavior = 'guard';
           w.target = null;
+          if (ITEMS[th.ballId]?.special === 'heal') {
+            w.hp = w.maxHp;
+            this.battle.cureStatus(w);
+          }
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
@@ -382,11 +412,23 @@ export class Match {
       for (let i = this.items.length - 1; i >= 0; i--) {
         const it = this.items[i] as GroundItem;
         if (Math.hypot(it.x - t.x, it.y - t.y) > CONFIG.items.pickupRadius) continue;
-        // Contents are revealed when the ball is opened.
-        if (!it.itemId) it.itemId = rollLoot(this.rng, it.tier);
-        if (this.giveItem(t, it.itemId)) {
-          this.items.splice(i, 1);
-          this.battle.events.push({ type: 'pickup', trainer: t, itemId: it.itemId });
+        // Contents are revealed when the ball is opened; whatever does not fit stays in the ball.
+        if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common')];
+        const got: InventorySlot[] = [];
+        it.contents = it.contents.filter((c) => {
+          if (!this.giveItem(t, c.id, c.count)) return true;
+          got.push(c);
+          return false;
+        });
+        if (got.length) {
+          const healed = !!it.heal;
+          if (healed) for (const m of t.party) if (!m.fainted) {
+            m.hp = m.maxHp;
+            this.battle.cureStatus(m);
+          }
+          it.heal = false;
+          if (it.contents.length === 0) this.items.splice(i, 1);
+          this.battle.events.push({ type: 'pickup', trainer: t, items: got, ball: it.ball, healed });
         } else if (t.isPlayer && it.bob % 3 < dt) {
           this.battle.events.push({ type: 'notice', text: 'Bag is full', seconds: 0.8 });
         }
@@ -893,6 +935,11 @@ export class Match {
   /** XP for knockouts and item drops from wild Pokémon (read off this step's faint events). */
   private handleKnockouts(): void {
     for (const ev of this.battle.events) {
+      if (ev.type === 'faint' && ev.mon.boss) {
+        // Darkrai's defeat: a Cherish Ball with a Dark-type held item that also heals the finder's party.
+        this.placeBall('cherish', [{ id: 'black-glasses', count: 1 }], ev.mon.x, ev.mon.y + 0.6, true);
+        this.battle.events.push({ type: 'notice', text: 'Darkrai is down! It left a Cherish Ball behind', seconds: 3 });
+      }
       if (ev.type !== 'faint' || !ev.by || ev.by.boss) continue;
       const owner = ev.by.owner;
       if (owner) {
@@ -900,10 +947,7 @@ export class Match {
           this.battle.events.push({ type: 'xp', mon: r.mon, xp: r.xp, levels: r.levels });
         }
       }
-      if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) {
-        const tier: LootTier = rollTier(this.rng);
-        this.items.push({ id: nextId++, tier, itemId: null, x: ev.mon.x, y: ev.mon.y, bob: this.rng.next() * 6 });
-      }
+      if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) this.dropLoot(ev.mon.x, ev.mon.y);
     }
   }
 
@@ -922,14 +966,24 @@ export class Match {
     stepDarkness(d, dt, mapRadius);
     if (d.pulsed) {
       this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
-      if (d.finale && !this.darkrai) this.spawnDarkrai();
+      if (d.finale && !this.darkrai) {
+        this.spawnDarkrai();
+        // The one Master Ball of the match appears at the crystal's foot.
+        this.placeBall('master', [{ id: 'master-ball', count: 1 }], this.centerX + 1.5, this.centerY + 1.2);
+        this.battle.events.push({ type: 'notice', text: 'A Master Ball glints beside the crystal', seconds: 3 });
+      }
     }
     void wasPhase;
+    for (let i = this.lightZones.length - 1; i >= 0; i--) {
+      const z = this.lightZones[i] as (typeof this.lightZones)[number];
+      z.t -= dt;
+      if (z.t <= 0) this.lightZones.splice(i, 1);
+    }
     if (!Number.isFinite(d.radius)) return;
     const c = CONFIG.darkness;
     for (const m of this.mons()) {
       if (m.boss) continue;
-      const dark = inDarkness(d, m.x, m.y, this.centerX, this.centerY);
+      const dark = this.isDark(m.x, m.y);
       m.inDark = dark;
       if (m.wild) m.aura = dark;
       if (dark) {
@@ -967,17 +1021,23 @@ export class Match {
       mo.x += mo.vx * dt;
       mo.y += mo.vy * dt;
       mo.life -= dt;
-      if (mo.life <= 0 || !inDarkness(d, mo.x, mo.y, this.centerX, this.centerY)) this.motes.splice(i, 1);
+      if (mo.life <= 0 || !this.isDark(mo.x, mo.y)) this.motes.splice(i, 1);
     }
     if (this.motes.length < 90) {
       for (let k = 0; k < 3; k++) {
         const x = p.x + this.rng.range(-7, 7);
         const y = p.y + this.rng.range(-4, 4);
-        if (inDarkness(d, x, y, this.centerX, this.centerY)) {
+        if (this.isDark(x, y)) {
           this.motes.push({ x, y, vx: this.rng.range(-0.25, 0.25), vy: this.rng.range(-0.35, -0.05), life: this.rng.range(2, 5), size: this.rng.range(0.03, 0.09) });
         }
       }
     }
+  }
+
+  /** Inside the darkness and outside every shard clearing. */
+  isDark(x: number, y: number): boolean {
+    if (!inDarkness(this.darkness, x, y, this.centerX, this.centerY)) return false;
+    return !this.lightZones.some((z) => Math.hypot(z.x - x, z.y - y) < z.r);
   }
 
   private spawnDarkrai(): void {
@@ -1033,14 +1093,9 @@ export class Match {
 
   eliminate(t: Trainer): void {
     t.alive = false;
-    // Dropped items are scattered around the trainer.
-    [...t.items, ...t.held].forEach((entry, i) => {
-      if (!entry) return;
-      const a = (i / (t.items.length + t.held.length)) * Math.PI * 2;
-      for (let k = 0; k < entry.count; k++) {
-        this.items.push({ id: nextId++, tier: tierOf(entry.id), itemId: entry.id, x: t.x + Math.cos(a + k * 0.4) * (1.2 + k * 0.4), y: t.y + Math.sin(a + k * 0.4) * (1.2 + k * 0.4), bob: this.rng.next() * 6 });
-      }
-    });
+    // The trainer's whole inventory drops as one Premier Ball.
+    const bag = [...t.items, ...t.held].filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }));
+    if (bag.length) this.placeBall('premier', bag, t.x + 0.8, t.y + 0.4);
     t.items.fill(null);
     t.held.fill(null);
     this.battle.events.push({ type: 'eliminated', trainer: t });

@@ -32,12 +32,13 @@ other edges. Last trainer standing wins.
 | --- | --- |
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
 | 1-4, or click the move wheel | the lead casts a move where you face (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |
-| Shift+1-6, or click the bag | use an item (balls arm themselves) |
+| Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
 | Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
 | hold Space, release | aim an arc toward the nearest wild Pokémon and throw the armed ball |
 | click a portrait | swap the lead; click a behaviour chip to cycle Aggressive / Guard / Passive / Hold / Roam |
-| walk over an item ball | open it: a popup reveals the contents (Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare) |
+| walk over an item ball | open it: a popup reveals the contents. Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |
+| Shift+number on a Crystal Shard | clears the darkness in a 5-tile circle around you for 10 s |
 | stand on a Ranger outpost pad | full party heal over 3 s; a beacon tells every trainer you are there |
 
 Every 90 s the Shadow Crystal pulses and darkness sweeps inward from the
@@ -67,11 +68,12 @@ assets/
   rangers/                Shadows of Almia overworld NPC sheets (civ_00-12,
                           union_00-09) + manifest.json + README.md
   tiles/                  optional painted tileset + Tiled JSON map (see below)
-  vfx/                    optional hand-made effect strips (see moves.json)
+  fx/guardian_signs/      256 Guardian Signs attack effects + manifest.json + contact_sheet.png (move VFX)
+  items/                  Gen 4 bag icons, TM discs, balls/ (every ball sprite and the Crystal Shard vial)
   CREDITS.md              generated: SpriteCollab license and per-folder artists
 data/
   species.json            dex, name, types, base stats, starter tier, wild biome, kit
-  moves.json              38 moves: type, power, shape, cooldown, VFX family, animation
+  moves.json              38 moves: type, power, shape, cooldown, Guardian Signs fx parts, fallback VFX family
   items/items.json        balls, medicine, X items, held items and what they do
   items/tms.json          the 16 TMs and the move each one teaches
   items/loot.json         the three rarity tiers and what each item ball can contain
@@ -170,13 +172,33 @@ filtering. Nothing else changes: the match, minimap, spawns and darkness
 read the interface only. If `map.json` is absent the procedural ground is
 used with a console warning.
 
-### Hand-made move effects
+### Move effects
 
-Every move names one of five procedural VFX families (`burst`,
-`projectile`, `beam`, `ring`, `cloud`) parameterised by its type colour and
-`size`. Set `"strip": "ember.png"` on a move to play
-`assets/vfx/ember.png` instead: a horizontal strip of square frames at
-18 fps (`SpriteStripVisual` in `src/vfx/visuals.ts`).
+Every move lists Guardian Signs effects in `data/moves.json` under `fx`:
+`{ "id": "fx_040", "anchor": "attacker", "mode": "stream" }` and so on, in
+playback order. `anchor` is `target` (at each Pokémon hit, or the aimed
+tile), `attacker` (centred on the user) or `projectile` (flies user to
+target rotated to its travel direction; the target parts listed after it
+play on arrival). `mode` is `beam` (the strip tiled from user to target),
+`stream` (stretched) or `status` (loops above the head). `fps` defaults to
+15, `scale` to 3 pixels per source pixel, `tint` is optional. Each effect
+lights the scene with its sheet's dominant colour. The capture sequence
+uses 176 (flash on impact), 144 (the "sucked in" swirl), 014 (click
+sparkle) and 066 (burst); Darkrai's Bad Dreams loop 158 on sleepers.
+`src/vfx/fxLibrary.ts` loads the sheets from `manifest.json`; a move with
+no `fx`, or whose sheet is missing, falls back to the procedural family in
+`vfx` (`src/vfx/visuals.ts`).
+
+### Balls
+
+All fifteen balls use `assets/items/balls/` in the bag, on the ground and
+in flight; the open frame (top half lifted, white flash) and the ±20°
+wobble are built in code. Catch modifiers: Poké ×1, Great ×1.5, Ultra ×2,
+Master always, Net ×3 on Bug/Water, Dive ×3.5 on a target standing in
+water, Nest better on low levels, Repeat ×3 on species already in the
+party, Timer up to ×4 as the match goes on, Dusk ×3 inside the darkness,
+Heal fully heals its catch, Quick ×5 in the first 90 s, Luxury, Premier
+and Cherish ×1 (`ballModifier` in `src/sim/catching.ts`).
 
 ## Architecture
 
@@ -186,7 +208,7 @@ src/sprites    AnimData/Offsets parsers, sprite registry and animation player, A
 src/ground     GroundRenderer, procedural painter, Tiled loader
 src/render     view/camera (continuous ground scale, integer sprite scale), world drawing, WebGL lighting pass
 src/sim        pure simulation: data accessors, battle (areas, damage, status), AI, catching, darkness, items, match
-src/vfx        the five VFX families, sprite strips, lights, floating numbers
+src/vfx        Guardian Signs effect sheets (fxLibrary, fxVisuals), the procedural fallback families, lights, floating numbers
 src/ui         title, starter roll, match screen (events → VFX/shake/hit-stop), HUD, results
 scripts/       fetch-sprites.py (sparse checkout + credits)
 ```

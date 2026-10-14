@@ -1,28 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { ITEMS, LOOT, rollLoot, rollTier, TM_LIST, tierOf } from './items';
+import { BALL_LIST, ITEMS, LOOT, rollLoot, rollTier, TM_LIST } from './items';
 import { MOVES, SPECIES } from './data';
 
 describe('items and loot', () => {
-  it('defines every loot entry and at least ten TMs with real moves', () => {
-    for (const tier of Object.values(LOOT)) for (const e of tier.entries) if (e.id !== 'tm') expect(ITEMS[e.id], e.id).toBeDefined();
+  it('defines every loot entry, fifteen balls and at least ten TMs with real moves', () => {
+    for (const tier of Object.values(LOOT)) for (const e of tier.entries) if (e.id !== 'tm' && e.id !== 'rare-tm') expect(ITEMS[e.id], e.id).toBeDefined();
+    expect(BALL_LIST.length).toBe(15);
+    for (const b of BALL_LIST) expect(b.id.endsWith('-ball'), b.id).toBe(true);
+    expect(ITEMS['master-ball']?.special).toBe('master');
     expect(TM_LIST.length).toBeGreaterThanOrEqual(10);
+    expect(TM_LIST.some((t) => t.rare)).toBe(true);
     for (const tm of TM_LIST) expect(MOVES.has(tm.move ?? '')).toBe(true);
     expect(ITEMS['choice-band']?.kind).toBe('hold');
     expect(ITEMS['hyper-potion']?.amount).toBe(120);
+    expect(ITEMS['crystal-shard']?.kind).toBe('shard');
   });
 
-  it('rolls tiers by weight and contents from the tier', () => {
+  it('rolls tiers by weight and stacks from the tier; rare TMs only from Ultra Balls', () => {
     const rng = new Rng(11);
     const counts = { common: 0, uncommon: 0, rare: 0 };
     for (let i = 0; i < 1000; i++) counts[rollTier(rng)]++;
     expect(counts.common).toBeGreaterThan(counts.uncommon);
     expect(counts.uncommon).toBeGreaterThan(counts.rare);
-    for (let i = 0; i < 50; i++) {
-      const id = rollLoot(rng, 'rare');
-      expect(ITEMS[id]).toBeDefined();
-      expect(['rare', 'uncommon']).toContain(tierOf(id));
+    let doubles = 0;
+    for (let i = 0; i < 300; i++) {
+      const common = rollLoot(rng, 'common');
+      expect(ITEMS[common.id]).toBeDefined();
+      if (common.id === 'poke-ball') {
+        expect(common.count).toBe(2);
+        doubles++;
+      }
+      const uncommon = rollLoot(rng, 'uncommon');
+      if (ITEMS[uncommon.id]?.kind === 'tm') expect(ITEMS[uncommon.id]?.rare).toBe(false);
+      const rare = rollLoot(rng, 'rare');
+      if (ITEMS[rare.id]?.kind === 'tm') expect(ITEMS[rare.id]?.rare).toBe(true);
     }
+    expect(doubles).toBeGreaterThan(0);
   });
 
   it('every TM type matches at least one starter or wild type', () => {

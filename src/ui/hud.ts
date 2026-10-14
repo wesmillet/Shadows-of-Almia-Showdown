@@ -9,7 +9,8 @@ import { lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
 import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
-import { ITEMS } from '../sim/items';
+import { ITEMS, type BallKind } from '../sim/items';
+import type { InventorySlot } from '../sim/entities';
 import { darken, hit, lighten, rgba } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
@@ -35,7 +36,9 @@ export interface HudState {
   /** Which bag tab is open. */
   gearTab: boolean;
   /** Pickup popup: item id and seconds left. */
-  popup: { itemId: string; t: number } | null;
+  popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null;
+  /** Name of the ball Space will throw, if one is armed. */
+  armedBall: string | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
   teach: { moveName: string; moves: string[]; mon: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
@@ -155,16 +158,26 @@ export class Hud {
       ctx.restore();
     }
     if (st.popup) {
-      const w = 300 * s;
+      const names = st.popup.items.map((it) => `${ITEMS[it.id]?.name ?? it.id}${it.count > 1 ? ` ×${it.count}` : ''}`);
+      const title = `Found ${names.join(', ')}!`;
+      ctx.font = this.font(15, '800');
+      const w = Math.max(300 * s, ctx.measureText(title).width + 110 * s);
       const h = 54 * s;
       const x = v.width / 2 - w / 2;
       const y = 140 * s;
-      const def = ITEMS[st.popup.itemId];
+      const first = st.popup.items[0];
+      const def = first ? ITEMS[first.id] : undefined;
       this.popupBox(ctx, x, y, w, h);
-      this.icons.draw(ctx, st.popup.itemId, x + 30 * s, y + h / 2, Math.max(1, Math.round(s)), def?.tmType);
-      this.label(ctx, `Found ${def?.name ?? st.popup.itemId}!`, x + 58 * s, y + 24 * s, 15, '#4a2d1a', 'left', '800');
-      const hint = def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab` : def?.kind === 'hold' ? 'Held item · Held & TMs tab' : def?.kind === 'ball' ? 'Hold Space to throw' : 'Shift+number to use';
-      this.label(ctx, hint, x + 58 * s, y + 42 * s, 11, '#6b4a30', 'left', '600');
+      // The ball it came in, then what was inside.
+      this.icons.draw(ctx, `${st.popup.ball}-ball`, x + 22 * s, y + h / 2, 36 * s);
+      if (first) this.icons.draw(ctx, first.id, x + 58 * s, y + h / 2, 32 * s, def?.tmType);
+      this.label(ctx, title, x + 86 * s, y + 24 * s, 15, '#4a2d1a', 'left', '800');
+      const hint = st.popup.healed ? 'Your party is fully healed'
+        : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
+        : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
+        : def?.kind === 'ball' ? (def.desc ?? 'Hold Space to throw')
+        : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
+      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#6b4a30', 'left', '600');
     }
     if (st.teach) {
       const w = 340 * s;
@@ -187,7 +200,7 @@ export class Hud {
       ctx.beginPath();
       ctx.roundRect(x + 3 * s, y + 3 * s, (w - 6 * s) * st.aiming, 16 * s, 8);
       ctx.fill();
-      this.label(ctx, 'release to throw', v.width / 2, y - 6 * s, 12, '#ffe9a8', 'center');
+      this.label(ctx, st.armedBall ? `${st.armedBall}: release to throw` : 'release to throw', v.width / 2, y - 6 * s, 12, '#ffe9a8', 'center');
     }
     const note = match.ground.label;
     this.label(ctx, `${note} · lighting: ${st.lightingMode}`, v.width - 16 * s, v.height - 8 * s, 10, 'rgba(255,220,250,0.75)', 'right', '500');
@@ -524,7 +537,7 @@ export class Hud {
       if (id) {
         const def = ITEMS[id];
         if (def) {
-          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, Math.max(1, Math.round(s)), def.tmType);
+          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, 36 * s, def.tmType);
           this.label(ctx, def.kind === 'tm' ? def.name.replace('TM ', '') : def.short, x + slot / 2, y0 + slot - 4 * s, 8, '#ffffff', 'center', '700');
           if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 4 * s, y0 + 11 * s, 9, '#ffe9a8', 'right', '800');
         }
@@ -532,70 +545,4 @@ export class Hud {
       this.itemRects.push({ x, y: y0, w: slot, h: slot });
     });
   }
-}
-
-/** Simple vector icons for items (balls, bottles, badges). */
-export function drawItemIcon(ctx: CanvasRenderingContext2D, icon: { shape: 'ball' | 'bottle' | 'badge' | 'sash' | 'styler'; color: string; accent?: string }, x: number, y: number, r: number): void {
-  ctx.save();
-  if (icon.shape === 'ball') {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#f4f4f4';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, y, r, Math.PI, 0);
-    ctx.fillStyle = icon.color;
-    ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(x - r, y - r * 0.12, r * 2, r * 0.24);
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = '#222';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.18, 0, Math.PI * 2);
-    ctx.fillStyle = icon.accent ?? '#fff';
-    ctx.fill();
-  } else if (icon.shape === 'bottle') {
-    ctx.fillStyle = icon.color;
-    ctx.beginPath();
-    ctx.roundRect(x - r * 0.55, y - r * 0.5, r * 1.1, r * 1.5, r * 0.3);
-    ctx.fill();
-    ctx.fillStyle = icon.accent ?? '#fff';
-    ctx.fillRect(x - r * 0.3, y - r * 1.0, r * 0.6, r * 0.55);
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.fillRect(x - r * 0.35, y - r * 0.2, r * 0.25, r * 0.9);
-  } else if (icon.shape === 'badge') {
-    ctx.fillStyle = icon.color;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
-      ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = icon.accent ?? '#fff';
-    ctx.font = `800 ${Math.round(r * 1.1)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('X', x, y + 1);
-  } else if (icon.shape === 'sash') {
-    ctx.strokeStyle = icon.color;
-    ctx.lineWidth = r * 0.45;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - r, y - r * 0.8);
-    ctx.quadraticCurveTo(x, y + r * 0.2, x + r, y + r * 0.9);
-    ctx.stroke();
-  } else {
-    ctx.fillStyle = icon.color;
-    ctx.beginPath();
-    ctx.ellipse(x, y, r, r * 0.65, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = icon.accent ?? '#fff';
-    ctx.beginPath();
-    ctx.arc(x + r * 0.25, y - r * 0.1, r * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
 }

@@ -61,7 +61,7 @@ export class TitleScreen implements Screen {
     v.beginLights();
     v.lightCtx.fillStyle = 'rgba(255,220,170,0.08)';
     v.lightCtx.fillRect(0, 0, v.width, v.height);
-    this.lighting.render({ cold: 0.45, darkCx: v.width / 2, darkCy: v.height / 2, darkRadius: v.width * 0.7, darkFeather: v.width * 0.5, darkAmount: 0.4, time: this.t });
+    this.lighting.render({ cold: 0.45, darkCx: v.width / 2, darkCy: v.height / 2, darkRadius: v.width * 0.7, darkFeather: v.width * 0.5, darkAmount: 0.4, clearCx: 0, clearCy: 0, clearRadius: 0, time: this.t });
     // Overlay
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);

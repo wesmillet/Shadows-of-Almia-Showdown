@@ -606,9 +606,9 @@ export class MatchScreen implements Screen {
   private drawGroundItem(v: View, it: GroundItem): void {
     const sx = Math.round(v.toScreenX(it.x));
     const sy = Math.round(v.toScreenY(it.y));
-    const s = Math.max(1, v.spriteScale - 1); // item balls sit a step smaller than the characters
+    const s = Math.max(1, v.spriteScale - 2); // item balls draw at 1x: small pickups under the 3x characters
     const lift = Math.round((Math.sin(it.bob * 1.8) * 0.5 + 0.5) * 2) * s;
-    drawSoftShadow(v, sx, sy, 0.16, 0.3);
+    drawSoftShadow(v, sx, sy, 0.1, 0.3);
     const img = this.icons.ball(it.ball);
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;

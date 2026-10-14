@@ -24,7 +24,7 @@ from content2 import (Builder, finish_paths, door_path, forest, forest_rim, scat
 from designer2 import W, H
 
 LADDERS = [
-    (76, 58), (84, 58), (22, 42), (36, 42), (114, 42), (140, 42),   # B3: grand stair, west, east
+    (76, 58), (84, 58), (22, 42), (34, 46), (117, 46), (140, 42),   # B3: grand stair, west, east
     (80, 68), (14, 52), (34, 52), (116, 52), (132, 52),             # B2
     (24, 30), (44, 16), (116, 16), (142, 30),                      # highland corners
 ]
@@ -73,8 +73,8 @@ def network(b):
     r([(116, 14), (128, 14)]); r([(142, 27), (136, 21), (130, 21)])
     # terraces
     b.plaza(71, 61, 89, 66, cut=2)
-    r([(72, 63), (60, 51), (57, 48), (12, 48)])
-    r([(88, 63), (100, 51), (103, 48), (136, 48)])
+    r([(72, 63), (60, 51), (57, 48), (44, 48), (42, 50), (28, 50), (26, 48), (12, 48)])
+    r([(88, 63), (100, 51), (103, 48), (108, 48), (110, 50), (124, 50), (126, 48), (136, 48)])
     # lowlands
     b.plaza(70, 73, 90, 84, cut=3)                          # Almia Town square
     r([(70, 80), (60, 80)])
@@ -197,12 +197,12 @@ def windmill_fields(b):
 
 def terraces(b):
     # orchards in loose clumps under the summit cliffs, a few fence runs
-    for (x, y) in [(107, 45), (110, 45), (118, 45), (121, 46), (131, 45), (134, 45), (106, 50), (124, 50)]:
+    for (x, y) in [(106, 45), (126, 45), (129, 45), (132, 45), (104, 50), (128, 50)]:
         b.put(b.rng.choice(['berry_red', 'berry_orange']), x, y)
-    for (x, y) in [(16, 45), (19, 45), (27, 50), (30, 50), (40, 45), (43, 50), (24, 45)]:
+    for (x, y) in [(16, 45), (19, 45), (40, 45), (43, 50), (24, 45), (14, 50)]:
         b.put(b.rng.choice(['berry_red', 'berry_orange', 'round_bush']), x, y)
-    fence_line(b, 110, 115, 51); fence_line(b, 36, 41, 51); fence_line(b, 18, 22, 51)
-    for (x, y) in [(12, 45), (46, 51), (126, 45), (129, 51)]:
+    fence_line(b, 18, 22, 51); fence_line(b, 130, 135, 51)
+    for (x, y) in [(12, 45), (46, 51), (122, 49), (31, 49)]:
         b.sprite('spr_deco_tree_01', x, y, frame=x % 4)
     houses(b, [('green_gable_tall', 141, 50)], 'terrace')
     b.put('bench', 138, 46)
@@ -223,7 +223,7 @@ def westbrook(b):
     field(b, 19, 72, 31, 76, ['cabbage_05', 'pumpkin_05', 'cauliflower_05'])
     fence_line(b, 19, 31, 71)
     for k in range(4):
-        b.sprite('spr_deco_chicken_01', b.rng.randrange(49, 56), b.rng.randrange(62, 65), flip=k % 2 == 0, frame=k)
+        b.sprite('spr_deco_chicken_01', b.rng.randrange(52, 57), b.rng.randrange(63, 65), flip=k % 2 == 0, frame=k)
     houses(b, [('blue_flat', 48, 73)], 'westbrook')
     field(b, 44, 82, 56, 85, ['beetroot_05', 'potato_05'])
     for (x, y) in [(53, 56), (56, 58), (53, 61), (56, 62)]:
@@ -322,7 +322,7 @@ def caves(b):
     B = b.d.bands
     cave(b, 145, 147, B['B4E'][146])
     cave(b, 12, 14, B['B4W'][13])
-    cave(b, 26, 28, B['B3'][27])
+    cave(b, 36, 38, B['B3'][37])
     cave(b, 122, 124, B['B2'][123])
 
 
@@ -352,7 +352,8 @@ def greenery(b):
     scatter(b, allg, ROCKS, 0.005)
     scatter(b, allg, ['pine_small', 'stump_351', 'stump_352'], 0.003)
     scatter(b, allg, ['spr_deco_tree_01', 'spr_deco_tree_02'], 0.004)
-    ys, xs = np.nonzero((b.lab == 'S') & ~b.occ)
+    from scipy import ndimage as nd
+    ys, xs = np.nonzero((b.lab == 'S') & ~nd.binary_dilation(b.occ, iterations=1))
     for y, x in zip(ys, xs):
         if b.rng.random() < 0.01: b.put(b.rng.choice(['rock_288', 'rock_289', 'rock_290']), x, y, terrain='S')
 

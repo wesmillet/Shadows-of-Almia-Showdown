@@ -150,7 +150,8 @@ export class MatchScreen implements Screen {
       const slot = m.ballSlot(m.player, this.selectedItem);
       if (slot >= 0) {
         const to = this.aimPoint();
-        if (m.throwBall(m.player, slot, to)) this.say('Go, Poké Ball!', 0.8);
+        const ballName = ITEMS[m.player.items[slot]?.id ?? '']?.name ?? 'Poké Ball';
+        if (m.throwBall(m.player, slot, to)) this.say(`Go, ${ballName}!`, 0.8);
         if (!m.player.items[slot]) this.selectedItem = m.ballSlot(m.player);
       }
       this.aimPower = 0;
@@ -489,15 +490,19 @@ export class MatchScreen implements Screen {
     const img = this.icons.ball(ballOfTier(it.tier));
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;
-    if (img) ctx.drawImage(img, sx - 8 * s, sy - 16 * s - lift, 16 * s, 16 * s);
-    else ctx.drawImage(this.assets.placeholder('ball', 16, 16), sx - 8 * s, sy - 16 * s - lift, 16 * s, 16 * s);
+    const w = (img ? img.width : 18) * s;
+    const h = (img ? img.height : 18) * s;
+    const x0 = sx - Math.floor(w / 2);
+    const y0 = sy - h - lift;
+    if (img) ctx.drawImage(img, x0, y0, w, h);
+    else ctx.drawImage(this.assets.placeholder('ball', 18, 18), x0, y0, w, h);
     // Shine sweeping over the ball.
     const k = (it.bob * 0.9) % 3;
     if (k < 0.5) {
       ctx.save();
       ctx.globalAlpha = 0.8 * (1 - Math.abs(k - 0.25) * 4);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(sx - 4 * s + Math.floor(k * 16) * s, sy - 14 * s - lift, s, 2 * s);
+      ctx.fillRect(x0 + 3 * s + Math.floor(k * (w / s - 6)) * s, y0 + 2 * s, s, 2 * s);
       ctx.restore();
     }
   }
@@ -542,12 +547,12 @@ export class MatchScreen implements Screen {
     if (th.phase === 'click') rot = Math.sin(th.phaseT * 60) * 0.06;
     ctx.rotate(rot);
     if (img) {
-      const w = img.naturalWidth * s;
-      const h = img.naturalHeight * s;
-      ctx.drawImage(img, -w / 2, -h, w, h);
+      const w = img.width * s;
+      const h = img.height * s;
+      ctx.drawImage(img, -Math.floor(w / 2), -h, w, h);
     } else {
-      const ph = this.assets.placeholder(`ball ${kind}`, 16, 16);
-      ctx.drawImage(ph, -8 * s, -16 * s, 16 * s, 16 * s);
+      const ph = this.assets.placeholder(`ball ${kind}`, 18, 18);
+      ctx.drawImage(ph, -9 * s, -18 * s, 18 * s, 18 * s);
     }
     ctx.restore();
     // Beam of light pulling the Pokémon in / letting it out.

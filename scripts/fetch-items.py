@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Fetch Gen 4 item icons and Poké Ball graphics from the pret/pokeplatinum
-decompilation (sparse checkout of res/items and the ball throw graphics only)
-into assets/items/.
+"""Fetch Gen 4 item icons from the pret/pokeplatinum decompilation (sparse
+checkout of res/items only) into assets/items/.
 
 Icons are 32x32 indexed PNGs whose real colours live in a JASC .pal file named
 by the item's data JSON (several items share one sprite with their own
 palette: Super Potion is potion.png + super_potion.pal, every TM is tm.png +
 tm_<type>.pal). Palette index 0 is transparent.
 
-Ball sheets (res/graphics/battle/ball_throws/<ball>.png) hold eight 16x16
-rolling frames stacked at the top and a 32x32 open ball at the bottom. The
-closed ball is frame 0; the game builds the wobble by rotating it and uses
-the open frame for the capture burst.
+The item-ball sprites drawn on the ground and thrown in captures are the
+project's own assets/items/balls/ set (see its README); the open and wobble
+frames are built in code from the closed sprite.
 
 Set POKEPLATINUM_DIR to reuse an existing sparse checkout (default
 /tmp/pokeplatinum).
@@ -32,7 +30,6 @@ REPO = 'https://github.com/pret/pokeplatinum'
 DEST = os.path.join(ROOT, 'assets', 'items')
 ICONS = os.path.join(WORK, 'res', 'items', 'icons')
 DATA = os.path.join(WORK, 'res', 'items', 'data')
-BALLS = os.path.join(WORK, 'res', 'graphics', 'battle', 'ball_throws')
 
 # game item id -> decomp item name
 ITEMS = {
@@ -48,19 +45,16 @@ ITEMS = {
 }
 TM_TYPES = ['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying',
             'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel']
-BALL_SHEETS = {'poke': 'poke_ball', 'great': 'great_ball', 'ultra': 'ultra_ball'}
 
-CREDITS = """Item icons and Poké Ball graphics: Pokémon Platinum, by Game Freak / The
-Pokémon Company / Nintendo, taken from the pret/pokeplatinum decompilation
+CREDITS = """Item icons: Pokémon Platinum, by Game Freak / The Pokémon Company /
+Nintendo, taken from the pret/pokeplatinum decompilation
 (https://github.com/pret/pokeplatinum) by scripts/fetch-items.py (icons
-recoloured with their JASC palettes, palette index 0 keyed out; ball frames
-cut from res/graphics/battle/ball_throws). Non-commercial fan project use
-only.
+recoloured with their JASC palettes, palette index 0 keyed out).
+Non-commercial fan project use only.
 
 <item>.png            32x32 Gen 4 bag icon
 tm-<type>.png         the TM disc in that type's colour
-ball-<kind>-closed.png  16x16 closed ball (frame 0 of the throw sheet)
-ball-<kind>-open.png    32x32 open ball (the capture burst frame)
+balls/                overworld item-ball sprites: see balls/README.md
 """
 
 
@@ -68,7 +62,7 @@ def ensure_repo():
     if not os.path.isdir(os.path.join(WORK, '.git')):
         subprocess.run(['git', 'clone', '--depth', '1', '--filter=blob:none', '--sparse', '--no-checkout', REPO, WORK], check=True)
     current = subprocess.run(['git', 'sparse-checkout', 'list'], cwd=WORK, capture_output=True, text=True).stdout.split('\n')
-    wanted = sorted(set([p for p in current if p] + ['/res/items/data/*', '/res/items/icons/*', '/res/graphics/battle/ball_throws/*']))
+    wanted = sorted(set([p for p in current if p] + ['/res/items/data/*', '/res/items/icons/*']))
     subprocess.run(['git', 'sparse-checkout', 'set', '--no-cone', '--stdin'], cwd=WORK, input='\n'.join(wanted) + '\n', check=True, text=True)
     subprocess.run(['git', 'checkout'], cwd=WORK, check=True, capture_output=True)
 
@@ -106,19 +100,6 @@ def icon_rgba(sprite, palette):
     return out
 
 
-def keyed(path):
-    im = Image.open(path)
-    rgba = im.convert('RGBA')
-    if im.mode == 'P':
-        idx = im.load()
-        px = rgba.load()
-        for y in range(im.height):
-            for x in range(im.width):
-                if idx[x, y] == 0:
-                    px[x, y] = (0, 0, 0, 0)
-    return rgba
-
-
 def main():
     ensure_repo()
     os.makedirs(DEST, exist_ok=True)
@@ -142,19 +123,6 @@ def main():
         n += 1
     # fairy has no Gen 4 disc: reuse the psychic colouring
     icon_rgba('tm', 'tm_psychic').save(os.path.join(DEST, 'tm-fairy.png'))
-    for kind, sheet in BALL_SHEETS.items():
-        im = keyed(os.path.join(BALLS, sheet + '.png'))
-        im.crop((0, 0, 16, 16)).save(os.path.join(DEST, f'ball-{kind}-closed.png'))
-        bottom = im.crop((0, im.height - 32, 32, im.height))
-        bbox = bottom.getbbox()
-        if bbox:
-            # centre the open ball in a 32x32 cell
-            cell = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
-            part = bottom.crop(bbox)
-            cell.paste(part, ((32 - part.width) // 2, 32 - part.height), part)
-            bottom = cell
-        bottom.save(os.path.join(DEST, f'ball-{kind}-open.png'))
-        n += 2
     with open(os.path.join(DEST, 'CREDITS.txt'), 'w') as f:
         f.write(CREDITS)
     print(f'wrote {n} files to assets/items/')

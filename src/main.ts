@@ -80,6 +80,7 @@ async function boot(): Promise<void> {
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
     });
+    debug.showdown.screen = screen;
     game.setScreen(screen);
     console.info(`[showdown] match started with ${starters.join(', ')}`);
   };

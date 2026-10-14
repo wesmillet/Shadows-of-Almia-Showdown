@@ -23,7 +23,7 @@ import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVi
 import { drawInfoBar, Hud, type HudState } from './hud';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
-import { ITEMS } from '../sim/items';
+import { ballOfTier, ITEMS } from '../sim/items';
 import { drawSoftShadow } from '../render/world';
 import { rgba, type GameContext, type Screen } from './screens';
 
@@ -37,6 +37,9 @@ export class MatchScreen implements Screen {
   private selectedItem = -1;
   private aimPower = 0;
   private aiming = false;
+  private gearTab = false;
+  private popup: { itemId: string; t: number } | null = null;
+  private teach: { slot: number } | null = null;
   private readonly strips = new Map<string, HTMLImageElement | null>();
 
   private endTimer = -1;
@@ -74,6 +77,14 @@ export class MatchScreen implements Screen {
       }
       return;
     }
+    if (this.popup) {
+      this.popup.t -= dt;
+      if (this.popup.t <= 0) this.popup = null;
+    }
+    if (this.teach) {
+      this.handleTeachInput(input);
+      return;
+    }
     this.handleInput(input);
     this.match.step(dt, input);
     this.consumeEvents();
@@ -102,7 +113,9 @@ export class MatchScreen implements Screen {
           this.say(`${m.name} is ${Math.hypot(m.x - this.match.player.x, m.y - this.match.player.y).toFixed(0)} tiles away (see minimap)`, 1.5);
         } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
+      else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
+    if (input.pressed('Tab')) this.gearTab = !this.gearTab;
     if (input.pressed('KeyR')) {
       const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
       const m = i >= 0 ? this.match.player.party[i] : undefined;
@@ -145,6 +158,25 @@ export class MatchScreen implements Screen {
     void v;
   }
 
+  /** The TM prompt: 1-4 replaces that move, Escape keeps the current moves. */
+  private handleTeachInput(input: Input): void {
+    if (!this.teach) return;
+    if (input.pressed('Escape')) {
+      this.teach = null;
+      return;
+    }
+    const slot = this.teach.slot;
+    for (let i = 0; i < 4; i++) {
+      if (input.pressed(`Digit${i + 1}`)) {
+        const msg = this.match.teach(this.match.player, slot, i);
+        this.say(msg || 'Could not teach that move', 2.2);
+        this.teach = null;
+        break;
+      }
+    }
+    input.takeClicks();
+  }
+
   /** Where the aimed ball will land: toward the nearest wild Pokémon, else straight ahead; distance from the hold time. */
   protected aimPoint(): { x: number; y: number } {
     const p = this.match.player;
@@ -164,9 +196,24 @@ export class MatchScreen implements Screen {
     return { x: p.x + (dx / n) * dist, y: p.y + (dy / n) * dist };
   }
 
-  /** Number keys and clicks on the bag: balls arm themselves, anything else is used at once. */
+  /** Number keys and clicks on the bag: balls arm themselves, anything else is used at once; the gear tab equips or teaches. */
   protected onItemSlot(index: number): void {
     const p = this.match.player;
+    if (this.gearTab) {
+      const entry = p.held[index];
+      const def = entry ? ITEMS[entry.id] : undefined;
+      if (!entry || !def) return;
+      if (def.kind === 'tm') {
+        const m = lead(p);
+        if (!m) return this.say('No Pokémon to teach', 1.2);
+        if (!m.types.includes(def.tmType ?? '')) return this.say(`${m.name} cannot learn ${def.name.replace('TM ', '')} (${def.tmType} type)`, 2);
+        this.teach = { slot: index };
+        return;
+      }
+      const msg = this.match.equip(p, index);
+      if (msg) this.say(msg, 1.4);
+      return;
+    }
     const entry = p.items[index];
     if (!entry) {
       this.selectedItem = -1;
@@ -264,7 +311,8 @@ export class MatchScreen implements Screen {
         break;
       case 'pickup':
         if (ev.trainer.isPlayer) {
-          this.floaters.add(ev.trainer.x, ev.trainer.y - 0.3, `Got ${ITEMS[ev.itemId]?.name ?? ev.itemId}`, '#ffe9a8', 14);
+          this.popup = { itemId: ev.itemId, t: 2.4 };
+          this.vfx.add(new ImpactBurst(ev.trainer.x, ev.trainer.y, '#ffe9a8', 0.6));
           if (this.selectedItem < 0) this.selectedItem = this.match.ballSlot(this.match.player);
         }
         break;
@@ -432,15 +480,13 @@ export class MatchScreen implements Screen {
   }
 
   /** Items on the ground are item balls: a Poké Ball sprite that bobs and glints. */
-  private drawGroundItem(v: View, it: { itemId: string; x: number; y: number; bob: number }): void {
-    const def = ITEMS[it.itemId];
-    if (!def) return;
+  private drawGroundItem(v: View, it: { tier: 'common' | 'uncommon' | 'rare'; itemId: string | null; x: number; y: number; bob: number }): void {
     const sx = Math.round(v.toScreenX(it.x));
     const sy = Math.round(v.toScreenY(it.y));
     const s = v.spriteScale;
     const lift = Math.round((Math.sin(it.bob * 3) * 0.5 + 0.5) * 2) * s;
     drawSoftShadow(v, sx, sy, 0.22, 0.3);
-    const img = this.icons.ball(ballKind(it.itemId));
+    const img = this.icons.ball(ballOfTier(it.tier));
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;
     if (img) ctx.drawImage(img, sx - 8 * s, sy - 16 * s - lift, 16 * s, 16 * s);
@@ -620,6 +666,14 @@ export class MatchScreen implements Screen {
       nextPulseIn: this.match.darkness.nextPulseIn,
       notice: this.notice,
       selectedItem: this.selectedItem,
+      gearTab: this.gearTab,
+      popup: this.popup,
+      teach: this.teach ? ((slot) => {
+        const m = lead(this.match.player);
+        const entry = this.match.player.held[slot];
+        const def = entry ? ITEMS[entry.id] : undefined;
+        return { moveName: def?.name.replace('TM ', '') ?? '?', moves: m ? m.moves.map((id) => move(id).name) : [], mon: m?.name ?? '?' };
+      })(this.teach.slot) : null,
       aiming: this.aiming ? Math.max(0.02, this.aimPower) : 0,
       lightingMode: this.lighting.mode,
     };

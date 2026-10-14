@@ -1,0 +1,69 @@
+{
+  "_comment": "TMs teach `move` (moves.json id) to the lead when one of its types matches the move's type. Icon = assets/items/tm-<type>.png.",
+  "tms": [
+    {
+      "id": "tm-flamethrower",
+      "move": "flamethrower"
+    },
+    {
+      "id": "tm-surf",
+      "move": "surf"
+    },
+    {
+      "id": "tm-thunderbolt",
+      "move": "thunderbolt"
+    },
+    {
+      "id": "tm-energy-ball",
+      "move": "energy-ball"
+    },
+    {
+      "id": "tm-crunch",
+      "move": "crunch"
+    },
+    {
+      "id": "tm-brick-break",
+      "move": "brick-break"
+    },
+    {
+      "id": "tm-earthquake",
+      "move": "earthquake"
+    },
+    {
+      "id": "tm-aerial-ace",
+      "move": "aerial-ace"
+    },
+    {
+      "id": "tm-poison-jab",
+      "move": "poison-jab"
+    },
+    {
+      "id": "tm-sludge-bomb",
+      "move": "sludge-bomb"
+    },
+    {
+      "id": "tm-rock-slide",
+      "move": "rock-slide"
+    },
+    {
+      "id": "tm-dragon-pulse",
+      "move": "dragon-pulse"
+    },
+    {
+      "id": "tm-stone-edge",
+      "move": "stone-edge"
+    },
+    {
+      "id": "tm-wild-charge",
+      "move": "wild-charge"
+    },
+    {
+      "id": "tm-x-scissor",
+      "move": "x-scissor"
+    },
+    {
+      "id": "tm-return",
+      "move": "return"
+    }
+  ]
+}

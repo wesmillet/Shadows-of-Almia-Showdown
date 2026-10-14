@@ -14,7 +14,7 @@ import { darken, hit, lighten, rgba } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number };
 
 interface Rect {
   x: number;
@@ -32,6 +32,12 @@ export interface HudState {
   nextPulseIn: number;
   notice: string;
   selectedItem: number;
+  /** Which bag tab is open. */
+  gearTab: boolean;
+  /** Pickup popup: item id and seconds left. */
+  popup: { itemId: string; t: number } | null;
+  /** TM teach prompt: the TM's move name and the lead's current moves. */
+  teach: { moveName: string; moves: string[]; mon: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
 }
@@ -62,6 +68,7 @@ export class Hud {
   ping: { mon: import('../sim/entities').Mon; t: number } | null = null;
   private moveRects: Rect[] = [];
   private itemRects: Rect[] = [];
+  private tabRects: Rect[] = [];
   private minimap: HTMLCanvasElement | null = null;
 
   constructor(private readonly view: View, private readonly icons: ItemIcons, private readonly ui: PixelUi) {}
@@ -87,6 +94,10 @@ export class Hud {
     for (let i = 0; i < this.itemRects.length; i++) {
       const r = this.itemRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'item', index: i };
+    }
+    for (let i = 0; i < this.tabRects.length; i++) {
+      const r = this.tabRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'tab', index: i };
     }
     return null;
   }
@@ -142,6 +153,30 @@ export class Hud {
       this.popupBox(ctx, v.width / 2 - w / 2, 86 * s, w, 40 * s);
       this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#4a2d1a', 'center', '700');
       ctx.restore();
+    }
+    if (st.popup) {
+      const w = 300 * s;
+      const h = 54 * s;
+      const x = v.width / 2 - w / 2;
+      const y = 140 * s;
+      const def = ITEMS[st.popup.itemId];
+      this.popupBox(ctx, x, y, w, h);
+      this.icons.draw(ctx, st.popup.itemId, x + 30 * s, y + h / 2, Math.max(1, Math.round(s)), def?.tmType);
+      this.label(ctx, `Found ${def?.name ?? st.popup.itemId}!`, x + 58 * s, y + 24 * s, 15, '#4a2d1a', 'left', '800');
+      const hint = def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab` : def?.kind === 'hold' ? 'Held item · Held & TMs tab' : def?.kind === 'ball' ? 'Hold Space to throw' : 'Shift+number to use';
+      this.label(ctx, hint, x + 58 * s, y + 42 * s, 11, '#6b4a30', 'left', '600');
+    }
+    if (st.teach) {
+      const w = 340 * s;
+      const h = 150 * s;
+      const x = v.width / 2 - w / 2;
+      const y = v.height / 2 - h / 2;
+      this.popupBox(ctx, x, y, w, h);
+      this.label(ctx, `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
+      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600');
+      st.teach.moves.forEach((mv, i) => {
+        this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700');
+      });
     }
     if (st.aiming > 0) {
       const w = 220 * s;
@@ -449,7 +484,7 @@ export class Hud {
 
   private drawItems(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
-    const items = match.player.items;
+    const items = st.gearTab ? match.player.held : match.player.items;
     const n = items.length;
     const slot = 44 * s;
     const gap = 6 * s;
@@ -457,7 +492,20 @@ export class Hud {
     const x0 = 24 * s;
     const y0 = v.height - 62 * s - 16 * s - slot - 20 * s;
     this.itemRects = [];
+    this.tabRects = [];
     this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12, 'rgba(12,12,22,0.25)');
+    // Tabs above the slots.
+    const tabW = 64 * s;
+    ['Bag', 'Held & TMs'].forEach((name, i) => {
+      const tx = x0 - 8 * s + i * (tabW + 4 * s);
+      const ty = y0 - 8 * s - 18 * s;
+      const active = (i === 1) === st.gearTab;
+      ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
+      ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
+      this.label(ctx, name, tx + tabW / 2, ty + 12 * s, 9, active ? '#fff' : '#b9b4cc', 'center', '800');
+      this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
+    });
+    this.label(ctx, 'Tab', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
     items.forEach((entry, i) => {
       const id = entry?.id ?? null;
       const x = x0 + i * (slot + gap);
@@ -477,7 +525,7 @@ export class Hud {
         const def = ITEMS[id];
         if (def) {
           this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, Math.max(1, Math.round(s)), def.tmType);
-          this.label(ctx, def.short, x + slot / 2, y0 + slot - 4 * s, 8.5, '#ffffff', 'center', '700');
+          this.label(ctx, def.kind === 'tm' ? def.name.replace('TM ', '') : def.short, x + slot / 2, y0 + slot - 4 * s, 8, '#ffffff', 'center', '700');
           if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 4 * s, y0 + 11 * s, 9, '#ffe9a8', 'right', '800');
         }
       }

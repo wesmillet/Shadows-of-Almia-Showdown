@@ -1,0 +1,249 @@
+{
+  "_comment": "Items. kind: ball (held throw, tier multiplies catch chance), heal (lead HP), revive, cure, boost (stat stage on the lead), hold (held item the lead equips; effect names in sim/battle), tm (teaches `move` to the lead when its type matches), styler. Held items and TMs live in the second bag tab. Icons are assets/items/<id>.png (TMs: tm-<type>.png).",
+  "items": [
+    {
+      "id": "poke-ball",
+      "name": "Pok\u00e9 Ball",
+      "short": "Ball",
+      "kind": "ball",
+      "tier": 1,
+      "stack": 3
+    },
+    {
+      "id": "great-ball",
+      "name": "Great Ball",
+      "short": "Great",
+      "kind": "ball",
+      "tier": 1.5,
+      "stack": 1
+    },
+    {
+      "id": "ultra-ball",
+      "name": "Ultra Ball",
+      "short": "Ultra",
+      "kind": "ball",
+      "tier": 2,
+      "stack": 1
+    },
+    {
+      "id": "potion",
+      "name": "Potion",
+      "short": "Potion",
+      "kind": "heal",
+      "amount": 20
+    },
+    {
+      "id": "super-potion",
+      "name": "Super Potion",
+      "short": "S.Potion",
+      "kind": "heal",
+      "amount": 50
+    },
+    {
+      "id": "revive",
+      "name": "Revive",
+      "short": "Revive",
+      "kind": "revive",
+      "fraction": 0.5
+    },
+    {
+      "id": "full-heal",
+      "name": "Full Heal",
+      "short": "F.Heal",
+      "kind": "cure"
+    },
+    {
+      "id": "x-attack",
+      "name": "X Attack",
+      "short": "X Atk",
+      "kind": "boost",
+      "stat": "atk",
+      "stages": 2
+    },
+    {
+      "id": "leftovers",
+      "name": "Leftovers",
+      "short": "Leftovrs",
+      "kind": "hold",
+      "effect": "regen"
+    },
+    {
+      "id": "focus-sash",
+      "name": "Focus Sash",
+      "short": "Sash",
+      "kind": "hold",
+      "effect": "sash"
+    },
+    {
+      "id": "capture-styler",
+      "name": "Capture Styler",
+      "short": "Styler",
+      "kind": "styler"
+    },
+    {
+      "id": "hyper-potion",
+      "name": "Hyper Potion",
+      "short": "H.Potion",
+      "kind": "heal",
+      "amount": 120
+    },
+    {
+      "id": "x-defend",
+      "name": "X Defend",
+      "short": "X Def",
+      "kind": "boost",
+      "stat": "def",
+      "stages": 2
+    },
+    {
+      "id": "x-speed",
+      "name": "X Speed",
+      "short": "X Spd",
+      "kind": "boost",
+      "stat": "spe",
+      "stages": 2
+    },
+    {
+      "id": "choice-band",
+      "name": "Choice Band",
+      "short": "Ch.Band",
+      "kind": "hold",
+      "effect": "choice-band"
+    },
+    {
+      "id": "life-orb",
+      "name": "Life Orb",
+      "short": "Life Orb",
+      "kind": "hold",
+      "effect": "life-orb"
+    },
+    {
+      "id": "charcoal",
+      "name": "Charcoal",
+      "short": "Charcoal",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "fire"
+    },
+    {
+      "id": "mystic-water",
+      "name": "Mystic Water",
+      "short": "M.Water",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "water"
+    },
+    {
+      "id": "magnet",
+      "name": "Magnet",
+      "short": "Magnet",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "electric"
+    },
+    {
+      "id": "miracle-seed",
+      "name": "Miracle Seed",
+      "short": "M.Seed",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "grass"
+    },
+    {
+      "id": "never-melt-ice",
+      "name": "NeverMeltIce",
+      "short": "N.M.Ice",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "ice"
+    },
+    {
+      "id": "black-belt",
+      "name": "Black Belt",
+      "short": "B.Belt",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "fighting"
+    },
+    {
+      "id": "soft-sand",
+      "name": "Soft Sand",
+      "short": "S.Sand",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "ground"
+    },
+    {
+      "id": "sharp-beak",
+      "name": "Sharp Beak",
+      "short": "S.Beak",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "flying"
+    },
+    {
+      "id": "twisted-spoon",
+      "name": "TwistedSpoon",
+      "short": "T.Spoon",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "psychic"
+    },
+    {
+      "id": "poison-barb",
+      "name": "Poison Barb",
+      "short": "P.Barb",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "poison"
+    },
+    {
+      "id": "hard-stone",
+      "name": "Hard Stone",
+      "short": "H.Stone",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "rock"
+    },
+    {
+      "id": "spell-tag",
+      "name": "Spell Tag",
+      "short": "S.Tag",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "ghost"
+    },
+    {
+      "id": "dragon-fang",
+      "name": "Dragon Fang",
+      "short": "D.Fang",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "dragon"
+    },
+    {
+      "id": "black-glasses",
+      "name": "BlackGlasses",
+      "short": "B.Glass",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "dark"
+    },
+    {
+      "id": "metal-coat",
+      "name": "Metal Coat",
+      "short": "M.Coat",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "steel"
+    },
+    {
+      "id": "silk-scarf",
+      "name": "Silk Scarf",
+      "short": "S.Scarf",
+      "kind": "hold",
+      "effect": "type-boost",
+      "boostType": "normal"
+    }
+  ]
+}

@@ -30,13 +30,14 @@ other edges. Last trainer standing wins.
 
 | Input | Action |
 | --- | --- |
-| WASD / arrows | move, 8 directions, 4 tiles/s; the party follows in a line |
-| walk into a wild Pokémon | start a fight (camera eases in 10%) |
-| 1-4 while fighting, or click the move wheel | cast a move (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |
-| 1-6 outside a fight, Shift+1-6 anytime, or click the bag | use an item (balls arm themselves) |
+| WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
+| 1-4, or click the move wheel | the lead casts a move where you face (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |
+| Shift+1-6, or click the bag | use an item (balls arm themselves) |
+| Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
+| Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
 | hold Space, release | aim an arc toward the nearest wild Pokémon and throw the armed ball |
-| click a portrait | swap the lead; fainted members leave the line |
-| walk over an item | pick it up (bag of six; balls stack) |
+| click a portrait | swap the lead; click a behaviour chip to cycle Aggressive / Guard / Passive / Hold / Roam |
+| walk over an item ball | open it: a popup reveals the contents (Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare) |
 | stand on a Ranger outpost pad | full party heal over 3 s; a beacon tells every trainer you are there |
 
 Every 90 s the Shadow Crystal pulses and darkness sweeps inward from the
@@ -70,8 +71,10 @@ assets/
   CREDITS.md              generated: SpriteCollab license and per-folder artists
 data/
   species.json            dex, name, types, base stats, starter tier, wild biome, kit
-  moves.json              22 moves: type, power, shape, cooldown, VFX family, animation
-  items.json              the ground items and what they do
+  moves.json              38 moves: type, power, shape, cooldown, VFX family, animation
+  items/items.json        balls, medicine, X items, held items and what they do
+  items/tms.json          the 16 TMs and the move each one teaches
+  items/loot.json         the three rarity tiers and what each item ball can contain
   types.json              the 18-type chart and type colours
   spawns.json             wild spawn tables per biome, starter and trainer pools
   characters.json         which manifest character plays each role (player, AI trainers, host, staff, grunt)

@@ -5,13 +5,13 @@ import { Rng } from '../core/rng';
 
 function trainer(x: number, y: number, hp: number): Trainer {
   const m = { hp, maxHp: 100, fainted: hp <= 0 } as Trainer['party'][number];
-  return { x, y, alive: true, party: [m], items: [null, null], stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 } } as unknown as Trainer;
+  return { x, y, alive: true, party: [m], items: [null, null], held: [null, null], stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 } } as unknown as Trainer;
 }
 
 const world = (rivals: Trainer[], items: Array<{ x: number; y: number }> = []) => ({
   ground: { reachable: () => true } as never,
   rng: new Rng(3),
-  items: items.map((p, i) => ({ id: i, itemId: 'potion', x: p.x, y: p.y, bob: 0 })),
+  items: items.map((p, i) => ({ id: i, tier: 'common' as const, itemId: 'potion', x: p.x, y: p.y, bob: 0 })),
   outposts: [{ x: 0, y: 0 }],
   rivals,
   darkRadius: Infinity,

@@ -6,6 +6,7 @@
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG, effectiveness, move, type MoveDef, type StatusKind } from './data';
+import { ITEMS } from './items';
 import type { Mon, Trainer } from './entities';
 
 export interface Area {
@@ -25,7 +26,7 @@ export type BattleEvent =
   | { type: 'resolve'; attacker: Mon; move: MoveDef; area: Area; hits: Mon[] }
   | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean }
   | { type: 'status'; target: Mon; status: StatusKind }
-  | { type: 'stages'; target: Mon; stat: 'atk' | 'def'; delta: number }
+  | { type: 'stages'; target: Mon; stat: 'atk' | 'def' | 'spe'; delta: number }
   | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' }
   | { type: 'faint'; mon: Mon; by: Mon | null }
   | { type: 'wake'; mon: Mon }
@@ -96,6 +97,11 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   let dmg = (((2 * attacker.level) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
+  // Held items.
+  const held = attacker.heldItem ? ITEMS[attacker.heldItem] : undefined;
+  if (held?.effect === 'choice-band' && m.category === 'physical') dmg *= 1.5;
+  if (held?.effect === 'life-orb') dmg *= 1.3;
+  if (held?.effect === 'type-boost' && held.boostType === m.type) dmg *= 1.2;
   const crit = rng.chance(CONFIG.battle.critChance);
   if (crit) dmg *= 1.5;
   if (attacker.status === 'burn' && m.category === 'physical') dmg *= 0.5;
@@ -187,7 +193,8 @@ export class BattleSystem {
       this.events.push({ type: 'text', mon: attacker, text: 'paralyzed!' });
       return false;
     }
-    attacker.cooldowns[slot] = m.cooldown;
+    // X Speed stages shorten cooldowns (10% per stage).
+    attacker.cooldowns[slot] = m.cooldown * Math.max(0.4, 1 - 0.1 * attacker.stages.spe);
     const area = makeArea(m, attacker, targetX, targetY);
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId };
     attacker.dir = dirFromVector(area.fx, area.fy, attacker.dir);
@@ -258,6 +265,11 @@ export class BattleSystem {
           target.flash = 0.06;
           if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
           if (attacker.owner) attacker.owner.stats.damage += r.damage;
+          if (attacker.heldItem === 'life-orb' && !attacker.fainted) {
+            const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
+            this.applyDamage(attacker, recoil, null);
+            this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'burn' });
+          }
         }
         this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });
         if (r.effectiveness === 0) continue;
@@ -278,7 +290,7 @@ export class BattleSystem {
     return true;
   }
 
-  changeStage(mon: Mon, stat: 'atk' | 'def', delta: number): void {
+  changeStage(mon: Mon, stat: 'atk' | 'def' | 'spe', delta: number): void {
     const before = mon.stages[stat];
     mon.stages[stat] = Math.max(-6, Math.min(6, before + delta));
     if (mon.stages[stat] !== before) this.events.push({ type: 'stages', target: mon, stat, delta });

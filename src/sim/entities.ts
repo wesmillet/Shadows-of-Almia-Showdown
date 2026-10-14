@@ -14,8 +14,8 @@ export interface Mon {
   hp: number;
   maxHp: number;
   stats: StatBlock;
-  /** Stat stages for atk/def (-6..6). */
-  stages: { atk: number; def: number };
+  /** Stat stages for atk/def/spe (-6..6); spe shortens cooldowns. */
+  stages: { atk: number; def: number; spe: number };
   types: string[];
   moves: string[];
   cooldowns: number[];
@@ -93,7 +93,10 @@ export interface Trainer {
   moving: boolean;
   walkPhase: number;
   party: Mon[];
+  /** Bag tab: balls and consumables. */
   items: Array<InventorySlot | null>;
+  /** Gear tab: held items and TMs. */
+  held: Array<InventorySlot | null>;
   alive: boolean;
   stats: TrainerStats;
   /** AI brain. */
@@ -117,7 +120,9 @@ export interface InventorySlot {
 
 export interface GroundItem {
   id: number;
-  itemId: string;
+  /** Loot tier (decides the ball sprite). Contents roll on pickup unless already known. */
+  tier: 'common' | 'uncommon' | 'rare';
+  itemId: string | null;
   x: number;
   y: number;
   bob: number;

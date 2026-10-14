@@ -1,0 +1,159 @@
+{
+  "_comment": "Item balls on the ground roll their contents from these tiers when picked up. tier weights pick the tier (and the ball sprite: common = Pok\u00e9 Ball, uncommon = Great Ball, rare = Ultra Ball); entries are item ids with weights, 'tm' draws a random TM. Wild knockouts roll from the same table.",
+  "tiers": {
+    "common": {
+      "weight": 62,
+      "ball": "poke",
+      "entries": [
+        {
+          "id": "poke-ball",
+          "weight": 12
+        },
+        {
+          "id": "potion",
+          "weight": 10
+        },
+        {
+          "id": "super-potion",
+          "weight": 5
+        },
+        {
+          "id": "full-heal",
+          "weight": 4
+        },
+        {
+          "id": "x-attack",
+          "weight": 3
+        },
+        {
+          "id": "x-defend",
+          "weight": 3
+        },
+        {
+          "id": "x-speed",
+          "weight": 3
+        }
+      ]
+    },
+    "uncommon": {
+      "weight": 28,
+      "ball": "great",
+      "entries": [
+        {
+          "id": "great-ball",
+          "weight": 8
+        },
+        {
+          "id": "hyper-potion",
+          "weight": 5
+        },
+        {
+          "id": "revive",
+          "weight": 4
+        },
+        {
+          "id": "leftovers",
+          "weight": 3
+        },
+        {
+          "id": "focus-sash",
+          "weight": 3
+        },
+        {
+          "id": "charcoal",
+          "weight": 1
+        },
+        {
+          "id": "mystic-water",
+          "weight": 1
+        },
+        {
+          "id": "magnet",
+          "weight": 1
+        },
+        {
+          "id": "miracle-seed",
+          "weight": 1
+        },
+        {
+          "id": "never-melt-ice",
+          "weight": 1
+        },
+        {
+          "id": "black-belt",
+          "weight": 1
+        },
+        {
+          "id": "soft-sand",
+          "weight": 1
+        },
+        {
+          "id": "sharp-beak",
+          "weight": 1
+        },
+        {
+          "id": "twisted-spoon",
+          "weight": 1
+        },
+        {
+          "id": "poison-barb",
+          "weight": 1
+        },
+        {
+          "id": "hard-stone",
+          "weight": 1
+        },
+        {
+          "id": "spell-tag",
+          "weight": 1
+        },
+        {
+          "id": "dragon-fang",
+          "weight": 1
+        },
+        {
+          "id": "black-glasses",
+          "weight": 1
+        },
+        {
+          "id": "metal-coat",
+          "weight": 1
+        },
+        {
+          "id": "silk-scarf",
+          "weight": 1
+        },
+        {
+          "id": "tm",
+          "weight": 6
+        }
+      ]
+    },
+    "rare": {
+      "weight": 10,
+      "ball": "ultra",
+      "entries": [
+        {
+          "id": "ultra-ball",
+          "weight": 6
+        },
+        {
+          "id": "choice-band",
+          "weight": 3
+        },
+        {
+          "id": "life-orb",
+          "weight": 3
+        },
+        {
+          "id": "capture-styler",
+          "weight": 3
+        },
+        {
+          "id": "tm",
+          "weight": 5
+        }
+      ]
+    }
+  }
+}

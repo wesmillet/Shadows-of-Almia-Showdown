@@ -1,27 +1,509 @@
 {
   "_comment": "shape: single (target point), line (3 tiles ahead), cone (3 wide, 2.5 deep), ring (radius 2 around the user), self. vfx family: burst | projectile | beam | ring | cloud, tinted by the move's type colour and scaled by size. anim: the SpriteCollab action the attacker plays. strip (optional): a hand-made sprite strip under assets/vfx/ that replaces the procedural family. cooldown and cast in seconds.",
   "moves": [
-    { "id": "tackle", "name": "Tackle", "type": "normal", "category": "physical", "power": 40, "shape": "single", "cooldown": 1.5, "vfx": "burst", "anim": "Attack", "size": 1 },
-    { "id": "scratch", "name": "Scratch", "type": "normal", "category": "physical", "power": 40, "shape": "single", "cooldown": 1.5, "vfx": "burst", "anim": "Attack", "size": 0.9 },
-    { "id": "quick-attack", "name": "Quick Attack", "type": "normal", "category": "physical", "power": 40, "shape": "single", "cooldown": 1.5, "vfx": "burst", "anim": "Attack", "size": 0.8 },
-    { "id": "bite", "name": "Bite", "type": "dark", "category": "physical", "power": 60, "shape": "single", "cooldown": 2.5, "vfx": "burst", "anim": "Attack", "size": 1.1 },
-    { "id": "rock-smash", "name": "Rock Smash", "type": "fighting", "category": "physical", "power": 40, "shape": "single", "cooldown": 2.5, "vfx": "burst", "anim": "Attack", "size": 1.2, "stages": { "target": { "def": -1 }, "chance": 0.5 } },
-    { "id": "wing-attack", "name": "Wing Attack", "type": "flying", "category": "physical", "power": 60, "shape": "single", "cooldown": 2.5, "vfx": "burst", "anim": "Attack", "size": 1.2 },
-    { "id": "ember", "name": "Ember", "type": "fire", "category": "special", "power": 40, "shape": "single", "cooldown": 2, "vfx": "projectile", "anim": "Shoot", "size": 1, "status": { "kind": "burn", "chance": 0.1 } },
-    { "id": "water-gun", "name": "Water Gun", "type": "water", "category": "special", "power": 40, "shape": "single", "cooldown": 2, "vfx": "projectile", "anim": "Shoot", "size": 1 },
-    { "id": "rock-throw", "name": "Rock Throw", "type": "rock", "category": "physical", "power": 50, "shape": "single", "cooldown": 2.5, "vfx": "projectile", "anim": "Shoot", "size": 1.2 },
-    { "id": "shadow-ball", "name": "Shadow Ball", "type": "ghost", "category": "special", "power": 80, "shape": "single", "cooldown": 4, "vfx": "projectile", "anim": "Charge", "size": 1.4 },
-    { "id": "thunder-shock", "name": "Thunder Shock", "type": "electric", "category": "special", "power": 40, "shape": "line", "cooldown": 2.5, "vfx": "beam", "anim": "Shoot", "size": 1, "status": { "kind": "paralysis", "chance": 0.1 } },
-    { "id": "razor-leaf", "name": "Razor Leaf", "type": "grass", "category": "physical", "power": 55, "shape": "cone", "cooldown": 3, "vfx": "beam", "anim": "Shoot", "size": 1.2 },
-    { "id": "psybeam", "name": "Psybeam", "type": "psychic", "category": "special", "power": 65, "shape": "line", "cooldown": 3, "vfx": "beam", "anim": "Shoot", "size": 1.1 },
-    { "id": "ice-beam", "name": "Ice Beam", "type": "ice", "category": "special", "power": 90, "shape": "line", "cooldown": 4.5, "vfx": "beam", "anim": "Charge", "size": 1.3 },
-    { "id": "dark-pulse", "name": "Dark Pulse", "type": "dark", "category": "special", "power": 80, "shape": "line", "cooldown": 4, "vfx": "beam", "anim": "Charge", "size": 1.4 },
-    { "id": "discharge", "name": "Discharge", "type": "electric", "category": "special", "power": 80, "shape": "ring", "cooldown": 5, "vfx": "ring", "anim": "Charge", "size": 1.3, "status": { "kind": "paralysis", "chance": 0.3 } },
-    { "id": "bulldoze", "name": "Bulldoze", "type": "ground", "category": "physical", "power": 60, "shape": "ring", "cooldown": 4, "vfx": "ring", "anim": "Attack", "size": 1.2 },
-    { "id": "dark-void", "name": "Dark Void", "type": "dark", "category": "status", "power": 0, "shape": "ring", "cooldown": 6, "vfx": "ring", "anim": "Charge", "size": 1.5, "status": { "kind": "sleep", "chance": 1 } },
-    { "id": "sleep-powder", "name": "Sleep Powder", "type": "grass", "category": "status", "power": 0, "shape": "cone", "cooldown": 6, "vfx": "cloud", "anim": "Shoot", "size": 1.2, "status": { "kind": "sleep", "chance": 0.75 } },
-    { "id": "thunder-wave", "name": "Thunder Wave", "type": "electric", "category": "status", "power": 0, "shape": "single", "cooldown": 5, "vfx": "cloud", "anim": "Shoot", "size": 1, "status": { "kind": "paralysis", "chance": 0.9 } },
-    { "id": "will-o-wisp", "name": "Will-O-Wisp", "type": "fire", "category": "status", "power": 0, "shape": "single", "cooldown": 5, "vfx": "cloud", "anim": "Shoot", "size": 1, "status": { "kind": "burn", "chance": 0.85 } },
-    { "id": "howl", "name": "Howl", "type": "normal", "category": "status", "power": 0, "shape": "self", "cooldown": 6, "vfx": "cloud", "anim": "Charge", "size": 1, "stages": { "self": { "atk": 1 }, "chance": 1 } }
+    {
+      "id": "tackle",
+      "name": "Tackle",
+      "type": "normal",
+      "category": "physical",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 1.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1
+    },
+    {
+      "id": "scratch",
+      "name": "Scratch",
+      "type": "normal",
+      "category": "physical",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 1.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 0.9
+    },
+    {
+      "id": "quick-attack",
+      "name": "Quick Attack",
+      "type": "normal",
+      "category": "physical",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 1.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 0.8
+    },
+    {
+      "id": "bite",
+      "name": "Bite",
+      "type": "dark",
+      "category": "physical",
+      "power": 60,
+      "shape": "single",
+      "cooldown": 2.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.1
+    },
+    {
+      "id": "rock-smash",
+      "name": "Rock Smash",
+      "type": "fighting",
+      "category": "physical",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 2.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2,
+      "stages": {
+        "target": {
+          "def": -1
+        },
+        "chance": 0.5
+      }
+    },
+    {
+      "id": "wing-attack",
+      "name": "Wing Attack",
+      "type": "flying",
+      "category": "physical",
+      "power": 60,
+      "shape": "single",
+      "cooldown": 2.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "ember",
+      "name": "Ember",
+      "type": "fire",
+      "category": "special",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 2,
+      "vfx": "projectile",
+      "anim": "Shoot",
+      "size": 1,
+      "status": {
+        "kind": "burn",
+        "chance": 0.1
+      }
+    },
+    {
+      "id": "water-gun",
+      "name": "Water Gun",
+      "type": "water",
+      "category": "special",
+      "power": 40,
+      "shape": "single",
+      "cooldown": 2,
+      "vfx": "projectile",
+      "anim": "Shoot",
+      "size": 1
+    },
+    {
+      "id": "rock-throw",
+      "name": "Rock Throw",
+      "type": "rock",
+      "category": "physical",
+      "power": 50,
+      "shape": "single",
+      "cooldown": 2.5,
+      "vfx": "projectile",
+      "anim": "Shoot",
+      "size": 1.2
+    },
+    {
+      "id": "shadow-ball",
+      "name": "Shadow Ball",
+      "type": "ghost",
+      "category": "special",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 4,
+      "vfx": "projectile",
+      "anim": "Charge",
+      "size": 1.4
+    },
+    {
+      "id": "thunder-shock",
+      "name": "Thunder Shock",
+      "type": "electric",
+      "category": "special",
+      "power": 40,
+      "shape": "line",
+      "cooldown": 2.5,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1,
+      "status": {
+        "kind": "paralysis",
+        "chance": 0.1
+      }
+    },
+    {
+      "id": "razor-leaf",
+      "name": "Razor Leaf",
+      "type": "grass",
+      "category": "physical",
+      "power": 55,
+      "shape": "cone",
+      "cooldown": 3,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.2
+    },
+    {
+      "id": "psybeam",
+      "name": "Psybeam",
+      "type": "psychic",
+      "category": "special",
+      "power": 65,
+      "shape": "line",
+      "cooldown": 3,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.1
+    },
+    {
+      "id": "ice-beam",
+      "name": "Ice Beam",
+      "type": "ice",
+      "category": "special",
+      "power": 90,
+      "shape": "line",
+      "cooldown": 4.5,
+      "vfx": "beam",
+      "anim": "Charge",
+      "size": 1.3
+    },
+    {
+      "id": "dark-pulse",
+      "name": "Dark Pulse",
+      "type": "dark",
+      "category": "special",
+      "power": 80,
+      "shape": "line",
+      "cooldown": 4,
+      "vfx": "beam",
+      "anim": "Charge",
+      "size": 1.4
+    },
+    {
+      "id": "discharge",
+      "name": "Discharge",
+      "type": "electric",
+      "category": "special",
+      "power": 80,
+      "shape": "ring",
+      "cooldown": 5,
+      "vfx": "ring",
+      "anim": "Charge",
+      "size": 1.3,
+      "status": {
+        "kind": "paralysis",
+        "chance": 0.3
+      }
+    },
+    {
+      "id": "bulldoze",
+      "name": "Bulldoze",
+      "type": "ground",
+      "category": "physical",
+      "power": 60,
+      "shape": "ring",
+      "cooldown": 4,
+      "vfx": "ring",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "dark-void",
+      "name": "Dark Void",
+      "type": "dark",
+      "category": "status",
+      "power": 0,
+      "shape": "ring",
+      "cooldown": 6,
+      "vfx": "ring",
+      "anim": "Charge",
+      "size": 1.5,
+      "status": {
+        "kind": "sleep",
+        "chance": 1
+      }
+    },
+    {
+      "id": "sleep-powder",
+      "name": "Sleep Powder",
+      "type": "grass",
+      "category": "status",
+      "power": 0,
+      "shape": "cone",
+      "cooldown": 6,
+      "vfx": "cloud",
+      "anim": "Shoot",
+      "size": 1.2,
+      "status": {
+        "kind": "sleep",
+        "chance": 0.75
+      }
+    },
+    {
+      "id": "thunder-wave",
+      "name": "Thunder Wave",
+      "type": "electric",
+      "category": "status",
+      "power": 0,
+      "shape": "single",
+      "cooldown": 5,
+      "vfx": "cloud",
+      "anim": "Shoot",
+      "size": 1,
+      "status": {
+        "kind": "paralysis",
+        "chance": 0.9
+      }
+    },
+    {
+      "id": "will-o-wisp",
+      "name": "Will-O-Wisp",
+      "type": "fire",
+      "category": "status",
+      "power": 0,
+      "shape": "single",
+      "cooldown": 5,
+      "vfx": "cloud",
+      "anim": "Shoot",
+      "size": 1,
+      "status": {
+        "kind": "burn",
+        "chance": 0.85
+      }
+    },
+    {
+      "id": "howl",
+      "name": "Howl",
+      "type": "normal",
+      "category": "status",
+      "power": 0,
+      "shape": "self",
+      "cooldown": 6,
+      "vfx": "cloud",
+      "anim": "Charge",
+      "size": 1,
+      "stages": {
+        "self": {
+          "atk": 1
+        },
+        "chance": 1
+      }
+    },
+    {
+      "id": "flamethrower",
+      "name": "Flamethrower",
+      "type": "fire",
+      "category": "special",
+      "power": 90,
+      "shape": "line",
+      "cooldown": 4,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.3,
+      "status": {
+        "kind": "burn",
+        "chance": 0.1
+      }
+    },
+    {
+      "id": "surf",
+      "name": "Surf",
+      "type": "water",
+      "category": "special",
+      "power": 90,
+      "shape": "ring",
+      "cooldown": 5,
+      "vfx": "ring",
+      "anim": "Charge",
+      "size": 1.4
+    },
+    {
+      "id": "thunderbolt",
+      "name": "Thunderbolt",
+      "type": "electric",
+      "category": "special",
+      "power": 90,
+      "shape": "line",
+      "cooldown": 4,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.3,
+      "status": {
+        "kind": "paralysis",
+        "chance": 0.1
+      }
+    },
+    {
+      "id": "energy-ball",
+      "name": "Energy Ball",
+      "type": "grass",
+      "category": "special",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 3.5,
+      "vfx": "projectile",
+      "anim": "Shoot",
+      "size": 1.3
+    },
+    {
+      "id": "crunch",
+      "name": "Crunch",
+      "type": "dark",
+      "category": "physical",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 3.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "brick-break",
+      "name": "Brick Break",
+      "type": "fighting",
+      "category": "physical",
+      "power": 75,
+      "shape": "single",
+      "cooldown": 3,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "earthquake",
+      "name": "Earthquake",
+      "type": "ground",
+      "category": "physical",
+      "power": 100,
+      "shape": "ring",
+      "cooldown": 6,
+      "vfx": "ring",
+      "anim": "Attack",
+      "size": 1.6
+    },
+    {
+      "id": "aerial-ace",
+      "name": "Aerial Ace",
+      "type": "flying",
+      "category": "physical",
+      "power": 60,
+      "shape": "single",
+      "cooldown": 2,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.1
+    },
+    {
+      "id": "poison-jab",
+      "name": "Poison Jab",
+      "type": "poison",
+      "category": "physical",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 3.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "sludge-bomb",
+      "name": "Sludge Bomb",
+      "type": "poison",
+      "category": "special",
+      "power": 90,
+      "shape": "single",
+      "cooldown": 4,
+      "vfx": "projectile",
+      "anim": "Shoot",
+      "size": 1.4
+    },
+    {
+      "id": "rock-slide",
+      "name": "Rock Slide",
+      "type": "rock",
+      "category": "physical",
+      "power": 75,
+      "shape": "cone",
+      "cooldown": 5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.4
+    },
+    {
+      "id": "dragon-pulse",
+      "name": "Dragon Pulse",
+      "type": "dragon",
+      "category": "special",
+      "power": 85,
+      "shape": "line",
+      "cooldown": 4,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.3
+    },
+    {
+      "id": "stone-edge",
+      "name": "Stone Edge",
+      "type": "rock",
+      "category": "physical",
+      "power": 100,
+      "shape": "single",
+      "cooldown": 5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.4
+    },
+    {
+      "id": "wild-charge",
+      "name": "Wild Charge",
+      "type": "electric",
+      "category": "physical",
+      "power": 90,
+      "shape": "single",
+      "cooldown": 4,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.3
+    },
+    {
+      "id": "x-scissor",
+      "name": "X-Scissor",
+      "type": "bug",
+      "category": "physical",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 3.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.2
+    },
+    {
+      "id": "return",
+      "name": "Return",
+      "type": "normal",
+      "category": "physical",
+      "power": 90,
+      "shape": "single",
+      "cooldown": 4,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.3
+    }
   ]
 }

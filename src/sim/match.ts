@@ -15,7 +15,7 @@ import { CONFIG, SPAWNS, move, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
-import { ITEM_LIST, ITEMS } from './items';
+import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, tierOf, type LootTier } from './items';
 import { canStand, tryMove } from './movement';
 import { areaContains, makeArea } from './battle';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
@@ -133,39 +133,70 @@ export class Match {
     }
     this.rng.shuffle(spots);
     // Guarantee the player a few balls nearby, then weight the rest.
-    const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 7).slice(0, 3);
+    const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 9).slice(0, 3);
     let id = 0;
-    for (const p of near) this.items.push({ id: nextId++, itemId: 'poke-ball', x: p.x, y: p.y, bob: id++ });
+    for (const p of near) this.items.push({ id: nextId++, tier: 'common', itemId: 'poke-ball', x: p.x, y: p.y, bob: id++ });
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };
       if (near.includes(p)) continue;
-      const def = this.rng.weighted(ITEM_LIST, (d) => d.weight);
-      this.items.push({ id: nextId++, itemId: def.id, x: p.x, y: p.y, bob: this.rng.next() * 6 });
+      this.items.push({ id: nextId++, tier: rollTier(this.rng), itemId: null, x: p.x, y: p.y, bob: this.rng.next() * 6 });
     }
   }
 
-  /** Adds an item to a bag; returns false when it is full. */
+  /** Adds an item to the right tab (bag, or gear for held items and TMs); returns false when it is full. */
   giveItem(t: Trainer, itemId: string): boolean {
     const def = ITEMS[itemId];
+    const tab = isGear(itemId) ? t.held : t.items;
     if (def?.stack) {
-      const slot = t.items.find((s) => s?.id === itemId);
+      const slot = tab.find((s) => s?.id === itemId);
       if (slot) {
         slot.count += def.stack;
         return true;
       }
     }
-    const free = t.items.indexOf(null);
+    const free = tab.indexOf(null);
     if (free < 0) return false;
-    t.items[free] = { id: itemId, count: def?.stack ?? 1 };
+    tab[free] = { id: itemId, count: def?.stack ?? 1 };
     return true;
   }
 
-  takeItem(t: Trainer, slot: number): InventorySlot | null {
-    const s = t.items[slot];
+  takeItem(t: Trainer, slot: number, tab: 'items' | 'held' = 'items'): InventorySlot | null {
+    const list = t[tab];
+    const s = list[slot];
     if (!s) return null;
     s.count--;
-    if (s.count <= 0) t.items[slot] = null;
+    if (s.count <= 0) list[slot] = null;
     return s;
+  }
+
+  /** Equips a held item from the gear tab on the lead; the previous item returns to the tab. */
+  equip(t: Trainer, slot: number): string {
+    const entry = t.held[slot];
+    const def = entry ? ITEMS[entry.id] : undefined;
+    const m = lead(t);
+    if (!entry || !def || def.kind !== 'hold') return '';
+    if (!m) return 'No Pokémon to hold it';
+    const previous = m.heldItem;
+    m.heldItem = def.id;
+    this.takeItem(t, slot, 'held');
+    if (previous) this.giveItem(t, previous);
+    return `${m.name} holds the ${def.name}`;
+  }
+
+  /** Teaches a TM's move to the lead in move slot `replace` (0-3). */
+  teach(t: Trainer, slot: number, replace: number): string {
+    const entry = t.held[slot];
+    const def = entry ? ITEMS[entry.id] : undefined;
+    const m = lead(t);
+    if (!entry || !def || def.kind !== 'tm' || !def.move) return '';
+    if (!m) return 'No Pokémon to teach';
+    if (!m.types.includes(def.tmType ?? '')) return `${m.name} cannot learn ${move(def.move).name} (${def.tmType} type)`;
+    if (replace < 0 || replace > 3) return '';
+    const old = m.moves[replace];
+    m.moves[replace] = def.move;
+    m.cooldowns[replace] = 0;
+    this.takeItem(t, slot, 'held');
+    return `${m.name} forgot ${old ? move(old).name : '?'} and learned ${move(def.move).name}!`;
   }
 
   /** Uses a non-ball item from a bag slot. Returns a message for the HUD. */
@@ -210,15 +241,13 @@ export class Match {
         if (!m) return 'No Pokémon';
         this.battle.changeStage(m, def.stat ?? 'atk', def.stages ?? 2);
         this.takeItem(t, slot);
-        return `${m.name}'s ${def.stat === 'def' ? 'Defense' : 'Attack'} rose sharply!`;
+        const label = def.stat === 'def' ? 'Defense' : def.stat === 'spe' ? 'Speed' : 'Attack';
+        return `${m.name}'s ${label} rose sharply!`;
       }
-      case 'hold': {
-        if (!m) return 'No Pokémon';
-        if (m.heldItem) return `${m.name} already holds ${ITEMS[m.heldItem]?.name ?? 'an item'}`;
-        m.heldItem = def.id;
-        this.takeItem(t, slot);
-        return `${m.name} holds the ${def.name}`;
-      }
+      case 'hold':
+        return this.equip(t, slot);
+      case 'tm':
+        return 'Pick a move slot to replace';
       case 'styler': {
         if (activeParty(t).length >= CONFIG.player.partyCap) return `Party is full (${CONFIG.player.partyCap})`;
         let best: Mon | null = null;
@@ -353,6 +382,8 @@ export class Match {
       for (let i = this.items.length - 1; i >= 0; i--) {
         const it = this.items[i] as GroundItem;
         if (Math.hypot(it.x - t.x, it.y - t.y) > CONFIG.items.pickupRadius) continue;
+        // Contents are revealed when the ball is opened.
+        if (!it.itemId) it.itemId = rollLoot(this.rng, it.tier);
         if (this.giveItem(t, it.itemId)) {
           this.items.splice(i, 1);
           this.battle.events.push({ type: 'pickup', trainer: t, itemId: it.itemId });
@@ -546,7 +577,8 @@ export class Match {
   makeTrainer(name: string, role: string, isPlayer: boolean, x: number, y: number): Trainer {
     return {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
-      party: [], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
+      party: [], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null),
+      held: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
       stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
       ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0,
     };
@@ -558,7 +590,7 @@ export class Match {
     const sprites = this.sprites.get(dex);
     return {
       id: nextId++, dex, species: sp, name: sp.name, level, hp: stats.hp, maxHp: stats.hp, stats,
-      stages: { atk: 0, def: 0 }, types: [...sp.types], moves: [...sp.moves], cooldowns: sp.moves.map(() => 0),
+      stages: { atk: 0, def: 0, spe: 0 }, types: [...sp.types], moves: [...sp.moves], cooldowns: sp.moves.map(() => 0),
       x, y, px: x, py: y, dir: 0, anim: new AnimPlayer(sprites), sprites, owner, wild: owner === null, boss: false,
       fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y,
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
@@ -869,8 +901,8 @@ export class Match {
         }
       }
       if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) {
-        const def = this.rng.weighted(ITEM_LIST, (d) => d.weight);
-        this.items.push({ id: nextId++, itemId: def.id, x: ev.mon.x, y: ev.mon.y, bob: this.rng.next() * 6 });
+        const tier: LootTier = rollTier(this.rng);
+        this.items.push({ id: nextId++, tier, itemId: null, x: ev.mon.x, y: ev.mon.y, bob: this.rng.next() * 6 });
       }
     }
   }
@@ -1002,14 +1034,15 @@ export class Match {
   eliminate(t: Trainer): void {
     t.alive = false;
     // Dropped items are scattered around the trainer.
-    t.items.forEach((entry, i) => {
+    [...t.items, ...t.held].forEach((entry, i) => {
       if (!entry) return;
-      const a = (i / t.items.length) * Math.PI * 2;
+      const a = (i / (t.items.length + t.held.length)) * Math.PI * 2;
       for (let k = 0; k < entry.count; k++) {
-        this.items.push({ id: nextId++, itemId: entry.id, x: t.x + Math.cos(a + k * 0.4) * (0.9 + k * 0.3), y: t.y + Math.sin(a + k * 0.4) * (0.9 + k * 0.3), bob: this.rng.next() * 6 });
+        this.items.push({ id: nextId++, tier: tierOf(entry.id), itemId: entry.id, x: t.x + Math.cos(a + k * 0.4) * (1.2 + k * 0.4), y: t.y + Math.sin(a + k * 0.4) * (1.2 + k * 0.4), bob: this.rng.next() * 6 });
       }
-      t.items[i] = null;
     });
+    t.items.fill(null);
+    t.held.fill(null);
     this.battle.events.push({ type: 'eliminated', trainer: t });
   }
 }

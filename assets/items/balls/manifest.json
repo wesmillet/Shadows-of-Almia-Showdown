@@ -1,0 +1,105 @@
+{
+ "source": "Overworld item-ball sprites supplied by the project owner (Gen 4 DS style), 18x18 each, transparent",
+ "cell": [
+  20,
+  24
+ ],
+ "balls": {
+  "master": {
+   "file": "master_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 0
+  },
+  "ultra": {
+   "file": "ultra_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 1
+  },
+  "great": {
+   "file": "great_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 2
+  },
+  "poke": {
+   "file": "poke_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 3
+  },
+  "net": {
+   "file": "net_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 4
+  },
+  "dive": {
+   "file": "dive_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 5
+  },
+  "nest": {
+   "file": "nest_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 6
+  },
+  "repeat": {
+   "file": "repeat_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 7
+  },
+  "timer": {
+   "file": "timer_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 8
+  },
+  "luxury": {
+   "file": "luxury_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 9
+  },
+  "premier": {
+   "file": "premier_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 10
+  },
+  "dusk": {
+   "file": "dusk_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 11
+  },
+  "heal": {
+   "file": "heal_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 12
+  },
+  "quick": {
+   "file": "quick_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 13
+  },
+  "cherish": {
+   "file": "cherish_ball.png",
+   "w": 18,
+   "h": 18,
+   "strip_index": 14
+  },
+  "vial": {
+   "file": "vial.png",
+   "w": 16,
+   "h": 22,
+   "strip_index": 15
+  }
+ }
+}

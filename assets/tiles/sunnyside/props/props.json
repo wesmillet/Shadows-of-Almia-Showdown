@@ -1,0 +1,1217 @@
+{
+ "chimneysmoke_01": {
+  "file": "chimneysmoke_01_strip30.png",
+  "w": 15,
+  "h": 37,
+  "frames": 30,
+  "fps": 10.0,
+  "originX": 7,
+  "originY": 37,
+  "bbox": [
+   0,
+   0,
+   14,
+   36
+  ]
+ },
+ "chimneysmoke_02": {
+  "file": "chimneysmoke_02_strip30.png",
+  "w": 10,
+  "h": 30,
+  "frames": 30,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 30,
+  "bbox": [
+   0,
+   0,
+   9,
+   29
+  ]
+ },
+ "chimneysmoke_03": {
+  "file": "chimneysmoke_03_strip30.png",
+  "w": 18,
+  "h": 21,
+  "frames": 30,
+  "fps": 10.0,
+  "originX": 9,
+  "originY": 21,
+  "bbox": [
+   0,
+   0,
+   17,
+   20
+  ]
+ },
+ "chimneysmoke_04": {
+  "file": "chimneysmoke_04_strip30.png",
+  "w": 20,
+  "h": 32,
+  "frames": 30,
+  "fps": 10.0,
+  "originX": 10,
+  "originY": 32,
+  "bbox": [
+   0,
+   0,
+   19,
+   31
+  ]
+ },
+ "chimneysmoke_05": {
+  "file": "chimneysmoke_05_strip30.png",
+  "w": 24,
+  "h": 19,
+  "frames": 30,
+  "fps": 10.0,
+  "originX": 12,
+  "originY": 19,
+  "bbox": [
+   0,
+   0,
+   23,
+   18
+  ]
+ },
+ "spr_deco_acron": {
+  "file": "spr_deco_acron.png",
+  "w": 10,
+  "h": 9,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 4,
+  "bbox": [
+   0,
+   0,
+   9,
+   8
+  ]
+ },
+ "spr_deco_anvil": {
+  "file": "spr_deco_anvil.png",
+  "w": 22,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 11,
+  "originY": 8,
+  "bbox": [
+   0,
+   0,
+   21,
+   15
+  ]
+ },
+ "spr_deco_barrel_closed": {
+  "file": "spr_deco_barrel_closed.png",
+  "w": 13,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 6,
+  "originY": 8,
+  "bbox": [
+   0,
+   0,
+   12,
+   15
+  ]
+ },
+ "spr_deco_barrel_open": {
+  "file": "spr_deco_barrel_open.png",
+  "w": 13,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   12,
+   15
+  ]
+ },
+ "spr_deco_barrel_swords": {
+  "file": "spr_deco_barrel_swords.png",
+  "w": 13,
+  "h": 20,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   12,
+   19
+  ]
+ },
+ "spr_deco_barrel_water": {
+  "file": "spr_deco_barrel_water.png",
+  "w": 13,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 6,
+  "originY": 8,
+  "bbox": [
+   0,
+   0,
+   12,
+   15
+  ]
+ },
+ "spr_deco_beam": {
+  "file": "spr_deco_beam.png",
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   5,
+   0,
+   10,
+   15
+  ]
+ },
+ "spr_deco_bird_01": {
+  "file": "spr_deco_bird_01_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 8.0,
+  "originX": 8,
+  "originY": 16,
+  "bbox": [
+   1,
+   0,
+   15,
+   15
+  ]
+ },
+ "spr_deco_blinking": {
+  "file": "spr_deco_blinking_strip12.png",
+  "w": 16,
+  "h": 16,
+  "frames": 12,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   0,
+   0,
+   11,
+   10
+  ]
+ },
+ "spr_deco_book_01": {
+  "file": "spr_deco_book_01.png",
+  "w": 7,
+  "h": 8,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   7
+  ]
+ },
+ "spr_deco_book_02": {
+  "file": "spr_deco_book_02.png",
+  "w": 5,
+  "h": 9,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   4,
+   8
+  ]
+ },
+ "spr_deco_buckect_rope": {
+  "file": "spr_deco_buckect_rope.png",
+  "w": 11,
+  "h": 13,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 6,
+  "bbox": [
+   0,
+   0,
+   10,
+   12
+  ]
+ },
+ "spr_deco_bucket": {
+  "file": "spr_deco_bucket.png",
+  "w": 10,
+  "h": 11,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   10
+  ]
+ },
+ "spr_deco_campfire": {
+  "file": "spr_deco_campfire.png",
+  "w": 23,
+  "h": 20,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 11,
+  "originY": 10,
+  "bbox": [
+   0,
+   0,
+   22,
+   19
+  ]
+ },
+ "spr_deco_chair_01": {
+  "file": "spr_deco_chair_01.png",
+  "w": 10,
+  "h": 14,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   9,
+   13
+  ]
+ },
+ "spr_deco_charactershadow": {
+  "file": "spr_deco_charactershadow.png",
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   1,
+   4,
+   14,
+   11
+  ]
+ },
+ "spr_deco_chest_01_closed": {
+  "file": "spr_deco_chest_01_closed.png",
+  "w": 16,
+  "h": 21,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 10,
+  "bbox": [
+   0,
+   0,
+   15,
+   20
+  ]
+ },
+ "spr_deco_chest_01_open": {
+  "file": "spr_deco_chest_01_open.png",
+  "w": 16,
+  "h": 25,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 12,
+  "bbox": [
+   0,
+   0,
+   15,
+   24
+  ]
+ },
+ "spr_deco_chest_02_closed": {
+  "file": "spr_deco_chest_02_closed.png",
+  "w": 16,
+  "h": 21,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 10,
+  "bbox": [
+   0,
+   0,
+   15,
+   20
+  ]
+ },
+ "spr_deco_chest_02_open": {
+  "file": "spr_deco_chest_02_open.png",
+  "w": 16,
+  "h": 27,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 13,
+  "bbox": [
+   0,
+   0,
+   15,
+   26
+  ]
+ },
+ "spr_deco_chicken_01": {
+  "file": "spr_deco_chicken_01_strip4.png",
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "fps": 10.0,
+  "originX": 16,
+  "originY": 23,
+  "bbox": [
+   7,
+   7,
+   22,
+   25
+  ]
+ },
+ "spr_deco_chinmney": {
+  "file": "spr_deco_chinmney.png",
+  "w": 11,
+  "h": 37,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 37,
+  "bbox": [
+   0,
+   0,
+   10,
+   36
+  ]
+ },
+ "spr_deco_coin": {
+  "file": "spr_deco_coin.png",
+  "w": 8,
+  "h": 7,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 4,
+  "originY": 3,
+  "bbox": [
+   0,
+   0,
+   7,
+   6
+  ]
+ },
+ "spr_deco_coins": {
+  "file": "spr_deco_coins.png",
+  "w": 16,
+  "h": 11,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   15,
+   10
+  ]
+ },
+ "spr_deco_cook_chinmney": {
+  "file": "spr_deco_cook_chinmney.png",
+  "w": 27,
+  "h": 37,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 13,
+  "originY": 37,
+  "bbox": [
+   0,
+   0,
+   21,
+   36
+  ]
+ },
+ "spr_deco_coracle": {
+  "file": "spr_deco_coracle_strip4.png",
+  "w": 48,
+  "h": 37,
+  "frames": 4,
+  "fps": 5.0,
+  "originX": 24,
+  "originY": 18,
+  "bbox": [
+   3,
+   1,
+   39,
+   35
+  ]
+ },
+ "spr_deco_coracle_land": {
+  "file": "spr_deco_coracle_land.png",
+  "w": 32,
+  "h": 30,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 16,
+  "originY": 15,
+  "bbox": [
+   0,
+   0,
+   31,
+   29
+  ]
+ },
+ "spr_deco_cow": {
+  "file": "spr_deco_cow_strip4.png",
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "fps": 10.0,
+  "originX": 16,
+  "originY": 23,
+  "bbox": [
+   4,
+   3,
+   27,
+   28
+  ]
+ },
+ "spr_deco_crate_01": {
+  "file": "spr_deco_crate_01.png",
+  "w": 16,
+  "h": 21,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 21,
+  "bbox": [
+   0,
+   0,
+   15,
+   20
+  ]
+ },
+ "spr_deco_crate_02": {
+  "file": "spr_deco_crate_02.png",
+  "w": 16,
+  "h": 21,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 21,
+  "bbox": [
+   0,
+   0,
+   15,
+   20
+  ]
+ },
+ "spr_deco_duck_01": {
+  "file": "spr_deco_duck_01_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   0,
+   2,
+   15,
+   15
+  ]
+ },
+ "spr_deco_fire_01": {
+  "file": "spr_deco_fire_01_strip4.png",
+  "w": 5,
+  "h": 10,
+  "frames": 4,
+  "fps": 10.0,
+  "originX": 2,
+  "originY": 10,
+  "bbox": [
+   0,
+   1,
+   4,
+   9
+  ]
+ },
+ "spr_deco_fire_02": {
+  "file": "spr_deco_fire_02_strip4.png",
+  "w": 8,
+  "h": 12,
+  "frames": 4,
+  "fps": 10.0,
+  "originX": 4,
+  "originY": 12,
+  "bbox": [
+   0,
+   1,
+   7,
+   11
+  ]
+ },
+ "spr_deco_firepit": {
+  "file": "spr_deco_firepit.png",
+  "w": 14,
+  "h": 17,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 7,
+  "originY": 17,
+  "bbox": [
+   0,
+   0,
+   13,
+   16
+  ]
+ },
+ "spr_deco_flowers_house_01": {
+  "file": "spr_deco_flowers_house_01.png",
+  "w": 8,
+  "h": 18,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   7,
+   17
+  ]
+ },
+ "spr_deco_flowers_house_02": {
+  "file": "spr_deco_flowers_house_02.png",
+  "w": 12,
+  "h": 19,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   11,
+   18
+  ]
+ },
+ "spr_deco_glint_01": {
+  "file": "spr_deco_glint_01_strip6.png",
+  "w": 7,
+  "h": 7,
+  "frames": 6,
+  "fps": 4.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   6
+  ]
+ },
+ "spr_deco_glint_02": {
+  "file": "spr_deco_glint_02_strip4.png",
+  "w": 7,
+  "h": 7,
+  "frames": 4,
+  "fps": 5.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   6
+  ]
+ },
+ "spr_deco_jar_01": {
+  "file": "spr_deco_jar_01.png",
+  "w": 10,
+  "h": 12,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   9,
+   11
+  ]
+ },
+ "spr_deco_jar_02": {
+  "file": "spr_deco_jar_02.png",
+  "w": 10,
+  "h": 13,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   9,
+   12
+  ]
+ },
+ "spr_deco_knifeandfork": {
+  "file": "spr_deco_knifeandfork.png",
+  "w": 6,
+  "h": 13,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   5,
+   12
+  ]
+ },
+ "spr_deco_minecart": {
+  "file": "spr_deco_minecart.png",
+  "w": 14,
+  "h": 23,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 7,
+  "originY": 11,
+  "bbox": [
+   0,
+   0,
+   13,
+   22
+  ]
+ },
+ "spr_deco_mug_01": {
+  "file": "spr_deco_mug_01.png",
+  "w": 5,
+  "h": 9,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   4,
+   8
+  ]
+ },
+ "spr_deco_mug_02": {
+  "file": "spr_deco_mug_02.png",
+  "w": 7,
+  "h": 8,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   7
+  ]
+ },
+ "spr_deco_mushroom_blue_01": {
+  "file": "spr_deco_mushroom_blue_01_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 8,
+  "originY": 16,
+  "bbox": [
+   1,
+   4,
+   10,
+   15
+  ]
+ },
+ "spr_deco_mushroom_blue_02": {
+  "file": "spr_deco_mushroom_blue_02_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 8,
+  "originY": 16,
+  "bbox": [
+   0,
+   0,
+   15,
+   15
+  ]
+ },
+ "spr_deco_mushroom_blue_03": {
+  "file": "spr_deco_mushroom_blue_03_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   8,
+   5,
+   14,
+   13
+  ]
+ },
+ "spr_deco_mushroom_red_01": {
+  "file": "spr_deco_mushroom_red_01_strip4.png",
+  "w": 16,
+  "h": 16,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   5,
+   2,
+   14,
+   13
+  ]
+ },
+ "spr_deco_oar": {
+  "file": "spr_deco_oar.png",
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 6,
+  "bbox": [
+   0,
+   2,
+   14,
+   11
+  ]
+ },
+ "spr_deco_ore_bluestone": {
+  "file": "spr_deco_ore_bluestone.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_ore_coal": {
+  "file": "spr_deco_ore_coal.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_ore_gold": {
+  "file": "spr_deco_ore_gold.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_ore_silver": {
+  "file": "spr_deco_ore_silver.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_ore_stone": {
+  "file": "spr_deco_ore_stone.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_picture_01": {
+  "file": "spr_deco_picture_01.png",
+  "w": 9,
+  "h": 9,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   8,
+   8
+  ]
+ },
+ "spr_deco_picture_01_1": {
+  "file": "spr_deco_picture_01_1.png",
+  "w": 11,
+  "h": 11,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   10,
+   10
+  ]
+ },
+ "spr_deco_pig_01": {
+  "file": "spr_deco_pig_01_strip4.png",
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "fps": 10.0,
+  "originX": 16,
+  "originY": 16,
+  "bbox": [
+   7,
+   6,
+   24,
+   26
+  ]
+ },
+ "spr_deco_plate": {
+  "file": "spr_deco_plate.png",
+  "w": 7,
+  "h": 9,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   8
+  ]
+ },
+ "spr_deco_plate_food": {
+  "file": "spr_deco_plate_food.png",
+  "w": 7,
+  "h": 8,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   7
+  ]
+ },
+ "spr_deco_plate_knifeandfork": {
+  "file": "spr_deco_plate_knifeandfork.png",
+  "w": 7,
+  "h": 13,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   6,
+   12
+  ]
+ },
+ "spr_deco_rug_01": {
+  "file": "spr_deco_rug_01.png",
+  "w": 10,
+  "h": 12,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   9,
+   11
+  ]
+ },
+ "spr_deco_shadow": {
+  "file": "spr_deco_shadow.png",
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 8,
+  "originY": 8,
+  "bbox": [
+   1,
+   4,
+   14,
+   12
+  ]
+ },
+ "spr_deco_sheep_01": {
+  "file": "spr_deco_sheep_01_strip4.png",
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "fps": 8.0,
+  "originX": 16,
+  "originY": 24,
+  "bbox": [
+   7,
+   4,
+   24,
+   26
+  ]
+ },
+ "spr_deco_sidetable_01": {
+  "file": "spr_deco_sidetable_01.png",
+  "w": 12,
+  "h": 26,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   11,
+   25
+  ]
+ },
+ "spr_deco_sword_floor": {
+  "file": "spr_deco_sword_floor.png",
+  "w": 10,
+  "h": 11,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   10
+  ]
+ },
+ "spr_deco_tree_01": {
+  "file": "spr_deco_tree_01_strip4.png",
+  "w": 32,
+  "h": 34,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   3,
+   0,
+   28,
+   33
+  ]
+ },
+ "spr_deco_tree_02": {
+  "file": "spr_deco_tree_02_strip4.png",
+  "w": 28,
+  "h": 43,
+  "frames": 4,
+  "fps": 4.0,
+  "originX": 14,
+  "originY": 43,
+  "bbox": [
+   5,
+   5,
+   22,
+   39
+  ]
+ },
+ "spr_deco_trough": {
+  "file": "spr_deco_trough.png",
+  "w": 29,
+  "h": 16,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 14,
+  "originY": 8,
+  "bbox": [
+   0,
+   0,
+   28,
+   15
+  ]
+ },
+ "spr_deco_truffle": {
+  "file": "spr_deco_truffle.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ },
+ "spr_deco_waterbowl": {
+  "file": "spr_deco_waterbowl.png",
+  "w": 8,
+  "h": 11,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 0,
+  "bbox": [
+   0,
+   0,
+   7,
+   10
+  ]
+ },
+ "spr_deco_well": {
+  "file": "spr_deco_well.png",
+  "w": 20,
+  "h": 25,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 10,
+  "originY": 12,
+  "bbox": [
+   0,
+   0,
+   19,
+   24
+  ]
+ },
+ "spr_deco_well_covered": {
+  "file": "spr_deco_well_covered.png",
+  "w": 20,
+  "h": 40,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 0,
+  "originY": 40,
+  "bbox": [
+   0,
+   0,
+   19,
+   39
+  ]
+ },
+ "spr_deco_windmill": {
+  "file": "spr_deco_windmill_strip9.png",
+  "w": 112,
+  "h": 112,
+  "frames": 9,
+  "fps": 10.0,
+  "originX": 56,
+  "originY": 56,
+  "bbox": [
+   7,
+   8,
+   103,
+   104
+  ]
+ },
+ "spr_deco_windmill_withshadow": {
+  "file": "spr_deco_windmill_withshadow_strip9.png",
+  "w": 112,
+  "h": 112,
+  "frames": 9,
+  "fps": 6.0,
+  "originX": 56,
+  "originY": 56,
+  "bbox": [
+   7,
+   8,
+   103,
+   110
+  ]
+ },
+ "spr_deco_windmillshadow": {
+  "file": "spr_deco_windmillshadow_strip9.png",
+  "w": 112,
+  "h": 112,
+  "frames": 9,
+  "fps": 10.0,
+  "originX": 56,
+  "originY": 56,
+  "bbox": [
+   7,
+   8,
+   103,
+   104
+  ]
+ },
+ "spr_deco_wool": {
+  "file": "spr_deco_wool.png",
+  "w": 10,
+  "h": 10,
+  "frames": 1,
+  "fps": 10.0,
+  "originX": 5,
+  "originY": 5,
+  "bbox": [
+   0,
+   0,
+   9,
+   9
+  ]
+ }
+}

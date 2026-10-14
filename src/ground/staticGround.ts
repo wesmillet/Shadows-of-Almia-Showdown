@@ -1,11 +1,22 @@
 /**
- * A pre-authored map from assets/maps/<name>.json (built by
- * scripts/build_map.py). Every tile is already resolved, so this renderer only
- * stacks the layers: sea, ground (grass, cliff faces, foam base), water
- * shadows, river banks, beaches and trails, baked into 8x8-tile chunks at 1x
- * and drawn at the view's integer scale. River water inside the banks and the
- * sea sparkle animate each frame; the 32 px canopy is drawn above the
- * characters. Walkability and reachability come straight from the file.
+ * A pre-authored map from assets/maps/<name>.json (format 2, built by
+ * scripts/mapgen). Every tile is already resolved, so this renderer only
+ * stacks the layers (sea, land, paths, bridge decks, shadows, ground decor)
+ * into 8x8-tile chunks at 1x and draws them at the view's integer scale.
+ *
+ * Tiles are stored as `index | flags << 12` (flags: 1 mirror, 2 flip,
+ * 4 rotate 90 degrees clockwise, as GameMaker exports them).
+ *
+ * Animated tiles (sea foam, river, waterfalls) make a chunk animated: each
+ * distinct animation state of such a chunk is baked once, on first use, and
+ * reused, so the layer order stays exact (a bridge deck stays above the water
+ * it crosses).
+ *
+ * Buildings and other multi-tile objects are baked into canvases and handed
+ * to the world renderer as decor, depth-sorted with the characters, together
+ * with the pack's sprites (trees, animals, boats, crops, the windmills).
+ * Walkability, reachability, biomes and the minimap come straight from the
+ * file.
  */
 import type { View } from '../render/view';
 import type { Assets } from '../sprites/assets';
@@ -15,24 +26,50 @@ import type { Biome, DecorItem, GroundRenderer } from './types';
 const CHUNK = 8;
 const SEA_SPARKLE = [212, 215];
 const BIOME_CODES: Biome[] = ['water', 'meadow', 'forest', 'shore'];
-const STRIPS: Record<string, { kind: DecorItem['kind']; frames: number; w: number; h: number; block: number }> = {
-  'spr_deco_tree_01_strip4.png': { kind: 'tree', frames: 4, w: 32, h: 34, block: 0.45 },
-  'spr_deco_tree_02_strip4.png': { kind: 'tree', frames: 4, w: 28, h: 43, block: 0.45 },
-  'spr_deco_mushroom_blue_01_strip4.png': { kind: 'mushroom', frames: 4, w: 16, h: 16, block: 0 },
-  'spr_deco_mushroom_blue_02_strip4.png': { kind: 'mushroom', frames: 4, w: 16, h: 16, block: 0 },
-  'spr_deco_mushroom_red_01_strip4.png': { kind: 'mushroom', frames: 4, w: 16, h: 16, block: 0 },
+/** The longest tile animation in the pack has 16 frames; every state of a chunk repeats within that. */
+const ANIM_PERIOD = 16;
+const MINIMAP: Record<string, string> = {
+  w: '#2a6fb5',
+  g: '#6cc24a',
+  s: '#e3cf86',
+  f: '#2f7a3a',
+  p: '#c8a06a',
+  b: '#b0563c',
+  c: '#9a5a3a',
 };
 
-export interface MapDecor {
-  kind: DecorItem['kind'];
+type Enc = number;
+
+export interface MapPrefab {
+  w: number;
+  h: number;
+  layers: Enc[][][];
+}
+
+export interface MapSpriteDef {
+  src: string;
+  w: number;
+  h: number;
+  frames: number;
+  fps: number;
+}
+
+export interface MapSprite {
+  s: string;
+  /** Anchor position in map pixels (16 per tile). */
   x: number;
   y: number;
-  tile?: number;
-  stamp?: [number, number, number];
-  strip?: string;
+  /** Anchor inside the frame, in source pixels. */
+  ax: number;
+  ay: number;
+  /** Depth in tiles. */
+  z: number;
+  f?: number;
+  fr?: number;
 }
 
 export interface MapFile {
+  version: number;
   name: string;
   seed: number;
   cols: number;
@@ -40,18 +77,27 @@ export interface MapFile {
   tileSize: number;
   tileset: string;
   tilesetColumns: number;
-  forestTileset: string;
-  forestColumns: number;
-  layers: Array<{ name: string; tiles: number[][] }>;
-  canopy: number[][];
-  riverFillFrames: number[];
-  walkable: number[][];
-  reachable: number[][];
-  biome: number[][];
+  layers: Array<{ name: string; tiles: Enc[][] }>;
+  prefabs: Record<string, MapPrefab>;
+  objects: Array<[string, number, number]>;
+  spriteDefs: Record<string, MapSpriteDef>;
+  sprites: MapSprite[];
+  walkable: string[];
+  reachable: string[];
+  biome: string[];
+  minimap: string[];
   center: { x: number; y: number };
   outposts: Array<{ x: number; y: number }>;
   spawns: Array<{ x: number; y: number }>;
-  decor: MapDecor[];
+}
+
+interface Chunk {
+  /** Baked canvas for a chunk without animated tiles. */
+  still: HTMLCanvasElement | null;
+  /** Animated cells: layer index, x, y, encoded tile. */
+  anim: Array<[number, number, number, Enc]>;
+  /** Baked states of an animated chunk, keyed by the frames its animated tiles show. */
+  states: Map<string, HTMLCanvasElement>;
 }
 
 export class StaticGround implements GroundRenderer {
@@ -66,17 +112,14 @@ export class StaticGround implements GroundRenderer {
   private walk: Uint8Array;
   private reach: Uint8Array;
   private biomes: Uint8Array;
-  private landMask: Uint8Array;
-  private riverFill: Uint8Array;
-  private canopyIdx: number[][];
-  private chunks: HTMLCanvasElement[] = [];
+  private mini: string[];
+  private chunks: Chunk[] = [];
   private chunkCols: number;
   private chunkRows: number;
   private time = 0;
   private sparkles: Array<{ x: number; y: number; phase: number }> = [];
-  private riverFillTile: number;
 
-  private constructor(private readonly map: MapFile, private readonly main: Tileset, private readonly forest: Tileset) {
+  private constructor(private readonly map: MapFile, private readonly main: Tileset) {
     this.cols = map.cols;
     this.rows = map.rows;
     this.label = `${map.name} · authored map ${map.cols}x${map.rows} · Sunnyside World tileset (Daniel Diggle) at 3x`;
@@ -89,55 +132,44 @@ export class StaticGround implements GroundRenderer {
     this.walk = new Uint8Array(n);
     this.reach = new Uint8Array(n);
     this.biomes = new Uint8Array(n);
-    this.landMask = new Uint8Array(n);
-    this.riverFill = new Uint8Array(n);
-    this.riverFillTile = map.riverFillFrames[0] ?? 542;
-    const ground = this.layer('ground');
-    const river = this.layer('river');
     for (let y = 0; y < this.rows; y++) {
+      const wr = map.walkable[y] ?? '';
+      const rr = map.reachable[y] ?? '';
+      const br = map.biome[y] ?? '';
       for (let x = 0; x < this.cols; x++) {
         const i = y * this.cols + x;
-        this.walk[i] = map.walkable[y]?.[x] ?? 0;
-        this.reach[i] = map.reachable[y]?.[x] ?? 0;
-        this.biomes[i] = map.biome[y]?.[x] ?? 0;
-        this.landMask[i] = (map.biome[y]?.[x] ?? 0) !== 0 ? 1 : 0;
-        if (river && river[y]?.[x] === this.riverFillTile) this.riverFill[i] = 1;
-        if (ground && !ground[y]?.[x]) this.landMask[i] = 0;
+        this.walk[i] = wr.charCodeAt(x) === 49 ? 1 : 0;
+        this.reach[i] = rr.charCodeAt(x) === 49 ? 1 : 0;
+        this.biomes[i] = Math.max(0, (br.charCodeAt(x) || 48) - 48);
       }
     }
-    this.canopyIdx = map.canopy;
+    this.mini = map.minimap;
   }
 
   static async load(assets: Assets, name: string, onProgress?: (p: number) => void): Promise<StaticGround | null> {
     const map = await assets.json<MapFile>(`maps/${name}.json`);
-    if (!map) return null;
+    if (!map || map.version !== 2) return null;
     const data = await assets.json<{ tilesets: Record<string, TilesetDef> }>('tiles/sunnyside/sunnyside.json');
-    if (!data) return null;
-    const mainDef = data.tilesets.tileset_sunnysideworld;
-    const forestDef = data.tilesets.tileset_forest;
-    if (!mainDef || !forestDef) return null;
+    const mainDef = data?.tilesets.tileset_sunnysideworld;
+    if (!mainDef) return null;
     mainDef.columns = map.tilesetColumns;
-    forestDef.columns = map.forestColumns;
-    const [mainImg, forestImg] = await Promise.all([assets.loadImage(map.tileset), assets.loadImage(map.forestTileset)]);
+    const mainImg = await assets.loadImage(map.tileset);
     const main = new Tileset(mainDef, mainImg, assets.placeholder('tile', 16, 16));
-    const forest = new Tileset(forestDef, forestImg, assets.placeholder('forest', 32, 32));
     main.indexAnimations();
-    const g = new StaticGround(map, main, forest);
+    const g = new StaticGround(map, main);
+    g.indexChunks();
     await g.buildDecor(assets);
     g.seedSparkles();
     const total = g.chunkCols * g.chunkRows;
-    for (let r = 0; r < g.chunkRows; r++) {
-      for (let c = 0; c < g.chunkCols; c++) {
-        g.chunks[r * g.chunkCols + c] = g.bakeChunk(c, r);
-        onProgress?.((r * g.chunkCols + c + 1) / total);
+    for (let i = 0; i < total; i++) {
+      const c = g.chunks[i] as Chunk;
+      if (!c.anim.length) c.still = g.bake(i, null);
+      if (i % g.chunkCols === g.chunkCols - 1) {
+        onProgress?.((i + 1) / total);
+        await new Promise((res) => setTimeout(res, 0));
       }
-      await new Promise((res) => setTimeout(res, 0));
     }
     return g;
-  }
-
-  private layer(name: string): number[][] | null {
-    return this.map.layers.find((l) => l.name === name)?.tiles ?? null;
   }
 
   private idx(x: number, y: number): number {
@@ -148,94 +180,158 @@ export class StaticGround implements GroundRenderer {
     return x >= 0 && y >= 0 && x < this.cols && y < this.rows;
   }
 
-  private seedSparkles(): void {
-    let s = 0x5ea1 ^ this.map.seed;
-    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-    for (let k = 0; k < (this.cols * this.rows) / 18; k++) {
-      const x = Math.floor(rnd() * this.cols);
-      const y = Math.floor(rnd() * this.rows);
-      if (!this.landMask[this.idx(x, y)]) this.sparkles.push({ x, y, phase: rnd() * 10 });
-    }
-  }
-
-  private async buildDecor(assets: Assets): Promise<void> {
-    const ts = this.main;
-    const stampCache = new Map<string, HTMLCanvasElement>();
-    const stamp = (indices: number[][], w: number, h: number): HTMLCanvasElement => {
-      const key = indices.map((r) => r.join(',')).join('|');
-      let c = stampCache.get(key);
-      if (c) return c;
-      c = document.createElement('canvas');
-      c.width = w * 16;
-      c.height = h * 16;
-      const ctx = c.getContext('2d')!;
-      ctx.imageSmoothingEnabled = false;
-      indices.forEach((row, y) => row.forEach((t, x) => ts.draw(ctx, t, x * 16, y * 16, 1)));
-      stampCache.set(key, c);
-      return c;
-    };
-    const strips = new Map<string, HTMLImageElement | null>();
-    for (const d of this.map.decor) {
-      if (d.strip && !strips.has(d.strip)) strips.set(d.strip, await assets.loadImage(`tiles/sunnyside/plants/${d.strip}`));
-    }
-    for (const d of this.map.decor) {
-      if (d.tile !== undefined) {
-        const img = stamp([[d.tile]], 1, 1);
-        this.decor.push({ kind: d.kind, x: d.x, y: d.y, image: img, frameW: 16, frameH: 16, frames: 1, fps: 0, anchorX: 8, anchorY: 15, blockRadius: d.kind === 'rock' ? 0.4 : 0 });
-      } else if (d.stamp) {
-        const [tl, w, h] = d.stamp;
-        const rows: number[][] = [];
-        for (let y = 0; y < h; y++) {
-          const row: number[] = [];
-          for (let x = 0; x < w; x++) row.push(tl + y * this.map.tilesetColumns + x);
-          rows.push(row);
-        }
-        const img = stamp(rows, w, h);
-        this.decor.push({ kind: d.kind, x: d.x, y: d.y, image: img, frameW: w * 16, frameH: h * 16, frames: 1, fps: 0, anchorX: (w * 16) / 2, anchorY: h * 16 - 2, blockRadius: 0.45 });
-      } else if (d.strip) {
-        const meta = STRIPS[d.strip];
-        if (!meta) continue;
-        const img = strips.get(d.strip) ?? null;
-        this.decor.push({
-          kind: meta.kind,
-          x: d.x,
-          y: d.y,
-          image: img ?? assets.placeholder(d.strip.slice(9, 24), meta.w, meta.h),
-          frameW: meta.w,
-          frameH: meta.h,
-          frames: img ? meta.frames : 1,
-          fps: meta.kind === 'tree' ? 4 : 3,
-          anchorX: meta.w / 2,
-          anchorY: meta.h - 2,
-          blockRadius: meta.block,
+  /** Which cells of each chunk hold animated tiles. */
+  private indexChunks(): void {
+    for (let cr = 0; cr < this.chunkRows; cr++) {
+      for (let cc = 0; cc < this.chunkCols; cc++) {
+        const anim: Chunk['anim'] = [];
+        this.map.layers.forEach((layer, li) => {
+          for (let ty = 0; ty < CHUNK; ty++) {
+            for (let tx = 0; tx < CHUNK; tx++) {
+              const e = layer.tiles[cr * CHUNK + ty]?.[cc * CHUNK + tx] ?? 0;
+              if (e && this.main.isAnimated(e & 4095)) anim.push([li, tx, ty, e]);
+            }
+          }
         });
+        this.chunks.push({ still: null, anim, states: new Map() });
       }
     }
-    this.decor.sort((a, b) => a.y - b.y);
   }
 
-  /** All static layers of one chunk at 1x, bottom to top. */
-  private bakeChunk(cc: number, cr: number): HTMLCanvasElement {
+  /** All layers of chunk `i` at 1x; `frameTime` picks the animation state (null: first frames). */
+  private bake(i: number, frameTime: number | null): HTMLCanvasElement {
+    const cc = i % this.chunkCols;
+    const cr = Math.floor(i / this.chunkCols);
     const c = document.createElement('canvas');
     c.width = CHUNK * 16;
     c.height = CHUNK * 16;
     const ctx = c.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
     for (const layer of this.map.layers) {
-      const isRiver = layer.name === 'river';
       for (let ty = 0; ty < CHUNK; ty++) {
+        const row = layer.tiles[cr * CHUNK + ty];
+        if (!row) continue;
         for (let tx = 0; tx < CHUNK; tx++) {
-          const x = cc * CHUNK + tx;
-          const y = cr * CHUNK + ty;
-          if (!this.inBounds(x, y)) continue;
-          const t = layer.tiles[y]?.[x] ?? 0;
-          if (!t) continue;
-          if (isRiver && t === this.riverFillTile) continue; // animated at draw time
-          this.main.draw(ctx, t, tx * 16, ty * 16, 1);
+          const e = row[cc * CHUNK + tx] ?? 0;
+          if (!e) continue;
+          let t = e & 4095;
+          if (frameTime !== null) t = this.main.animated(t, frameTime);
+          this.main.draw(ctx, t, tx * 16, ty * 16, 1, e >> 12);
         }
       }
     }
     return c;
+  }
+
+  private chunkCanvas(i: number): HTMLCanvasElement | null {
+    const c = this.chunks[i];
+    if (!c) return null;
+    if (c.still) return c.still;
+    const fps = this.main.def.frame_duration_s || 5;
+    const step = Math.floor(this.time * fps) % ANIM_PERIOD;
+    const t = (step + 0.5) / fps;
+    let key = '';
+    for (const a of c.anim) key += this.main.animated(a[3] & 4095, t) + ',';
+    let canvas = c.states.get(key);
+    if (!canvas) {
+      canvas = this.bake(i, t);
+      c.states.set(key, canvas);
+    }
+    return canvas;
+  }
+
+  private seedSparkles(): void {
+    let s = 0x5ea1 ^ this.map.seed;
+    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let k = 0; k < (this.cols * this.rows) / 18; k++) {
+      const x = Math.floor(rnd() * this.cols);
+      const y = Math.floor(rnd() * this.rows);
+      if ((this.mini[y] ?? '')[x] === 'w' && this.biomes[this.idx(x, y)] === 0) this.sparkles.push({ x, y, phase: rnd() * 10 });
+    }
+  }
+
+  /** A multi-tile object baked to a canvas; animated tiles (bushes) become a frame strip. */
+  private bakePrefab(p: MapPrefab): { canvas: HTMLCanvasElement; frames: number } {
+    let animated = false;
+    for (const l of p.layers) for (const r of l) for (const e of r) if (e && this.main.isAnimated(e & 4095)) animated = true;
+    const frames = animated ? 4 : 1;
+    const fps = this.main.def.frame_duration_s || 5;
+    const c = document.createElement('canvas');
+    c.width = p.w * 16 * frames;
+    c.height = p.h * 16;
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    for (let f = 0; f < frames; f++) {
+      for (const l of p.layers) {
+        l.forEach((row, y) =>
+          row.forEach((e, x) => {
+            if (!e) return;
+            const t = animated ? this.main.animated(e & 4095, (f + 0.5) / fps) : e & 4095;
+            this.main.draw(ctx, t, f * p.w * 16 + x * 16, y * 16, 1, e >> 12);
+          }),
+        );
+      }
+    }
+    return { canvas: c, frames };
+  }
+
+  private async buildDecor(assets: Assets): Promise<void> {
+    const fps = this.main.def.frame_duration_s || 5;
+    const baked = new Map<string, { canvas: HTMLCanvasElement; frames: number }>();
+    for (const [key, x, y] of this.map.objects) {
+      const p = this.map.prefabs[key];
+      if (!p) continue;
+      let b = baked.get(key);
+      if (!b) {
+        b = this.bakePrefab(p);
+        baked.set(key, b);
+      }
+      // anchored at the bottom centre; sorted by the bottom edge
+      this.decor.push({
+        kind: p.w * p.h >= 9 ? 'building' : 'prop',
+        x: x + p.w / 2,
+        y: y + p.h,
+        image: b.canvas,
+        frameW: p.w * 16,
+        frameH: p.h * 16,
+        frames: b.frames,
+        fps,
+        anchorX: (p.w * 16) / 2,
+        anchorY: p.h * 16,
+        blockRadius: 0,
+        phase: (x * 7 + y * 3) % 4,
+        extent: Math.max(p.w, p.h),
+      });
+    }
+    const images = new Map<string, HTMLImageElement | null>();
+    await Promise.all(
+      Object.entries(this.map.spriteDefs).map(async ([name, d]) => {
+        images.set(name, await assets.loadImage(d.src));
+      }),
+    );
+    for (const s of this.map.sprites) {
+      const d = this.map.spriteDefs[s.s];
+      if (!d) continue;
+      const img = images.get(s.s) ?? null;
+      this.decor.push({
+        kind: s.s.startsWith('spr_deco_tree') ? 'tree' : 'prop',
+        x: s.x / 16,
+        y: s.y / 16,
+        image: img ?? assets.placeholder(s.s.slice(-12), d.w, d.h),
+        frameW: d.w,
+        frameH: d.h,
+        frames: img ? d.frames : 1,
+        fps: d.fps,
+        anchorX: s.ax,
+        anchorY: s.ay,
+        blockRadius: 0,
+        sortY: s.z,
+        flip: !!s.f,
+        phase: s.fr ?? 0,
+        extent: Math.ceil(Math.max(d.w, d.h) / 16),
+      });
+    }
+    this.decor.sort((a, b) => (a.sortY ?? a.y) - (b.sortY ?? b.y));
   }
 
   biomeAt(tx: number, ty: number): Biome {
@@ -244,8 +340,7 @@ export class StaticGround implements GroundRenderer {
   }
 
   inWater(tx: number, ty: number): boolean {
-    if (!this.inBounds(tx, ty)) return true;
-    return this.biomeAt(tx, ty) === 'water' || this.riverFill[this.idx(tx, ty)] === 1;
+    return this.biomeAt(tx, ty) === 'water';
   }
 
   walkable(tx: number, ty: number): boolean {
@@ -256,24 +351,13 @@ export class StaticGround implements GroundRenderer {
     return this.inBounds(tx, ty) && this.reach[this.idx(tx, ty)] === 1;
   }
 
-  underCanopy(x: number, y: number): boolean {
-    const bx = Math.floor(x / 2);
-    const by = Math.floor(y / 2);
-    return (this.canopyIdx[by]?.[bx] ?? 0) !== 0;
+  underCanopy(): boolean {
+    return false;
   }
 
   minimapColor(tx: number, ty: number): string {
-    if (!this.inBounds(tx, ty)) return '#2a6fb5';
-    const i = this.idx(tx, ty);
-    if (!this.landMask[i]) return '#2a6fb5';
-    const b = this.biomes[i];
-    if (this.riverFill[i]) return '#5fd4e8';
-    const path = this.layer('path');
-    if (path && path[ty]?.[tx]) return '#c8a06a';
-    if (b === 2) return '#2f7a3a';
-    if (b === 3) return '#d9c27a';
-    if (!this.walk[i]) return '#4e9a3c';
-    return '#6cc24a';
+    if (!this.inBounds(tx, ty)) return MINIMAP.w as string;
+    return MINIMAP[(this.mini[ty] ?? '')[tx] ?? 'w'] ?? (MINIMAP.g as string);
   }
 
   update(dt: number): void {
@@ -292,9 +376,9 @@ export class StaticGround implements GroundRenderer {
     const chunkPx = CHUNK * view.pxPerTile;
     for (let cr = Math.floor(y0 / CHUNK); cr <= Math.floor(y1 / CHUNK); cr++) {
       for (let cc = Math.floor(x0 / CHUNK); cc <= Math.floor(x1 / CHUNK); cc++) {
-        const chunk = this.chunks[cr * this.chunkCols + cc];
-        if (!chunk) continue;
-        ctx.drawImage(chunk, Math.round(view.toScreenX(cc * CHUNK)), Math.round(view.toScreenY(cr * CHUNK)), chunkPx, chunkPx);
+        const canvas = this.chunkCanvas(cr * this.chunkCols + cc);
+        if (!canvas) continue;
+        ctx.drawImage(canvas, Math.round(view.toScreenX(cc * CHUNK)), Math.round(view.toScreenY(cr * CHUNK)), chunkPx, chunkPx);
       }
     }
     for (const sp of this.sparkles) {
@@ -302,30 +386,9 @@ export class StaticGround implements GroundRenderer {
       const k = (this.time * 0.5 + sp.phase) % 4;
       if (k < 1) this.main.draw(ctx, SEA_SPARKLE[k < 0.5 ? 0 : 1] as number, Math.round(view.toScreenX(sp.x)), Math.round(view.toScreenY(sp.y)), s);
     }
-    const frames = this.map.riverFillFrames;
-    const fill = frames[Math.floor(this.time * 5) % frames.length] as number;
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        if (this.riverFill[this.idx(x, y)]) this.main.draw(ctx, fill, Math.round(view.toScreenX(x)), Math.round(view.toScreenY(y)), s);
-      }
-    }
   }
 
-  drawCanopy(view: View): void {
-    const ctx = view.ctx;
-    ctx.imageSmoothingEnabled = false;
-    const s = view.pxPerTile / 16;
-    const vis = view.visibleTiles();
-    const bx0 = Math.max(0, Math.floor(vis.x0 / 2) - 1);
-    const by0 = Math.max(0, Math.floor(vis.y0 / 2) - 1);
-    const bx1 = Math.min(Math.ceil(this.cols / 2) - 1, Math.ceil(vis.x1 / 2));
-    const by1 = Math.min(Math.ceil(this.rows / 2) - 1, Math.ceil(vis.y1 / 2));
-    for (let by = by0; by <= by1; by++) {
-      for (let bx = bx0; bx <= bx1; bx++) {
-        const t = this.canopyIdx[by]?.[bx] ?? 0;
-        if (!t) continue;
-        this.forest.draw(ctx, t, Math.round(view.toScreenX(bx * 2)), Math.round(view.toScreenY(by * 2)), s);
-      }
-    }
+  drawCanopy(): void {
+    // Trees are depth-sorted sprites on this map; there is no canopy layer.
   }
 }

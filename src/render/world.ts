@@ -196,17 +196,26 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   }
 
   const list: Drawable[] = [];
-  const frameOf = (d: { frames: number; fps: number }): number => (d.frames > 1 ? Math.floor(worldTime * d.fps) % d.frames : 0);
   for (const d of match.ground.decor) {
-    if (!inView(d.x, d.y, 3)) continue;
+    if (!inView(d.x, d.y, Math.max(3, d.extent ?? 0))) continue;
     list.push({
-      y: d.y,
+      y: d.sortY ?? d.y,
       draw: () => {
         const k = view.pxPerTile / match.ground.tileSize;
         ctx.imageSmoothingEnabled = false;
-        if (d.kind === 'tree') drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), 0.5, 0.22);
-        const f = frameOf(d);
-        ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(view.toScreenX(d.x) - d.anchorX * k), Math.round(view.toScreenY(d.y) - d.anchorY * k), d.frameW * k, d.frameH * k);
+        if (d.kind === 'tree' && !d.extent) drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), 0.5, 0.22);
+        const f = d.frames > 1 ? (Math.floor(worldTime * d.fps) + (d.phase ?? 0)) % d.frames : 0;
+        const sx = Math.round(view.toScreenX(d.x));
+        const sy = Math.round(view.toScreenY(d.y) - d.anchorY * k);
+        if (d.flip) {
+          ctx.save();
+          ctx.translate(sx, sy);
+          ctx.scale(-1, 1);
+          ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(-(d.frameW - d.anchorX) * k), 0, d.frameW * k, d.frameH * k);
+          ctx.restore();
+        } else {
+          ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(sx - d.anchorX * k), sy, d.frameW * k, d.frameH * k);
+        }
       },
     });
   }

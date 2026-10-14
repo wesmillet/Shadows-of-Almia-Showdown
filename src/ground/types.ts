@@ -9,7 +9,7 @@ export type Biome = 'meadow' | 'forest' | 'shore' | 'water';
 export const BIOMES: readonly Biome[] = ['meadow', 'forest', 'shore', 'water'];
 
 export interface DecorItem {
-  kind: 'tree' | 'rock' | 'bush' | 'flower' | 'mushroom';
+  kind: 'tree' | 'rock' | 'bush' | 'flower' | 'mushroom' | 'building' | 'prop';
   /** Base point in tiles (the item's ground contact, used for depth sorting). */
   x: number;
   y: number;
@@ -24,6 +24,14 @@ export interface DecorItem {
   anchorY: number;
   /** Blocking radius in tiles (0 = decorative only). */
   blockRadius: number;
+  /** Depth used for sorting when it differs from the anchor's y (tall objects, windmill sails). */
+  sortY?: number;
+  /** Drawn mirrored left to right. */
+  flip?: boolean;
+  /** Frame offset so neighbouring animated items do not move in lockstep. */
+  phase?: number;
+  /** How far (in tiles) the picture reaches from its anchor, for view culling. */
+  extent?: number;
 }
 
 export interface GroundRenderer {

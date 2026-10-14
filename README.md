@@ -204,3 +204,14 @@ in the dark), a vignette and a depth-of-field blur over the top 20% of the
 screen. Every sprite also gets a soft elliptical shadow plus its
 SpriteCollab Shadow sheet. Without WebGL the same look is approximated in
 Canvas 2D.
+
+## The map
+
+The match plays on an authored map, `assets/maps/almia.json`, built by
+`scripts/build_map.py` (`python3 scripts/build_map.py --seed 7`, needs numpy, scipy
+and Pillow). The builder shapes land, cliffs, rivers, trails, beaches and forest so
+that every region is drawable with the Sunnyside World autotiles (no 1-wide spurs
+or corridors, three clear rows under every cliff edge), connects the outposts,
+spawns and the Shadow Crystal on foot, and writes a preview PNG next to the JSON.
+`src/ground/staticGround.ts` renders that file; if it is missing the old island
+generator in `src/ground/sunnysideGround.ts` is used instead.

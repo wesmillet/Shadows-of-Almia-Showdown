@@ -1,5 +1,5 @@
 {
-  "map": { "cols": 64, "rows": 64, "tileSize": 16 },
+  "map": { "cols": 160, "rows": 112, "tileSize": 16, "name": "almia" },
   "player": { "speedTilesPerSec": 5.5, "radius": 0.3, "partyCap": 4, "level": 15 },
   "party": {
     "leashLead": 2.6, "leash": 4.2, "leashPassive": 2.0,
@@ -12,7 +12,7 @@
     "wildDropChance": 0.4
   },
   "wild": { "wanderSpeed": 2.2, "idleMin": 1.5, "idleMax": 4.5, "wanderRadius": 4, "aggroRange": 5.5 },
-  "trainers": { "count": 2, "speed": 4.8, "fleeHpFraction": 0.3, "partySize": 3, "level": 14, "aggroRange": 7 },
+  "trainers": { "count": 4, "speed": 4.8, "fleeHpFraction": 0.3, "partySize": 3, "level": 14, "aggroRange": 7 },
   "battle": {
     "castSeconds": 0.3,
     "rangeScale": 1.6,
@@ -27,12 +27,12 @@
     "bossLevel": 11,
     "bossHpMultiplier": 6
   },
-  "items": { "inventorySize": 6, "groundItems": 45, "pickupRadius": 0.8 },
+  "items": { "inventorySize": 6, "groundItems": 140, "pickupRadius": 0.8 },
   "catch": { "aimMaxTiles": 8, "aimSeconds": 1.2, "wobbleSeconds": 0.55, "statusBonus": { "sleep": 2, "paralysis": 1.5, "burn": 1.5 } },
   "outpost": { "healSeconds": 3, "radius": 1.8 },
   "darkness": {
     "pulseSeconds": 90,
-    "radiiTiles": [30, 18, 10, 4],
+    "radiiTiles": [60, 38, 20, 8],
     "sweepSeconds": 12,
     "drowsySeconds": 4,
     "badDreamsFraction": 0.0625,

@@ -5,7 +5,7 @@ License: usable in free and commercial projects, may be modified, credit appreci
 Not for repackaging or resale.
 
 - `spr_tileset_sunnysideworld_16px.png`: main 16x16 tileset, 64 columns (1024x1024).
-- `spr_tileset_sunnysideworld_forest_32px.png`: 32x32 forest canopy autotile, 13 columns.
+- `spr_tileset_sunnysideworld_forest_32px.png`: 32x32 forest canopy autotile, 10 columns (320 px wide).
 - `sunnyside.json`: extracted from the pack's GameMaker project.
   - `tilesets.*.autotiles`: GameMaker 16-tile autotile sets by name (Land, Path 01-03,
     River, Clouds, Cloud Shadow, Building, Inner Walls, forest_01). Each lists 16 tile
@@ -17,4 +17,4 @@ Not for repackaging or resale.
 - `plants/`, `other/`, `animals/`, `vfx/`: decor and effect strips (`_stripN` = N frames
   side by side). `ui/`: bars, icons and a 9-slice box.
 
-Tile index = row * 64 + column in the 16px sheet (13 columns for the forest sheet).
+Tile index = row * 64 + column in the 16px sheet (10 columns for the forest sheet).

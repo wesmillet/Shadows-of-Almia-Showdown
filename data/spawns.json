@@ -2,7 +2,7 @@
   "_comment": "Wild spawn tables per biome. count = wild Pok\u00e9mon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water.",
   "biomes": {
     "meadow": {
-      "count": 10,
+      "count": 30,
       "table": [
         {
           "dex": "0396",
@@ -23,7 +23,7 @@
       ]
     },
     "forest": {
-      "count": 9,
+      "count": 27,
       "table": [
         {
           "dex": "0406",
@@ -44,7 +44,7 @@
       ]
     },
     "shore": {
-      "count": 8,
+      "count": 24,
       "table": [
         {
           "dex": "0074",
@@ -65,7 +65,7 @@
       ]
     },
     "water": {
-      "count": 7,
+      "count": 21,
       "table": [
         {
           "dex": "0129",

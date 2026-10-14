@@ -8,8 +8,12 @@ import { Match } from './sim/match';
 import { Assets } from './sprites/assets';
 import { SpriteRegistry } from './sprites/pokemonSprite';
 import { RangerSprites } from './sprites/rangerSprite';
+import { EndScreen } from './ui/endScreen';
 import { MatchScreen } from './ui/matchScreen';
+import { RollScreen } from './ui/rollScreen';
 import { text, type GameContext, type Screen } from './ui/screens';
+import { TitleScreen } from './ui/titleScreen';
+import type { GroundRenderer } from './ground/types';
 
 async function boot(): Promise<void> {
   const stage = document.getElementById('stage')!;
@@ -56,10 +60,47 @@ async function boot(): Promise<void> {
     },
   };
 
-  const starters = (params.get('party') ?? '0025,0387,0133').split(',').filter((d) => SPECIES.has(d));
-  const match = new Match({ ground, rng: new Rng(seed), sprites }, starters.length ? starters : ['0025']);
-  game.setScreen(new MatchScreen(game, match, rangers, assets));
-  (window as unknown as { nightfall: unknown }).nightfall = { match, view, seed };
+  const debug = window as unknown as { nightfall: Record<string, unknown> };
+  debug.nightfall = { view, seed };
+
+  let currentGround: GroundRenderer = ground;
+  let currentSeed = seed;
+
+  const startMatch = (starters: string[]): void => {
+    const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters);
+    debug.nightfall.match = match;
+    const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, () => {
+      game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
+    });
+    game.setScreen(screen);
+    console.info(`[nightfall] match started with ${starters.join(', ')}`);
+  };
+
+  const showRoll = (): void => {
+    game.setScreen(new RollScreen(game, sprites, currentSeed, (dex) => startMatch([dex])));
+  };
+
+  const showTitle = async (regenerate: boolean): Promise<void> => {
+    if (regenerate) {
+      currentSeed = (Math.random() * 0xffffffff) >>> 0;
+      status = 'Painting a new island…';
+      drawLoading();
+      currentGround = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, CONFIG.map.tileSize, currentSeed, (p) => {
+        status = `Painting terrain ${Math.round(p * 100)}%`;
+        drawLoading();
+      });
+    }
+    game.setScreen(new TitleScreen(game, currentGround, rangers, showRoll));
+  };
+
+  // ?party=0025,0387 skips the title and roll with that party (debugging).
+  const party = params.get('party');
+  if (party) {
+    const starters = party.split(',').filter((d) => SPECIES.has(d));
+    startMatch(starters.length ? starters : ['0025']);
+  } else {
+    void showTitle(false);
+  }
 
   const loop = new GameLoop({
     step(dt) {

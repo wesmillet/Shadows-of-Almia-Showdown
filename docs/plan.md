@@ -38,7 +38,7 @@ scripts/                  fetch-sprites.py, fetch-rangers.py
   biome), moves (type, power, shape, cooldown, VFX family, anim), items,
   18-type chart, spawn tables, tunables.
 
-## Milestones (one commit each)
+## Milestones (one commit each; all five done)
 
 1. Sprite loader (AnimData + Offsets + Shadow), ranger sheets, procedural
    ground with decor, fixed-step loop, player + follower line, camera.

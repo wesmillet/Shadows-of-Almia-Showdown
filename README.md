@@ -231,11 +231,38 @@ Canvas 2D.
 
 ## The map
 
-The match plays on an authored map, `assets/maps/almia.json`, built by
-`scripts/build_map.py` (`python3 scripts/build_map.py --seed 7`, needs numpy, scipy
-and Pillow). The builder shapes land, cliffs, rivers, trails, beaches and forest so
-that every region is drawable with the Sunnyside World autotiles (no 1-wide spurs
-or corridors, three clear rows under every cliff edge), connects the outposts,
-spawns and the Shadow Crystal on foot, and writes a preview PNG next to the JSON.
-`src/ground/staticGround.ts` renders that file; if it is missing the old island
-generator in `src/ground/sunnysideGround.ts` is used instead.
+The match plays on an authored map, `assets/maps/almia.json`
+(preview: `assets/maps/almia_preview.png`), built by `scripts/mapgen/build.py`
+(`python3 scripts/mapgen/build.py`, needs numpy, scipy and Pillow).
+
+Almia is a terraced island that opens to the south: two highland corners, the
+summit with its lake, a terrace, and the lowlands, separated by cliff bands
+that always run coast to coast. Two rivers cascade over every band. The Shadow
+Crystal stands on the summit's prow at the map centre, above the grand stair,
+which is where the darkness closes. Around it: the Crystal Shrine, Lakeside
+(a stilt house on the lake, a pier into the north cove), the Old Stone Mill,
+the Spring outpost, the Hollow Graveyard, the Quarry, the Windmill Fields, the
+terrace orchards, Westbrook Village, Almia Town with its market square and
+ranch, and Fisher's Cove on the beach.
+
+How it is built:
+
+- `designer2.py` lays out the terrain as labels (sea, grass, sand, cliff face,
+  river) using only shapes the Sunnyside artist draws: two-row cliff bands,
+  straight or at 45 degrees inland, one row per two columns on the coast;
+  one-water rivers in straight runs; beaches under the cliffs.
+- `almia.py` places the roads, ladders, bridges, piers, caves and every
+  district. Buildings are cut whole from the pack's demo room (`bspecs.py`,
+  `lib.py`); everything else is a whole stamp from the sheet or one of the
+  pack's sprites (trees, animals, boats, windmills, crops). Nothing is cropped.
+- `resolve.py` picks every tile by example from the demo room: each cell's
+  neighbourhood is matched against what the artist drew there, then a repair
+  pass keeps only tile pairs the artist actually used next to each other.
+- `export.py` writes the map file: tile layers (index plus GameMaker flip
+  flags), buildings and stamps as objects, sprites, and walkability,
+  reachability, biome and minimap grids.
+
+`src/ground/staticGround.ts` renders that file (animated water and foam are
+baked per animation state, objects are depth-sorted with the characters); if
+it is missing the old island generator in `src/ground/sunnysideGround.ts` is
+used instead.

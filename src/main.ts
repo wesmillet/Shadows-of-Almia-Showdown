@@ -14,6 +14,7 @@ import { MatchScreen } from './ui/matchScreen';
 import { RollScreen } from './ui/rollScreen';
 import { text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
+import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
 
 async function boot(): Promise<void> {
@@ -44,6 +45,8 @@ async function boot(): Promise<void> {
     drawLoading();
   });
   const rangers = await rangersP;
+  const ui = new PixelUi(assets);
+  await ui.load();
   const t1 = performance.now();
   if (params.has('verify')) {
     await verifyDemoRoom(assets, view);
@@ -74,7 +77,7 @@ async function boot(): Promise<void> {
   const startMatch = (starters: string[]): void => {
     const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters);
     debug.showdown.match = match;
-    const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, () => {
+    const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
     });
     game.setScreen(screen);

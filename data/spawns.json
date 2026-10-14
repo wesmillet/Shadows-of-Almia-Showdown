@@ -1,12 +1,114 @@
 {
-  "_comment": "Wild spawn tables per biome. count = wild Pokémon per biome at match start; a biome's table lists species dex numbers with weights. water spawns stand on shore tiles next to water. level sets wild strength.",
-  "wildLevel": 12,
+  "_comment": "Wild spawn tables per biome. count = wild Pok\u00e9mon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water.",
   "biomes": {
-    "meadow": { "count": 10, "table": [{ "dex": "0396", "weight": 4 }, { "dex": "0399", "weight": 4 }, { "dex": "0403", "weight": 2 }] },
-    "forest": { "count": 9, "table": [{ "dex": "0406", "weight": 3 }, { "dex": "0010", "weight": 4 }, { "dex": "0401", "weight": 3 }] },
-    "shore": { "count": 8, "table": [{ "dex": "0074", "weight": 3 }, { "dex": "0098", "weight": 3 }, { "dex": "0422", "weight": 3 }] },
-    "water": { "count": 7, "table": [{ "dex": "0129", "weight": 4 }, { "dex": "0054", "weight": 2 }, { "dex": "0278", "weight": 3 }] }
+    "meadow": {
+      "count": 10,
+      "table": [
+        {
+          "dex": "0396",
+          "weight": 4
+        },
+        {
+          "dex": "0399",
+          "weight": 4
+        },
+        {
+          "dex": "0403",
+          "weight": 2
+        }
+      ],
+      "levels": [
+        8,
+        12
+      ]
+    },
+    "forest": {
+      "count": 9,
+      "table": [
+        {
+          "dex": "0406",
+          "weight": 3
+        },
+        {
+          "dex": "0010",
+          "weight": 4
+        },
+        {
+          "dex": "0401",
+          "weight": 3
+        }
+      ],
+      "levels": [
+        10,
+        15
+      ]
+    },
+    "shore": {
+      "count": 8,
+      "table": [
+        {
+          "dex": "0074",
+          "weight": 3
+        },
+        {
+          "dex": "0098",
+          "weight": 3
+        },
+        {
+          "dex": "0422",
+          "weight": 3
+        }
+      ],
+      "levels": [
+        11,
+        16
+      ]
+    },
+    "water": {
+      "count": 7,
+      "table": [
+        {
+          "dex": "0129",
+          "weight": 4
+        },
+        {
+          "dex": "0054",
+          "weight": 2
+        },
+        {
+          "dex": "0278",
+          "weight": 3
+        }
+      ],
+      "levels": [
+        9,
+        14
+      ]
+    }
   },
-  "starterPool": ["0387", "0390", "0393", "0025", "0133", "0447", "0443", "0147", "0246"],
-  "trainerPool": ["0387", "0390", "0393", "0025", "0133", "0447", "0443", "0147", "0246", "0403", "0074", "0054"]
+  "starterPool": [
+    "0387",
+    "0390",
+    "0393",
+    "0025",
+    "0133",
+    "0447",
+    "0443",
+    "0147",
+    "0246"
+  ],
+  "trainerPool": [
+    "0387",
+    "0390",
+    "0393",
+    "0025",
+    "0133",
+    "0447",
+    "0443",
+    "0147",
+    "0246",
+    "0403",
+    "0074",
+    "0054"
+  ]
 }

@@ -20,7 +20,8 @@ import { phaseLabel } from '../sim/darkness';
 import { isRoaming, nextBehavior } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
-import { Hud, type HudState } from './hud';
+import { drawInfoBar, Hud, type HudState } from './hud';
+import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
 import { ITEMS } from '../sim/items';
 import { drawSoftShadow } from '../render/world';
@@ -46,11 +47,12 @@ export class MatchScreen implements Screen {
     readonly match: Match,
     protected readonly rangers: RangerSprites,
     protected readonly assets: Assets,
+    protected readonly ui: PixelUi,
     private readonly onEnd?: () => void,
   ) {
     this.lighting = new Lighting(ctx.view);
     this.icons = new ItemIcons(assets);
-    this.hud = new Hud(ctx.view, this.icons);
+    this.hud = new Hud(ctx.view, this.icons, ui);
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -538,7 +540,7 @@ export class MatchScreen implements Screen {
     const crystalGlow = 0.25 + 0.15 * Math.sin(t * 2) + (Number.isFinite(d.radius) ? 0.25 : 0);
     drawPointLight(v, this.match.centerX, this.match.centerY, 2.8, '#b36bff', crystalGlow, 0.6);
     // Drifting motes in the dark and purple auras on wild Pokémon.
-    for (const mo of this.match.motes) drawPointLight(v, mo.x, mo.y, mo.size * 6, '#8a4dff', 0.35 * Math.min(1, mo.life), 0);
+    for (const mo of this.match.motes) drawPointLight(v, mo.x, mo.y, 0.35, '#8a4dff', 0.12 * Math.min(1, mo.life), 0);
     for (const m of this.match.mons()) if (m.aura) drawPointLight(v, m.x, m.y, 0.9, '#9b5cff', 0.45, 0.25);
     if (this.match.darkrai && !this.match.darkrai.fainted) drawPointLight(v, this.match.darkrai.x, this.match.darkrai.y, 2.2, '#6a2cff', 0.5, 0.5);
     for (const o of this.match.outposts) if (o.users.length) drawPointLight(v, o.x, o.y, 5, '#7dffc0', 0.12, 0);
@@ -606,7 +608,7 @@ export class MatchScreen implements Screen {
     const d = this.match.darkness;
     const cold = clamp(this.match.time / CONFIG.lighting.dayToColdSeconds, 0, 1);
     if (!Number.isFinite(d.radius)) return { cold, darkRadius: 1e6, darkFeather: 1, darkAmount: 0 };
-    return { cold: Math.max(cold, 0.4), darkRadius: d.radius * v.pxPerTile, darkFeather: 1.6 * v.pxPerTile, darkAmount: 0.92 };
+    return { cold: Math.max(cold, 0.4), darkRadius: d.radius * v.pxPerTile, darkFeather: 1.2 * v.pxPerTile, darkAmount: 0.92 };
   }
 
   protected hudState(v: View): HudState {
@@ -665,19 +667,39 @@ export class MatchScreen implements Screen {
       time: this.match.time,
     });
     this.hud.draw(this.match, this.hudState(v));
+    this.drawInfoBars(v, alpha);
     this.floaters.draw(v, v.hud);
     this.drawOverlay(v);
   }
 
+  /** HP bar, name and level over every wild or enemy Pokémon within 6 tiles of the player or hit in the last 4 s. */
+  private drawInfoBars(v: View, alpha: number): void {
+    const p = this.match.player;
+    const px = Math.max(2, Math.round(v.baseScale * 3));
+    for (const m of this.match.mons()) {
+      if (m.owner === p || m.captured || m.visual.alpha < 0.5) continue;
+      const near = Math.hypot(m.x - p.x, m.y - p.y) <= 6 * R();
+      if (!near && m.sinceHit > 4) continue;
+      const x = m.px + (m.x - m.px) * alpha;
+      const y = m.py + (m.y - m.py) * alpha;
+      const sx = Math.round(v.toScreenX(x));
+      const f = m.anim.current();
+      const top = Math.round(v.toScreenY(y)) - (f.h * v.spriteScale) / 2;
+      if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
+      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.name, m.level, m.hp / m.maxHp, v.baseScale);
+    }
+  }
+
+  /** Drifting motes as whole pixels of the 3x grid. */
   private drawMotes(v: View): void {
     const ctx = v.ctx;
+    const s = v.spriteScale;
     ctx.save();
     for (const mo of this.match.motes) {
-      const a = 0.35 * Math.min(1, mo.life);
-      ctx.fillStyle = `rgba(200,160,255,${a})`;
-      ctx.beginPath();
-      ctx.arc(v.toScreenX(mo.x), v.toScreenY(mo.y), Math.max(1, mo.size * v.pxPerTile), 0, Math.PI * 2);
-      ctx.fill();
+      const a = 0.7 * Math.min(1, mo.life);
+      ctx.fillStyle = `rgba(210,170,255,${a})`;
+      const size = mo.size > 0.06 ? 2 * s : s;
+      ctx.fillRect(Math.round(v.toScreenX(mo.x) / s) * s, Math.round(v.toScreenY(mo.y) / s) * s, size, size);
     }
     ctx.restore();
   }

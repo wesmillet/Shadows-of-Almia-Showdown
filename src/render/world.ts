@@ -30,21 +30,23 @@ export function trainerPos(t: Trainer, alpha: number): { x: number; y: number } 
   return { x: lerp(t.px, t.x, alpha), y: lerp(t.py, t.y, alpha) };
 }
 
+/** Flat oval drop shadow on the pixel grid (no gradient). */
 export function drawSoftShadow(view: View, sx: number, sy: number, radiusTiles: number, alpha = 0.28): void {
   const ctx = view.ctx;
-  const rx = radiusTiles * view.pxPerTile;
-  const ry = rx * 0.45;
-  const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, rx);
-  g.addColorStop(0, `rgba(10,6,20,${alpha})`);
-  g.addColorStop(0.6, `rgba(10,6,20,${alpha * 0.5})`);
-  g.addColorStop(1, 'rgba(10,6,20,0)');
+  const s = view.spriteScale;
+  const rx = Math.max(s, Math.round((radiusTiles * view.pxPerTile) / s) * s);
+  const ry = Math.max(s, Math.round(rx * 0.45 / s) * s);
+  const cx = Math.round(sx / s) * s;
+  const cy = Math.round(sy / s) * s;
   ctx.save();
-  ctx.translate(sx, sy);
-  ctx.scale(1, ry / rx);
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0, 0, rx, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = `rgba(10,6,20,${alpha})`;
+  // Stepped ellipse: rows of whole pixels.
+  for (let yy = -ry; yy < ry; yy += s) {
+    const k = Math.sqrt(Math.max(0, 1 - ((yy + s / 2) / ry) ** 2));
+    const half = Math.round((rx * k) / s) * s;
+    if (half <= 0) continue;
+    ctx.fillRect(cx - half, cy + yy, half * 2, s);
+  }
   ctx.restore();
 }
 

@@ -588,13 +588,14 @@ export class Match {
         }
       }
     }
-    for (const [biome, table] of Object.entries(SPAWNS.biomes) as Array<[Biome, { count: number; table: Array<{ dex: string; weight: number }> }]>) {
+    for (const [biome, table] of Object.entries(SPAWNS.biomes) as Array<[Biome, { count: number; levels: number[]; table: Array<{ dex: string; weight: number }> }]>) {
       const spots = this.rng.shuffle([...byBiome[biome]]);
       const n = Math.min(table.count, spots.length);
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
         const row = this.rng.weighted(table.table, (r) => r.weight);
-        const mon = this.makeMon(row.dex, SPAWNS.wildLevel, null, spot.x, spot.y);
+        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12);
+        const mon = this.makeMon(row.dex, level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
       }

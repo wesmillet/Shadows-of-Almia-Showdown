@@ -12,6 +12,7 @@ import type { Match } from '../sim/match';
 import { ITEMS } from '../sim/items';
 import { darken, hit, lighten, rgba } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
+import type { PixelUi } from './pixelUi';
 
 export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number };
 
@@ -35,6 +36,23 @@ export interface HudState {
   lightingMode: string;
 }
 
+/** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
+export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number): void {
+  const w = 20 * px;
+  const x = Math.round(sx - w / 2);
+  const y = Math.round(top - 7 * px - 4 * px);
+  ui.bar(ctx, x, y, w, px, frac);
+  ctx.font = `700 ${Math.round(10 * baseScale)}px "Segoe UI", Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+  const label = `${name}  Lv ${level}`;
+  ctx.strokeText(label, sx, y - 3 * baseScale);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(label, sx, y - 3 * baseScale);
+}
+
 const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f' };
 
 export class Hud {
@@ -46,7 +64,12 @@ export class Hud {
   private itemRects: Rect[] = [];
   private minimap: HTMLCanvasElement | null = null;
 
-  constructor(private readonly view: View, private readonly icons: ItemIcons) {}
+  constructor(private readonly view: View, private readonly icons: ItemIcons, private readonly ui: PixelUi) {}
+
+  /** Integer pixel scale for ui/ art on the HUD canvas. */
+  private get px(): number {
+    return Math.max(2, Math.round(this.view.baseScale * 3));
+  }
 
   hitTest(x: number, y: number): HudHit | null {
     for (let i = 0; i < this.behaviorRects.length; i++) {
@@ -82,14 +105,24 @@ export class Hud {
     ctx.fillText(s, x, y);
   }
 
-  private panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 14, fill = 'rgba(12,12,22,0.68)'): void {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+  /** Panels are the tileset's dark 9-slice box; `fill` tints it (lead card, hover). */
+  private panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, _r = 14, fill = ''): void {
+    const s = this.px;
+    const X = Math.round(x / s) * s;
+    const Y = Math.round(y / s) * s;
+    const W = Math.max(3 * s * 2, Math.round(w / s) * s);
+    const H = Math.max(3 * s * 2, Math.round(h / s) * s);
+    this.ui.box(ctx, X, Y, W, H, s, 'dt');
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fillRect(X + s, Y + s, W - 2 * s, H - 2 * s);
+    }
+  }
+
+  /** Light 9-slice box for popups and notices. */
+  popupBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+    const s = this.px;
+    this.ui.box(ctx, Math.round(x / s) * s, Math.round(y / s) * s, Math.round(w / s) * s, Math.round(h / s) * s, s, 'lt');
   }
 
   draw(match: Match, st: HudState): void {
@@ -106,8 +139,8 @@ export class Hud {
       ctx.save();
       ctx.font = this.font(18, '700');
       const w = ctx.measureText(st.notice).width + 40 * s;
-      this.panel(ctx, v.width / 2 - w / 2, 86 * s, w, 40 * s, 20, 'rgba(20,16,40,0.78)');
-      this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#ffe9a8', 'center', '700');
+      this.popupBox(ctx, v.width / 2 - w / 2, 86 * s, w, 40 * s);
+      this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#4a2d1a', 'center', '700');
       ctx.restore();
     }
     if (st.aiming > 0) {
@@ -127,7 +160,7 @@ export class Hud {
 
   private drawCounter(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const remaining = [match.player, ...match.trainers].filter((t) => t.alive).length;
-    this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s);
+    this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s, 14, 'rgba(12,12,22,0.35)');
     this.label(ctx, String(remaining), 34 * s, 66 * s, 44, '#ffffff', 'left', '800');
     this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800');
     const t = Math.floor(match.time);
@@ -158,7 +191,7 @@ export class Hud {
     const size = 156 * s;
     const x = v.width - size - 16 * s;
     const y = 16 * s;
-    this.panel(ctx, x - 6 * s, y - 6 * s, size + 12 * s, size + 12 * s, 12);
+    this.panel(ctx, x - 6 * s, y - 6 * s, size + 12 * s, size + 12 * s, 12, 'rgba(12,12,22,0.2)');
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(x, y, size, size, 8);
@@ -258,13 +291,11 @@ export class Hud {
       const x = x0 + i * (cardW + gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, cardW, cardH);
       const isLead = m === first;
-      this.panel(ctx, x, y0, cardW, cardH, 12, m.fainted ? 'rgba(40,20,30,0.7)' : isLead ? 'rgba(60,40,110,0.82)' : hover ? 'rgba(30,26,52,0.85)' : 'rgba(12,12,22,0.72)');
+      this.panel(ctx, x, y0, cardW, cardH, 12, m.fainted ? 'rgba(60,20,30,0.45)' : isLead ? 'rgba(90,60,170,0.45)' : hover ? 'rgba(255,255,255,0.08)' : '');
       if (isLead) {
-        ctx.strokeStyle = '#b89cff';
-        ctx.lineWidth = 2 * s;
-        ctx.beginPath();
-        ctx.roundRect(x, y0, cardW, cardH, 12);
-        ctx.stroke();
+        ctx.strokeStyle = '#d7c6ff';
+        ctx.lineWidth = this.px;
+        ctx.strokeRect(x + this.px / 2, y0 + this.px / 2, cardW - this.px, cardH - this.px);
       }
       // portrait
       const ps = 46 * s;
@@ -292,27 +323,17 @@ export class Hud {
       this.label(ctx, `Lv ${m.level}`, x + cardW - 10 * s, y0 + 22 * s, 11, '#cdbfff', 'right', '600');
       // HP bar
       const bx = px + ps + 10 * s;
-      const by = y0 + 32 * s;
+      const by = y0 + 30 * s;
       const bw = cardW - ps - 28 * s;
-      const bh = 9 * s;
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, bh / 2);
-      ctx.fill();
       const frac = clamp(m.hp / m.maxHp, 0, 1);
-      ctx.fillStyle = frac > 0.5 ? '#5ee28a' : frac > 0.25 ? '#f2c94c' : '#ff5c5c';
-      if (frac > 0) {
-        ctx.beginPath();
-        ctx.roundRect(bx, by, Math.max(bh, bw * frac), bh, bh / 2);
-        ctx.fill();
-      }
-      this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 22 * s, 11, '#e8e4f8', 'left', '500');
+      this.ui.bar(ctx, Math.round(bx), Math.round(by), Math.round(bw / this.px) * this.px, this.px, frac);
+      this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 7 * this.px + 12 * s, 11, '#e8e4f8', 'left', '500');
       // XP bar
       const xf = clamp(m.xp / xpToNext(m.level), 0, 1);
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.fillRect(bx, by + 26 * s, bw, 3 * s);
+      ctx.fillRect(bx, by + 7 * this.px + 16 * s, bw, this.px);
       ctx.fillStyle = '#7fb3ff';
-      ctx.fillRect(bx, by + 26 * s, bw * xf, 3 * s);
+      ctx.fillRect(bx, by + 7 * this.px + 16 * s, Math.round(bw * xf / this.px) * this.px, this.px);
       // behaviour chip
       const roaming = isRoaming(m);
       const chipW = 66 * s;
@@ -436,7 +457,7 @@ export class Hud {
     const x0 = 24 * s;
     const y0 = v.height - 62 * s - 16 * s - slot - 20 * s;
     this.itemRects = [];
-    this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12);
+    this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12, 'rgba(12,12,22,0.25)');
     items.forEach((entry, i) => {
       const id = entry?.id ?? null;
       const x = x0 + i * (slot + gap);

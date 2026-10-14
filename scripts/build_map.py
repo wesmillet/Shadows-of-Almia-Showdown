@@ -228,179 +228,212 @@ class MapBuilder:
     def dist_to_water(self):
         return ndimage.distance_transform_cdt(self.land, metric='taxicab')
 
+    # -- routing with straight runs --
+    def route(self, cost, start, goals, turn_cost=9.0):
+        """Dijkstra over (x, y, heading) so routes are long straight runs with
+        90-degree turns. `goals` is a set of cells; returns the cell path."""
+        import heapq
+        h, w = cost.shape
+        dirs = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        best = {}
+        pq = [(0.0, start[0], start[1], -1)]
+        prev = {}
+        end = None
+        while pq:
+            d, x, y, hd = heapq.heappop(pq)
+            key = (x, y, hd)
+            if key in best:
+                continue
+            best[key] = d
+            if (x, y) in goals and (x, y) != start:
+                end = key
+                break
+            for di, (dx, dy) in enumerate(dirs):
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < w and 0 <= ny < h):
+                    continue
+                c = cost[ny, nx]
+                if c >= 1e5:
+                    continue
+                nd = d + c + (turn_cost if hd not in (-1, di) else 0)
+                nk = (nx, ny, di)
+                if nk not in best and nd < best.get(nk, 1e18):
+                    prev[nk] = key
+                    heapq.heappush(pq, (nd, nx, ny, di))
+        if end is None:
+            return []
+        out = []
+        k = end
+        while k in prev:
+            out.append((k[0], k[1]))
+            k = prev[k]
+        out.append((k[0], k[1]))
+        return out[::-1]
+
     def build_rivers(self):
         h, w = self.rows, self.cols
-        land = self.land; river = np.zeros_like(land)
+        land = self.land
+        water = np.zeros_like(land)   # visible water cells
         dist = self.dist_to_water()
-        elev = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 18 + 3, np.mgrid[0:h, 0:w][0] / 18 + 9, 3)
-        tries = 0; made = 0
-        while made < 5 and tries < 120:
+        drop = self.bottom.copy()
+        for dy in (1, 2, 3):
+            drop |= np.roll(self.bottom, -dy, axis=0)
+        wob = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 7 + 3, np.mgrid[0:h, 0:w][0] / 7 + 9, 3)
+        base = np.where(land, 1.0 + np.clip(wob + 0.5, 0, 1.5) * 3, 1e6)
+        base[drop] = 1e6
+        yy, xx = np.mgrid[0:h, 0:w]
+        base[np.hypot(xx - w // 2, yy - h // 2) < 9] = 1e6   # keep the crystal clearing dry
+        coast = land & ~ndimage.binary_erosion(land, iterations=1) & ~drop
+        goals = {(int(x), int(y)) for y, x in zip(*np.where(coast))}
+        made = 0; tries = 0
+        while made < 4 and tries < 40:
             tries += 1
-            # source: well inland
-            ys, xs = np.where(dist >= 11)
+            ys, xs = np.where(dist >= 10)
             if len(ys) == 0:
                 break
-            k = self.rng.randrange(len(ys)); y, x = int(ys[k]), int(xs[k])
-            path = [(x, y)]
-            cur = (x, y); seen = {cur}; last = (0, 1)
-            for _ in range(160):
-                cx, cy = cur
-                best = None; bv = 1e9
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    nx, ny = cx + dx, cy + dy
-                    if not (0 <= nx < w and 0 <= ny < h) or (nx, ny) in seen:
-                        continue
-                    v = dist[ny, nx] * 0.9 + elev[ny, nx] * 5 + self.rng.random() * 2.2 - (0.5 if (dx, dy) == last else 0) + (3 if (dx, dy) == (-last[0], -last[1]) else 0)
-                    if not land[ny, nx]:
-                        v = -100
-                    if v < bv:
-                        bv = v; best = (nx, ny)
-                if best is None:
-                    break
-                last = (best[0]-cx, best[1]-cy); cur = best; seen.add(cur); path.append(cur)
-                if not land[cur[1], cur[0]]:
-                    break
-            if len(path) < 16 or land[path[-1][1], path[-1][0]]:
+            k = self.rng.randrange(len(ys)); src = (int(xs[k]), int(ys[k]))
+            cost = base.copy()
+            cost[ndimage.binary_dilation(water, iterations=5)] = 1e6
+            # one or two waypoints so the river bends instead of running straight to the sea
+            path = []
+            cur = src
+            ok = True
+            for _ in range(self.rng.choice((1, 2))):
+                wx = min(w-2, max(1, cur[0] + self.rng.randint(-14, 14)))
+                wy = min(h-2, max(1, cur[1] + self.rng.randint(-14, 14)))
+                if cost[wy, wx] >= 1e5 or (wx, wy) == cur:
+                    continue
+                seg = self.route(cost, cur, {(wx, wy)}, turn_cost=12.0)
+                if not seg:
+                    ok = False; break
+                path += seg[:-1]; cur = (wx, wy)
+            if not ok:
+                continue
+            seg = self.route(cost, cur, goals, turn_cost=12.0)
+            if not seg:
+                continue
+            path += seg
+            if len(path) < 14:
                 continue
             cand = np.zeros_like(land)
             for (px, py) in path:
-                cand[max(0, py-1):py+2, max(0, px-1):px+2] = True
+                cand[py:py+2, px:px+2] = True       # 2-wide water
+            sx, sy = path[0]
+            cand[max(0, sy-1):sy+3, max(0, sx-1):sx+3] = True   # a spring pond at the source
             cand &= land
-            cand = clean(cand) & land
-            # keep away from cliff drops and existing rivers
-            drop = self.bottom | np.roll(self.bottom, -1, axis=0) | np.roll(self.bottom, -2, axis=0)
-            cand &= ~drop
-            cand = clean(cand)
-            if cand.sum() < 40:
+            ring = ndimage.binary_dilation(cand, iterations=1) & land
+            # the bank ring must not sit on a cliff drop
+            if (ring & drop).any():
                 continue
-            # connectivity: the river must not split the land
-            walk = land & ~river & ~cand
+            walk = land & ~water & ~cand
             lab, n = ndimage.label(walk)
-            if n == 0:
+            sizes = ndimage.sum(walk, lab, range(1, n+1)) if n else [0]
+            if max(sizes) < (land & ~water).sum() * 0.96:
                 continue
-            sizes = ndimage.sum(walk, lab, range(1, n+1))
-            if sizes.max() < (land & ~river).sum() * 0.97:
-                continue
-            river |= cand; made += 1
-        self.river = river
+            water |= cand; made += 1
+        self.river = water
+        self.river_mask = ndimage.binary_dilation(water, iterations=1) & land
 
     def build_pois(self):
         h, w = self.rows, self.cols
-        land = self.land & ~self.river
+        land = self.land & ~self.river_mask
         dist = ndimage.distance_transform_cdt(land, metric='taxicab')
         cx, cy = w // 2, h // 2
         self.center = (cx, cy)
         def open_at(x, y, r):
             return 0 < x-r and x+r < w and 0 < y-r and y+r < h and land[y-r:y+r+1, x-r:x+r+1].all()
-        # outposts: four, one per quadrant, well inland
         outposts = []
         for qx, qy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
-            best = None; bd = -1
-            for y in range(4, h-4):
-                for x in range(4, w-4):
-                    if (x - cx) * qx <= 0 or (y - cy) * qy <= 0 or dist[y, x] < 4 or not open_at(x, y, 2):
+            best = None; bd = -1e9
+            for y in range(6, h-6):
+                for x in range(6, w-6):
+                    if (x - cx) * qx <= 0 or (y - cy) * qy <= 0 or dist[y, x] < 5 or not open_at(x, y, 3):
                         continue
-                    d = math.hypot(x - cx, y - cy)
-                    target = min(w, h) * 0.34
-                    score = -abs(d - target) + dist[y, x] * 0.3
                     if any(math.hypot(x - o[0], y - o[1]) < min(w, h) * 0.3 for o in outposts):
                         continue
+                    d = math.hypot(x - cx, y - cy)
+                    score = -abs(d - min(w, h) * 0.34) + dist[y, x] * 0.3
                     if score > bd:
                         bd = score; best = (x, y)
             if best is None:
-                best = max(((x, y) for y in range(4, h-4) for x in range(4, w-4) if open_at(x, y, 2) and dist[y, x] >= 4),
-                           key=lambda p: min([math.hypot(p[0]-o[0], p[1]-o[1]) for o in outposts] + [math.hypot(p[0]-cx, p[1]-cy)]))
+                cands = [(x, y) for y in range(6, h-6) for x in range(6, w-6) if open_at(x, y, 3) and dist[y, x] >= 5]
+                best = max(cands, key=lambda p: min([math.hypot(p[0]-o[0], p[1]-o[1]) for o in outposts] + [math.hypot(p[0]-cx, p[1]-cy)]))
             outposts.append(best)
-        # spawns: six coast-side open spots far apart
-        cands = [(x, y) for y in range(3, h-3) for x in range(3, w-3) if open_at(x, y, 1) and 2 <= dist[y, x] <= 6]
+        cands = [(x, y) for y in range(4, h-4) for x in range(4, w-4) if open_at(x, y, 2) and 3 <= dist[y, x] <= 7]
         self.rng.shuffle(cands)
         cands.sort(key=lambda p: -math.hypot(p[0]-cx, p[1]-cy))
         spawns = []
         for p in cands:
             if len(spawns) >= 6:
                 break
-            if all(math.hypot(p[0]-s[0], p[1]-s[1]) > min(w, h) * 0.3 for s in spawns) and all(math.hypot(p[0]-o[0], p[1]-o[1]) > 8 for o in outposts):
+            if all(math.hypot(p[0]-s[0], p[1]-s[1]) > min(w, h) * 0.3 for s in spawns) and all(math.hypot(p[0]-o[0], p[1]-o[1]) > 10 for o in outposts):
                 spawns.append(p)
         self.outposts, self.spawns = outposts, spawns
-
-    def build_paths(self):
-        h, w = self.rows, self.cols
-        land = self.land
-        wob = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 5 + 99, np.mgrid[0:h, 0:w][0] / 5 + 17, 3)
-        cost = np.where(land, 1.0 + np.clip(wob + 0.5, 0, 1.5) * 4.0, 1e6)
-        cost[self.river] = 40.0
-        cost[self.beach] = 3.0
-        edge = ~ndimage.binary_erosion(land, iterations=2)
-        cost[edge & land] += 6
-        path = np.zeros_like(land)
-        def route(a, b):
-            # Dijkstra on the grid
-            import heapq
-            dist = np.full((h, w), np.inf); dist[a[1], a[0]] = 0
-            prev = {}
-            pq = [(0.0, a)]
-            while pq:
-                d, (x, y) = heapq.heappop(pq)
-                if (x, y) == b:
-                    break
-                if d > dist[y, x]:
-                    continue
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    nx, ny = x+dx, y+dy
-                    if not (0 <= nx < w and 0 <= ny < h):
-                        continue
-                    c = cost[ny, nx] * (0.35 if path[ny, nx] else 1.0)
-                    nd = d + c
-                    if nd < dist[ny, nx]:
-                        dist[ny, nx] = nd; prev[(nx, ny)] = (x, y); heapq.heappush(pq, (nd, (nx, ny)))
-            out = []; cur = b
-            while cur != a:
-                out.append(cur); cur = prev.get(cur)
-                if cur is None:
-                    return []
-            out.append(a); return out
-        nodes = [self.center] + self.outposts
-        links = [(self.center, o) for o in self.outposts]
-        # ring between neighbouring outposts and spurs to spawns
-        for i in range(len(self.outposts)):
-            links.append((self.outposts[i], self.outposts[(i + 1) % len(self.outposts)]))
-        for s in self.spawns:
-            nearest = min(nodes, key=lambda n: math.hypot(n[0]-s[0], n[1]-s[1]))
-            links.append((s, nearest))
-        for a, b in links:
-            for (x, y) in route(a, b):
-                path[max(0, y-1):y+2, max(0, x-1):x+2] = True
-        for (x, y) in nodes:
-            path[max(0, y-2):y+4, max(0, x-2):x+4] = True
-        path &= land
-        path = clean(path) & land
-        # don't let the trail run through the cliff-top edge row (it would be cut by the drop)
-        path &= ~self.bottom
-        path = clean(path) & land
-        self.path = path
-        # bridges: river cells the trail crosses become fords (walkable, drawn as path over river)
-        self.ford = path & self.river
 
     def build_beaches(self):
         h, w = self.rows, self.cols
         land = self.land
-        coast = land & ~ndimage.binary_erosion(land, iterations=4)
-        coast &= ~self.bottom
-        for dy in (1, 2):
-            coast &= ~np.roll(self.bottom, -dy, axis=0)
-        n = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 7 + 21, np.mgrid[0:h, 0:w][0] / 7 + 5, 2)
-        beach = coast & (n > -0.05) & ~self.river
-        beach = clean(beach) & land & ~self.river
-        beach = clean(beach)
-        self.beach = beach
+        drop = self.bottom.copy()
+        for dy in (1, 2, 3):
+            drop |= np.roll(self.bottom, -dy, axis=0)
+        band = land & ~ndimage.binary_erosion(land, iterations=4) & ~drop & ~self.river_mask
+        n = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 8 + 21, np.mgrid[0:h, 0:w][0] / 8 + 5, 2)
+        sand = band & (n > 0.0)
+        sand[:] = False   # Path 02 is a dirt variant, not shoreline sand; beaches are off until a real sand set is wired in
+        # smooth blobs: no jaggies, no slivers
+        sand = ndimage.binary_opening(sand, structure=np.ones((3, 3), bool))
+        sand = ndimage.binary_closing(sand, structure=np.ones((3, 3), bool)) & land & ~drop
+        lab, k = ndimage.label(sand)
+        if k:
+            sizes = ndimage.sum(sand, lab, range(1, k+1))
+            for i, sz in enumerate(sizes, 1):
+                if sz < 12:
+                    sand[lab == i] = False
+        self.beach = sand                                             # visible sand
+        self.beach_mask = ndimage.binary_dilation(sand, iterations=1) & land
+
+    def build_paths(self):
+        h, w = self.rows, self.cols
+        land = self.land
+        drop = self.bottom.copy()
+        for dy in (1, 2, 3):
+            drop |= np.roll(self.bottom, -dy, axis=0)
+        wob = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 7 + 99, np.mgrid[0:h, 0:w][0] / 7 + 17, 3)
+        cost = np.where(land, 1.0 + np.clip(wob + 0.5, 0, 1.5) * 2.0, 1e6)
+        cost[~ndimage.binary_erosion(land, iterations=3)] = 1e6      # keep the dirt ring on land, off the coast
+        cost[drop] = 1e6
+        cost[self.river_mask] = 1e6                                  # trails go around rivers, never through them
+        cost[self.beach_mask] += 4
+        dirt = np.zeros_like(land)
+        nodes = [self.center] + self.outposts
+        links = [(self.center, o) for o in self.outposts]
+        for i in range(len(self.outposts)):
+            links.append((self.outposts[i], self.outposts[(i + 1) % len(self.outposts)]))
+        for sp in self.spawns:
+            nearest = min(nodes, key=lambda n: math.hypot(n[0]-sp[0], n[1]-sp[1]))
+            links.append((sp, nearest))
+        for a, b in links:
+            c = cost.copy()
+            c[dirt] *= 0.3                                          # reuse existing trails
+            pth = self.route(c, a, {b}, turn_cost=9.0)
+            for (x, y) in pth:
+                dirt[max(0, y-1):y+2, max(0, x-1):x+2] = True       # 3-wide dirt
+        for (x, y) in nodes:
+            dirt[max(0, y-3):y+4, max(0, x-3):x+4] = True           # 7x7 clearing
+        for (x, y) in self.spawns:
+            dirt[max(0, y-2):y+3, max(0, x-2):x+3] = True
+        dirt &= land
+        self.path = dirt
+        self.path_mask = ndimage.binary_dilation(dirt, iterations=1) & land
+        self.ford = np.zeros_like(dirt)
 
     def build_forest(self):
         h, w = self.rows, self.cols
         land = self.land
         inner = ndimage.binary_erosion(land, iterations=3)
         n = self.noise.fbm(np.mgrid[0:h, 0:w][1] / 14 + 77, np.mgrid[0:h, 0:w][0] / 14 + 31, 3)
-        f = inner & (n > 0.02) & ~self.path & ~self.river & ~self.beach
-        f = ~ndimage.binary_dilation(self.path | self.river, iterations=2) & f
+        f = inner & (n > 0.02) & ~self.path_mask & ~self.river_mask & ~self.beach_mask
+        f = ~ndimage.binary_dilation(self.path_mask | self.river_mask, iterations=1) & f
         # keep POIs clear
         for (x, y) in [self.center] + self.outposts + self.spawns:
             f[max(0, y-5):y+6, max(0, x-5):x+6] = False
@@ -422,7 +455,7 @@ class MapBuilder:
     def build_decor(self):
         h, w = self.rows, self.cols
         land = self.land; rng = self.rng
-        busy = self.path | self.river | self.beach | self.forest | ~land
+        busy = self.path_mask | self.river_mask | self.beach_mask | self.forest | ~land
         busy |= self.bottom | np.roll(self.bottom, -1, axis=0)
         for (x, y) in [self.center] + self.outposts + self.spawns:
             busy[max(0, y-3):y+4, max(0, x-3):x+4] = True
@@ -489,6 +522,7 @@ class MapBuilder:
         face2 = np.roll(self.bottom, 2, axis=0) & ~land
         base = np.roll(self.bottom, 3, axis=0) & ~land
         faces = face1 | face2
+        river_ctx = self.river_mask | ~land   # the sea counts as water at a river mouth
         for y in range(h):
             for x in range(w):
                 if land[y, x]:
@@ -506,14 +540,14 @@ class MapBuilder:
                 if self.shadow[y, x]:
                     left = x > 0 and self.shadow[y, x-1]; right = x < w-1 and self.shadow[y, x+1]
                     shadow[y, x] = WATER_SHADOW_L if not left else WATER_SHADOW_R if not right else WATER_SHADOW_M
-                if river[y, x]:
-                    m, d = masks(river, x, y)
+                if self.river_mask[y, x]:
+                    m, d = masks(river_ctx, x, y)
                     riverL[y, x] = autotile(R, m, d)
-                if beach[y, x]:
-                    m, d = masks(beach, x, y)
+                if self.beach_mask[y, x]:
+                    m, d = masks(self.beach_mask, x, y)
                     beachL[y, x] = autotile(P2, m, d)
-                if path[y, x]:
-                    m, d = masks(path, x, y)
+                if self.path_mask[y, x]:
+                    m, d = masks(self.path_mask, x, y)
                     pathL[y, x] = autotile(P1, m, d)
         # canopy on the block grid
         bh, bw = self.forest_blocks.shape

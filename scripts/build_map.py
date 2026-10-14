@@ -37,11 +37,17 @@ SEA_PATTERN = {  # (x%4, y%4) -> tile, read from the pack's demo room
     (3, 0): 1293, (3, 1): 1357, (3, 2): 1165, (3, 3): 1229,
 }
 RIVER_FILL_FRAMES = [542, 543, 544, 545]
-BUSHES = [114, 307, 219, 221, 155, 157]
-FLOWERS = [176, 240, 304, 368, 223, 227]
-ROCKS = [287, 289, 290, 497, 498]
-# Multi-tile tree stamps: (top-left index, w, h); 2x2 round trees and 1x2 pines.
-TREE_STAMPS = [(119, 2, 2), (121, 2, 2), (435, 1, 2), (436, 1, 2), (308, 1, 2)]
+# Whole single-tile decor (checked against the sheet: nothing here is a crop of a bigger sprite).
+BUSHES = [91, 92, 93, 94, 155, 156, 157, 158, 219, 220, 221, 222, 283, 284, 285, 286, 307]
+FLOWERS = [95, 96, 97, 98, 99, 159, 160, 161, 162, 163, 223, 224, 225, 226, 227]
+ROCKS = [287, 288, 289, 290, 1975]
+STUMPS = [351, 352]
+# Multi-tile stamps: (top-left index, w, h). Pines are whole 1x3 / 1x2 columns; the
+# round trees in the sheet only exist as an overlapping cluster, so round trees come
+# from the animated plant strips instead.
+TREE_STAMPS = [(436, 1, 3), (308, 1, 2)]
+BERRY_BUSHES = [(241, 2, 2), (369, 2, 2)]
+BOULDERS = [(1905, 2, 2), (1907, 2, 2), (1909, 2, 2)]
 PLANT_STRIPS = ['spr_deco_tree_01_strip4.png', 'spr_deco_tree_02_strip4.png']
 MUSHROOMS = ['spr_deco_mushroom_blue_01_strip4.png', 'spr_deco_mushroom_blue_02_strip4.png', 'spr_deco_mushroom_red_01_strip4.png']
 
@@ -431,24 +437,33 @@ class MapBuilder:
                 r = rng.random()
                 p_tree = 0.16 if forest_edge[y, x] else 0.035
                 if r < p_tree:
-                    if rng.random() < 0.55:
+                    if rng.random() < 0.35:
                         tl, tw, th = rng.choice(TREE_STAMPS)
-                        if tw == 2 and (busy[y, x+1] or self.block[y, x+1]):
-                            continue
-                        decor.append({'kind': 'tree', 'x': x + tw/2, 'y': y + 0.95, 'stamp': [tl, tw, th]})
-                        self.block[y, x:x+tw] = True
+                        decor.append({'kind': 'tree', 'x': x + 0.5, 'y': y + 0.95, 'stamp': [tl, tw, th]})
+                        self.block[y, x] = True
                     else:
                         decor.append({'kind': 'tree', 'x': x + 0.5, 'y': y + 0.95, 'strip': rng.choice(PLANT_STRIPS)})
                         self.block[y, x] = True
                     busy[max(0, y-1):y+2, max(0, x-1):x+3] = True
                 elif r < p_tree + 0.05:
                     decor.append({'kind': 'bush', 'x': x + 0.5, 'y': y + 0.9, 'tile': rng.choice(BUSHES)})
-                elif r < p_tree + 0.11:
+                elif r < p_tree + 0.06 and not busy[y, x+1]:
+                    tl, tw, th = rng.choice(BERRY_BUSHES)
+                    decor.append({'kind': 'bush', 'x': x + 1.0, 'y': y + 0.95, 'stamp': [tl, tw, th]})
+                    self.block[y, x:x+2] = True; busy[y, x:x+2] = True
+                elif r < p_tree + 0.12:
                     decor.append({'kind': 'flower', 'x': x + 0.5, 'y': y + 0.9, 'tile': rng.choice(FLOWERS)})
-                elif r < p_tree + 0.125:
+                elif r < p_tree + 0.135:
                     decor.append({'kind': 'rock', 'x': x + 0.5, 'y': y + 0.9, 'tile': rng.choice(ROCKS)})
                     self.block[y, x] = True
-                elif r < p_tree + 0.145 and forest_edge[y, x]:
+                elif r < p_tree + 0.142 and not busy[y, x+1] and not busy[y+1, x] and not busy[y+1, x+1]:
+                    tl, tw, th = rng.choice(BOULDERS)
+                    decor.append({'kind': 'rock', 'x': x + 1.0, 'y': y + 1.95, 'stamp': [tl, tw, th]})
+                    self.block[y:y+2, x:x+2] = True; busy[y:y+2, x:x+2] = True
+                elif r < p_tree + 0.15:
+                    decor.append({'kind': 'rock', 'x': x + 0.5, 'y': y + 0.9, 'tile': rng.choice(STUMPS)})
+                    self.block[y, x] = True
+                elif r < p_tree + 0.17 and forest_edge[y, x]:
                     decor.append({'kind': 'mushroom', 'x': x + 0.5, 'y': y + 0.9, 'strip': rng.choice(MUSHROOMS)})
                 elif r < p_tree + 0.30:
                     grass_variant[y, x] = rng.choice(GRASS_VARIANTS)

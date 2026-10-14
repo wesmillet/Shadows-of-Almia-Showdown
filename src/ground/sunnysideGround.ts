@@ -24,16 +24,13 @@ const GRASS_DETAIL = [131, 132, 133, 134, 340, 403];
 const CLIFF_WALL = [266, 267, 268];
 /** Decor tiles from the 16 px sheet. */
 const DECOR_TILES = {
-  bush: [114, 307, 219, 221, 155, 157],
-  flower: [176, 240, 304, 368, 223, 227],
-  rock: [287, 289, 290, 497, 498],
+  bush: [91, 92, 93, 94, 155, 156, 157, 158, 219, 220, 221, 222, 283, 284, 285, 286, 307],
+  flower: [95, 96, 97, 98, 99, 159, 160, 161, 162, 163, 223, 224, 225, 226, 227],
+  rock: [287, 288, 289, 290, 1975],
 };
-/** Multi-tile trees: [top-left index, width in tiles, height in tiles]. */
+/** Multi-tile trees: [top-left index, width in tiles, height in tiles]. Only whole pines; the sheet's round trees are an overlapping cluster. */
 const TREE_STAMPS: Array<[number, number, number]> = [
-  [119, 2, 2],
-  [121, 2, 2],
-  [435, 1, 2],
-  [436, 1, 2],
+  [436, 1, 3],
   [308, 1, 2],
 ];
 const PLANT_STRIPS: Array<{ file: string; kind: DecorItem['kind']; frames: number; w: number; h: number; block: number }> = [

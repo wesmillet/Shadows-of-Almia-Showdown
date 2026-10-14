@@ -75,17 +75,20 @@ export class View {
     this.lightCtx.globalCompositeOperation = 'lighter';
   }
 
-  /** 1 at a 720 px tall canvas. */
+  /** HUD text scale: 1 at a 720 px tall canvas. */
   get baseScale(): number {
     return this.height / 720;
   }
 
+  /** Everything in the world draws at one integer scale: 16 px tiles at 3x = 48 px, sprites at 3x. */
+  static readonly PIXEL_SCALE = 3;
+
   get pxPerTile(): number {
-    return this.tileSize * this.baseScale * this.zoom;
+    return this.tileSize * View.PIXEL_SCALE;
   }
 
   get spriteScale(): number {
-    return Math.max(1, Math.round(3 * this.baseScale * this.zoom));
+    return View.PIXEL_SCALE;
   }
 
   /** Overworld (human) sheets are 1x art drawn at the same integer scale. */
@@ -94,11 +97,11 @@ export class View {
   }
 
   toScreenX(wx: number): number {
-    return (wx - this.camX) * this.pxPerTile + this.width / 2 + this.shakeX;
+    return (wx - this.camX) * this.pxPerTile + Math.floor(this.width / 2) + this.shakeX;
   }
 
   toScreenY(wy: number): number {
-    return (wy - this.camY) * this.pxPerTile + this.height / 2 + this.shakeY;
+    return (wy - this.camY) * this.pxPerTile + Math.floor(this.height / 2) + this.shakeY;
   }
 
   toWorld(sx: number, sy: number): { x: number; y: number } {
@@ -125,16 +128,16 @@ export class View {
     const k = 1 - Math.exp(-dt * 8);
     this.camX = lerp(this.camX, tx, k);
     this.camY = lerp(this.camY, ty, k);
-    this.zoom = lerp(this.zoom, this.targetZoom, 1 - Math.exp(-dt * 4));
     const halfW = this.width / 2 / this.pxPerTile;
     const halfH = this.height / 2 / this.pxPerTile;
     this.camX = clamp(this.camX, Math.min(halfW, cols / 2), Math.max(cols - halfW, cols / 2));
     this.camY = clamp(this.camY, Math.min(halfH, rows / 2), Math.max(rows - halfH, rows / 2));
     if (this.shakeTime > 0) {
       this.shakeTime -= dt;
-      const a = this.shakeAmp * clamp(this.shakeTime / 0.25, 0, 1) * this.baseScale;
-      this.shakeX = (Math.random() * 2 - 1) * a;
-      this.shakeY = (Math.random() * 2 - 1) * a;
+      const a = this.shakeAmp * clamp(this.shakeTime / 0.25, 0, 1);
+      // Shake in whole pixels of the integer grid.
+      this.shakeX = Math.round((Math.random() * 2 - 1) * a / View.PIXEL_SCALE) * View.PIXEL_SCALE;
+      this.shakeY = Math.round((Math.random() * 2 - 1) * a / View.PIXEL_SCALE) * View.PIXEL_SCALE;
       if (this.shakeTime <= 0) {
         this.shakeAmp = 0;
         this.shakeX = this.shakeY = 0;

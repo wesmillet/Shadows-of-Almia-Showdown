@@ -11,6 +11,7 @@ import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS } from '../sim/items';
 import { darken, hit, lighten, rgba } from './screens';
+import type { ItemIcons } from '../sprites/itemIcons';
 
 export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number };
 
@@ -45,7 +46,7 @@ export class Hud {
   private itemRects: Rect[] = [];
   private minimap: HTMLCanvasElement | null = null;
 
-  constructor(private readonly view: View) {}
+  constructor(private readonly view: View, private readonly icons: ItemIcons) {}
 
   hitTest(x: number, y: number): HudHit | null {
     for (let i = 0; i < this.behaviorRects.length; i++) {
@@ -454,8 +455,8 @@ export class Hud {
       if (id) {
         const def = ITEMS[id];
         if (def) {
-          drawItemIcon(ctx, def.icon, x + slot / 2, y0 + slot / 2 - 2 * s, slot * 0.28);
-          this.label(ctx, def.short, x + slot / 2, y0 + slot - 5 * s, 8.5, '#ffffff', 'center', '700');
+          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, Math.max(1, Math.round(s)), def.tmType);
+          this.label(ctx, def.short, x + slot / 2, y0 + slot - 4 * s, 8.5, '#ffffff', 'center', '700');
           if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 4 * s, y0 + 11 * s, 9, '#ffe9a8', 'right', '800');
         }
       }

@@ -2,6 +2,7 @@ import { GameLoop } from './core/loop';
 import { Input } from './core/input';
 import { hashSeed, Rng } from './core/rng';
 import { createGround } from './ground';
+import { Sunnyside } from './ground/sunnyside';
 import { View } from './render/view';
 import { CONFIG, SPECIES } from './sim/data';
 import { Match } from './sim/match';
@@ -44,7 +45,11 @@ async function boot(): Promise<void> {
   });
   const rangers = await rangersP;
   const t1 = performance.now();
-  const ground = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, CONFIG.map.tileSize, seed, (p) => {
+  if (params.has('verify')) {
+    await verifyDemoRoom(assets, view);
+    return;
+  }
+  const ground = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, seed, (p) => {
     status = `Painting terrain ${Math.round(p * 100)}%`;
     drawLoading();
   });
@@ -85,7 +90,7 @@ async function boot(): Promise<void> {
       currentSeed = (Math.random() * 0xffffffff) >>> 0;
       status = 'Painting a new island…';
       drawLoading();
-      currentGround = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, CONFIG.map.tileSize, currentSeed, (p) => {
+      currentGround = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, currentSeed, (p) => {
         status = `Painting terrain ${Math.round(p * 100)}%`;
         drawLoading();
       });
@@ -113,6 +118,56 @@ async function boot(): Promise<void> {
   });
   loop.start();
   console.info(`[showdown] seed ${seed}; ground: ${ground.label}; sprites ${Math.round(t1 - t0)} ms, terrain ${Math.round(performance.now() - t1)} ms`);
+}
+
+/**
+ * ?verify=demo: re-render the Sunnyside demo room from sunnyside.json with the
+ * autotile/tile code and compare it pixel-for-pixel against
+ * demo_room_render.png. Logs the mismatch count and shows both side by side.
+ */
+async function verifyDemoRoom(assets: Assets, view: View): Promise<void> {
+  const sunny = await Sunnyside.load(assets);
+  const ref = await assets.loadImage('tiles/sunnyside/demo_room_render.png');
+  if (!sunny || !ref) {
+    console.error('[showdown] verify: tileset or reference render missing');
+    return;
+  }
+  const mine = sunny.renderDemoRoom();
+  const refC = document.createElement('canvas');
+  refC.width = ref.naturalWidth;
+  refC.height = ref.naturalHeight;
+  refC.getContext('2d')!.drawImage(ref, 0, 0);
+  const a = mine.getContext('2d')!.getImageData(0, 0, mine.width, mine.height).data;
+  const b = refC.getContext('2d')!.getImageData(0, 0, refC.width, refC.height).data;
+  // Canvas stores premultiplied alpha, so semi-transparent layers (shadows,
+  // clouds) can round a channel by a step or two; opaque pixels must be exact.
+  let mismatch = 0;
+  let beyondRounding = 0;
+  let opaqueMismatch = 0;
+  let maxDiff = 0;
+  const total = Math.min(a.length, b.length) / 4;
+  for (let i = 0; i < Math.min(a.length, b.length); i += 4) {
+    const ta = a[i + 3] ?? 0;
+    const tb = b[i + 3] ?? 0;
+    if (ta === 0 && tb === 0) continue;
+    const d = Math.max(Math.abs((a[i] ?? 0) - (b[i] ?? 0)), Math.abs((a[i + 1] ?? 0) - (b[i + 1] ?? 0)), Math.abs((a[i + 2] ?? 0) - (b[i + 2] ?? 0)), Math.abs(ta - tb));
+    if (d === 0) continue;
+    mismatch++;
+    if (d > maxDiff) maxDiff = d;
+    if (d > 3) beyondRounding++;
+    if (ta === 255 && tb === 255 && d > 0) opaqueMismatch++;
+  }
+  const result = { width: mine.width, height: mine.height, pixels: total, mismatch, beyondRounding, opaqueMismatch, maxDiff, ok: beyondRounding === 0 };
+  console.info(`[showdown] demo_room re-render: ${mismatch} of ${total} pixels differ, ${beyondRounding} by more than rounding (max channel diff ${maxDiff}) (${result.ok ? 'MATCH' : 'MISMATCH'})`);
+  (window as unknown as { showdown: Record<string, unknown> }).showdown = { verify: result };
+  const ctx = view.hud;
+  ctx.fillStyle = '#0b0a12';
+  ctx.fillRect(0, 0, view.width, view.height);
+  ctx.imageSmoothingEnabled = false;
+  const s = Math.min(view.width / 2 / mine.width, view.height / mine.height);
+  ctx.drawImage(mine, 0, 0, mine.width * s, mine.height * s);
+  ctx.drawImage(refC, view.width / 2, 0, refC.width * s, refC.height * s);
+  text(view, `re-render (left) vs demo_room_render.png (right): ${mismatch} px differ`, view.width / 2, view.height - 12, 14, { align: 'center' });
 }
 
 boot().catch((e) => {

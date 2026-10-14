@@ -8,7 +8,7 @@ import { clamp } from '../core/math';
 import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
-import { areaContains, makeArea, type Area, type BattleEvent } from '../sim/battle';
+import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { CONFIG, move, typeColor, type MoveDef } from '../sim/data';
 import type { Mon } from '../sim/entities';
 import { lead } from '../sim/entities';
@@ -20,7 +20,8 @@ import { phaseLabel } from '../sim/darkness';
 import { isRoaming, nextBehavior } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
-import { drawItemIcon, Hud, type HudState } from './hud';
+import { Hud, type HudState } from './hud';
+import { ItemIcons } from '../sprites/itemIcons';
 import { ITEMS } from '../sim/items';
 import { drawSoftShadow } from '../render/world';
 import { rgba, type GameContext, type Screen } from './screens';
@@ -38,8 +39,7 @@ export class MatchScreen implements Screen {
   private readonly strips = new Map<string, HTMLImageElement | null>();
 
   private endTimer = -1;
-  /** Poké Ball frames from assets/items (closed and open per kind). */
-  private balls = new Map<string, HTMLImageElement | null>();
+  protected readonly icons: ItemIcons;
 
   constructor(
     protected readonly ctx: GameContext,
@@ -49,14 +49,8 @@ export class MatchScreen implements Screen {
     private readonly onEnd?: () => void,
   ) {
     this.lighting = new Lighting(ctx.view);
-    this.hud = new Hud(ctx.view);
-    for (const kind of ['poke', 'great', 'ultra']) {
-      for (const state of ['closed', 'open']) {
-        const key = `${kind}-${state}`;
-        this.balls.set(key, null);
-        void assets.loadImage(`items/ball-${key}.png`).then((img) => this.balls.set(key, img));
-      }
-    }
+    this.icons = new ItemIcons(assets);
+    this.hud = new Hud(ctx.view, this.icons);
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -312,11 +306,11 @@ export class MatchScreen implements Screen {
         }));
         break;
       case 'beam':
-        this.vfx.add(new Beam(from.x, from.y - 0.35, area.fx, area.fy, m.shape === 'cone' ? 2.8 : 3.3, color, size, m.shape === 'cone'));
+        this.vfx.add(new Beam(from.x, from.y - 0.35, area.fx, area.fy, (m.shape === 'cone' ? 2.8 : 3.3) * R(), color, size * R(), m.shape === 'cone'));
         for (const h of hits) this.vfx.add(new ImpactBurst(h.x, h.y, color, size * 0.7));
         break;
       case 'ring':
-        this.vfx.add(new RingPulse(attacker.x, attacker.y, 2.3, color, size));
+        this.vfx.add(new RingPulse(attacker.x, attacker.y, 2.3 * R(), color, size));
         for (const h of hits) this.vfx.add(new ImpactBurst(h.x, h.y, color, size * 0.6));
         break;
       case 'cloud':
@@ -342,31 +336,32 @@ export class MatchScreen implements Screen {
       ctx.fillStyle = rgba(base, pulse);
       ctx.strokeStyle = rgba(base, 0.85);
       ctx.lineWidth = 2 * v.baseScale;
+      const k = R();
       const ppt = v.pxPerTile;
       const X = (x: number) => v.toScreenX(x);
       const Y = (y: number) => v.toScreenY(y);
       ctx.beginPath();
-      if (area.shape === 'single') ctx.arc(X(area.tx), Y(area.ty), 0.65 * ppt, 0, Math.PI * 2);
-      else if (area.shape === 'self') ctx.arc(X(area.ox), Y(area.oy), 0.45 * ppt, 0, Math.PI * 2);
+      if (area.shape === 'single') ctx.arc(X(area.tx), Y(area.ty), 0.65 * k * ppt, 0, Math.PI * 2);
+      else if (area.shape === 'self') ctx.arc(X(area.ox), Y(area.oy), 0.45 * k * ppt, 0, Math.PI * 2);
       else if (area.shape === 'ring') {
-        ctx.arc(X(area.ox), Y(area.oy), 2.3 * ppt, 0, Math.PI * 2);
-        ctx.arc(X(area.ox), Y(area.oy), 0.3 * ppt, 0, Math.PI * 2, true);
+        ctx.arc(X(area.ox), Y(area.oy), 2.3 * k * ppt, 0, Math.PI * 2);
+        ctx.arc(X(area.ox), Y(area.oy), 0.3 * k * ppt, 0, Math.PI * 2, true);
       } else {
         const nx = -area.fy;
         const ny = area.fx;
         const pts: Array<[number, number]> =
           area.shape === 'line'
             ? [
-                [area.ox + area.fx * 0.25 + nx * 0.55, area.oy + area.fy * 0.25 + ny * 0.55],
-                [area.ox + area.fx * 3.4 + nx * 0.55, area.oy + area.fy * 3.4 + ny * 0.55],
-                [area.ox + area.fx * 3.4 - nx * 0.55, area.oy + area.fy * 3.4 - ny * 0.55],
-                [area.ox + area.fx * 0.25 - nx * 0.55, area.oy + area.fy * 0.25 - ny * 0.55],
+                [area.ox + area.fx * 0.25 * k + nx * 0.55 * k, area.oy + area.fy * 0.25 * k + ny * 0.55 * k],
+                [area.ox + area.fx * 3.4 * k + nx * 0.55 * k, area.oy + area.fy * 3.4 * k + ny * 0.55 * k],
+                [area.ox + area.fx * 3.4 * k - nx * 0.55 * k, area.oy + area.fy * 3.4 * k - ny * 0.55 * k],
+                [area.ox + area.fx * 0.25 * k - nx * 0.55 * k, area.oy + area.fy * 0.25 * k - ny * 0.55 * k],
               ]
             : [
-                [area.ox + area.fx * 0.25 + nx * 0.5, area.oy + area.fy * 0.25 + ny * 0.5],
-                [area.ox + area.fx * 2.9 + nx * 1.9, area.oy + area.fy * 2.9 + ny * 1.9],
-                [area.ox + area.fx * 2.9 - nx * 1.9, area.oy + area.fy * 2.9 - ny * 1.9],
-                [area.ox + area.fx * 0.25 - nx * 0.5, area.oy + area.fy * 0.25 - ny * 0.5],
+                [area.ox + area.fx * 0.25 * k + nx * 0.5 * k, area.oy + area.fy * 0.25 * k + ny * 0.5 * k],
+                [area.ox + area.fx * 2.9 * k + nx * 1.9 * k, area.oy + area.fy * 2.9 * k + ny * 1.9 * k],
+                [area.ox + area.fx * 2.9 * k - nx * 1.9 * k, area.oy + area.fy * 2.9 * k - ny * 1.9 * k],
+                [area.ox + area.fx * 0.25 * k - nx * 0.5 * k, area.oy + area.fy * 0.25 * k - ny * 0.5 * k],
               ];
         pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(X(x), Y(y)) : ctx.lineTo(X(x), Y(y))));
         ctx.closePath();
@@ -434,19 +429,29 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** Items on the ground: icon on a soft shadow, bobbing. */
+  /** Items on the ground are item balls: a Poké Ball sprite that bobs and glints. */
   private drawGroundItem(v: View, it: { itemId: string; x: number; y: number; bob: number }): void {
     const def = ITEMS[it.itemId];
     if (!def) return;
-    const sx = v.toScreenX(it.x);
-    const sy = v.toScreenY(it.y);
-    const lift = (Math.sin(it.bob * 3) * 0.5 + 0.5) * 6 * v.baseScale;
+    const sx = Math.round(v.toScreenX(it.x));
+    const sy = Math.round(v.toScreenY(it.y));
+    const s = v.spriteScale;
+    const lift = Math.round((Math.sin(it.bob * 3) * 0.5 + 0.5) * 2) * s;
     drawSoftShadow(v, sx, sy, 0.22, 0.3);
-    v.ctx.save();
-    v.ctx.shadowColor = 'rgba(255,240,200,0.6)';
-    v.ctx.shadowBlur = 8 * v.baseScale;
-    drawItemIcon(v.ctx, def.icon, sx, sy - 10 * v.baseScale - lift, 9 * v.baseScale);
-    v.ctx.restore();
+    const img = this.icons.ball(ballKind(it.itemId));
+    const ctx = v.ctx;
+    ctx.imageSmoothingEnabled = false;
+    if (img) ctx.drawImage(img, sx - 8 * s, sy - 16 * s - lift, 16 * s, 16 * s);
+    else ctx.drawImage(this.assets.placeholder('ball', 16, 16), sx - 8 * s, sy - 16 * s - lift, 16 * s, 16 * s);
+    // Shine sweeping over the ball.
+    const k = (it.bob * 0.9) % 3;
+    if (k < 0.5) {
+      ctx.save();
+      ctx.globalAlpha = 0.8 * (1 - Math.abs(k - 0.25) * 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx - 4 * s + Math.floor(k * 16) * s, sy - 14 * s - lift, s, 2 * s);
+      ctx.restore();
+    }
   }
 
   private drawOutpostPost(v: View, o: { x: number; y: number; users: unknown[] }): void {
@@ -480,7 +485,7 @@ export class MatchScreen implements Screen {
     const s = v.spriteScale;
     const kind = ballKind(th.ballId);
     const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
-    const img = this.balls.get(`${kind}-${open ? 'open' : 'closed'}`) ?? null;
+    const img = this.icons.ball(kind, open);
     drawSoftShadow(v, sx, sy, 0.2, 0.35);
     ctx.save();
     ctx.imageSmoothingEnabled = false;

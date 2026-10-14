@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { areaContains, computeDamage, makeArea, moveScore } from './battle';
+import { areaContains, computeDamage, makeArea, moveScore, R } from './battle';
 import { move, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 
@@ -17,20 +17,21 @@ function mon(dex: string, x = 0, y = 0): Mon {
 }
 
 describe('areas', () => {
-  it('line reaches three tiles ahead and cone widens', () => {
+  it('line reaches three tiles ahead and cone widens (in range-scaled tiles)', () => {
+    const k = R();
     const caster = mon('0025', 5, 5);
     const line = makeArea(move('thunder-shock'), caster, 8, 5);
-    expect(areaContains(line, 7, 5)).toBe(true);
-    expect(areaContains(line, 7, 6.2)).toBe(false);
-    expect(areaContains(line, 9.2, 5)).toBe(false);
+    expect(areaContains(line, 5 + 2 * k, 5)).toBe(true);
+    expect(areaContains(line, 5 + 2 * k, 5 + 1.2 * k)).toBe(false);
+    expect(areaContains(line, 5 + 4.2 * k, 5)).toBe(false);
     const cone = makeArea(move('razor-leaf'), caster, 5, 8);
-    expect(areaContains(cone, 5, 7)).toBe(true);
-    expect(areaContains(cone, 6.2, 7.5)).toBe(true);
-    expect(areaContains(cone, 6.2, 5.5)).toBe(false);
+    expect(areaContains(cone, 5, 5 + 2 * k)).toBe(true);
+    expect(areaContains(cone, 5 + 1.2 * k, 5 + 2.5 * k)).toBe(true);
+    expect(areaContains(cone, 5 + 1.2 * k, 5 + 0.5 * k)).toBe(false);
     const ring = makeArea(move('discharge'), caster, 5, 5);
-    expect(areaContains(ring, 6.5, 5)).toBe(true);
+    expect(areaContains(ring, 5 + 1.5 * k, 5)).toBe(true);
     expect(areaContains(ring, 5, 5)).toBe(false);
-    expect(areaContains(ring, 8, 5)).toBe(false);
+    expect(areaContains(ring, 5 + 3 * k, 5)).toBe(false);
   });
 });
 

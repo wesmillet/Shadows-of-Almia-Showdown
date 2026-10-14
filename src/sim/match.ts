@@ -73,7 +73,7 @@ export class Match {
     this.battle = new BattleSystem(this.rng);
     this.centerX = this.ground.cols / 2;
     this.centerY = this.ground.rows / 2;
-    const spawn = this.edgeSpawn();
+    const spawn = this.ground.spawns[0] ? { x: this.ground.spawns[0].x + 0.5, y: this.ground.spawns[0].y + 0.5 } : this.edgeSpawn();
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, CONFIG.player.level, this.player, spawn.x, spawn.y));
     this.placeParty(this.player);
@@ -87,7 +87,8 @@ export class Match {
     const taken = [{ x: this.player.x, y: this.player.y }];
     for (let i = 0; i < CONFIG.trainers.count; i++) {
       const [name, role] = AI_NAMES[i % AI_NAMES.length] as [string, string];
-      const spot = this.edgeSpawn(taken);
+      const planned = this.ground.spawns[i + 1];
+      const spot = planned ? { x: planned.x + 0.5, y: planned.y + 0.5 } : this.edgeSpawn(taken);
       taken.push(spot);
       const t = this.makeTrainer(name, role, false, spot.x, spot.y);
       const pool = this.rng.shuffle([...SPAWNS.trainerPool]);
@@ -102,29 +103,12 @@ export class Match {
     }
   }
 
-  /** Two outposts on opposite sides, a third of the way out from the centre, each with a member of staff on patrol. */
+  /** The outposts the island generator laid trails to, each with a member of staff on patrol. */
   private placeOutposts(): void {
-    const base = this.rng.range(0, Math.PI * 2);
     for (let i = 0; i < 2; i++) {
-      const ang = base + i * Math.PI;
-      let best: { x: number; y: number } | null = null;
-      for (let r = 9; r < 18 && !best; r += 0.5) {
-        for (let da = 0; da < 0.9 && !best; da += 0.15) {
-          for (const sgn of [1, -1]) {
-            const x = this.centerX + Math.cos(ang + da * sgn) * r;
-            const y = this.centerY + Math.sin(ang + da * sgn) * r;
-            const tx = Math.floor(x);
-            const ty = Math.floor(y);
-            let open = 0;
-            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (this.ground.reachable(tx + dx, ty + dy)) open++;
-            if (open === 9) {
-              best = { x: tx + 0.5, y: ty + 0.5 };
-              break;
-            }
-          }
-        }
-      }
-      if (!best) continue;
+      const planned = this.ground.outposts[i];
+      if (!planned) continue;
+      const best = { x: planned.x + 0.5, y: planned.y + 0.5 };
       this.outposts.push({ ...best, users: [], beacon: 0 });
       const npc = this.makeTrainer(i === 0 ? 'Outpost staff' : 'Outpost staff', i === 0 ? 'staff_a' : 'staff_b', false, best.x + 1.5, best.y + 1.2);
       const pts = [
@@ -296,7 +280,7 @@ export class Match {
       if (th.target) th.target.visual = targetVisual(th);
       if (ev === 'landed') {
         let best: Mon | null = null;
-        let bd = 0.9;
+        let bd = 1.4;
         for (const w of this.wilds) {
           if (!BattleSystem.active(w)) continue;
           const d = Math.hypot(w.x - th.x, w.y - th.y);
@@ -590,8 +574,8 @@ export class Match {
     for (let ty = 0; ty < g.rows; ty++) {
       for (let tx = 0; tx < g.cols; tx++) {
         if (!g.reachable(tx, ty)) continue;
-        if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 1.5) continue;
-        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 3) continue;
+        if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 2) continue;
+        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 10) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
         if (b !== 'water') {
@@ -701,6 +685,7 @@ export class Match {
       return;
     }
     this.time += dt;
+    this.ground.update(dt);
     for (const m of this.renderMons()) {
       m.px = m.x;
       m.py = m.y;
@@ -761,7 +746,7 @@ export class Match {
 
   /** Trainers cannot walk through wild Pokémon, other trainers or Darkrai: push them apart. */
   separate(t: Trainer): void {
-    const minD = 0.7;
+    const minD = 1.0;
     const push = (ox: number, oy: number) => {
       const dx = t.x - ox;
       const dy = t.y - oy;

@@ -169,9 +169,12 @@ export function drawSheetFrame(ctx: CanvasRenderingContext2D, f: { image: Canvas
   }
 }
 
+let worldTime = 0;
+
 export function renderWorld(view: View, match: Match, opts: WorldRenderOptions): void {
   const { alpha } = opts;
   const ctx = view.ctx;
+  worldTime = match.time;
   match.ground.drawGround(view);
   opts.groundOverlay?.(view);
 
@@ -191,15 +194,17 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   }
 
   const list: Drawable[] = [];
+  const frameOf = (d: { frames: number; fps: number }): number => (d.frames > 1 ? Math.floor(worldTime * d.fps) % d.frames : 0);
   for (const d of match.ground.decor) {
     if (!inView(d.x, d.y, 3)) continue;
     list.push({
       y: d.y,
       draw: () => {
         const k = view.pxPerTile / match.ground.tileSize;
-        ctx.imageSmoothingEnabled = true;
-        drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), d.kind === 'tree' ? 0.7 : 0.35, 0.22);
-        ctx.drawImage(d.image, view.toScreenX(d.x) - d.anchorX * k, view.toScreenY(d.y) - d.anchorY * k, d.w * k, d.h * k);
+        ctx.imageSmoothingEnabled = false;
+        if (d.kind === 'tree') drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), 0.5, 0.22);
+        const f = frameOf(d);
+        ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(view.toScreenX(d.x) - d.anchorX * k), Math.round(view.toScreenY(d.y) - d.anchorY * k), d.frameW * k, d.frameH * k);
       },
     });
   }
@@ -217,4 +222,19 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   if (opts.extra) list.push(...opts.extra);
   list.sort((a, b) => a.y - b.y);
   for (const d of list) d.draw();
+
+  // Forest canopy above everything; anyone standing under it shows through faded.
+  match.ground.drawCanopy(view);
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  for (const m of match.renderMons()) {
+    const p = monPos(m, alpha);
+    if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawMon(view, m, alpha);
+  }
+  for (const t of [match.player, ...match.trainers, ...match.npcs]) {
+    if (!t.alive) continue;
+    const p = trainerPos(t, alpha);
+    if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha);
+  }
+  ctx.restore();
 }

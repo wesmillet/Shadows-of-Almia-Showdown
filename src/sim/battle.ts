@@ -42,15 +42,19 @@ export type BattleEvent =
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 
+/** Shape sizes are designed in "big" tiles; the 16 px tileset packs more tiles per sprite, so they scale up. */
+export const R = (): number => CONFIG.battle.rangeScale;
+
 export function areaContains(a: Area, x: number, y: number): boolean {
+  const k = R();
   switch (a.shape) {
     case 'single':
-      return Math.hypot(x - a.tx, y - a.ty) < 0.65;
+      return Math.hypot(x - a.tx, y - a.ty) < 0.65 * k;
     case 'self':
-      return Math.hypot(x - a.ox, y - a.oy) < 0.4;
+      return Math.hypot(x - a.ox, y - a.oy) < 0.4 * k;
     case 'ring': {
       const d = Math.hypot(x - a.ox, y - a.oy);
-      return d > 0.3 && d < 2.3;
+      return d > 0.3 * k && d < 2.3 * k;
     }
     case 'line':
     case 'cone': {
@@ -58,8 +62,8 @@ export function areaContains(a: Area, x: number, y: number): boolean {
       const dy = y - a.oy;
       const along = dx * a.fx + dy * a.fy;
       const perp = Math.abs(dx * -a.fy + dy * a.fx);
-      if (a.shape === 'line') return along > 0.25 && along < 3.4 && perp < 0.55;
-      return along > 0.25 && along < 2.9 && perp < 0.45 + along * 0.5;
+      if (a.shape === 'line') return along > 0.25 * k && along < 3.4 * k && perp < 0.55 * k;
+      return along > 0.25 * k && along < 2.9 * k && perp < (0.45 + along / k * 0.5) * k;
     }
   }
 }
@@ -151,14 +155,14 @@ export class BattleSystem {
    * facing. A single-target move aims at the nearest hostile inside the
    * facing cone (within `range`), or straight ahead when nothing is there.
    */
-  castAt(attacker: Mon, slot: number, candidates: Iterable<Mon>, range = 3.5): boolean {
+  castAt(attacker: Mon, slot: number, candidates: Iterable<Mon>, range = 3.5 * R()): boolean {
     const id = attacker.moves[slot];
     if (!id) return false;
     const m = move(id);
     const f = DIR_VECTORS[attacker.dir] as { x: number; y: number };
     const fl = Math.hypot(f.x, f.y) || 1;
-    let tx = attacker.x + (f.x / fl) * 1.5;
-    let ty = attacker.y + (f.y / fl) * 1.5;
+    let tx = attacker.x + (f.x / fl) * 1.5 * R();
+    let ty = attacker.y + (f.y / fl) * 1.5 * R();
     let tid: number | null = null;
     if (m.shape === 'single') {
       const t = this.pickTarget(attacker, candidates, range, 70);

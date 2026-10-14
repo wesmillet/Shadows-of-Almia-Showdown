@@ -14,7 +14,9 @@ export interface ItemDef {
   effect?: 'regen' | 'sash';
   weight: number;
   stack?: number;
-  icon: { shape: 'ball' | 'bottle' | 'badge' | 'sash' | 'styler'; color: string; accent?: string };
+  /** TMs: the move type whose disc icon to show. */
+  tmType?: string;
+  icon?: { shape: 'ball' | 'bottle' | 'badge' | 'sash' | 'styler'; color: string; accent?: string };
 }
 
 export const ITEMS: Record<string, ItemDef> = {};

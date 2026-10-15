@@ -5,7 +5,10 @@ export class Input {
   private releasedThisStep = new Set<string>();
   mouseX = 0;
   mouseY = 0;
+  /** Left button held. */
   mouseDown = false;
+  /** Right button held. */
+  rightDown = false;
   private clicks: Array<{ x: number; y: number; button: number }> = [];
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -23,10 +26,18 @@ export class Input {
     canvas.addEventListener('pointermove', (e) => this.updateMouse(e));
     canvas.addEventListener('pointerdown', (e) => {
       this.updateMouse(e);
-      this.mouseDown = true;
+      if (e.button === 2) this.rightDown = true;
+      else this.mouseDown = true;
       this.clicks.push({ x: this.mouseX, y: this.mouseY, button: e.button });
     });
-    window.addEventListener('pointerup', () => (this.mouseDown = false));
+    window.addEventListener('pointerup', (e) => {
+      if (e.button === 2) this.rightDown = false;
+      else this.mouseDown = false;
+    });
+    window.addEventListener('blur', () => {
+      this.mouseDown = false;
+      this.rightDown = false;
+    });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 

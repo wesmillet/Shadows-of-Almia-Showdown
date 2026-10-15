@@ -154,15 +154,24 @@ export class MatchScreen implements Screen {
     const v = this.ctx.view;
     const duelSide = this.playerDuelSide();
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
-    if (!this.hud.hitTest(input.mouseX, input.mouseY)) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
+    const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
+    if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
+    // The throw target follows the cursor: the wild Pokémon under or nearest it.
+    if (!overHud) this.throwTarget = this.wildNear(input.mouseX, input.mouseY);
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (duelSide?.awaitingPick) {
         if (h?.kind === 'portrait') this.pickNext(h.index);
         continue;
       }
-      if (!h) this.clickWorld(c.x, c.y);
-      else if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
+      // On the field: left click casts move 1, right click move 2 (hold to keep casting).
+      if (!h) {
+        if (c.button === 0) this.castFeedback(this.match.playerCast(0));
+        else if (c.button === 2) this.castFeedback(this.match.playerCast(1));
+        continue;
+      }
+      if (c.button !== 0) continue;
+      if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
       else if (h?.kind === 'behavior') {
         const m = this.match.player.party[h.index];
         if (m && !m.fainted) {
@@ -182,14 +191,16 @@ export class MatchScreen implements Screen {
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
     // Space talks to whoever is in reach, else picks up a ball in reach.
-    if (input.pressed('Space') || input.pressed('KeyE')) this.interact();
+    if (input.pressed('Space')) this.interact();
+    // R: auto-battle on or off (the lead picks its own moves while you steer).
     if (input.pressed('KeyR')) {
-      const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
-      const m = i >= 0 ? this.match.player.party[i] : undefined;
-      if (m && isRoaming(m)) {
-        m.recall = true;
-        this.say(`${m.name} is coming back`, 1.2);
-      }
+      this.match.auto = !this.match.auto;
+      this.say(this.match.auto ? 'Auto-battle on: your lead picks its own moves' : 'Auto-battle off: you pick the moves', 1.6);
+    }
+    // Holding a mouse button on the field keeps casting that move as it comes off cooldown.
+    if (!overHud && !duelSide?.awaitingPick) {
+      if (input.mouseDown) this.match.playerCast(0);
+      if (input.rightDown) this.match.playerCast(1);
     }
     if (this.hud.ping) this.hud.ping.t -= 1 / 60;
     // 1-4 always cast; Shift+1-6 (or the bag panel) uses items. After a knockout in a battle, 1-6 picks who goes next.
@@ -203,7 +214,10 @@ export class MatchScreen implements Screen {
       if (shift) this.onItemSlot(i);
       else if (i < 4) this.castFeedback(this.match.playerCast(i));
     }
-    // Throwing: click a wild Pokémon to target it, then F throws the armed ball at it.
+    // Q and E: moves 3 and 4, next to WASD.
+    if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(2));
+    if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(3));
+    // Throwing: point at a wild Pokémon and press F.
     if (input.pressed('KeyF')) this.throwAtTarget();
     void v;
   }
@@ -245,30 +259,22 @@ export class MatchScreen implements Screen {
     if (msg) this.say(msg, 1.2);
   }
 
-  /** A click on the field: a wild Pokémon under the cursor becomes the throw target. */
-  private clickWorld(sx: number, sy: number): void {
-    const v = this.ctx.view;
-    const w = v.toWorld(sx, sy);
+  /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
+  private wildNear(sx: number, sy: number): Mon | null {
+    const w = this.ctx.view.toWorld(sx, sy);
     let best: Mon | null = null;
     let bd = Infinity;
     for (const m of this.match.wilds) {
       if (m.fainted || m.captured || m.visual.alpha < 0.5) continue;
-      // Measure from the middle of the drawn body, so big and small Pokémon are equally easy to click.
+      // Measure from the middle of the drawn body, so big and small Pokémon are equally easy to point at.
       const hTiles = (m.species.body[1] * drawScale(m.species)) / 16;
       const d = Math.hypot(w.x - m.x, w.y - (m.y - hTiles / 2));
-      if (d < Math.max(0.7, hTiles * 0.65) && d < bd) {
+      if (d < Math.max(2, hTiles * 0.8) && d < bd) {
         bd = d;
         best = m;
       }
     }
-    if (!best) {
-      this.throwTarget = null;
-      return;
-    }
-    this.throwTarget = best;
-    const p = this.match.player;
-    const far = Math.hypot(best.x - p.x, best.y - p.y) > CONFIG.catch.throwRange;
-    this.say(`Target: ${best.name} Lv ${best.level}${far ? ' (move closer to throw)' : ' · F to throw'}`, 1.4);
+    return best;
   }
 
   /** F: throw the armed ball (or the first ball in the bag) at the target, if it is in range. */
@@ -279,7 +285,7 @@ export class MatchScreen implements Screen {
     const t = this.throwTarget;
     if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {
       this.throwTarget = null;
-      return this.say('Click a wild Pokémon to target it first', 1.4);
+      return this.say('Point at a wild Pokémon, then press F', 1.4);
     }
     if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange) return this.say(`${t.name} is out of range`, 1);
     const slot = m.ballSlot(p, this.selectedItem);
@@ -325,7 +331,8 @@ export class MatchScreen implements Screen {
   private drawAim(v: View): void {
     if (!this.showHud || this.playerDuelSide()?.awaitingPick) return;
     const m = lead(this.match.player);
-    const a = this.match.aim;
+    const snap = this.match.aimSnap();
+    const a = snap ? { x: snap.x, y: snap.y } : this.match.aim;
     if (!m || !a || m.fainted) return;
     const range = 3.5 * CONFIG.battle.rangeScale;
     let dx = a.x - m.x;
@@ -352,7 +359,8 @@ export class MatchScreen implements Screen {
     ctx.setLineDash([]);
     // Reticle: the single-target hit circle, with four ticks.
     const r = 0.65 * CONFIG.battle.rangeScale * v.pxPerTile;
-    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : 'rgba(255,255,255,0.75)';
+    // White when aiming at open ground, red when snapped onto an enemy, orange when out of reach.
+    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : snap ? 'rgba(255,90,110,0.95)' : 'rgba(255,255,255,0.75)';
     ctx.lineWidth = Math.max(2, 2.5 * s);
     ctx.beginPath();
     ctx.arc(tx, ty, r, 0, Math.PI * 2);

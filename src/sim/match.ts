@@ -1169,11 +1169,34 @@ export class Match {
 
   /** Where the player is aiming (the cursor on the field, in tiles), or null to fire the way the trainer faces. */
   aim: { x: number; y: number } | null = null;
+  /** Auto-battle: the lead picks its own moves and targets while the player steers (R toggles). */
+  auto = true;
+  private autoTimer = 0;
 
   /**
-   * Player input: the lead casts move `slot` toward the aim point. Nothing
-   * locks on; a single-target move lands where it was aimed, so a moving
-   * Pokémon can step out of it.
+   * Aim assist: the enemy nearest the cursor, if one is within 1.6 tiles of it. Moves then go
+   * where that Pokémon stands when they are cast; they still land on that spot, so it can step out.
+   */
+  aimSnap(): Mon | null {
+    const m = lead(this.player);
+    const a = this.aim;
+    if (!m || !a) return null;
+    let best: Mon | null = null;
+    let bd = 1.6;
+    for (const c of this.mons()) {
+      if (c === m || !BattleSystem.active(c) || !this.battle.isEnemy(m, c)) continue;
+      const d = Math.hypot(c.x - a.x, c.y - a.y);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Player input: the lead casts move `slot` toward the aim point (snapped onto an enemy near
+   * the cursor). Nothing tracks the target after the cast, so a moving Pokémon can step out.
    */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
@@ -1183,10 +1206,28 @@ export class Match {
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     const f = DIR_VECTORS[p.dir] as { x: number; y: number };
-    const a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    const snap = this.aimSnap();
+    const a = snap ? { x: snap.x, y: snap.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
     return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
+  }
+
+  /** Auto-battle for the player's lead: the best ready move at the nearest enemy in reach. */
+  private stepAutoLead(dt: number): void {
+    if (!this.auto) return;
+    const m = lead(this.player);
+    if (!m || m.casting || m.status === 'sleep') return;
+    this.autoTimer -= dt;
+    if (this.autoTimer > 0) return;
+    this.autoTimer = 0.45;
+    const t = this.battle.pickTarget(m, this.mons(), 5.5);
+    if (!t) return;
+    const slot = this.battle.chooseMove(m, t);
+    if (slot < 0) return;
+    m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
+    m.anim.dir = m.dir;
+    this.battle.castToward(m, slot, t.x, t.y);
   }
 
   /** Hostile Pokémon pick their own targets: nearest enemy within `aggro`, then cast on cooldown. */
@@ -1238,6 +1279,7 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
+    this.stepAutoLead(dt);
     for (const t of this.trainers) if (t.alive && !t.duelId) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();

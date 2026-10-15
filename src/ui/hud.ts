@@ -68,6 +68,9 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   ctx.fillText(label, sx, y - 3 * baseScale);
 }
 
+/** The key or button that casts each move slot (1-4 work too). */
+const MOVE_KEYS = ['LMB', 'RMB', 'Q', 'E'];
+
 const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f' };
 
 export class Hud {
@@ -497,6 +500,16 @@ export class Hud {
     ctx.fillStyle = 'rgba(12,12,22,0.55)';
     ctx.fill();
     ctx.restore();
+    // Auto-battle state above the wheel.
+    const autoText = match.auto ? 'AUTO ON · R' : 'AUTO OFF · R';
+    ctx.font = this.font(10, '800');
+    const aw = ctx.measureText(autoText).width + 16 * s;
+    const ay = cy - R - r - 30 * s;
+    ctx.fillStyle = match.auto ? 'rgba(70,160,110,0.9)' : 'rgba(60,50,90,0.85)';
+    ctx.beginPath();
+    ctx.roundRect(cx - aw / 2, ay, aw, 18 * s, 9 * s);
+    ctx.fill();
+    this.label(ctx, autoText, cx, ay + 13 * s, 10, '#ffffff', 'center', '800');
     m.moves.forEach((id, i) => {
       const def = move(id);
       const [ox, oy] = offsets[i] as [number, number];
@@ -526,7 +539,7 @@ export class Hud {
           ctx.fill();
         }
         ctx.restore();
-        this.label(ctx, String(i + 1), x, y - 4 * s, 15, '#ffffff', 'center', '800');
+        this.label(ctx, MOVE_KEYS[i] ?? String(i + 1), x, y - 4 * s, 12, '#ffffff', 'center', '800', r * 1.4);
         this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600', ri * 2 - 6 * s);
         if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
         this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
@@ -560,7 +573,7 @@ export class Hud {
         ctx.stroke();
       }
       ctx.restore();
-      this.label(ctx, String(i + 1), x, y - 4 * s, 15, '#ffffff', 'center', '800');
+      this.label(ctx, MOVE_KEYS[i] ?? String(i + 1), x, y - 4 * s, 12, '#ffffff', 'center', '800', r * 1.4);
       this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600', r * 2 - 8 * s);
       if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
       this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });

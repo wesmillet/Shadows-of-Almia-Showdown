@@ -1,5 +1,12 @@
 import type { Input } from '../core/input';
 import type { View } from '../render/view';
+import type { PixelUi } from './pixelUi';
+
+/** The pixel UI kit buttons are drawn with once it has loaded (set at boot). */
+let skin: PixelUi | null = null;
+export function setUiSkin(ui: PixelUi): void {
+  skin = ui;
+}
 
 /** One full-canvas screen (title, roll, match, results). */
 export interface Screen {
@@ -17,6 +24,11 @@ export interface GameContext {
 
 /** Shared modern-menu drawing helpers (no retro styling). */
 export function panel(view: View, x: number, y: number, w: number, h: number, radius = 14, fill = 'rgba(12,12,22,0.72)', ctx: CanvasRenderingContext2D = view.hud): void {
+  // The pixel kit's wood panel once it has loaded.
+  if (skin?.ready) {
+    skin.box(ctx, x, y, w, h, Math.max(2, Math.round(3 * view.baseScale)), 'dt');
+    return;
+  }
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, radius);
@@ -53,8 +65,25 @@ export function text(view: View, s: string, x: number, y: number, size: number, 
   ctx.restore();
 }
 
-export function button(view: View, label: string, x: number, y: number, w: number, h: number, hover: boolean, accent = '#8a6cff'): void {
+/** Accent colours meaning "the main action" (a red ribbon) and "not available" (a faded plate). */
+const PRIMARY = '#8a6cff';
+const DISABLED = '#44405a';
+
+export function button(view: View, label: string, x: number, y: number, w: number, h: number, hover: boolean, accent = PRIMARY): void {
   const ctx = view.hud;
+  // The pixel kit: the main action is a ribbon, other buttons are plates.
+  if (skin?.ready) {
+    const ribbon = accent === PRIMARY;
+    ctx.save();
+    if (accent === DISABLED) ctx.globalAlpha = 0.55;
+    const lift = hover && accent !== DISABLED ? -2 * view.baseScale : 0;
+    skin.strip(ctx, ribbon ? 'ribbon' : 'plate', x, y + lift, w, h, false);
+    ctx.restore();
+    text(view, label, x + w / 2, y + h / 2 + 1 + lift, h * 0.36 / view.baseScale, {
+      align: 'center', baseline: 'middle', color: ribbon ? '#fff7e8' : accent === DISABLED ? '#5c5670' : '#2a2438', shadow: ribbon,
+    });
+    return;
+  }
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, h / 2);

@@ -13,7 +13,7 @@ import { RangerSprites } from './sprites/rangerSprite';
 import { EndScreen } from './ui/endScreen';
 import { MatchScreen } from './ui/matchScreen';
 import { RollScreen } from './ui/rollScreen';
-import { text, type GameContext, type Screen } from './ui/screens';
+import { setUiSkin, text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
@@ -84,6 +84,7 @@ async function boot(): Promise<void> {
   const rangers = await rangersP;
   const ui = new PixelUi(assets);
   await ui.load();
+  setUiSkin(ui);
   const t1 = performance.now();
   if (params.has('verify')) {
     await verifyDemoRoom(assets, view);

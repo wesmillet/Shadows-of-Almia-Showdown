@@ -106,15 +106,6 @@ export class RollScreen implements Screen {
       }
     } else this.drawCard(this.pick, c.x, c.y, c.w, c.h, false);
     h.restore();
-    if (!spinning) {
-      h.save();
-      h.strokeStyle = 'rgba(215,198,255,0.9)';
-      h.lineWidth = 2.5 * s;
-      h.beginPath();
-      h.roundRect(c.x, c.y, c.w, c.h, 18 * s);
-      h.stroke();
-      h.restore();
-    }
     const b = this.startRect();
     button(v, spinning ? 'Rolling…' : `Start with ${this.pick.def.name}`, b.x, b.y, b.w, b.h, !spinning && hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), spinning ? '#44405a' : '#8a6cff');
     text(v, 'Enter or Space to start', v.width / 2, v.height - 18 * s, 12, { align: 'center', color: '#9f97bb' });

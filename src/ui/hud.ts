@@ -383,12 +383,11 @@ export class Hud {
       const ps = 46 * s;
       const px = x + 8 * s;
       const py = y0 + 8 * s;
+      this.ui.slot(ctx, px - 3 * s, py - 3 * s, ps + 6 * s, Math.max(1, Math.round(this.px / 2)));
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(px, py, ps, ps, 8);
+      ctx.roundRect(px, py, ps, ps, 4);
       ctx.clip();
-      ctx.fillStyle = '#1c1830';
-      ctx.fillRect(px, py, ps, ps);
       const f = m.sprites.portraitSource();
       ctx.imageSmoothingEnabled = false;
       const scale = Math.max(1, Math.floor(ps / Math.max(f.w, f.h)));
@@ -494,6 +493,32 @@ export class Hud {
       const ready = cd <= 0 && m.status !== 'sleep';
       const hover = Math.hypot(st.mouseX - x, st.mouseY - y) < r;
       const color = typeColor(def.type);
+      // A wood ring frame (Kenney pixel kit) round a type-coloured face.
+      if (this.ui.circle(ctx, x, y, r + 3 * s, ready && hover ? 'parchment' : 'wood')) {
+        const ri = r * 0.78;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, ri, 0, Math.PI * 2);
+        const gi = ctx.createRadialGradient(x - ri * 0.3, y - ri * 0.4, ri * 0.1, x, y, ri);
+        gi.addColorStop(0, ready ? lighten(color, 0.3) : darken(color, 0.5));
+        gi.addColorStop(1, ready ? darken(color, 0.12) : darken(color, 0.7));
+        ctx.fillStyle = gi;
+        ctx.fill();
+        if (!ready && cd > 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.arc(x, y, ri, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (cd / def.cooldown));
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+        this.label(ctx, String(i + 1), x, y - 4 * s, 15, '#ffffff', 'center', '800');
+        this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600');
+        if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
+        this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
+        return;
+      }
       ctx.save();
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -530,6 +555,10 @@ export class Hud {
     // Slots not learned yet: faint and empty until a level-up fills them.
     for (let i = m.moves.length; i < 4; i++) {
       const [ox, oy] = offsets[i] as [number, number];
+      if (this.ui.circle(ctx, cx + ox, cy + oy, r + 3 * s, 'slate')) {
+        this.label(ctx, '—', cx + ox, cy + oy + 5 * s, 14, 'rgba(255,255,255,0.45)', 'center', '600');
+        continue;
+      }
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx + ox, cy + oy, r, 0, Math.PI * 2);
@@ -562,9 +591,11 @@ export class Hud {
       const tx = x0 - 8 * s + i * (tabW + 4 * s);
       const ty = y0 - 8 * s - 18 * s;
       const active = (i === 1) === st.gearTab;
-      ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
-      ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
-      this.label(ctx, name, tx + tabW / 2, ty + 12 * s, 9, active ? '#fff' : '#b9b4cc', 'center', '800');
+      if (!this.ui.tab(ctx, tx, ty - 3 * s, tabW, 20 * s, Math.max(1, Math.round(this.px / 2)), active)) {
+        ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
+        ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
+      }
+      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#4a2d1a' : '#e8eef6', 'center', '800');
       this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
     });
     this.label(ctx, 'Tab', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
@@ -573,22 +604,25 @@ export class Hud {
       const x = x0 + i * (slot + gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, slot, slot);
       const selected = st.selectedItem === i;
-      ctx.beginPath();
-      ctx.roundRect(x, y0, slot, slot, 8);
-      ctx.fillStyle = selected ? 'rgba(120,90,220,0.6)' : hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-      ctx.fill();
-      if (selected) {
-        ctx.strokeStyle = '#ffe9a8';
-        ctx.lineWidth = 2 * s;
-        ctx.stroke();
+      // Parchment slots in wood frames (Kenney pixel kit); rivets mark the armed item.
+      const kit = this.ui.slot(ctx, x, y0, slot, Math.max(1, Math.round(this.px / 2)), selected);
+      if (!kit) {
+        ctx.beginPath();
+        ctx.roundRect(x, y0, slot, slot, 8);
+        ctx.fillStyle = selected ? 'rgba(120,90,220,0.6)' : 'rgba(255,255,255,0.06)';
+        ctx.fill();
       }
-      this.label(ctx, String(i + 1), x + 4 * s, y0 + 11 * s, 9, '#b9b4cc', 'left', '600');
+      if (hover) {
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(x + 4 * s, y0 + 4 * s, slot - 8 * s, slot - 8 * s);
+      }
+      this.label(ctx, String(i + 1), x + 6 * s, y0 + 13 * s, 9, kit ? '#8a5a2a' : '#b9b4cc', 'left', '600');
       if (id) {
         const def = ITEMS[id];
         if (def) {
           this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, 36 * s, def.tmType);
-          this.label(ctx, def.kind === 'tm' ? def.name.replace('TM ', '') : def.short, x + slot / 2, y0 + slot - 4 * s, 8, '#ffffff', 'center', '700');
-          if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 4 * s, y0 + 11 * s, 9, '#ffe9a8', 'right', '800');
+          this.label(ctx, def.kind === 'tm' ? def.name.replace('TM ', '') : def.short, x + slot / 2, y0 + slot - 6 * s, 8, kit ? '#4a2d1a' : '#ffffff', 'center', '700');
+          if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 6 * s, y0 + 13 * s, 9, kit ? '#b0401a' : '#ffe9a8', 'right', '800');
         }
       }
       this.itemRects.push({ x, y: y0, w: slot, h: slot });

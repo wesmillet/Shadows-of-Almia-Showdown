@@ -14,7 +14,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import type { SpriteRegistry } from '../sprites/pokemonSprite';
 import { MatchScreen } from './matchScreen';
 import type { PixelUi } from './pixelUi';
-import { text, type GameContext } from './screens';
+import { panel, text, type GameContext } from './screens';
 
 /** Seconds each move stays on screen in the slideshow. */
 const HOLD = 2.6;
@@ -165,12 +165,7 @@ export class MoveGallery extends MatchScreen {
     const w = Math.min(v.width - 32 * s, 640 * s);
     const x = v.width / 2 - w / 2;
     const y = 16 * s;
-    h.save();
-    h.fillStyle = 'rgba(14,8,28,0.86)';
-    h.beginPath();
-    h.roundRect(x, y, w, 96 * s, 12 * s);
-    h.fill();
-    h.restore();
+    panel(v, x, y, w, 100 * s);
     const color = typeColor(mv.type);
     text(v, mv.name, v.width / 2, y + 36 * s, 26, { align: 'center', color: '#f4f1ff' });
     // Type chip

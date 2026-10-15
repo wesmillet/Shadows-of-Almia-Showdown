@@ -397,7 +397,7 @@ export class TitleScreen implements Screen {
     const hover = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
     button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hover);
     const d = this.demoRect();
-    button(v, 'Demo Team (D)', d.x, d.y, d.w, d.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, d.x, d.y, d.w, d.h));
+    button(v, 'Demo Team (D)', d.x, d.y, d.w, d.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, d.x, d.y, d.w, d.h), '#4f7ad6');
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#9f97bb' });
     const g = this.galleryRect();
     button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');

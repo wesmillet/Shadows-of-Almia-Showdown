@@ -6,6 +6,8 @@
 - Terrain tileset and decor: Sunnyside World Asset Pack V2.1 by Daniel Diggle (danieldiggle.itch.io/sunnyside). See assets/tiles/sunnyside/README.md.
 - Move and status effects: Pokémon Ranger 3: Guardian Signs attack effects, ripped for The Spriters Resource. See assets/fx/guardian_signs/README.md.
 - UI font: BoldPixels by YukiPixels (yukipixels.itch.io/boldpixels), CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0/). Unmodified; license text in assets/fonts/BoldPixels-LICENSE.txt.
+- Menu panels, buttons, move rings, bag slots and tabs: UI Pack - Pixel Adventure by Kenney (kenney.nl), CC0. A subset of its tiles is in assets/ui/kenney/ with the license.
+- Item icons: Pokémon Platinum bag icons from the pret/pokeplatinum decompilation. See assets/items/CREDITS.txt.
 
 ## Map art
 

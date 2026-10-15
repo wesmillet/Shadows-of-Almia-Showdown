@@ -28,7 +28,7 @@ import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
 import { drawSoftShadow } from '../render/world';
-import { rgba, text, uiFont, type GameContext, type Screen } from './screens';
+import { panel, rgba, text, uiFont, type GameContext, type Screen } from './screens';
 
 /** Effects used outside moves: the capture sequence, Bad Dreams and status icons. */
 export const EXTRA_FX = {
@@ -1176,12 +1176,7 @@ export class MatchScreen implements Screen {
     const w = 420 * s;
     const x = v.width / 2 - w / 2;
     const y = 12 * s;
-    h.save();
-    h.fillStyle = 'rgba(14,8,28,0.82)';
-    h.beginPath();
-    h.roundRect(x, y, w, 44 * s, 10 * s);
-    h.fill();
-    h.restore();
+    panel(v, x, y, w, 50 * s);
     const balls = (t: Trainer, cx: number) => {
       const n = t.party.length;
       for (let i = 0; i < n; i++) {
@@ -1208,15 +1203,7 @@ export class MatchScreen implements Screen {
     const ph = (58 + party.length * 30) * s;
     const px = v.width / 2 - pw / 2;
     const py = v.height * 0.32;
-    h.save();
-    h.fillStyle = 'rgba(14,8,28,0.9)';
-    h.beginPath();
-    h.roundRect(px, py, pw, ph, 12 * s);
-    h.fill();
-    h.strokeStyle = 'rgba(180,140,255,0.6)';
-    h.lineWidth = 2 * s;
-    h.stroke();
-    h.restore();
+    panel(v, px, py, pw, ph);
     text(v, 'Choose your next Pokémon', v.width / 2, py + 28 * s, 16, { align: 'center', color: '#e9ddff' });
     party.forEach((m, i) => {
       const ok = !m.fainted && !m.captured;

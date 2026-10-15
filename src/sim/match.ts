@@ -879,7 +879,8 @@ export class Match {
   /** Walk-cycle phase for the overworld sheet. */
   afterTrainerMove(t: Trainer, moved: number): void {
     t.moving = moved > 1e-4;
-    if (t.moving) t.walkPhase = (t.walkPhase + moved / 0.9) % 1;
+    // One walk cycle per 2.2 tiles: the side run has two strides in it, so feet land about five times a second at full speed.
+    if (t.moving) t.walkPhase = (t.walkPhase + moved / 2.2) % 1;
   }
 
   /** The world a party sees when it steers and fights. */

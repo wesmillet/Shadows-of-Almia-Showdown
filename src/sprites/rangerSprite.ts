@@ -78,7 +78,10 @@ export class RangerSheet {
       const ph = this.assets.placeholder(this.role, w, h);
       return { image: ph, sx: 0, sy: 0, w, h, footY: h, flip: false, placeholder: true };
     }
-    const { frames, flip } = this.clip(`${moving ? 'walk' : 'idle'}_${facing}`);
+    const clip = this.clip(`${moving ? 'walk' : 'idle'}_${facing}`);
+    const flip = clip.flip;
+    // Three-frame walks (step, stand, step) play as a four-beat cycle: step, stand, other step, stand.
+    const frames = clip.frames.length === 3 ? [clip.frames[0], clip.frames[1], clip.frames[2], clip.frames[1]] as number[] : clip.frames;
     const idx = frames[Math.floor(((phase % 1) + 1) % 1 * frames.length) % frames.length] ?? 0;
     const cellW = def.frame_w || Math.floor(this.image.naturalWidth / Math.max(1, def.frames));
     const cellH = def.frame_h || this.image.naturalHeight;

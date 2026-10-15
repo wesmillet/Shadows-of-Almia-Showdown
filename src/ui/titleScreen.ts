@@ -64,6 +64,7 @@ export class TitleScreen implements Screen {
     assets: Assets,
     private readonly onStart: () => void,
     private readonly onDemo: () => void,
+    private readonly onGallery: () => void,
   ) {
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
@@ -133,6 +134,14 @@ export class TitleScreen implements Screen {
     return { x: v.width / 2 - 120 * s, y: v.height * 0.64 + 68 * s, w: 240 * s, h: 44 * s };
   }
 
+  /** Move Gallery: every move played in turn. */
+  private galleryRect(): { x: number; y: number; w: number; h: number } {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const d = this.demoRect();
+    return { x: d.x, y: d.y + d.h + 30 * s, w: d.w, h: 40 * s };
+  }
+
   step(dt: number, input: Input): void {
     this.t += dt;
     this.loopT += dt;
@@ -142,7 +151,12 @@ export class TitleScreen implements Screen {
     for (const c of input.takeClicks()) {
       if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.onStart();
       else if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) this.onDemo();
+      else {
+        const g = this.galleryRect();
+        if (hit(c.x, c.y, g.x, g.y, g.w, g.h)) this.onGallery();
+      }
     }
+    if (input.pressed('KeyM')) this.onGallery();
     if (input.pressed('Enter') || input.pressed('Space')) this.onStart();
     if (input.pressed('KeyD')) this.onDemo();
   }
@@ -385,6 +399,8 @@ export class TitleScreen implements Screen {
     const d = this.demoRect();
     button(v, 'Demo Team (D)', d.x, d.y, d.w, d.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, d.x, d.y, d.w, d.h));
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#9f97bb' });
+    const g = this.galleryRect();
+    button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');
     text(v, 'WASD move · 1-4 moves · Shift+1-6 items · Space talk / pick up · hold F to throw', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;

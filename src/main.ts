@@ -15,6 +15,7 @@ import { MatchScreen } from './ui/matchScreen';
 import { RollScreen } from './ui/rollScreen';
 import { text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
+import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
 
@@ -131,6 +132,16 @@ async function boot(): Promise<void> {
     void startMatch(team.length ? team : ['0025'], { level: DEMO_LEVEL, partyCap: team.length });
   };
 
+  /** Move Gallery (title button, M, or ?moves=1): every move played on a practice dummy. */
+  const startGallery = async (): Promise<void> => {
+    await rest;
+    const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, ['0026'], { level: 50 });
+    debug.showdown.match = match;
+    const screen = new MoveGallery(game, match, rangers, assets, ui, sprites, () => void showTitle(false));
+    debug.showdown.screen = screen;
+    game.setScreen(screen);
+  };
+
   const showRoll = (): void => {
     game.setScreen(new RollScreen(game, sprites, currentSeed, (dex) => void startMatch([dex])));
   };
@@ -145,12 +156,14 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    game.setScreen(new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo));
+    game.setScreen(new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery()));
   };
 
   // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).
   const party = params.get('party');
-  if (params.get('demo')) {
+  if (params.get('moves')) {
+    void startGallery();
+  } else if (params.get('demo')) {
     startDemo();
   } else if (party) {
     const starters = party.split(',').filter((d) => SPECIES.has(d));

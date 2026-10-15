@@ -55,6 +55,12 @@ export class MatchScreen implements Screen {
   private readonly vfx = new VfxLayer();
   /** Effects drawn flat on the ground, under the Pokémon (rings, puddles, cracks). */
   private readonly groundVfx = new VfxLayer();
+  /** The match HUD (bag, party, move wheel, info bars); screens built on this one can hide it. */
+  protected showHud = true;
+  /** Where the camera looks instead of the player (null = follow the player or the battle). */
+  protected cameraFocus(): { x: number; y: number } | null {
+    return null;
+  }
   /** Camera zoom override for inspecting effects (showdown.screen.debugZoom). */
   debugZoom: number | null = null;
   /** Hit feedback waiting for its projectile to land. */
@@ -1098,7 +1104,11 @@ export class MatchScreen implements Screen {
     if (Math.abs(targetZoom - v.zoom) < 0.003) v.zoom = targetZoom;
     let fx = p.px + (p.x - p.px) * alpha;
     let fy = p.py + (p.y - p.py) * alpha;
-    if (duel && fighting) {
+    const focus = this.cameraFocus();
+    if (focus) {
+      fx = focus.x;
+      fy = focus.y;
+    } else if (duel && fighting) {
       const ma = duel.a.mon;
       const mb = duel.b.mon;
       fx = ma && mb ? (ma.x + mb.x) / 2 : duel.cx;
@@ -1144,8 +1154,10 @@ export class MatchScreen implements Screen {
       clearRadius: zone ? zone.r * v.pxPerTile * Math.min(1, zone.t / 1.5) : 0,
       time: this.match.time,
     });
-    this.hud.draw(this.match, this.hudState(v));
-    this.drawInfoBars(v, alpha);
+    if (this.showHud) {
+      this.hud.draw(this.match, this.hudState(v));
+      this.drawInfoBars(v, alpha);
+    } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
     this.drawDuelHud(v);
     this.drawOverlay(v);

@@ -22,6 +22,11 @@ export class SpriteRegistry {
     }));
   }
 
+  /** True once a species' sprites have been loaded. */
+  has(dex: string): boolean {
+    return this.sets.has(dex);
+  }
+
   get(dex: string): PokemonSprites {
     let s = this.sets.get(dex);
     if (!s) {

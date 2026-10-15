@@ -68,6 +68,7 @@ impact on the body, at most one aftershock.
 
 | Input | Action |
 | --- | --- |
+| title screen: Move Gallery button, M, or `?moves=1` | every move in the game cast in turn at a practice dummy, by a Pokémon that learns it: Left/Right browse, Space replays, P pauses the slideshow, T filters by type, Esc returns to the title |
 | title screen: Demo Team button, D, or `?demo=1` | skip the roll and start with a level 100 team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton (party cap 5) |
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
 | 1-4, or click the move wheel | the lead casts a move where you face (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |

@@ -1,6 +1,6 @@
 /**
  * The match screen: feeds input to the simulation, turns battle events into
- * VFX, numbers, shake and hit-stop, draws the world through the lighting
+ * VFX, numbers and hit-stop, draws the world through the lighting
  * pass and the HUD on top.
  */
 import type { Input } from '../core/input';
@@ -303,10 +303,8 @@ export class MatchScreen implements Screen {
           this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
           if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
           else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
-          // Shake and hit-stop only for hits the player is part of; distant AI fights stay quiet.
+          // Hit-stop only for hits the player is part of; distant AI fights stay quiet.
           if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
-            const frac = ev.damage / ev.target.maxHp;
-            v.shake(clamp(4 + frac * 40, 4, 20), 0.22 + frac * 0.2);
             this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
           }
         }

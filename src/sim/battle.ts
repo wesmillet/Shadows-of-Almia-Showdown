@@ -1,7 +1,7 @@
 /**
  * Overworld battles: engagement, telegraphed casts, area shapes, damage,
  * status and knockouts. Pure simulation; it reports what happened through
- * `events`, which the renderer turns into VFX, numbers, shake and hit-stop.
+ * `events`, which the renderer turns into VFX, numbers and hit-stop.
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';

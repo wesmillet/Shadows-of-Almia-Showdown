@@ -970,7 +970,8 @@ export class Match {
 
   private checkElimination(): void {
     for (const t of this.allTrainers) {
-      if (t.alive && t.party.length > 0 && !lead(t)) this.eliminate(t);
+      // Out only when nothing is left standing; members out roaming still count.
+      if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) this.eliminate(t);
     }
     if (!this.player.alive) this.outcome = 'loss';
     else if (this.trainers.length > 0 && this.trainers.every((t) => !t.alive)) this.outcome = 'win';

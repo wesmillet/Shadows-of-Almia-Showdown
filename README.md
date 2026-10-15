@@ -211,13 +211,13 @@ src/ground     GroundRenderer, procedural painter, Tiled loader
 src/render     view/camera (continuous ground scale, integer sprite scale), world drawing, WebGL lighting pass
 src/sim        pure simulation: data accessors, battle (areas, damage, status), AI, catching, darkness, items, match
 src/vfx        Guardian Signs effect sheets (fxLibrary, fxVisuals), the procedural fallback families, lights, floating numbers
-src/ui         title, starter roll, match screen (events → VFX/shake/hit-stop), HUD, results
+src/ui         title, starter roll, match screen (events → VFX/hit-stop), HUD, results
 scripts/       fetch-sprites.py (sparse checkout + credits)
 ```
 
 The simulation never touches a canvas; the battle system emits events
 (`cast`, `resolve`, `hit`, `status`, `faint`, `caught`, …) that the match
-screen turns into effects, hit-stop, shake and floating numbers.
+screen turns into effects, hit-stop and floating numbers.
 
 ## Lighting
 

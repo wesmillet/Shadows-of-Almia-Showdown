@@ -23,10 +23,6 @@ export class View {
   camY = 0;
   zoom = 1;
   targetZoom = 1;
-  shakeX = 0;
-  shakeY = 0;
-  private shakeAmp = 0;
-  private shakeTime = 0;
 
   constructor(stage: HTMLElement, readonly tileSize: number) {
     this.sceneCanvas = document.createElement('canvas');
@@ -97,17 +93,17 @@ export class View {
   }
 
   toScreenX(wx: number): number {
-    return (wx - this.camX) * this.pxPerTile + Math.floor(this.width / 2) + this.shakeX;
+    return (wx - this.camX) * this.pxPerTile + Math.floor(this.width / 2);
   }
 
   toScreenY(wy: number): number {
-    return (wy - this.camY) * this.pxPerTile + Math.floor(this.height / 2) + this.shakeY;
+    return (wy - this.camY) * this.pxPerTile + Math.floor(this.height / 2);
   }
 
   toWorld(sx: number, sy: number): { x: number; y: number } {
     return {
-      x: (sx - this.width / 2 - this.shakeX) / this.pxPerTile + this.camX,
-      y: (sy - this.height / 2 - this.shakeY) / this.pxPerTile + this.camY,
+      x: (sx - this.width / 2) / this.pxPerTile + this.camX,
+      y: (sy - this.height / 2) / this.pxPerTile + this.camY,
     };
   }
 
@@ -118,12 +114,7 @@ export class View {
     return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
   }
 
-  shake(amplitudePx: number, seconds = 0.25): void {
-    this.shakeAmp = Math.max(this.shakeAmp, amplitudePx);
-    this.shakeTime = Math.max(this.shakeTime, seconds);
-  }
-
-  /** Eases the camera toward a target and advances the shake. Called per render frame. */
+  /** Eases the camera toward a target. Called per render frame. */
   follow(tx: number, ty: number, dt: number, cols: number, rows: number): void {
     const k = 1 - Math.exp(-dt * 8);
     this.camX = lerp(this.camX, tx, k);
@@ -132,17 +123,6 @@ export class View {
     const halfH = this.height / 2 / this.pxPerTile;
     this.camX = clamp(this.camX, Math.min(halfW, cols / 2), Math.max(cols - halfW, cols / 2));
     this.camY = clamp(this.camY, Math.min(halfH, rows / 2), Math.max(rows - halfH, rows / 2));
-    if (this.shakeTime > 0) {
-      this.shakeTime -= dt;
-      const a = this.shakeAmp * clamp(this.shakeTime / 0.25, 0, 1);
-      // Shake in whole pixels of the integer grid.
-      this.shakeX = Math.round((Math.random() * 2 - 1) * a / View.PIXEL_SCALE) * View.PIXEL_SCALE;
-      this.shakeY = Math.round((Math.random() * 2 - 1) * a / View.PIXEL_SCALE) * View.PIXEL_SCALE;
-      if (this.shakeTime <= 0) {
-        this.shakeAmp = 0;
-        this.shakeX = this.shakeY = 0;
-      }
-    }
   }
 
   snapTo(x: number, y: number): void {

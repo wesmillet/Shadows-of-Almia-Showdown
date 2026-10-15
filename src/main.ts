@@ -23,8 +23,8 @@ import type { GroundRenderer } from './ground/types';
 const DEMO_PARTY = ['0392', '0384-shiny', '0381', '0385-shiny', '0959'];
 const DEMO_LEVEL = 100;
 
-/** Pokémon on the title screen: Darkrai and the ones it puts to sleep. */
-export const TITLE_CAST = ['0491', '0025', '0387', '0133', '0393', '0390', '0447'];
+/** Pokémon on the title screen: Darkrai, Cresselia, and the small ones that wander in. */
+export const TITLE_CAST = ['0491', '0488', '0025', '0387', '0133', '0393', '0390', '0447'];
 
 /** A set of species plus everything they can evolve into. */
 function withEvolutions(dexes: Iterable<string>): Set<string> {
@@ -172,7 +172,9 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    game.setScreen(new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery()));
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery());
+    debug.showdown.screen = title;
+    game.setScreen(title);
   };
 
   // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).

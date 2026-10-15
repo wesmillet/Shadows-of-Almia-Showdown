@@ -22,6 +22,11 @@ repository path as the Vite base; the dev server stays at `/`.
 
 ## Playing
 
+The title screen is a live corner of the island: small wild Pokémon wander
+in, Darkrai drifts between the trees putting them to sleep with Dark Void and
+blasting the sleepers, and now and then Cresselia flies in, wakes them with
+moonlight and fights Darkrai until one of them is driven off.
+
 Title → **Roll Starter** → three reels each roll a rarity, then a Pokémon of
 that rarity. Pick one of the three (click its card, or press 1-3); that is
 your starter (no rerolls).

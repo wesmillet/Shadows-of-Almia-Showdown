@@ -19,7 +19,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { BEHAVIOR_LABEL, isRoaming, nextBehavior } from '../sim/party';
-import { PHASE_SECONDS, ballKind, ballWobble, type Throw } from '../sim/catching';
+import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import type { PixelUi } from './pixelUi';
@@ -952,35 +952,28 @@ export class MatchScreen implements Screen {
     const sy = v.toScreenY(th.y);
     const kind = ballKind(th.ballId);
     drawSoftShadow(v, sx, sy, 0.12, 0.35);
-    // A ball is small next to a trainer: the battle sheet's 13 px balls at two thirds of the world scale.
-    const s = Math.max(1, Math.round((v.spriteScale * 2) / 3));
-    const sheet = this.icons.throwSheet?.def;
-    let row = sheet?.rows.closed ?? 4;
-    if (sheet) {
-      if (th.phase === 'flying') row = sheet.rows.spin[Math.floor(th.t * 16) % sheet.rows.spin.length] ?? row;
-      else if (th.phase === 'hit') row = th.phaseT > 0.08 ? (sheet.rows.open[0] ?? row) : row;
-      else if (th.phase === 'absorb') row = sheet.rows.open[1] ?? row;
-      else if (th.phase === 'burst') {
-        const b = sheet.rows.burst;
-        row = b[Math.min(b.length - 1, Math.floor((th.phaseT / PHASE_SECONDS.burst) * b.length))] ?? row;
-      }
-    }
-    const fr = this.icons.throwFrame(kind, row);
+    // The crisp 18 px overworld ball at the ground balls' scale (whole screen pixels only).
+    const s = Math.max(1, Math.round(v.spriteScale / 3));
+    const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
+    const img = this.icons.ball(kind, open);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
+    // In flight it tumbles in quarter turns, which keep every pixel square; on the ground it rocks.
+    const lift = th.phase === 'flying' ? 9 * s : 0;
     ctx.translate(Math.round(sx), Math.round(sy - th.z * v.pxPerTile));
-    let rot = th.phase === 'flying' ? 0 : ballWobble(th);
+    let rot = th.phase === 'flying' ? (Math.floor(th.t * 14) % 4) * (Math.PI / 2) : ballWobble(th);
     if (th.phase === 'click') rot = Math.sin(th.phaseT * 60) * 0.06;
-    ctx.rotate(rot);
-    if (fr) {
-      // Anchored at the bottom of the ball so wobbles rock on the ground.
-      const [cx] = fr.def.ballCenter;
-      ctx.drawImage(fr.img, fr.sx, fr.sy, fr.size, fr.size, -(cx + 0.5) * s, -fr.def.ballBottom * s, fr.size * s, fr.size * s);
-    } else {
-      const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
-      const img = this.icons.ball(kind, open);
-      const k = s / 2;
-      if (img) ctx.drawImage(img, -Math.floor((img.width * k) / 2), -img.height * k, img.width * k, img.height * k);
+    if (img) {
+      const w = img.width * s;
+      const h = img.height * s;
+      if (th.phase === 'flying') {
+        ctx.translate(0, -lift);
+        ctx.rotate(rot);
+        ctx.drawImage(img, -Math.round(w / 2), -Math.round(h / 2), w, h);
+      } else {
+        ctx.rotate(rot);
+        ctx.drawImage(img, -Math.round(w / 2), -h, w, h);
+      }
     }
     ctx.restore();
     // Beam of light pulling the Pokémon in / letting it out.

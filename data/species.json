@@ -20772,6 +20772,79 @@
         17,
         26
       ]
+    },
+    {
+      "dex": "0488",
+      "name": "Cresselia",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 120,
+        "atk": 70,
+        "def": 110,
+        "spa": 75,
+        "spd": 120,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "moonblast",
+        "psychic",
+        "aurora-beam",
+        "psybeam"
+      ],
+      "heightM": 1.5,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "aurora-beam"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          36,
+          "zen-headbutt"
+        ],
+        [
+          36,
+          "moonblast"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
+      ],
+      "body": [
+        31,
+        31
+      ]
     }
   ]
 }

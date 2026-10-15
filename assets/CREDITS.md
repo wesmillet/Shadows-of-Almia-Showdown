@@ -875,6 +875,11 @@ license, sheets). The current artists per folder, resolved through
 ### 0784 Kommo_o
 - <@!276369635304275968>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop
 
+### 0802 Marshadow
+- <@!375676609283358722>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Shake,Dance,Swing,Double,Rotate,Hop
+- <@!375676609283358722>: Idle,Walk,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!375676609283358722>: Idle,Walk,Sleep,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,Wake,Pull,Pain,DeepBreath,Nod,Sit,LookUp,Sink,Trip,HitGround,Faint
+
 ### 0808 Meltan
 - <@!228595807132057600>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
 - <@!228595807132057600>: Walk,Sleep,Hop
@@ -2135,6 +2140,9 @@ license, sheets). The current artists per folder, resolved through
 - <@!356635814668664832>: Normal
 - <@!356635814668664832>: Normal
 - <@!229131140903075840>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0802 Marshadow
+- <@!276369635304275968>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
 
 ### 0808 Meltan
 - <@!589906152708505648> (earlier version): Normal

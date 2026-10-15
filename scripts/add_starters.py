@@ -31,7 +31,7 @@ TIERS = [
     dict(id='epic', name='Epic', weight=4, color='#b06cff',
          dex=['0147', '0246', '0371', '0374', '0443', '0633', '0704', '0782', '0885', '0996']),
     dict(id='mythic', name='Mythic', weight=1, color='#ffcf4a',
-         dex=['0151', '0251', '0385', '0490', '0492', '0494', '0808']),
+         dex=['0151', '0251', '0385', '0490', '0492', '0494', '0802', '0808']),
 ]
 
 # Evolutions with no level in the games (stones, trades, friendship, rain...).

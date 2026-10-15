@@ -32,7 +32,7 @@ with Enter or Space.
 | Uncommon | 27% | Elekid, Magby, Smoochum, Tyrogue, Munchlax, Riolu, Eevee |
 | Rare | 13% | every region's starter trio, Kanto to Paldea (27) |
 | Epic | 4% | the pseudo-legendary lines: Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy, Jangmo-o, Dreepy, Frigibax |
-| Mythic | 1% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Meltan |
+| Mythic | 1% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Marshadow, Meltan |
 
 Each starter comes with its whole evolution line (`scripts/add_starters.py`
 writes the species from PokeAPI data; the tiers live in `data/spawns.json`

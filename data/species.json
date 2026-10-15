@@ -20698,6 +20698,80 @@
         14,
         19
       ]
+    },
+    {
+      "dex": "0802",
+      "name": "Marshadow",
+      "types": [
+        "fighting",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 125,
+        "def": 80,
+        "spa": 90,
+        "spd": 90,
+        "spe": 125
+      },
+      "tier": 1,
+      "moves": [
+        "low-kick",
+        "shadow-sneak",
+        "double-kick",
+        "shadow-claw"
+      ],
+      "heightM": 0.7,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "karate-chop"
+        ],
+        [
+          9,
+          "astonish"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          14,
+          "low-kick"
+        ],
+        [
+          18,
+          "shadow-sneak"
+        ],
+        [
+          22,
+          "double-kick"
+        ],
+        [
+          28,
+          "shadow-claw"
+        ],
+        [
+          32,
+          "brick-break"
+        ],
+        [
+          44,
+          "close-combat"
+        ]
+      ],
+      "body": [
+        17,
+        26
+      ]
     }
   ]
 }

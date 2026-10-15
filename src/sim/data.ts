@@ -37,6 +37,16 @@ export interface FxPart {
   fps?: number;
   scale?: number;
   tint?: string;
+  /**
+   * Which way the artwork points, for projectiles, beams and streams: 'up' or 'down'
+   * (the source end is at the bottom or the top of the frame), 'right', or 'none'
+   * (never rotated, e.g. upright flames). Left out, it is guessed from the frame shape.
+   */
+  facing?: 'right' | 'up' | 'down' | 'none';
+  /** Height above the ground point in tiles (0 for rings and puddles on the ground). */
+  lift?: number;
+  /** Beams and streams: how long the strip stays up, looping its frames (a crackling bolt). */
+  seconds?: number;
 }
 
 export interface MoveDef {

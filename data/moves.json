@@ -53,7 +53,8 @@
         {
           "id": "fx_131",
           "anchor": "projectile",
-          "fps": 20
+          "fps": 20,
+          "facing": "right"
         },
         {
           "id": "fx_001",
@@ -140,7 +141,8 @@
       "fx": [
         {
           "id": "fx_134",
-          "anchor": "projectile"
+          "anchor": "projectile",
+          "facing": "none"
         },
         {
           "id": "fx_126",
@@ -189,7 +191,8 @@
         {
           "id": "fx_072",
           "anchor": "target",
-          "fps": 20
+          "fps": 20,
+          "lift": 0.1
         },
         {
           "id": "fx_149",
@@ -239,7 +242,11 @@
         {
           "id": "fx_232",
           "anchor": "attacker",
-          "mode": "beam"
+          "mode": "stream",
+          "facing": "down",
+          "scale": 1.25,
+          "fps": 16,
+          "seconds": 0.45
         },
         {
           "id": "fx_157",
@@ -285,7 +292,8 @@
         {
           "id": "fx_101",
           "anchor": "attacker",
-          "mode": "beam"
+          "mode": "beam",
+          "facing": "right"
         },
         {
           "id": "fx_041",
@@ -308,7 +316,8 @@
         {
           "id": "fx_109",
           "anchor": "attacker",
-          "mode": "beam"
+          "mode": "beam",
+          "facing": "right"
         },
         {
           "id": "fx_204",
@@ -331,7 +340,8 @@
         {
           "id": "fx_113",
           "anchor": "attacker",
-          "mode": "beam"
+          "mode": "beam",
+          "facing": "right"
         },
         {
           "id": "fx_177",
@@ -380,12 +390,14 @@
       "fx": [
         {
           "id": "fx_067",
-          "anchor": "attacker"
+          "anchor": "attacker",
+          "lift": 0.1
         },
         {
           "id": "fx_072",
           "anchor": "target",
-          "fps": 20
+          "fps": 20,
+          "lift": 0.1
         }
       ]
     },
@@ -407,7 +419,8 @@
       "fx": [
         {
           "id": "fx_114",
-          "anchor": "attacker"
+          "anchor": "attacker",
+          "lift": 0.1
         },
         {
           "id": "fx_186",
@@ -441,7 +454,8 @@
           "id": "fx_080",
           "anchor": "attacker",
           "mode": "stream",
-          "scale": 2
+          "scale": 2,
+          "facing": "up"
         },
         {
           "id": "fx_015",
@@ -499,7 +513,8 @@
         {
           "id": "fx_208",
           "anchor": "projectile",
-          "fps": 12
+          "fps": 12,
+          "facing": "none"
         },
         {
           "id": "fx_134",
@@ -557,7 +572,8 @@
           "id": "fx_040",
           "anchor": "attacker",
           "mode": "stream",
-          "scale": 1.5
+          "scale": 1.5,
+          "facing": "up"
         },
         {
           "id": "fx_174",
@@ -580,7 +596,8 @@
         {
           "id": "fx_070",
           "anchor": "attacker",
-          "scale": 4
+          "scale": 4,
+          "lift": 0.1
         },
         {
           "id": "fx_081",
@@ -606,14 +623,22 @@
       },
       "fx": [
         {
-          "id": "fx_027",
+          "id": "fx_044",
           "anchor": "attacker",
-          "mode": "beam",
-          "fps": 20,
-          "scale": 2
+          "mode": "stream",
+          "facing": "down",
+          "scale": 1.5,
+          "fps": 14,
+          "seconds": 0.6
         },
         {
-          "id": "fx_044",
+          "id": "fx_090",
+          "anchor": "target",
+          "scale": 1.5,
+          "fps": 18
+        },
+        {
+          "id": "fx_157",
           "anchor": "target",
           "scale": 2
         }
@@ -701,12 +726,14 @@
         {
           "id": "fx_067",
           "anchor": "attacker",
-          "scale": 4
+          "scale": 4,
+          "lift": 0.1
         },
         {
           "id": "fx_072",
           "anchor": "target",
-          "fps": 20
+          "fps": 20,
+          "lift": 0.1
         }
       ]
     },
@@ -725,7 +752,8 @@
         {
           "id": "fx_131",
           "anchor": "projectile",
-          "fps": 20
+          "fps": 20,
+          "facing": "right"
         },
         {
           "id": "fx_147",
@@ -776,7 +804,8 @@
           "id": "fx_068",
           "anchor": "target",
           "fps": 20,
-          "scale": 2
+          "scale": 2,
+          "lift": 0.1
         }
       ]
     },
@@ -800,7 +829,8 @@
         {
           "id": "fx_072",
           "anchor": "target",
-          "fps": 20
+          "fps": 20,
+          "lift": 0.1
         }
       ]
     },
@@ -819,7 +849,8 @@
         {
           "id": "fx_102",
           "anchor": "attacker",
-          "mode": "beam"
+          "mode": "beam",
+          "facing": "right"
         },
         {
           "id": "fx_097",

@@ -407,7 +407,7 @@ export class MatchScreen implements Screen {
       if (part.mode === 'status') {
         this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: 1.15, scale: part.scale ?? 2, fps: part.fps ?? 15, loopSeconds: 1.6, follow: t.mon, tint: part.tint }));
       } else {
-        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: 0.45, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
+        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: part.lift ?? 0.45, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
       }
     };
     let projectile: FxPart | null = null;
@@ -421,7 +421,7 @@ export class MatchScreen implements Screen {
         const sheet = this.fx.sheet(part.id);
         if (!sheet) continue;
         if (part.mode === 'beam' || part.mode === 'stream') {
-          this.vfx.add(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: 0.5, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
+          this.vfx.add(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? 0.5, scale: part.scale ?? 3, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing }));
         } else playAt(part, { x: attacker.x, y: attacker.y, mon: attacker });
         continue;
       }
@@ -437,7 +437,7 @@ export class MatchScreen implements Screen {
           continue;
         }
         this.vfx.add(new FxProjectile(sheet, {
-          from, to: { x: t.x, y: t.y }, lift: 0.5, scale: proj.scale ?? 3, fps: proj.fps ?? 15, tint: proj.tint,
+          from, to: { x: t.x, y: t.y }, lift: proj.lift ?? 0.5, scale: proj.scale ?? 3, fps: proj.fps ?? 15, tint: proj.tint, facing: proj.facing,
           onHit: () => {
             for (const p of impacts) playAt(p, t);
           },

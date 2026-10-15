@@ -10,17 +10,23 @@ import { rgba } from '../ui/screens';
 import { tintedSheet, type FxSheet } from './fxLibrary';
 import type { MoveVisual } from './visuals';
 
-export type FxFacing = 'right' | 'up' | 'none';
+export type FxFacing = 'right' | 'up' | 'down' | 'none';
 
-/** Which way a frame's artwork points: tall frames point up, wide ones right. */
-export function defaultFacing(sheet: FxSheet): FxFacing {
-  if (sheet.fh > sheet.fw * 1.1) return 'up';
-  if (sheet.fw > sheet.fh * 1.1) return 'right';
+/**
+ * Which way a frame's artwork points, guessed from its shape: clearly tall frames point
+ * up, clearly wide ones right. `ratio` is how elongated a frame must be to count.
+ */
+export function defaultFacing(sheet: FxSheet, ratio = 1.1): FxFacing {
+  if (sheet.fh > sheet.fw * ratio) return 'up';
+  if (sheet.fw > sheet.fh * ratio) return 'right';
   return 'none';
 }
 
+/** Rotation that turns the artwork's pointing direction onto the +x axis. */
 function facingOffset(f: FxFacing): number {
-  return f === 'up' ? Math.PI / 2 : 0;
+  if (f === 'up') return Math.PI / 2;
+  if (f === 'down') return -Math.PI / 2;
+  return 0;
 }
 
 function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, alpha: number): void {
@@ -147,6 +153,7 @@ export class FxProjectile implements MoveVisual {
   private t = 0;
   private readonly dur: number;
   private readonly rot: number;
+  private readonly spin: boolean;
   private readonly source: CanvasImageSource;
   private x: number;
   private wy: number;
@@ -160,7 +167,11 @@ export class FxProjectile implements MoveVisual {
     const d = Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y);
     this.dur = Math.max(0.12, d / (o.speed ?? 11));
     const ang = Math.atan2(o.to.y - o.from.y, o.to.x - o.from.x);
-    this.rot = ang + facingOffset(o.facing ?? defaultFacing(sheet));
+    // Only clearly elongated art (a streak, a dart) turns to its flight path; balls,
+    // rocks, bubbles and upright flames fly as drawn.
+    const facing = o.facing ?? defaultFacing(sheet, 1.6);
+    this.spin = facing !== 'none';
+    this.rot = ang + facingOffset(facing);
     this.source = o.tint ? tintedSheet(sheet, o.tint) : sheet.img;
     this.x = o.from.x;
     this.wy = o.from.y;
@@ -192,7 +203,7 @@ export class FxProjectile implements MoveVisual {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(Math.round(view.toScreenX(this.x)), Math.round(view.toScreenY(this.wy) - this.lift * view.pxPerTile));
-    if (this.o.facing !== 'none') ctx.rotate(this.rot);
+    if (this.spin) ctx.rotate(this.rot);
     ctx.drawImage(this.source, f * this.sheet.fw, 0, this.sheet.fw, this.sheet.fh, -Math.floor(w / 2), -Math.floor(h / 2), w, h);
     ctx.restore();
   }
@@ -263,20 +274,25 @@ export class FxBeam implements MoveVisual {
     ctx.translate(Math.round(view.toScreenX(this.o.from.x)), Math.round(view.toScreenY(this.o.from.y) - this.lift * view.pxPerTile));
     // Rotate so the frame's long axis runs along the attacker -> target line, source end at the attacker.
     ctx.rotate(this.ang + facingOffset(this.facing));
-    const along = this.facing === 'up' ? fh * this.scale : fw * this.scale; // frame length along the beam
-    const across = this.facing === 'up' ? fw * this.scale : fh * this.scale;
+    const tall = this.facing === 'up' || this.facing === 'down';
+    const along = tall ? fh * this.scale : fw * this.scale; // frame length along the beam
+    const across = tall ? fw * this.scale : fh * this.scale;
+    const half = -Math.floor(across / 2);
     if (this.o.mode === 'stream') {
-      if (this.facing === 'up') ctx.drawImage(this.source, f * fw, 0, fw, fh, -Math.floor(across / 2), -lenPx, across, lenPx);
-      else ctx.drawImage(this.source, f * fw, 0, fw, fh, 0, -Math.floor(across / 2), lenPx, across);
+      if (this.facing === 'up') ctx.drawImage(this.source, f * fw, 0, fw, fh, half, -lenPx, across, lenPx);
+      else if (this.facing === 'down') ctx.drawImage(this.source, f * fw, 0, fw, fh, half, 0, across, lenPx);
+      else ctx.drawImage(this.source, f * fw, 0, fw, fh, 0, half, lenPx, across);
     } else {
       // Tile whole frames along the length, clipping the last one at the target.
       ctx.beginPath();
       if (this.facing === 'up') ctx.rect(-across, -lenPx, across * 2, lenPx);
+      else if (this.facing === 'down') ctx.rect(-across, 0, across * 2, lenPx);
       else ctx.rect(0, -across, lenPx, across * 2);
       ctx.clip();
       for (let d = 0; d < lenPx; d += along) {
-        if (this.facing === 'up') ctx.drawImage(this.source, f * fw, 0, fw, fh, -Math.floor(across / 2), -d - along, across, along);
-        else ctx.drawImage(this.source, f * fw, 0, fw, fh, d, -Math.floor(across / 2), along, across);
+        if (this.facing === 'up') ctx.drawImage(this.source, f * fw, 0, fw, fh, half, -d - along, across, along);
+        else if (this.facing === 'down') ctx.drawImage(this.source, f * fw, 0, fw, fh, half, d, across, along);
+        else ctx.drawImage(this.source, f * fw, 0, fw, fh, d, half, along, across);
       }
     }
     ctx.restore();

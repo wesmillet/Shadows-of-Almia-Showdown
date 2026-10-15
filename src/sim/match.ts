@@ -3,7 +3,7 @@
  * wild Pokémon by biome, AI trainers, items, the Ranger outpost, the
  * darkness and the battle system. Pure: no canvas access.
  */
-import { dirFromVector, type Dir8 } from '../core/math';
+import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Input } from '../core/input';
 import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
@@ -131,7 +131,9 @@ export class Match {
     this.battle = new BattleSystem(this.rng);
     this.centerX = this.ground.cols / 2;
     this.centerY = this.ground.rows / 2;
-    const spawn = this.ground.spawns[0] ? { x: this.ground.spawns[0].x + 0.5, y: this.ground.spawns[0].y + 0.5 } : this.edgeSpawn();
+    // Everyone starts somewhere new each match, spread round the coast.
+    this.startSpots = this.pickStartSpots(1 + CONFIG.trainers.count);
+    const spawn = this.startSpots[0] as { x: number; y: number };
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, this.player, spawn.x, spawn.y));
     this.placeParty(this.player);
@@ -142,12 +144,9 @@ export class Match {
   }
 
   private spawnTrainers(): void {
-    const taken = [{ x: this.player.x, y: this.player.y }];
     for (let i = 0; i < CONFIG.trainers.count; i++) {
       const [name, role] = AI_NAMES[i % AI_NAMES.length] as [string, string];
-      const planned = this.ground.spawns[i + 1];
-      const spot = planned ? { x: planned.x + 0.5, y: planned.y + 0.5 } : this.edgeSpawn(taken);
-      taken.push(spot);
+      const spot = this.startSpots[i + 1] ?? this.edgeSpawn(this.startSpots);
       const t = this.makeTrainer(name, role, false, spot.x, spot.y);
       const pool = this.rng.shuffle([...SPAWNS.trainerPool]);
       for (let k = 0; k < CONFIG.trainers.partySize; k++) {
@@ -284,6 +283,9 @@ export class Match {
     const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 9).slice(0, 3);
     let id = 0;
     for (const p of near) this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 2 }], x: p.x, y: p.y, bob: id++ });
+    // And a pair of Quick Balls, best thrown before the first pulse.
+    const quick = spots.find((p) => !near.includes(p) && Math.hypot(p.x - this.player.x, p.y - this.player.y) < 12);
+    if (quick) this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 2 }], x: quick.x, y: quick.y, bob: id++ });
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };
       if (near.includes(p)) continue;
@@ -760,7 +762,21 @@ export class Match {
       darkRadius: this.darkRadius,
       centerX: this.centerX,
       centerY: this.centerY,
+      wilds: this.wilds,
+      comfortRadius: (level: number) => this.comfortRadius(level),
     };
+  }
+
+  /**
+   * How close to the crystal a team of `level` can wander before the wild
+   * Pokémon outclass it (wilds up to about three levels above it).
+   */
+  comfortRadius(level: number): number {
+    const w = CONFIG.wild as typeof CONFIG.wild & { centerLevelCurve?: number };
+    const allowed = level + 3 - 5;
+    if (allowed >= w.centerLevelBonus) return 0;
+    if (allowed <= 0) return w.centerLevelRadius;
+    return w.centerLevelRadius * (1 - (allowed / w.centerLevelBonus) ** (1 / (w.centerLevelCurve ?? 1.2)));
   }
 
   private stepAi(t: Trainer, dt: number): void {
@@ -830,6 +846,93 @@ export class Match {
   }
 
   /** A reachable, open tile as far from the centre as possible: the map edge. */
+  /** Where the player (first) and the rival trainers start this match. */
+  startSpots: Array<{ x: number; y: number }> = [];
+
+  /**
+   * Random starting points near the coast: open, reachable ground a few tiles
+   * from the sea and far from the crystal, clear of towns and the arena. The
+   * player's is any of them; each rival takes the one farthest from those
+   * already taken (from a random handful), so nobody starts on top of anyone.
+   */
+  pickStartSpots(n: number): Array<{ x: number; y: number }> {
+    const g = this.ground;
+    const W = g.cols;
+    const H = g.rows;
+    // Distance (in steps) from every tile to the nearest sea or map edge.
+    const sea = new Int32Array(W * H).fill(-1);
+    let q: number[] = [];
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (g.biomeAt(x, y) === 'water' || x === 0 || y === 0 || x === W - 1 || y === H - 1) {
+          sea[y * W + x] = 0;
+          q.push(y * W + x);
+        }
+      }
+    }
+    while (q.length) {
+      const next: number[] = [];
+      for (const i of q) {
+        const x = i % W;
+        const y = (i - x) / W;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = ny * W + nx;
+          if (sea[j] !== -1) continue;
+          sea[j] = (sea[i] ?? 0) + 1;
+          next.push(j);
+        }
+      }
+      q = next;
+    }
+    const services = this.mapServices();
+    const maxD = Math.hypot(W, H) / 2;
+    const pool: Array<{ x: number; y: number }> = [];
+    for (let ty = 4; ty < H - 4; ty += 2) {
+      for (let tx = 4; tx < W - 4; tx += 2) {
+        const d = sea[ty * W + tx] ?? 0;
+        if (d < 3 || d > 9 || !g.reachable(tx, ty)) continue;
+        const x = tx + 0.5;
+        const y = ty + 0.5;
+        if (Math.hypot(x - this.centerX, y - this.centerY) < maxD * 0.45) continue;
+        let open = 0;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (g.reachable(tx + dx, ty + dy)) open++;
+        if (open < 22) continue;
+        if (services.some((s) => Math.hypot(s.x - x, s.y - y) < 14)) continue;
+        if (g.features?.arena && inArena(g.features.arena, x, y, 6)) continue;
+        pool.push({ x, y });
+      }
+    }
+    if (!pool.length) {
+      const out: Array<{ x: number; y: number }> = [];
+      for (let i = 0; i < n; i++) out.push(this.edgeSpawn(out));
+      return out;
+    }
+    const out: Array<{ x: number; y: number }> = [this.rng.pick(pool)];
+    while (out.length < n) {
+      let best = pool[0] as { x: number; y: number };
+      let bd = -1;
+      for (let k = 0; k < 40; k++) {
+        const c = this.rng.pick(pool);
+        const d = Math.min(...out.map((o) => Math.hypot(o.x - c.x, o.y - c.y)));
+        if (d > bd) {
+          bd = d;
+          best = c;
+        }
+      }
+      out.push(best);
+    }
+    return out;
+  }
+
+  /** Towns' healers, vendors and challenger from the map file, for keeping starts away from them. */
+  private mapServices(): Array<{ x: number; y: number }> {
+    const npcs = this.ground.features?.npcs ?? [];
+    return npcs.map((n) => ({ x: n.x, y: n.y }));
+  }
+
   edgeSpawn(exclude: Array<{ x: number; y: number }> = []): { x: number; y: number } {
     let best = { x: this.centerX, y: this.centerY };
     let bestScore = -Infinity;
@@ -902,7 +1005,7 @@ export class Match {
         if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 2) continue;
         // none right beside a trainer's starting point (the planned starts, or the player)
         if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < clear) continue;
-        if (this.ground.spawns.some((s) => Math.hypot(tx - s.x, ty - s.y) < clear)) continue;
+        if (this.startSpots.some((s) => Math.hypot(tx + 0.5 - s.x, ty + 0.5 - s.y) < clear)) continue;
         if (this.ground.features?.arena && inArena(this.ground.features.arena, tx + 0.5, ty + 0.5, 3)) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
@@ -933,7 +1036,10 @@ export class Match {
         const lv = row.levels ?? t.levels ?? [3, 6];
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
         // easing to none at the coast, so the outer lands stay gentle for fresh teams.
-        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + this.centerBonus(spot.x, spot.y);
+        // Round every starting point the land stays at its base levels, so a fresh team can train there.
+        const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
+        const calm = Math.min(1, Math.max(0, (nearStart - 20) / 25));
+        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
         const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
@@ -1047,10 +1153,13 @@ export class Match {
     return best;
   }
 
+  /** Where the player is aiming (the cursor on the field, in tiles), or null to fire the way the trainer faces. */
+  aim: { x: number; y: number } | null = null;
+
   /**
-   * Player input: the lead casts move `slot` from where it stands, aimed by
-   * its facing. The lead faces the nearest threat when one is close, else
-   * the way the trainer faces.
+   * Player input: the lead casts move `slot` toward the aim point. Nothing
+   * locks on; a single-target move lands where it was aimed, so a moving
+   * Pokémon can step out of it.
    */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
@@ -1059,10 +1168,11 @@ export class Match {
     if (m.status === 'sleep') return 'asleep';
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
-    const threat = this.battle.pickTarget(m, this.mons(), 6);
-    m.dir = threat ? dirFromVector(threat.x - m.x, threat.y - m.y, m.dir) : p.dir;
+    const f = DIR_VECTORS[p.dir] as { x: number; y: number };
+    const a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
-    return this.battle.castAt(m, slot, this.mons()) ? 'cast' : 'cooldown';
+    return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
   }
 
   /** Hostile Pokémon pick their own targets: nearest enemy within `aggro`, then cast on cooldown. */

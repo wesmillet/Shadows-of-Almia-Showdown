@@ -13,12 +13,35 @@ export function iconPath(itemId: string, tmType?: string): string {
   return itemId;
 }
 
+/** assets/items/balls/throw.json: the thrown-ball sheet, one column per ball and one row per frame. */
+export interface ThrowSheet {
+  cell: number;
+  columns: Record<string, number>;
+  rows: { spin: number[]; closed: number; open: number[]; burst: number[] };
+  ballCenter: [number, number];
+  ballBottom: number;
+}
+
 export class ItemIcons {
   private icons = new Map<string, HTMLImageElement | null>();
   private pending = new Set<string>();
   private openFrames = new Map<string, HTMLCanvasElement>();
+  /** The thrown-ball sheet and its layout, once loaded. */
+  throwSheet: { img: HTMLImageElement; def: ThrowSheet } | null = null;
 
-  constructor(private readonly assets: Assets) {}
+  constructor(private readonly assets: Assets) {
+    void Promise.all([assets.loadImage('items/balls/throw_sheet.png'), assets.json<ThrowSheet>('items/balls/throw.json')]).then(([img, def]) => {
+      if (img && def) this.throwSheet = { img, def };
+    });
+  }
+
+  /** Source rectangle of a thrown-ball frame (row of the sheet) for a ball kind, or null (not loaded / no column). */
+  throwFrame(kind: BallKind, row: number): { img: HTMLImageElement; sx: number; sy: number; size: number; def: ThrowSheet } | null {
+    const t = this.throwSheet;
+    const col = t?.def.columns[kind];
+    if (!t || col === undefined) return null;
+    return { img: t.img, sx: col * t.def.cell, sy: row * t.def.cell, size: t.def.cell, def: t.def };
+  }
 
   /** The icon for an item id (TMs resolve to their type disc, balls to their sprite). Null until loaded or when missing. */
   get(itemId: string, tmType?: string): HTMLImageElement | null {

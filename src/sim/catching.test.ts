@@ -36,7 +36,7 @@ describe('catchChance', () => {
     expect(ballModifier('timer-ball', ctx({ matchTime: 600 }))).toBe(4);
     expect(ballModifier('dusk-ball', ctx({ inDark: true }))).toBe(3);
     expect(ballModifier('quick-ball', ctx({ matchTime: 30 }))).toBe(5);
-    expect(ballModifier('quick-ball', ctx({ matchTime: 120 }))).toBe(1);
+    expect(ballModifier('quick-ball', ctx({ matchTime: 200 }))).toBe(1);
     for (const id of ['heal-ball', 'luxury-ball', 'premier-ball', 'cherish-ball']) expect(ballModifier(id, ctx())).toBe(1);
     expect(ballKind('cherish-ball')).toBe('cherish');
   });

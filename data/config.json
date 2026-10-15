@@ -110,20 +110,22 @@
     "radius": 1.8
   },
   "darkness": {
-    "pulseSeconds": 90,
+    "_comment": "Every pulseSeconds the safe circle shrinks to the next radius; the darkness creeps in at sweepTilesPerSecond (a trainer walks about 4.8).",
+    "pulseSeconds": 150,
     "radiiTiles": [
-      125,
-      80,
-      42,
+      140,
+      100,
+      65,
+      35,
       12
     ],
-    "sweepSeconds": 12,
+    "sweepTilesPerSecond": 1.2,
     "drowsySeconds": 4,
     "badDreamsFraction": 0.0625,
     "wakeAfterSecondsOutside": 3
   },
   "lighting": {
-    "dayToColdSeconds": 420
+    "dayToColdSeconds": 780
   },
   "sizes": {
     "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall. Pokémon under smallFloorM are drawn on a ramp from smallBaseM (at 0 m) up to smallFloorM, so small ones stay readable and still smaller than bigger ones.",

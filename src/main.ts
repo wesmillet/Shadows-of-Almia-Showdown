@@ -26,11 +26,9 @@ const DEMO_LEVEL = 100;
 /** Pokémon on the title screen: Darkrai and the ones it puts to sleep. */
 export const TITLE_CAST = ['0491', '0025', '0387', '0133', '0393', '0390', '0447'];
 
-/** Every species a match can show: wild tables, land bosses, rivals, the champion, the demo team, and their evolutions. */
-function matchCast(): Set<string> {
-  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.starterPool, ...SPAWNS.trainerPool, ...SHOPS.challenger.party]);
-  for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
-  for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
+/** A set of species plus everything they can evolve into. */
+function withEvolutions(dexes: Iterable<string>): Set<string> {
+  const out = new Set<string>(dexes);
   const queue = [...out];
   while (queue.length) {
     const d = queue.pop() as string;
@@ -40,6 +38,17 @@ function matchCast(): Set<string> {
     }
   }
   return new Set([...out].filter((d) => SPECIES.has(d)));
+}
+
+/**
+ * Every species a match can show: wild tables, land bosses, rivals, the champion, the demo team, and their evolutions.
+ * The starter roll's pool is not in here (it is large): the roll loads its own reel, and a match loads its starter's line.
+ */
+function matchCast(): Set<string> {
+  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party]);
+  for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
+  for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
+  return withEvolutions(out);
 }
 
 async function boot(): Promise<void> {
@@ -75,7 +84,7 @@ async function boot(): Promise<void> {
   const rangersP = RangerSprites.load(assets);
   // The title scene and the starter roll load first; every other Pokémon the match can meet
   // (wild tables, bosses, rivals, the champion, and all their evolutions) loads behind the title screen.
-  const first = new Set([...TITLE_CAST, ...SPAWNS.starterPool]);
+  const first = new Set(TITLE_CAST);
   await sprites.preload(first, (done, total) => {
     status = `Loading sprites ${done}/${total}`;
     drawLoading();
@@ -114,10 +123,15 @@ async function boot(): Promise<void> {
 
   let currentGround: GroundRenderer = ground;
   let currentSeed = seed;
+  // Each match on the same island rolls its own starts, spawns and loot.
+  let matchNo = 0;
+  const matchRng = (): Rng => new Rng((currentSeed + Math.imul(0x9e3779b9, ++matchNo)) >>> 0);
 
   const startMatch = async (starters: string[], opts: { level?: number; partyCap?: number } = {}): Promise<void> => {
     await rest;
-    const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters, opts);
+    const line = [...withEvolutions(starters)].filter((d) => !sprites.has(d));
+    if (line.length) await sprites.preload(line);
+    const match = new Match({ ground: currentGround, rng: matchRng(), sprites }, starters, opts);
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
@@ -144,7 +158,8 @@ async function boot(): Promise<void> {
   };
 
   const showRoll = (): void => {
-    game.setScreen(new RollScreen(game, sprites, currentSeed, (dex) => void startMatch([dex])));
+    // A fresh roll every time, even on a fixed ?seed island.
+    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex])));
   };
 
   const showTitle = async (regenerate: boolean): Promise<void> => {

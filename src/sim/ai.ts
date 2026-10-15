@@ -20,6 +20,32 @@ export interface AiWorld {
   darkRadius: number;
   centerX: number;
   centerY: number;
+  /** Wild Pokémon, so trainers can steer clear of ones that outclass their team. */
+  wilds?: Mon[];
+  /** Nearest the crystal a team of that level wants to roam (stronger wilds live further in). */
+  comfortRadius?: (level: number) => number;
+}
+
+/** The strongest level in a trainer's team that can still fight. */
+export function teamLevel(t: Trainer): number {
+  return activeParty(t).reduce((a, m) => Math.max(a, m.level), 1);
+}
+
+/** The closest wild Pokémon within `range` that is well above the team's level. */
+export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, x = t.x, y = t.y): Mon | null {
+  if (!wilds) return null;
+  const lv = teamLevel(t);
+  let best: Mon | null = null;
+  let bd = range;
+  for (const m of wilds) {
+    if (m.fainted || m.captured || m.level < lv + 5) continue;
+    const d = Math.hypot(m.x - x, m.y - y);
+    if (d < bd) {
+      bd = d;
+      best = m;
+    }
+  }
+  return best;
 }
 
 export function partyHpFraction(t: Trainer): number {
@@ -90,18 +116,33 @@ export function decide(t: Trainer, w: AiWorld): { ai: TrainerAi; target: { x: nu
     const r = Math.max(2, w.darkRadius - 4);
     return { ai: 'roam', target: { x: w.centerX + Math.cos(ang) * r, y: w.centerY + Math.sin(ang) * r }, rival: null };
   }
+  // Back away from a wild Pokémon that would flatten the team.
+  const danger = dangerNear(t, w.wilds, 7);
+  if (danger) {
+    const dx = t.x - danger.x;
+    const dy = t.y - danger.y;
+    const d = Math.hypot(dx, dy) || 1;
+    return { ai: 'flee', target: { x: t.x + (dx / d) * 5, y: t.y + (dy / d) * 5 }, rival: null };
+  }
   const item = nearestItem(t, w.items, 9);
-  if (item) return { ai: 'seekItem', target: { x: item.x, y: item.y }, rival: null };
-  // Roam: a random reachable point in a ring that drifts toward the centre over time.
-  for (let i = 0; i < 8; i++) {
-    const ang = w.rng.range(0, Math.PI * 2);
-    const dist = w.rng.range(3, 8);
-    const x = t.x + Math.cos(ang) * dist;
-    const y = t.y + Math.sin(ang) * dist;
-    if (w.ground.reachable(Math.floor(x), Math.floor(y)) && Math.hypot(x - w.centerX, y - w.centerY) < Math.max(4, w.darkRadius - 2)) {
+  if (item && !dangerNear(t, w.wilds, 6, item.x, item.y)) return { ai: 'seekItem', target: { x: item.x, y: item.y }, rival: null };
+  // Roam: a random reachable point inside the light, no nearer the crystal than the team can handle
+  // (unless the darkness has pushed everyone in), and away from wild Pokémon that outclass it.
+  const safe = Math.max(4, w.darkRadius - 2);
+  const comfort = Math.min(w.comfortRadius?.(teamLevel(t)) ?? 0, safe - 8);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < 8; i++) {
+      const ang = w.rng.range(0, Math.PI * 2);
+      const dist = w.rng.range(3, 8);
+      const x = t.x + Math.cos(ang) * dist;
+      const y = t.y + Math.sin(ang) * dist;
+      const dc = Math.hypot(x - w.centerX, y - w.centerY);
+      if (!w.ground.reachable(Math.floor(x), Math.floor(y)) || dc >= safe) continue;
+      if (pass === 0 && (dc < comfort || dangerNear(t, w.wilds, 6, x, y))) continue;
       return { ai: 'roam', target: { x, y }, rival: null };
     }
   }
+  if (Math.hypot(t.x - w.centerX, t.y - w.centerY) < safe) return { ai: 'roam', target: { x: t.x, y: t.y }, rival: null };
   return { ai: 'roam', target: { x: w.centerX, y: w.centerY }, rival: null };
 }
 

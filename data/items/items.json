@@ -115,7 +115,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x5 in the first 90 s of the match",
+      "desc": "x5 before the first darkness pulse",
       "special": "quick"
     },
     {

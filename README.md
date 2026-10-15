@@ -22,10 +22,24 @@ repository path as the Vite base; the dev server stays at `/`.
 
 ## Playing
 
-Title → **Roll Starter** → a reel spins through the starter pool and stops
-on one Pokémon: that is your starter (no rerolls). Start with Enter or Space. You start at a town on
-the 320x224 island with seven rival trainers spread round the coast. Last
-trainer standing wins.
+Title → **Roll Starter** → first a rarity is rolled, then a Pokémon of that
+rarity; the reel stops on it and that is your starter (no rerolls). Start
+with Enter or Space.
+
+| Rarity | Chance | Pokémon |
+| --- | --- | --- |
+| Common | 55% | Pikachu, Meowth, Magikarp, Psyduck, Geodude, Shinx, Starly, Bidoof |
+| Uncommon | 27% | Elekid, Magby, Smoochum, Tyrogue, Munchlax, Riolu, Eevee |
+| Rare | 13% | every region's starter trio, Kanto to Paldea (27) |
+| Epic | 4% | the pseudo-legendary lines: Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy, Jangmo-o, Dreepy, Frigibax |
+| Mythic | 1% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Meltan |
+
+Each starter comes with its whole evolution line (`scripts/add_starters.py`
+writes the species from PokeAPI data; the tiers live in `data/spawns.json`
+`starterTiers`). You start at a random spot near the coast of the 320x224
+island, a new one every match, with seven rival trainers spread round the
+coast away from you; the wild Pokémon round every starting point stay at
+their land's base levels. Last trainer standing wins.
 
 The island: the Shadow Crystal on a terrace in an open plain at the centre,
 and four lands round it, each with its own wild Pokémon, a boss, and a town
@@ -71,7 +85,8 @@ impact on the body, at most one aftershock.
 | title screen: Move Gallery button, M, or `?moves=1` | every move in the game cast in turn at a practice dummy, by a Pokémon that learns it: Left/Right browse, Space replays, P pauses the slideshow, T filters by type, Esc returns to the title |
 | title screen: Demo Team button, D, or `?demo=1` | skip the roll and start with a level 100 team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton (party cap 5) |
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
-| 1-4, or click the move wheel | the lead casts a move where you face (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns) |
+| mouse | aim: a reticle marks where a single-target move lands (up to 5.6 tiles out); nothing locks on, so a moving Pokémon can step out of it |
+| 1-4, or click the move wheel | the lead casts the move at the aim point (0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns); lines and cones fire toward it |
 | Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
 | Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
@@ -83,8 +98,8 @@ impact on the body, at most one aftershock.
 | Shift+number on a Crystal Shard | clears the darkness in a 5-tile circle around you for 10 s |
 | healers (one per town and one in the castle courtyard) | Space for a full party heal, every 20 s |
 
-Every 90 s the Shadow Crystal pulses and darkness sweeps inward from the
-edges. In the dark a Pokémon grows drowsy after 4 s and falls asleep,
+Every 150 s the Shadow Crystal pulses (five pulses) and darkness creeps
+inward from the edges at 1.2 tiles a second, slow enough to walk ahead of. In the dark a Pokémon grows drowsy after 4 s and falls asleep,
 sleepers take Bad Dreams damage every second, wild Pokémon get a purple
 aura and cannot be caught. Full Heal (or three seconds back in the light)
 wakes them. When the last safe circle closes, Darkrai appears at the
@@ -240,7 +255,7 @@ wobble are built in code. Catch modifiers: Poké ×1, Great ×1.5, Ultra ×2,
 Master always, Net ×3 on Bug/Water, Dive ×3.5 on a target standing in
 water, Nest better on low levels, Repeat ×3 on species already in the
 party, Timer up to ×4 as the match goes on, Dusk ×3 inside the darkness,
-Heal fully heals its catch, Quick ×5 in the first 90 s, Luxury, Premier
+Heal fully heals its catch, Quick ×5 before the first darkness pulse (two Quick Balls sit near your start), Luxury, Premier
 and Cherish ×1 (`ballModifier` in `src/sim/catching.ts`).
 
 ## Architecture

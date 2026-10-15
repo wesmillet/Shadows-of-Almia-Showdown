@@ -33,9 +33,10 @@ describe('evolution data', () => {
   });
 
   it('every starter has an evolution line, every evolution target exists, and every species a canonical size', () => {
-    const bases = [...spawns.starterPool];
+    // Mythical starters stand alone; every other starter has somewhere to grow.
+    const bases = spawns.starterTiers.filter((t) => t.id !== 'mythic').flatMap((t) => t.dex);
     for (const s of SPECIES.values()) for (const e of s.evolves ?? []) expect(SPECIES.has(e.to), `${s.name} -> ${e.to}`).toBe(true);
-    for (const dex of bases) expect(species(dex).evolves?.length, dex).toBeGreaterThan(0);
+    for (const dex of bases) expect(species(dex).evolves?.length ?? 0, dex).toBeGreaterThan(0);
     for (const s of SPECIES.values()) {
       expect(s.heightM, s.name).toBeGreaterThan(0);
       expect(s.body?.length, s.name).toBe(2);

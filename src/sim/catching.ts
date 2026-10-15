@@ -49,11 +49,12 @@ export function ballModifier(ballId: string, ctx: CatchContext): number {
     case 'repeat':
       return base * (ctx.thrower.party.some((m) => m.dex === ctx.target.dex) ? 3 : 1);
     case 'timer':
-      return base * clamp(1 + ctx.matchTime / 100, 1, 4);
+      return base * clamp(1 + ctx.matchTime / 200, 1, 4);
     case 'dusk':
       return base * (ctx.inDark ? 3 : 1);
     case 'quick':
-      return base * (ctx.matchTime < 90 ? 5 : 1);
+      // Strong until the first pulse of darkness.
+      return base * (ctx.matchTime < CONFIG.darkness.pulseSeconds ? 5 : 1);
     case 'heal':
     default:
       return base;

@@ -19,7 +19,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { isRoaming, nextBehavior } from '../sim/party';
-import { ballKind, ballWobble, type Throw } from '../sim/catching';
+import { PHASE_SECONDS, ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import type { PixelUi } from './pixelUi';
@@ -153,6 +153,8 @@ export class MatchScreen implements Screen {
   protected handleInput(input: Input): void {
     const v = this.ctx.view;
     const duelSide = this.playerDuelSide();
+    // Moves aim at the cursor; over the HUD the last point on the field is kept.
+    if (!this.hud.hitTest(input.mouseX, input.mouseY)) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (duelSide?.awaitingPick) {
@@ -315,6 +317,51 @@ export class MatchScreen implements Screen {
       ctx.arc(0, 0, r * pulse, i * (Math.PI / 2) + 0.25, i * (Math.PI / 2) + Math.PI / 2 - 0.25);
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  /** The aim: a dotted line from the lead toward the cursor and a small reticle where a single-target move would land. */
+  private drawAim(v: View): void {
+    if (!this.showHud || this.playerDuelSide()?.awaitingPick) return;
+    const m = lead(this.match.player);
+    const a = this.match.aim;
+    if (!m || !a || m.fainted) return;
+    const range = 3.5 * CONFIG.battle.rangeScale;
+    let dx = a.x - m.x;
+    let dy = a.y - m.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 0.05) return;
+    const k = Math.min(1, range / d);
+    dx *= k;
+    dy *= k;
+    const ctx = v.ctx;
+    const ox = v.toScreenX(m.x);
+    const oy = v.toScreenY(m.y);
+    const tx = v.toScreenX(m.x + dx);
+    const ty = v.toScreenY(m.y + dy);
+    const s = v.baseScale;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = Math.max(1.5, 2 * s);
+    ctx.setLineDash([6 * s, 7 * s]);
+    ctx.beginPath();
+    ctx.moveTo(ox + (tx - ox) * (0.6 / (d * k)), oy + (ty - oy) * (0.6 / (d * k)));
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Reticle: the single-target hit circle, with four ticks.
+    const r = 0.65 * CONFIG.battle.rangeScale * v.pxPerTile;
+    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = Math.max(2, 2.5 * s);
+    ctx.beginPath();
+    ctx.arc(tx, ty, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    for (const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      ctx.moveTo(tx + ux * r * 0.55, ty + uy * r * 0.55);
+      ctx.lineTo(tx + ux * r * 1.15, ty + uy * r * 1.15);
+    }
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -848,6 +895,7 @@ export class MatchScreen implements Screen {
     }
     this.drawThrowTarget(v);
     this.drawDuelRing(v);
+    this.drawAim(v);
   }
 
   /** Items on the ground are item balls: the sprite of the ball that holds them, bobbing slowly with a periodic glint. */
@@ -902,24 +950,37 @@ export class MatchScreen implements Screen {
     const ctx = v.ctx;
     const sx = v.toScreenX(th.x);
     const sy = v.toScreenY(th.y);
-    const s = v.spriteScale;
     const kind = ballKind(th.ballId);
-    const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
-    const img = this.icons.ball(kind, open);
-    drawSoftShadow(v, sx, sy, 0.2, 0.35);
+    drawSoftShadow(v, sx, sy, 0.12, 0.35);
+    // A ball is small next to a trainer: the battle sheet's 13 px balls at two thirds of the world scale.
+    const s = Math.max(1, Math.round((v.spriteScale * 2) / 3));
+    const sheet = this.icons.throwSheet?.def;
+    let row = sheet?.rows.closed ?? 4;
+    if (sheet) {
+      if (th.phase === 'flying') row = sheet.rows.spin[Math.floor(th.t * 16) % sheet.rows.spin.length] ?? row;
+      else if (th.phase === 'hit') row = th.phaseT > 0.08 ? (sheet.rows.open[0] ?? row) : row;
+      else if (th.phase === 'absorb') row = sheet.rows.open[1] ?? row;
+      else if (th.phase === 'burst') {
+        const b = sheet.rows.burst;
+        row = b[Math.min(b.length - 1, Math.floor((th.phaseT / PHASE_SECONDS.burst) * b.length))] ?? row;
+      }
+    }
+    const fr = this.icons.throwFrame(kind, row);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.translate(sx, sy - th.z * v.pxPerTile);
-    let rot = th.phase === 'flying' ? th.t * 9 : ballWobble(th);
+    ctx.translate(Math.round(sx), Math.round(sy - th.z * v.pxPerTile));
+    let rot = th.phase === 'flying' ? 0 : ballWobble(th);
     if (th.phase === 'click') rot = Math.sin(th.phaseT * 60) * 0.06;
     ctx.rotate(rot);
-    if (img) {
-      const w = img.width * s;
-      const h = img.height * s;
-      ctx.drawImage(img, -Math.floor(w / 2), -h, w, h);
+    if (fr) {
+      // Anchored at the bottom of the ball so wobbles rock on the ground.
+      const [cx] = fr.def.ballCenter;
+      ctx.drawImage(fr.img, fr.sx, fr.sy, fr.size, fr.size, -(cx + 0.5) * s, -fr.def.ballBottom * s, fr.size * s, fr.size * s);
     } else {
-      const ph = this.assets.placeholder(`ball ${kind}`, 18, 18);
-      ctx.drawImage(ph, -9 * s, -18 * s, 18 * s, 18 * s);
+      const open = th.phase === 'absorb' || th.phase === 'burst' || (th.phase === 'hit' && th.phaseT > 0.08);
+      const img = this.icons.ball(kind, open);
+      const k = s / 2;
+      if (img) ctx.drawImage(img, -Math.floor((img.width * k) / 2), -img.height * k, img.width * k, img.height * k);
     }
     ctx.restore();
     // Beam of light pulling the Pokémon in / letting it out.
@@ -938,7 +999,7 @@ export class MatchScreen implements Screen {
       ctx.save();
       ctx.fillStyle = `rgba(255,255,255,${1 - th.phaseT / 0.2})`;
       ctx.beginPath();
-      ctx.arc(sx, sy - 8 * s, 3 * s, 0, Math.PI * 2);
+      ctx.arc(sx, sy - 6 * s, 2 * s, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

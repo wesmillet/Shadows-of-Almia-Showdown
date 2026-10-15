@@ -41,7 +41,8 @@ export function stepDarkness(d: DarknessState, dt: number, mapRadius: number): v
     }
   }
   if (Number.isFinite(d.targetRadius) && d.radius > d.targetRadius) {
-    const speed = Math.max(0.5, (mapRadius - (CONFIG.darkness.radiiTiles[0] ?? 20)) / CONFIG.darkness.sweepSeconds);
+    // A slow creep you can walk ahead of, not a wave.
+    const speed = CONFIG.darkness.sweepTilesPerSecond;
     d.radius = Math.max(d.targetRadius, d.radius - speed * dt);
   }
 }

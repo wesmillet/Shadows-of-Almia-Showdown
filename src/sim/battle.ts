@@ -201,6 +201,26 @@ export class BattleSystem {
     return this.tryCast(attacker, slot, tx, ty, tid);
   }
 
+  /**
+   * Aimed cast (the player): the move goes toward a point with no lock-on. A
+   * single-target move lands on that point, held to `maxRange`, and hits
+   * whoever is there when it lands; lines and cones point that way.
+   */
+  castToward(attacker: Mon, slot: number, x: number, y: number, maxRange = 3.5 * R()): boolean {
+    let dx = x - attacker.x;
+    let dy = y - attacker.y;
+    let d = Math.hypot(dx, dy);
+    if (d < 0.05) {
+      const f = DIR_VECTORS[attacker.dir] as { x: number; y: number };
+      const fl = Math.hypot(f.x, f.y) || 1;
+      dx = f.x / fl;
+      dy = f.y / fl;
+      d = 1;
+    }
+    const k = Math.min(1, maxRange / d);
+    return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, null);
+  }
+
   /** Begins a cast if the move is ready and the mon can act. */
   tryCast(attacker: Mon, slot: number, targetX: number, targetY: number, targetId: number | null): boolean {
     const id = attacker.moves[slot];

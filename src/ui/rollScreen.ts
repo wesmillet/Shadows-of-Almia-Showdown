@@ -6,7 +6,7 @@
 import type { Input } from '../core/input';
 import { easeOutCubic } from '../core/math';
 import { Rng } from '../core/rng';
-import { CONFIG, species, SPAWNS, type SpeciesDef } from '../sim/data';
+import { CONFIG, species, SPAWNS, SPECIES, type SpeciesDef } from '../sim/data';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { button, hit, panel, text, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
@@ -188,8 +188,27 @@ export class RollScreen implements Screen {
     });
     const st = card.def.stats;
     text(v, `HP ${st.hp}  ATK ${st.atk}  DEF ${st.def}  SPA ${st.spa}  SPD ${st.spd}  SPE ${st.spe}`, x + 140 * s, y + 96 * s, 12, { weight: '500', color: '#cfc6ea' });
+    text(v, evolutionLine(card.def), x + 140 * s, y + 118 * s, 12, { weight: '600', color: '#ffe27a' });
     text(v, `Tier ${card.def.tier}`, x + w - 16 * s, y + 30 * s, 13, { align: 'right', weight: '800', color: card.def.tier >= 3 ? '#ffd36b' : card.def.tier === 2 ? '#9be7ff' : '#b9b4cc' });
     text(v, String(index), x + 14 * s, y + 22 * s, 12, { weight: '700', color: '#9f97bb' });
     void CONFIG;
   }
+}
+
+/** "Evolves: Lv 18 Grotle · Lv 32 Torterra" (Eevee: "Lv 22 one of 8 Eeveelutions"). */
+function evolutionLine(def: SpeciesDef): string {
+  const parts: string[] = [];
+  let cur: SpeciesDef | undefined = def;
+  for (let guard = 0; cur && guard < 4; guard++) {
+    const evo: Array<{ to: string; level: number }> = cur.evolves ?? [];
+    if (!evo.length) break;
+    const first = evo[0] as { to: string; level: number };
+    if (evo.length > 1) {
+      parts.push(`Lv ${first.level} one of ${evo.length} forms`);
+      break;
+    }
+    cur = SPECIES.get(first.to);
+    parts.push(`Lv ${first.level} ${cur?.name ?? first.to}`);
+  }
+  return parts.length ? `Evolves: ${parts.join(' · ')}` : 'Does not evolve';
 }

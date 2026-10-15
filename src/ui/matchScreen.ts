@@ -9,7 +9,7 @@ import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
-import { CONFIG, MOVES, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { CONFIG, MOVES, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon } from '../sim/entities';
 import { lead } from '../sim/entities';
 import type { Match } from '../sim/match';
@@ -44,6 +44,8 @@ export const EXTRA_FX = {
   sleep: 'fx_015',
   burn: 'fx_134',
   paralysis: 'fx_096',
+  /** Rising sparkles while a Pokémon evolves. */
+  evolve: 'fx_041',
 } as const;
 
 export class MatchScreen implements Screen {
@@ -280,8 +282,9 @@ export class MatchScreen implements Screen {
   protected anchorWorld(m: Mon): { x: number; y: number } {
     const v = this.ctx.view;
     const [ax, ay] = m.anim.anchor();
-    const k = v.spriteScale / v.pxPerTile;
-    return { x: m.x + ax * k, y: m.y + ay * k + 0.35 };
+    const size = drawScale(m.species);
+    const k = (v.spriteScale * size) / v.pxPerTile;
+    return { x: m.x + ax * k, y: m.y + ay * k + 0.35 * Math.min(1, size) };
   }
 
   protected consumeEvents(): void {
@@ -373,6 +376,14 @@ export class MatchScreen implements Screen {
           this.floaters.add(ev.mon.x, ev.mon.y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
           if (ev.levels > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.9, `Level ${ev.mon.level}!`, '#ffe76b', 18);
         }
+        break;
+      case 'evolve-start':
+        if (ev.mon.owner?.isPlayer) this.say(`What? ${ev.mon.name} is evolving!`, 1.6);
+        this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2, fps: 12 });
+        break;
+      case 'evolved':
+        if (ev.mon.owner?.isPlayer) this.say(`${ev.from} evolved into ${ev.mon.name}!`, 2.6);
+        this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 3, fps: 18 });
         break;
       case 'eliminated':
         this.say(ev.trainer.isPlayer ? 'Your whole party fainted…' : `${ev.trainer.name} was eliminated!`, 2.5);
@@ -867,7 +878,8 @@ export class MatchScreen implements Screen {
       const y = m.py + (m.y - m.py) * alpha;
       const sx = Math.round(v.toScreenX(x));
       const f = m.anim.current();
-      const top = Math.round(v.toScreenY(y)) - (f.h * v.spriteScale) / 2;
+      // Bar just over the drawn body (sprites are drawn at their canonical size).
+      const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
       drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.name, m.level, m.hp / m.maxHp, v.baseScale);
     }

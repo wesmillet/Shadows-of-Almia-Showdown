@@ -1,5 +1,5 @@
 {
-  "_comment": "dex = SpriteCollab folder under assets/pokemon. Stats are the species' base stats. tier ranks starter candidates (3 = strongest; rerolls remove the top tier). biome places wild spawns (see spawns.json). moves are ids from moves.json (first four are the kit). Tier 4 entries are the demo team (title screen 'Demo Team'); a dex of the form <dex>-shiny loads assets/pokemon/<dex>-shiny (SpriteCollab's 0000/0001 shiny set).",
+  "_comment": "dex = SpriteCollab folder under assets/pokemon. Stats are the species' base stats. tier ranks starter candidates (3 = strongest; rerolls remove the top tier). biome places wild spawns (see spawns.json). moves are ids from moves.json (first four are the kit). Tier 4 entries are the demo team (title screen 'Demo Team'); a dex of the form <dex>-shiny loads assets/pokemon/<dex>-shiny (SpriteCollab's 0000/0001 shiny set). heightM/along/coil/bodyPx size the sprite to its Pokédex height next to a trainer; body is measured by scripts/measure_species.py. evolves lists [{to, level}]: the Pokémon evolves on reaching that level (several entries = one picked at random, e.g. Eevee). tier 0 = evolved forms, never rolled.",
   "species": [
     {
       "dex": "0387",
@@ -21,6 +21,17 @@
         "razor-leaf",
         "bite",
         "howl"
+      ],
+      "heightM": 0.4,
+      "body": [
+        13,
+        21
+      ],
+      "evolves": [
+        {
+          "to": "0388",
+          "level": 18
+        }
       ]
     },
     {
@@ -43,6 +54,17 @@
         "ember",
         "rock-smash",
         "will-o-wisp"
+      ],
+      "heightM": 0.5,
+      "body": [
+        15,
+        20
+      ],
+      "evolves": [
+        {
+          "to": "0391",
+          "level": 14
+        }
       ]
     },
     {
@@ -65,6 +87,17 @@
         "water-gun",
         "wing-attack",
         "ice-beam"
+      ],
+      "heightM": 0.4,
+      "body": [
+        17,
+        19
+      ],
+      "evolves": [
+        {
+          "to": "0394",
+          "level": 16
+        }
       ]
     },
     {
@@ -87,6 +120,17 @@
         "quick-attack",
         "thunder-wave",
         "discharge"
+      ],
+      "heightM": 0.4,
+      "body": [
+        19,
+        25
+      ],
+      "evolves": [
+        {
+          "to": "0026",
+          "level": 22
+        }
       ]
     },
     {
@@ -109,6 +153,45 @@
         "quick-attack",
         "bite",
         "shadow-ball"
+      ],
+      "heightM": 0.3,
+      "body": [
+        19,
+        18
+      ],
+      "evolves": [
+        {
+          "to": "0134",
+          "level": 22
+        },
+        {
+          "to": "0135",
+          "level": 22
+        },
+        {
+          "to": "0136",
+          "level": 22
+        },
+        {
+          "to": "0196",
+          "level": 22
+        },
+        {
+          "to": "0197",
+          "level": 22
+        },
+        {
+          "to": "0470",
+          "level": 22
+        },
+        {
+          "to": "0471",
+          "level": 22
+        },
+        {
+          "to": "0700",
+          "level": 22
+        }
       ]
     },
     {
@@ -131,6 +214,17 @@
         "quick-attack",
         "bite",
         "howl"
+      ],
+      "heightM": 0.7,
+      "body": [
+        18,
+        21
+      ],
+      "evolves": [
+        {
+          "to": "0448",
+          "level": 24
+        }
       ]
     },
     {
@@ -154,6 +248,17 @@
         "bulldoze",
         "bite",
         "rock-throw"
+      ],
+      "heightM": 0.7,
+      "body": [
+        21,
+        23
+      ],
+      "evolves": [
+        {
+          "to": "0444",
+          "level": 24
+        }
       ]
     },
     {
@@ -176,6 +281,19 @@
         "thunder-wave",
         "ice-beam",
         "water-gun"
+      ],
+      "heightM": 1.8,
+      "along": "length",
+      "coil": 0.5,
+      "body": [
+        24,
+        22
+      ],
+      "evolves": [
+        {
+          "to": "0148",
+          "level": 30
+        }
       ]
     },
     {
@@ -199,6 +317,17 @@
         "bite",
         "bulldoze",
         "howl"
+      ],
+      "heightM": 0.6,
+      "body": [
+        17,
+        23
+      ],
+      "evolves": [
+        {
+          "to": "0247",
+          "level": 30
+        }
       ]
     },
     {
@@ -223,6 +352,17 @@
         "wing-attack",
         "quick-attack",
         "howl"
+      ],
+      "heightM": 0.3,
+      "body": [
+        13,
+        18
+      ],
+      "evolves": [
+        {
+          "to": "0397",
+          "level": 14
+        }
       ]
     },
     {
@@ -246,6 +386,17 @@
         "bite",
         "howl",
         "rock-smash"
+      ],
+      "heightM": 0.5,
+      "body": [
+        17,
+        23
+      ],
+      "evolves": [
+        {
+          "to": "0400",
+          "level": 15
+        }
       ]
     },
     {
@@ -269,6 +420,17 @@
         "thunder-shock",
         "bite",
         "thunder-wave"
+      ],
+      "heightM": 0.5,
+      "body": [
+        21,
+        26
+      ],
+      "evolves": [
+        {
+          "to": "0404",
+          "level": 15
+        }
       ]
     },
     {
@@ -293,6 +455,17 @@
         "sleep-powder",
         "tackle",
         "howl"
+      ],
+      "heightM": 0.2,
+      "body": [
+        12,
+        19
+      ],
+      "evolves": [
+        {
+          "to": "0315",
+          "level": 16
+        }
       ]
     },
     {
@@ -316,6 +489,17 @@
         "sleep-powder",
         "quick-attack",
         "howl"
+      ],
+      "heightM": 0.3,
+      "body": [
+        12,
+        19
+      ],
+      "evolves": [
+        {
+          "to": "0011",
+          "level": 7
+        }
       ]
     },
     {
@@ -339,6 +523,17 @@
         "bite",
         "howl",
         "razor-leaf"
+      ],
+      "heightM": 0.3,
+      "body": [
+        16,
+        23
+      ],
+      "evolves": [
+        {
+          "to": "0402",
+          "level": 10
+        }
       ]
     },
     {
@@ -363,6 +558,17 @@
         "tackle",
         "bulldoze",
         "rock-smash"
+      ],
+      "heightM": 0.4,
+      "body": [
+        26,
+        17
+      ],
+      "evolves": [
+        {
+          "to": "0075",
+          "level": 25
+        }
       ]
     },
     {
@@ -386,6 +592,17 @@
         "tackle",
         "rock-smash",
         "bite"
+      ],
+      "heightM": 0.4,
+      "body": [
+        18,
+        20
+      ],
+      "evolves": [
+        {
+          "to": "0099",
+          "level": 28
+        }
       ]
     },
     {
@@ -409,6 +626,17 @@
         "tackle",
         "bulldoze",
         "howl"
+      ],
+      "heightM": 0.3,
+      "body": [
+        10,
+        15
+      ],
+      "evolves": [
+        {
+          "to": "0423",
+          "level": 30
+        }
       ]
     },
     {
@@ -432,6 +660,18 @@
         "water-gun",
         "howl",
         "quick-attack"
+      ],
+      "heightM": 0.9,
+      "along": "length",
+      "body": [
+        22,
+        22
+      ],
+      "evolves": [
+        {
+          "to": "0130",
+          "level": 20
+        }
       ]
     },
     {
@@ -455,6 +695,17 @@
         "psybeam",
         "scratch",
         "howl"
+      ],
+      "heightM": 0.8,
+      "body": [
+        20,
+        24
+      ],
+      "evolves": [
+        {
+          "to": "0055",
+          "level": 33
+        }
       ]
     },
     {
@@ -479,6 +730,17 @@
         "wing-attack",
         "quick-attack",
         "ice-beam"
+      ],
+      "heightM": 0.6,
+      "body": [
+        30,
+        18
+      ],
+      "evolves": [
+        {
+          "to": "0279",
+          "level": 25
+        }
       ]
     },
     {
@@ -501,6 +763,11 @@
         "dark-pulse",
         "shadow-ball",
         "bite"
+      ],
+      "heightM": 1.5,
+      "body": [
+        29,
+        41
       ]
     },
     {
@@ -524,6 +791,11 @@
         "brick-break",
         "aerial-ace",
         "crunch"
+      ],
+      "heightM": 1.2,
+      "body": [
+        29,
+        33
       ]
     },
     {
@@ -548,6 +820,13 @@
         "aerial-ace",
         "earthquake",
         "stone-edge"
+      ],
+      "heightM": 7.0,
+      "along": "length",
+      "coil": 0.5,
+      "body": [
+        62,
+        67
       ]
     },
     {
@@ -571,6 +850,12 @@
         "psybeam",
         "surf",
         "thunderbolt"
+      ],
+      "heightM": 2.0,
+      "along": "length",
+      "body": [
+        51,
+        31
       ]
     },
     {
@@ -595,6 +880,11 @@
         "thunderbolt",
         "energy-ball",
         "return"
+      ],
+      "heightM": 0.3,
+      "body": [
+        22,
+        22
       ]
     },
     {
@@ -618,6 +908,1128 @@
         "rock-slide",
         "stone-edge",
         "return"
+      ],
+      "heightM": 0.7,
+      "bodyPx": 24,
+      "body": [
+        57,
+        51
+      ]
+    },
+    {
+      "dex": "0388",
+      "name": "Grotle",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 89,
+        "def": 85,
+        "spa": 55,
+        "spd": 65,
+        "spe": 36
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "energy-ball",
+        "bite",
+        "howl"
+      ],
+      "heightM": 1.1,
+      "evolves": [
+        {
+          "to": "0389",
+          "level": 32
+        }
+      ],
+      "body": [
+        21,
+        23
+      ]
+    },
+    {
+      "dex": "0389",
+      "name": "Torterra",
+      "types": [
+        "grass",
+        "ground"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 109,
+        "def": 105,
+        "spa": 75,
+        "spd": 85,
+        "spe": 56
+      },
+      "tier": 0,
+      "moves": [
+        "earthquake",
+        "energy-ball",
+        "crunch",
+        "rock-slide"
+      ],
+      "heightM": 2.2,
+      "body": [
+        29,
+        31
+      ]
+    },
+    {
+      "dex": "0391",
+      "name": "Monferno",
+      "types": [
+        "fire",
+        "fighting"
+      ],
+      "stats": {
+        "hp": 64,
+        "atk": 78,
+        "def": 52,
+        "spa": 78,
+        "spd": 52,
+        "spe": 81
+      },
+      "tier": 0,
+      "moves": [
+        "quick-attack",
+        "flamethrower",
+        "brick-break",
+        "will-o-wisp"
+      ],
+      "heightM": 0.9,
+      "evolves": [
+        {
+          "to": "0392",
+          "level": 36
+        }
+      ],
+      "body": [
+        25,
+        25
+      ]
+    },
+    {
+      "dex": "0394",
+      "name": "Prinplup",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 64,
+        "atk": 66,
+        "def": 68,
+        "spa": 81,
+        "spd": 76,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "quick-attack",
+        "surf",
+        "wing-attack",
+        "ice-beam"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0395",
+          "level": 36
+        }
+      ],
+      "body": [
+        21,
+        24
+      ]
+    },
+    {
+      "dex": "0395",
+      "name": "Empoleon",
+      "types": [
+        "water",
+        "steel"
+      ],
+      "stats": {
+        "hp": 84,
+        "atk": 86,
+        "def": 88,
+        "spa": 111,
+        "spd": 101,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "brick-break",
+        "surf",
+        "aerial-ace",
+        "ice-beam"
+      ],
+      "heightM": 1.7,
+      "body": [
+        29,
+        30
+      ]
+    },
+    {
+      "dex": "0026",
+      "name": "Raichu",
+      "types": [
+        "electric"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 90,
+        "def": 55,
+        "spa": 90,
+        "spd": 80,
+        "spe": 110
+      },
+      "tier": 0,
+      "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "thunder-wave",
+        "wild-charge"
+      ],
+      "heightM": 0.8,
+      "body": [
+        29,
+        26
+      ]
+    },
+    {
+      "dex": "0134",
+      "name": "Vaporeon",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 130,
+        "atk": 65,
+        "def": 60,
+        "spa": 110,
+        "spd": 95,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "quick-attack",
+        "ice-beam",
+        "shadow-ball"
+      ],
+      "heightM": 1.0,
+      "body": [
+        23,
+        29
+      ]
+    },
+    {
+      "dex": "0135",
+      "name": "Jolteon",
+      "types": [
+        "electric"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 65,
+        "def": 60,
+        "spa": 110,
+        "spd": 95,
+        "spe": 130
+      },
+      "tier": 0,
+      "moves": [
+        "thunderbolt",
+        "quick-attack",
+        "thunder-wave",
+        "shadow-ball"
+      ],
+      "heightM": 0.8,
+      "body": [
+        21,
+        27
+      ]
+    },
+    {
+      "dex": "0136",
+      "name": "Flareon",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 130,
+        "def": 60,
+        "spa": 95,
+        "spd": 110,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "flamethrower",
+        "quick-attack",
+        "crunch",
+        "will-o-wisp"
+      ],
+      "heightM": 0.9,
+      "body": [
+        21,
+        24
+      ]
+    },
+    {
+      "dex": "0196",
+      "name": "Espeon",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 65,
+        "def": 60,
+        "spa": 130,
+        "spd": 95,
+        "spe": 110
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "quick-attack",
+        "shadow-ball",
+        "energy-ball"
+      ],
+      "heightM": 0.9,
+      "body": [
+        25,
+        26
+      ]
+    },
+    {
+      "dex": "0197",
+      "name": "Umbreon",
+      "types": [
+        "dark"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 65,
+        "def": 110,
+        "spa": 60,
+        "spd": 130,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "dark-pulse",
+        "quick-attack",
+        "crunch",
+        "return"
+      ],
+      "heightM": 1.0,
+      "body": [
+        17,
+        30
+      ]
+    },
+    {
+      "dex": "0470",
+      "name": "Leafeon",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 110,
+        "def": 130,
+        "spa": 60,
+        "spd": 65,
+        "spe": 95
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "quick-attack",
+        "x-scissor",
+        "energy-ball"
+      ],
+      "heightM": 1.0,
+      "body": [
+        21,
+        28
+      ]
+    },
+    {
+      "dex": "0471",
+      "name": "Glaceon",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 60,
+        "def": 110,
+        "spa": 130,
+        "spd": 95,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "ice-beam",
+        "quick-attack",
+        "bite",
+        "shadow-ball"
+      ],
+      "heightM": 0.8,
+      "body": [
+        23,
+        24
+      ]
+    },
+    {
+      "dex": "0700",
+      "name": "Sylveon",
+      "types": [
+        "fairy"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 65,
+        "def": 65,
+        "spa": 110,
+        "spd": 130,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "quick-attack",
+        "return",
+        "shadow-ball"
+      ],
+      "heightM": 1.0,
+      "body": [
+        23,
+        32
+      ]
+    },
+    {
+      "dex": "0448",
+      "name": "Lucario",
+      "types": [
+        "fighting",
+        "steel"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 110,
+        "def": 70,
+        "spa": 115,
+        "spd": 70,
+        "spe": 90
+      },
+      "tier": 0,
+      "moves": [
+        "brick-break",
+        "quick-attack",
+        "dark-pulse",
+        "dragon-pulse"
+      ],
+      "heightM": 1.2,
+      "body": [
+        25,
+        27
+      ]
+    },
+    {
+      "dex": "0444",
+      "name": "Gabite",
+      "types": [
+        "dragon",
+        "ground"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 90,
+        "def": 65,
+        "spa": 50,
+        "spd": 55,
+        "spe": 82
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "bulldoze",
+        "crunch",
+        "rock-slide"
+      ],
+      "heightM": 1.4,
+      "evolves": [
+        {
+          "to": "0445",
+          "level": 48
+        }
+      ],
+      "body": [
+        30,
+        25
+      ]
+    },
+    {
+      "dex": "0445",
+      "name": "Garchomp",
+      "types": [
+        "dragon",
+        "ground"
+      ],
+      "stats": {
+        "hp": 108,
+        "atk": 130,
+        "def": 95,
+        "spa": 80,
+        "spd": 85,
+        "spe": 102
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "earthquake",
+        "crunch",
+        "stone-edge"
+      ],
+      "heightM": 1.9,
+      "body": [
+        35,
+        30
+      ]
+    },
+    {
+      "dex": "0148",
+      "name": "Dragonair",
+      "types": [
+        "dragon"
+      ],
+      "stats": {
+        "hp": 61,
+        "atk": 84,
+        "def": 65,
+        "spa": 70,
+        "spd": 70,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "thunder-wave",
+        "ice-beam",
+        "surf"
+      ],
+      "heightM": 4.0,
+      "along": "length",
+      "coil": 0.4,
+      "evolves": [
+        {
+          "to": "0149",
+          "level": 55
+        }
+      ],
+      "body": [
+        26,
+        37
+      ]
+    },
+    {
+      "dex": "0149",
+      "name": "Dragonite",
+      "types": [
+        "dragon",
+        "flying"
+      ],
+      "stats": {
+        "hp": 91,
+        "atk": 134,
+        "def": 95,
+        "spa": 100,
+        "spd": 100,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "aerial-ace",
+        "ice-beam",
+        "thunderbolt"
+      ],
+      "heightM": 2.2,
+      "body": [
+        27,
+        32
+      ]
+    },
+    {
+      "dex": "0247",
+      "name": "Pupitar",
+      "types": [
+        "rock",
+        "ground"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 84,
+        "def": 70,
+        "spa": 65,
+        "spd": 70,
+        "spe": 51
+      },
+      "tier": 0,
+      "moves": [
+        "rock-slide",
+        "crunch",
+        "bulldoze",
+        "howl"
+      ],
+      "heightM": 1.2,
+      "evolves": [
+        {
+          "to": "0248",
+          "level": 55
+        }
+      ],
+      "body": [
+        19,
+        25
+      ]
+    },
+    {
+      "dex": "0248",
+      "name": "Tyranitar",
+      "types": [
+        "rock",
+        "dark"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 134,
+        "def": 110,
+        "spa": 95,
+        "spd": 100,
+        "spe": 61
+      },
+      "tier": 0,
+      "moves": [
+        "stone-edge",
+        "crunch",
+        "earthquake",
+        "dark-pulse"
+      ],
+      "heightM": 2.0,
+      "body": [
+        25,
+        29
+      ]
+    },
+    {
+      "dex": "0397",
+      "name": "Staravia",
+      "types": [
+        "normal",
+        "flying"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 75,
+        "def": 50,
+        "spa": 40,
+        "spd": 40,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "quick-attack",
+        "aerial-ace",
+        "wing-attack",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0398",
+          "level": 34
+        }
+      ],
+      "body": [
+        15,
+        23
+      ]
+    },
+    {
+      "dex": "0398",
+      "name": "Staraptor",
+      "types": [
+        "normal",
+        "flying"
+      ],
+      "stats": {
+        "hp": 85,
+        "atk": 120,
+        "def": 70,
+        "spa": 50,
+        "spd": 60,
+        "spe": 100
+      },
+      "tier": 0,
+      "moves": [
+        "return",
+        "aerial-ace",
+        "brick-break",
+        "howl"
+      ],
+      "heightM": 1.2,
+      "body": [
+        17,
+        27
+      ]
+    },
+    {
+      "dex": "0400",
+      "name": "Bibarel",
+      "types": [
+        "normal",
+        "water"
+      ],
+      "stats": {
+        "hp": 79,
+        "atk": 85,
+        "def": 60,
+        "spa": 55,
+        "spd": 60,
+        "spe": 71
+      },
+      "tier": 0,
+      "moves": [
+        "return",
+        "crunch",
+        "surf",
+        "rock-smash"
+      ],
+      "heightM": 1.0,
+      "body": [
+        21,
+        29
+      ]
+    },
+    {
+      "dex": "0404",
+      "name": "Luxio",
+      "types": [
+        "electric"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 85,
+        "def": 49,
+        "spa": 60,
+        "spd": 49,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "wild-charge",
+        "discharge",
+        "bite",
+        "thunder-wave"
+      ],
+      "heightM": 0.9,
+      "evolves": [
+        {
+          "to": "0405",
+          "level": 30
+        }
+      ],
+      "body": [
+        24,
+        26
+      ]
+    },
+    {
+      "dex": "0405",
+      "name": "Luxray",
+      "types": [
+        "electric"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 120,
+        "def": 79,
+        "spa": 95,
+        "spd": 79,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "wild-charge",
+        "thunderbolt",
+        "crunch",
+        "thunder-wave"
+      ],
+      "heightM": 1.4,
+      "body": [
+        24,
+        30
+      ]
+    },
+    {
+      "dex": "0315",
+      "name": "Roselia",
+      "types": [
+        "grass",
+        "poison"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 60,
+        "def": 45,
+        "spa": 100,
+        "spd": 80,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "sleep-powder",
+        "poison-jab",
+        "howl"
+      ],
+      "heightM": 0.3,
+      "evolves": [
+        {
+          "to": "0407",
+          "level": 32
+        }
+      ],
+      "body": [
+        28,
+        21
+      ]
+    },
+    {
+      "dex": "0407",
+      "name": "Roserade",
+      "types": [
+        "grass",
+        "poison"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 70,
+        "def": 65,
+        "spa": 125,
+        "spd": 105,
+        "spe": 90
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "sleep-powder",
+        "sludge-bomb",
+        "shadow-ball"
+      ],
+      "heightM": 0.9,
+      "body": [
+        28,
+        26
+      ]
+    },
+    {
+      "dex": "0011",
+      "name": "Metapod",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 20,
+        "def": 55,
+        "spa": 25,
+        "spd": 25,
+        "spe": 30
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "sleep-powder",
+        "quick-attack",
+        "howl"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0012",
+          "level": 10
+        }
+      ],
+      "body": [
+        19,
+        22
+      ]
+    },
+    {
+      "dex": "0012",
+      "name": "Butterfree",
+      "types": [
+        "bug",
+        "flying"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 45,
+        "def": 50,
+        "spa": 90,
+        "spd": 80,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "sleep-powder",
+        "aerial-ace",
+        "x-scissor"
+      ],
+      "heightM": 1.1,
+      "body": [
+        28,
+        25
+      ]
+    },
+    {
+      "dex": "0402",
+      "name": "Kricketune",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 77,
+        "atk": 85,
+        "def": 51,
+        "spa": 55,
+        "spd": 51,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "x-scissor",
+        "bite",
+        "howl",
+        "brick-break"
+      ],
+      "heightM": 1.0,
+      "body": [
+        23,
+        27
+      ]
+    },
+    {
+      "dex": "0075",
+      "name": "Graveler",
+      "types": [
+        "rock",
+        "ground"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 95,
+        "def": 115,
+        "spa": 45,
+        "spd": 45,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "rock-slide",
+        "tackle",
+        "bulldoze",
+        "rock-smash"
+      ],
+      "heightM": 1.0,
+      "evolves": [
+        {
+          "to": "0076",
+          "level": 40
+        }
+      ],
+      "body": [
+        23,
+        24
+      ]
+    },
+    {
+      "dex": "0076",
+      "name": "Golem",
+      "types": [
+        "rock",
+        "ground"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 120,
+        "def": 130,
+        "spa": 55,
+        "spd": 65,
+        "spe": 45
+      },
+      "tier": 0,
+      "moves": [
+        "stone-edge",
+        "rock-slide",
+        "earthquake",
+        "brick-break"
+      ],
+      "heightM": 1.4,
+      "body": [
+        28,
+        23
+      ]
+    },
+    {
+      "dex": "0099",
+      "name": "Kingler",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 130,
+        "def": 115,
+        "spa": 50,
+        "spd": 50,
+        "spe": 75
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "x-scissor",
+        "brick-break",
+        "crunch"
+      ],
+      "heightM": 1.3,
+      "body": [
+        28,
+        27
+      ]
+    },
+    {
+      "dex": "0423",
+      "name": "Gastrodon",
+      "types": [
+        "water",
+        "ground"
+      ],
+      "stats": {
+        "hp": 111,
+        "atk": 83,
+        "def": 68,
+        "spa": 92,
+        "spd": 82,
+        "spe": 39
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "sludge-bomb",
+        "earthquake",
+        "howl"
+      ],
+      "heightM": 0.9,
+      "body": [
+        19,
+        22
+      ]
+    },
+    {
+      "dex": "0130",
+      "name": "Gyarados",
+      "types": [
+        "water",
+        "flying"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 125,
+        "def": 79,
+        "spa": 60,
+        "spd": 100,
+        "spe": 81
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "surf",
+        "howl",
+        "earthquake"
+      ],
+      "heightM": 6.5,
+      "along": "length",
+      "coil": 0.5,
+      "body": [
+        37,
+        55
+      ]
+    },
+    {
+      "dex": "0055",
+      "name": "Golduck",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 82,
+        "def": 78,
+        "spa": 95,
+        "spd": 80,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "psybeam",
+        "brick-break",
+        "ice-beam"
+      ],
+      "heightM": 1.7,
+      "body": [
+        27,
+        28
+      ]
+    },
+    {
+      "dex": "0279",
+      "name": "Pelipper",
+      "types": [
+        "water",
+        "flying"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 50,
+        "def": 100,
+        "spa": 95,
+        "spd": 70,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "aerial-ace",
+        "quick-attack",
+        "ice-beam"
+      ],
+      "heightM": 1.2,
+      "body": [
+        31,
+        20
       ]
     }
   ]

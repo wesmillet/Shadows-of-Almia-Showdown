@@ -104,5 +104,10 @@
   },
   "lighting": {
     "dayToColdSeconds": 420
+  },
+  "sizes": {
+    "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall.",
+    "trainerHeightM": 1.6,
+    "trainerPx": 32
   }
 }

@@ -11,7 +11,7 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, SPAWNS, move, species, statsAtLevel } from './data';
+import { CONFIG, SPAWNS, hitPad, move, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
@@ -19,6 +19,7 @@ import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type Loot
 import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
+import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution } from './evolution';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -653,7 +654,7 @@ export class Match {
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
       heldItem: null, busy: 0, casting: null, target: null, captured: false,
       behavior: owner ? (owner.party.length === 0 ? 'aggressive' : 'guard') : 'guard', xp: 0, wander: null, wanderPause: 0,
-      roamTarget: null, recall: false, sinceHit: 999, visual: { scale: 1, alpha: 1, flash: 0 },
+      roamTarget: null, recall: false, sinceHit: 999, visual: { scale: 1, alpha: 1, flash: 0 }, evolving: null,
     };
   }
 
@@ -686,7 +687,8 @@ export class Match {
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre.
         const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / Math.hypot(this.centerX, this.centerY));
         const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far));
-        const mon = this.makeMon(row.dex, level, null, spot.x, spot.y);
+        // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
+        const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
       }
@@ -822,7 +824,34 @@ export class Match {
       if (i >= 0) this.wilds.splice(i, 1);
     }
     this.handleKnockouts();
+    this.stepEvolutions(dt);
     this.checkElimination();
+  }
+
+  /** Party Pokémon past an evolution level start evolving; evolutions in progress tick on. */
+  private stepEvolutions(dt: number): void {
+    for (const t of this.allTrainers) {
+      if (!t.alive) continue;
+      for (const m of t.party) {
+        const e = m.evolving;
+        if (!e) {
+          if (m.fainted || m.captured || m.visual.scale < 1) continue;
+          const to = pickEvolution(m.species, m.level, this.rng);
+          if (!to) continue;
+          m.evolving = { to, t: 0, swapped: false };
+          this.battle.events.push({ type: 'evolve-start', mon: m });
+          continue;
+        }
+        e.t += dt;
+        if (!e.swapped && e.t >= EVOLVE_SWAP) {
+          e.swapped = true;
+          const from = m.name;
+          applyEvolution(m, species(e.to), this.sprites.get(e.to));
+          this.battle.events.push({ type: 'evolved', mon: m, from });
+        }
+        if (e.t >= EVOLVE_SECONDS) m.evolving = null;
+      }
+    }
   }
 
   private stepPlayer(dt: number): void {
@@ -903,7 +932,7 @@ export class Match {
     for (const o of this.mons()) {
       if (!o.casting || o === m || !this.battle.isEnemy(o, m)) continue;
       const def = move(o.casting.moveId);
-      if (areaContains(makeArea(def, o, o.casting.targetX, o.casting.targetY), m.x, m.y)) return true;
+      if (areaContains(makeArea(def, o, o.casting.targetX, o.casting.targetY), m.x, m.y, hitPad(m.species))) return true;
     }
     return false;
   }

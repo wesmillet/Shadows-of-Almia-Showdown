@@ -4,6 +4,8 @@
  */
 import { lerp, dir8To4 } from '../core/math';
 import type { Match } from '../sim/match';
+import { drawScale } from '../sim/data';
+import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import type { View } from './view';
@@ -58,8 +60,11 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const sy = Math.round(view.toScreenY(p.y));
   const vis = m.visual;
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
-  const s = view.spriteScale * vis.scale;
-  ctx.imageSmoothingEnabled = false;
+  // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
+  const s = view.spriteScale * vis.scale * drawScale(m.species);
+  // Sprites shrunk below one screen pixel per art pixel are filtered rather than decimated.
+  ctx.imageSmoothingEnabled = s < 1;
+  ctx.imageSmoothingQuality = 'high';
   const tween = vis.scale < 1 || vis.alpha < 1 || vis.flash > 0;
   if (tween) {
     ctx.save();
@@ -72,7 +77,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const f = m.anim.current();
   const dx = sx - (f.w * s) / 2;
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet.
-  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * 0.15;
+  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * drawScale(m.species) * 0.15;
   if (m.aura) {
     ctx.save();
     ctx.shadowColor = 'rgba(150,60,255,0.95)';
@@ -97,8 +102,20 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.drawImage(tint(c, '#ff3b3b'), dx, dy, f.w * s, f.h * s);
     ctx.restore();
   }
+  if (m.evolving) {
+    // Evolution: the body glows white, brighter and faster toward the swap, then fades.
+    const e = m.evolving;
+    const k = e.t < EVOLVE_SWAP ? (e.t / EVOLVE_SWAP) * (0.65 + 0.35 * Math.sin(e.t * (8 + 14 * (e.t / EVOLVE_SWAP))))
+      : Math.max(0, 1 - (e.t - EVOLVE_SWAP) / (EVOLVE_SECONDS - EVOLVE_SWAP));
+    const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, k));
+    ctx.drawImage(c, dx, dy, f.w * s, f.h * s);
+    ctx.restore();
+  }
   if (tween) ctx.restore();
-  if (m.status === 'sleep' && !tween) drawZzz(view, sx, sy - (f.h * s) / 2, m.anim.time);
+  ctx.imageSmoothingEnabled = false;
+  if (m.status === 'sleep' && !tween) drawZzz(view, sx, sy - m.species.body[1] * s, m.anim.time);
 }
 
 const tintCache = document.createElement('canvas');

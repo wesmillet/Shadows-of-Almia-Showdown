@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, effectiveness, move, type MoveDef, type StatusKind } from './data';
+import { CONFIG, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import type { InventorySlot, Mon, Trainer } from './entities';
 
@@ -37,6 +37,8 @@ export type BattleEvent =
   | { type: 'pickup'; trainer: Trainer; items: InventorySlot[]; ball: BallKind; healed: boolean }
   | { type: 'eliminated'; trainer: Trainer }
   | { type: 'xp'; mon: Mon; xp: number; levels: number }
+  | { type: 'evolve-start'; mon: Mon }
+  | { type: 'evolved'; mon: Mon; from: string }
   | { type: 'ball-hit'; mon: Mon; x: number; y: number }
   | { type: 'ball-absorb'; mon: Mon; x: number; y: number }
   | { type: 'ball-click'; mon: Mon; x: number; y: number }
@@ -47,16 +49,17 @@ const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 /** Shape sizes are designed in "big" tiles; the 16 px tileset packs more tiles per sprite, so they scale up. */
 export const R = (): number => CONFIG.battle.rangeScale;
 
-export function areaContains(a: Area, x: number, y: number): boolean {
+/** True when a body at (x, y) is inside the area; `pad` widens it for big bodies (tiles). */
+export function areaContains(a: Area, x: number, y: number, pad = 0): boolean {
   const k = R();
   switch (a.shape) {
     case 'single':
-      return Math.hypot(x - a.tx, y - a.ty) < 0.65 * k;
+      return Math.hypot(x - a.tx, y - a.ty) < 0.65 * k + pad;
     case 'self':
-      return Math.hypot(x - a.ox, y - a.oy) < 0.4 * k;
+      return Math.hypot(x - a.ox, y - a.oy) < 0.4 * k + pad;
     case 'ring': {
       const d = Math.hypot(x - a.ox, y - a.oy);
-      return d > 0.3 * k && d < 2.3 * k;
+      return d > 0.3 * k - pad && d < 2.3 * k + pad;
     }
     case 'line':
     case 'cone': {
@@ -64,8 +67,8 @@ export function areaContains(a: Area, x: number, y: number): boolean {
       const dy = y - a.oy;
       const along = dx * a.fx + dy * a.fy;
       const perp = Math.abs(dx * -a.fy + dy * a.fx);
-      if (a.shape === 'line') return along > 0.25 * k && along < 3.4 * k && perp < 0.55 * k;
-      return along > 0.25 * k && along < 2.9 * k && perp < (0.45 + along / k * 0.5) * k;
+      if (a.shape === 'line') return along > 0.25 * k - pad && along < 3.4 * k + pad && perp < 0.55 * k + pad;
+      return along > 0.25 * k - pad && along < 2.9 * k + pad && perp < (0.45 + along / k * 0.5) * k + pad;
     }
   }
 }
@@ -249,7 +252,7 @@ export class BattleSystem {
       for (const c of candidates) {
         if (c === attacker || !BattleSystem.active(c)) continue;
         if (!this.isEnemy(attacker, c)) continue;
-        if (areaContains(area, c.x, c.y)) hits.push(c);
+        if (areaContains(area, c.x, c.y, hitPad(c.species))) hits.push(c);
       }
       // A single-target move lands on the one Pokémon nearest its point.
       if (m.shape === 'single' && hits.length > 1) {

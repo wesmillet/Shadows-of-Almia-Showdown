@@ -23,6 +23,18 @@ export interface SpeciesDef {
   tier: number;
   biome?: Biome;
   moves: string[];
+  /** Pokédex height (or length, see `along`) in metres. */
+  heightM: number;
+  /** Which sprite extent the Pokédex figure measures: body height (default) or the longest side. */
+  along?: 'height' | 'length';
+  /** Serpents drawn coiled show this fraction of their length. */
+  coil?: number;
+  /** Body height override in sprite pixels, when the sprite carries something larger than itself. */
+  bodyPx?: number;
+  /** Measured opaque extent of the down-facing Idle frames, [width, height] in sprite pixels. */
+  body: [number, number];
+  /** Evolutions: the species it becomes on reaching `level` (several = one at random). */
+  evolves?: Array<{ to: string; level: number }>;
 }
 
 export type MoveShape = 'single' | 'line' | 'cone' | 'ring' | 'self';
@@ -82,12 +94,39 @@ export const SPAWNS = spawnsJson;
 export const TYPE_CHART = typesJson as { types: string[]; colors: Record<string, string>; chart: Record<string, Record<string, number>> };
 
 export const SPECIES = new Map<string, SpeciesDef>();
-for (const s of (speciesJson as { species: SpeciesDef[] }).species) SPECIES.set(s.dex, s);
+for (const s of (speciesJson as unknown as { species: SpeciesDef[] }).species) SPECIES.set(s.dex, s);
 
 export function species(dex: string): SpeciesDef {
   const s = SPECIES.get(dex);
   if (!s) throw new Error(`species.json has no entry for ${dex}`);
   return s;
+}
+
+const PX_PER_M = CONFIG.sizes.trainerPx / CONFIG.sizes.trainerHeightM;
+const scaleCache = new Map<string, number>();
+
+/**
+ * Draw scale of a species' sprite so its body stands at its Pokédex size next to a
+ * trainer (1 = the sprite's native pixel size). See scripts/measure_species.py.
+ */
+export function drawScale(s: SpeciesDef): number {
+  const hit = scaleCache.get(s.dex);
+  if (hit !== undefined) return hit;
+  const [w, h] = s.body ?? [24, 24];
+  const px = s.bodyPx ?? (s.along === 'length' ? Math.max(w, h) : h);
+  const k = (PX_PER_M * s.heightM * (s.coil ?? 1)) / Math.max(1, px);
+  scaleCache.set(s.dex, k);
+  return k;
+}
+
+/** Half the drawn body width, in tiles (16 sprite pixels per tile). */
+export function bodyRadius(s: SpeciesDef): number {
+  return ((s.body?.[0] ?? 16) * drawScale(s)) / 32;
+}
+
+/** Extra reach for hits on a body bigger than a trainer-sized one (0 for ordinary Pokémon). */
+export function hitPad(s: SpeciesDef): number {
+  return Math.max(0, bodyRadius(s) - 0.35);
 }
 
 export function typeColor(type: string): string {

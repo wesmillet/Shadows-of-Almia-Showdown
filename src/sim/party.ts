@@ -16,7 +16,7 @@
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
-import { CONFIG, statsAtLevel } from './data';
+import { CONFIG, hitPad, statsAtLevel } from './data';
 import type { Mon, Trainer } from './entities';
 import { canStand, tryMove } from './movement';
 import type { Nav } from './nav';
@@ -89,8 +89,10 @@ function nearestHostile(m: Mon, w: PartyWorld, range: number, from = { x: m.x, y
 function separation(m: Mon, t: Trainer, w: PartyWorld): { x: number; y: number } {
   let sx = 0;
   let sy = 0;
-  const R = CONFIG.party.separation;
-  const push = (ox: number, oy: number, weight: number) => {
+  const mine = hitPad(m.species);
+  const push = (ox: number, oy: number, weight: number, pad = 0) => {
+    // Big bodies keep each other (and their trainer) further off.
+    const R = CONFIG.party.separation + mine + pad;
     const dx = m.x - ox;
     const dy = m.y - oy;
     const d = Math.hypot(dx, dy);
@@ -99,9 +101,9 @@ function separation(m: Mon, t: Trainer, w: PartyWorld): { x: number; y: number }
     sx += (dx / d) * k;
     sy += (dy / d) * k;
   };
-  for (const o of t.party) if (o !== m && w.active(o) && !isRoaming(o)) push(o.x, o.y, 1);
+  for (const o of t.party) if (o !== m && w.active(o) && !isRoaming(o)) push(o.x, o.y, 1, hitPad(o.species));
   push(t.x, t.y, 1.4);
-  for (const o of w.mons()) if (o.owner !== t && w.active(o)) push(o.x, o.y, 0.6);
+  for (const o of w.mons()) if (o.owner !== t && w.active(o)) push(o.x, o.y, 0.6, hitPad(o.species));
   return { x: sx, y: sy };
 }
 

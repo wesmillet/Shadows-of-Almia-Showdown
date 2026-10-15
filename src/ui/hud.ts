@@ -11,7 +11,7 @@ import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
-import { darken, hit, lighten, rgba, uiFont } from './screens';
+import { darken, fitSize, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
@@ -116,7 +116,9 @@ export class Hud {
     return uiFont(size * this.view.baseScale);
   }
 
-  private label(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color = '#f4f1ff', align: CanvasTextAlign = 'left', weight = '600'): void {
+  /** Shadowed text; with `maxWidth` it shrinks (to 8 px at most) to stay inside its box. */
+  private label(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color = '#f4f1ff', align: CanvasTextAlign = 'left', weight = '600', maxWidth?: number): void {
+    if (maxWidth !== undefined) size = fitSize(this.view, s, size, maxWidth, ctx);
     ctx.font = this.font(size, weight);
     ctx.textAlign = align;
     ctx.textBaseline = 'alphabetic';
@@ -184,7 +186,7 @@ export class Hud {
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
-      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#6b4a30', 'left', '600');
+      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#6b4a30', 'left', '600', w - 100 * s);
     }
     if (st.teach) {
       const w = 340 * s;
@@ -192,10 +194,10 @@ export class Hud {
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
-      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600');
+      this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800', w - 28 * s);
+      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600', w - 28 * s);
       st.teach.moves.forEach((mv, i) => {
-        this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700');
+        this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700', w - 60 * s);
       });
     }
     if (st.shop) {
@@ -204,12 +206,12 @@ export class Hud {
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
-      this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600');
+      this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800', w - 28 * s);
+      this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600', w - 28 * s);
       st.shop.entries.forEach((e, i) => {
         const yy = y + 70 * s + i * 20 * s;
         const col = e.affordable ? '#2a1a10' : '#9a8a7a';
-        this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700');
+        this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700', w - 130 * s);
         this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
       });
     }
@@ -241,15 +243,15 @@ export class Hud {
     const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger).length;
     this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s, 14, 'rgba(12,12,22,0.35)');
     this.label(ctx, String(remaining), 34 * s, 66 * s, 44, '#ffffff', 'left', '800');
-    this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800');
+    this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800', 148 * s);
     const t = Math.floor(match.time);
     const mm = String(Math.floor(t / 60)).padStart(2, '0');
     const ss = String(t % 60).padStart(2, '0');
-    this.label(ctx, `${mm}:${ss}  ·  ${st.darkPhaseLabel}`, 92 * s, 66 * s, 13, '#e8e4f8', 'left', '500');
-    if (st.nextPulseIn >= 0) this.label(ctx, `pulse in ${Math.ceil(st.nextPulseIn)}s`, 92 * s, 82 * s, 11, '#b9b4cc', 'left', '500');
+    this.label(ctx, `${mm}:${ss}  ·  ${st.darkPhaseLabel}`, 92 * s, 66 * s, 13, '#e8e4f8', 'left', '500', 148 * s);
+    if (st.nextPulseIn >= 0) this.label(ctx, `pulse in ${Math.ceil(st.nextPulseIn)}s`, 92 * s, 82 * s, 11, '#b9b4cc', 'left', '500', 148 * s);
     // Poké Dollars under the counter
     this.panel(ctx, 16 * s, 96 * s, 120 * s, 26 * s, 12, 'rgba(12,12,22,0.35)');
-    this.label(ctx, `₽ ${st.money.toLocaleString()}`, 30 * s, 114 * s, 14, '#ffe27a', 'left', '800');
+    this.label(ctx, `₽ ${st.money.toLocaleString()}`, 30 * s, 114 * s, 14, '#ffe27a', 'left', '800', 96 * s);
   }
 
   private buildMinimap(match: Match): HTMLCanvasElement {
@@ -399,16 +401,22 @@ export class Hud {
         ctx.fillRect(px, py, ps, ps);
       }
       ctx.restore();
-      // name + level
-      this.label(ctx, m.name, px + ps + 10 * s, y0 + 22 * s, 13, m.fainted ? '#9b8fa8' : '#ffffff', 'left', '700');
-      this.label(ctx, `Lv ${m.level}`, x + cardW - 10 * s, y0 + 22 * s, 11, '#cdbfff', 'right', '600');
+      // name + level: the level keeps its size, the name shrinks into what is left.
+      const lvText = `Lv ${m.level}`;
+      ctx.font = this.font(11, '600');
+      const lvW = ctx.measureText(lvText).width;
+      const nameX = px + ps + 10 * s;
+      this.label(ctx, lvText, x + cardW - 10 * s, y0 + 22 * s, 11, '#cdbfff', 'right', '600');
+      this.label(ctx, m.name, nameX, y0 + 22 * s, 13, m.fainted ? '#9b8fa8' : '#ffffff', 'left', '700', x + cardW - 10 * s - lvW - 6 * s - nameX);
       // HP bar
       const bx = px + ps + 10 * s;
       const by = y0 + 30 * s;
       const bw = cardW - ps - 28 * s;
       const frac = clamp(m.hp / m.maxHp, 0, 1);
       this.ui.bar(ctx, Math.round(bx), Math.round(by), Math.round(bw / this.px) * this.px, this.px, frac);
-      this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 7 * this.px + 12 * s, 11, '#e8e4f8', 'left', '500');
+      const chipW = 54 * s;
+      const chipX = x + cardW - chipW - 8 * s;
+      this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 7 * this.px + 12 * s, 11, '#e8e4f8', 'left', '500', chipX - bx - 4 * s);
       // XP bar
       const xf = clamp(m.xp / xpToNext(m.level), 0, 1);
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -417,15 +425,13 @@ export class Hud {
       ctx.fillRect(bx, by + 7 * this.px + 16 * s, Math.round(bw * xf / this.px) * this.px, this.px);
       // behaviour chip
       const roaming = isRoaming(m);
-      const chipW = 66 * s;
-      const chipX = x + cardW - chipW - 8 * s;
       const chipY = y0 + cardH - 18 * s;
       const chipHover = hit(st.mouseX, st.mouseY, chipX, chipY, chipW, 14 * s);
       ctx.fillStyle = roaming ? (chipHover ? 'rgba(255,170,90,0.9)' : 'rgba(230,140,60,0.8)') : chipHover ? 'rgba(170,150,255,0.9)' : 'rgba(110,90,200,0.75)';
       ctx.beginPath();
       ctx.roundRect(chipX, chipY, chipW, 14 * s, 7);
       ctx.fill();
-      this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + 10.5 * s, 8.5, '#ffffff', 'center', '800');
+      this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + 10.5 * s, 8.5, '#ffffff', 'center', '800', chipW - 6 * s);
       this.behaviorRects.push({ x: chipX, y: chipY, w: chipW, h: 14 * s });
       if (roaming) {
         const dist = Math.hypot(m.x - p.x, m.y - p.y);
@@ -445,19 +451,21 @@ export class Hud {
         ctx.beginPath();
         ctx.arc(pinX, pinY, 2 * s, 0, Math.PI * 2);
         ctx.fill();
-        this.label(ctx, `${dist.toFixed(0)} tiles away · R to recall`, x + 8 * s, y0 + cardH - 7 * s, 8.5, '#ffd3a8', 'left', '600');
+        this.label(ctx, `${dist.toFixed(0)} tiles away · R to recall`, x + 8 * s, y0 + cardH - 7 * s, 8.5, '#ffd3a8', 'left', '600', chipX - x - 12 * s);
       }
       if (m.status) {
         const color = STATUS_COLORS[m.status] ?? '#fff';
         const tag = m.status === 'paralysis' ? 'PAR' : m.status === 'burn' ? 'BRN' : 'SLP';
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.roundRect(x + cardW - 44 * s, by + 10 * s, 34 * s, 15 * s, 6);
+        // On the portrait's top-left corner, clear of the HP bar.
+        ctx.roundRect(px - 2 * s, py - 2 * s, 30 * s, 14 * s, 5);
         ctx.fill();
-        this.label(ctx, tag, x + cardW - 27 * s, by + 21.5 * s, 10, '#1a1028', 'center', '800');
+        this.label(ctx, tag, px + 13 * s, py + 9 * s, 9, '#1a1028', 'center', '800', 26 * s);
       }
       if (m.heldItem) {
-        this.label(ctx, ITEMS[m.heldItem]?.short ?? m.heldItem, x + cardW - 10 * s, y0 + cardH - 8 * s, 9, '#ffe9a8', 'right', '600');
+        // The held item as a small icon on the portrait's corner.
+        this.icons.draw(ctx, m.heldItem, px + ps - 7 * s, py + ps - 7 * s, 18 * s);
       }
       this.portraitRects.push({ x, y: y0, w: cardW, h: cardH });
     });
@@ -514,7 +522,7 @@ export class Hud {
         }
         ctx.restore();
         this.label(ctx, String(i + 1), x, y - 4 * s, 15, '#ffffff', 'center', '800');
-        this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600');
+        this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600', ri * 2 - 6 * s);
         if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
         this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
         return;
@@ -548,7 +556,7 @@ export class Hud {
       }
       ctx.restore();
       this.label(ctx, String(i + 1), x, y - 4 * s, 15, '#ffffff', 'center', '800');
-      this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600');
+      this.label(ctx, def.name, x, y + 11 * s, 8.5, ready ? '#ffffff' : '#bbb', 'center', '600', r * 2 - 8 * s);
       if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
       this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
     });
@@ -584,6 +592,7 @@ export class Hud {
     const y0 = v.height - 62 * s - 16 * s - slot - 20 * s;
     this.itemRects = [];
     this.tabRects = [];
+    let hovered: { def: (typeof ITEMS)[string]; x: number } | null = null;
     this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12, 'rgba(12,12,22,0.25)');
     // Tabs above the slots.
     const tabW = 64 * s;
@@ -595,7 +604,7 @@ export class Hud {
         ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
         ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
       }
-      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#4a2d1a' : '#e8eef6', 'center', '800');
+      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#4a2d1a' : '#e8eef6', 'center', '800', tabW - 10 * s);
       this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
     });
     this.label(ctx, 'Tab', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
@@ -620,12 +629,38 @@ export class Hud {
       if (id) {
         const def = ITEMS[id];
         if (def) {
-          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 - 3 * s, 36 * s, def.tmType);
-          this.label(ctx, def.kind === 'tm' ? def.name.replace('TM ', '') : def.short, x + slot / 2, y0 + slot - 6 * s, 8, kit ? '#4a2d1a' : '#ffffff', 'center', '700');
-          if ((entry?.count ?? 1) > 1) this.label(ctx, `×${entry?.count}`, x + slot - 6 * s, y0 + 13 * s, 9, kit ? '#b0401a' : '#ffe9a8', 'right', '800');
+          // The icon sits in the middle of the slot with room round it; balls (18 px art) and bag icons (32 px) both fit 24 px.
+          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 + 1 * s, 26 * s, def.tmType);
+          const count = entry?.count ?? 1;
+          if (count > 1) {
+            // Quantity badge in the bottom-right corner: white on dark, always readable.
+            const t = `×${count}`;
+            ctx.font = this.font(9, '800');
+            const bw = ctx.measureText(t).width + 8 * s;
+            const bh = 13 * s;
+            const bx = x + slot - bw - 2 * s;
+            const by = y0 + slot - bh - 2 * s;
+            ctx.fillStyle = 'rgba(30,18,10,0.85)';
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, bh, 4 * s);
+            ctx.fill();
+            this.label(ctx, t, bx + bw / 2, by + bh - 3 * s, 9, '#ffffff', 'center', '800');
+          }
+          if (hover) hovered = { def, x: x + slot / 2 };
         }
       }
       this.itemRects.push({ x, y: y0, w: slot, h: slot });
     });
+    // The hovered item's name above the bag.
+    if (hovered) {
+      const h = hovered as { def: (typeof ITEMS)[string]; x: number };
+      const name = h.def.kind === 'tm' ? h.def.name : h.def.name;
+      ctx.font = this.font(11, '700');
+      const tw = ctx.measureText(name).width + 18 * s;
+      const tx = Math.max(8 * s, h.x - tw / 2);
+      const ty = y0 - 8 * s - 18 * s - 30 * s;
+      this.panel(ctx, tx, ty, tw, 24 * s, 10, 'rgba(12,12,22,0.55)');
+      this.label(ctx, name, tx + tw / 2, ty + 16 * s, 11, '#ffffff', 'center', '700');
+    }
   }
 }

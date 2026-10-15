@@ -50,8 +50,54 @@ export function uiFont(px: number): string {
   return `${Math.max(8, Math.round(px * FONT_SCALE))}px ${FONT_FAMILY}`;
 }
 
-export function text(view: View, s: string, x: number, y: number, size: number, opts: { color?: string; align?: CanvasTextAlign; weight?: string; shadow?: boolean; baseline?: CanvasTextBaseline; ctx?: CanvasRenderingContext2D } = {}): void {
+export interface TextOpts {
+  color?: string;
+  align?: CanvasTextAlign;
+  weight?: string;
+  shadow?: boolean;
+  baseline?: CanvasTextBaseline;
+  ctx?: CanvasRenderingContext2D;
+  /** Shrink the text (down to 8 px) until it is no wider than this many canvas pixels. */
+  maxWidth?: number;
+}
+
+/** The font size (in `size` units) at which `s` fits `maxWidth` canvas pixels, never above `size`. */
+export function fitSize(view: View, s: string, size: number, maxWidth: number, ctx: CanvasRenderingContext2D = view.hud): number {
+  ctx.save();
+  ctx.font = uiFont(size * view.baseScale);
+  const w = ctx.measureText(s).width;
+  ctx.restore();
+  if (w <= maxWidth || w <= 0) return size;
+  return Math.max(8 / (view.baseScale * FONT_SCALE), size * (maxWidth / w) * 0.98);
+}
+
+/**
+ * Word-wrapped text inside `maxWidth`: up to `maxLines` lines `lineHeight` apart (canvas pixels),
+ * the last one shrunk to fit if words are left over. Returns the number of lines drawn.
+ */
+export function wrapText(view: View, s: string, x: number, y: number, size: number, maxWidth: number, lineHeight: number, maxLines: number, opts: TextOpts = {}): number {
   const ctx = opts.ctx ?? view.hud;
+  ctx.save();
+  ctx.font = uiFont(size * view.baseScale);
+  const words = s.split(' ');
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (cur && ctx.measureText(next).width > maxWidth && lines.length < maxLines - 1) {
+      lines.push(cur);
+      cur = w;
+    } else cur = next;
+  }
+  if (cur) lines.push(cur);
+  ctx.restore();
+  lines.forEach((line, i) => text(view, line, x, y + i * lineHeight, size, { ...opts, maxWidth }));
+  return lines.length;
+}
+
+export function text(view: View, s: string, x: number, y: number, size: number, opts: TextOpts = {}): void {
+  const ctx = opts.ctx ?? view.hud;
+  if (opts.maxWidth !== undefined) size = fitSize(view, s, size, opts.maxWidth, ctx);
   ctx.save();
   ctx.font = uiFont(size * view.baseScale);
   ctx.textAlign = opts.align ?? 'left';
@@ -80,6 +126,7 @@ export function button(view: View, label: string, x: number, y: number, w: numbe
     skin.strip(ctx, ribbon ? 'ribbon' : 'plate', x, y + lift, w, h, false);
     ctx.restore();
     text(view, label, x + w / 2, y + h / 2 + 1 + lift, h * 0.36 / view.baseScale, {
+      maxWidth: w - 28 * view.baseScale,
       align: 'center', baseline: 'middle', color: ribbon ? '#fff7e8' : accent === DISABLED ? '#5c5670' : '#2a2438', shadow: ribbon,
     });
     return;

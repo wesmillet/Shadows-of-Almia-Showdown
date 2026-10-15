@@ -1,7 +1,7 @@
 /** Win / loss with the match stats. */
 import type { Input } from '../core/input';
 import type { Match } from '../sim/match';
-import { button, hit, panel, text, type GameContext, type Screen } from './screens';
+import { button, hit, panel, text, wrapText, type GameContext, type Screen } from './screens';
 import type { MatchScreen } from './matchScreen';
 
 export class EndScreen implements Screen {
@@ -17,7 +17,7 @@ export class EndScreen implements Screen {
   private buttonRect(): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 150 * s, w: 220 * s, h: 52 * s };
+    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 176 * s, w: 220 * s, h: 52 * s };
   }
 
   step(dt: number, input: Input): void {
@@ -41,8 +41,9 @@ export class EndScreen implements Screen {
     const px = v.width / 2 - pw / 2;
     const py = v.height / 2 - ph / 2 - 20 * s;
     panel(v, px, py, pw, ph, 22, 'rgba(18,14,34,0.92)');
-    text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 62 * s, 44, { align: 'center', weight: '900', color: win ? '#ffd36b' : '#ff8fa3' });
-    text(v, win ? 'Last trainer standing on the training grounds.' : 'Your whole party fainted in the night.', v.width / 2, py + 92 * s, 14, { align: 'center', weight: '500', color: '#cfc6ea' });
+    const inner = pw - 80 * s;
+    text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 62 * s, 44, { align: 'center', weight: '900', color: win ? '#ffd36b' : '#ff8fa3', maxWidth: inner });
+    text(v, win ? 'Last trainer standing on the training grounds.' : 'Your whole party fainted in the night.', v.width / 2, py + 92 * s, 14, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: inner });
     const st = this.match.player.stats;
     const t = Math.floor(st.timeSurvived);
     const rows: Array<[string, string]> = [
@@ -50,13 +51,16 @@ export class EndScreen implements Screen {
       ['Knockouts', String(st.knockouts)],
       ['Damage dealt', String(st.damage)],
       ['Time survived', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
-      ['Party', this.match.player.party.map((m) => `${m.name}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-'],
     ];
     rows.forEach(([k, val], i) => {
       const y = py + 140 * s + i * 34 * s;
       text(v, k, px + 50 * s, y, 16, { weight: '600', color: '#b9b4cc' });
       text(v, val, px + pw - 50 * s, y, 16, { align: 'right', weight: '800', color: '#ffffff' });
     });
+    // The party under the stats, wrapped inside the panel.
+    const party = this.match.player.party.map((m) => `${m.name} Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-';
+    text(v, 'Party', v.width / 2, py + 140 * s + rows.length * 34 * s, 14, { align: 'center', weight: '600', color: '#b9b4cc' });
+    wrapText(v, party, v.width / 2, py + 162 * s + rows.length * 34 * s, 13, inner, 20 * s, 3, { align: 'center', color: '#ffffff' });
     const b = this.buttonRect();
     button(v, 'Play again', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h));
   }

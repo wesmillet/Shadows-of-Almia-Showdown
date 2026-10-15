@@ -116,6 +116,7 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   if (crit) dmg *= 1.5;
   if (attacker.status === 'burn' && m.category === 'physical') dmg *= 0.5;
   if (attacker.boss) dmg *= CONFIG.battle.bossDamageScale;
+  dmg *= (CONFIG.battle as typeof CONFIG.battle & { damageScale?: number }).damageScale ?? 1;
   dmg *= rng.range(0.85, 1);
   return { damage: Math.max(1, Math.floor(dmg)), effectiveness: eff, crit };
 }

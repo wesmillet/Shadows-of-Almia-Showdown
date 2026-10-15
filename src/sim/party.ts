@@ -22,11 +22,15 @@ import { canStand, tryMove } from './movement';
 import type { Nav } from './nav';
 
 export type Behavior = 'aggressive' | 'guard' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
-export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'passive', 'hold', 'roam', 'roam-aggressive'];
+/**
+ * The choices the player cycles through: Attack (go after anything in range), Guard (fight what
+ * comes near) and Follow (stay out of fights). Hold and the roaming modes are for rivals and scripts.
+ */
+export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'passive'];
 export const BEHAVIOR_LABEL: Record<Behavior, string> = {
-  aggressive: 'Aggressive',
+  aggressive: 'Attack',
   guard: 'Guard',
-  passive: 'Passive',
+  passive: 'Follow',
   hold: 'Hold',
   roam: 'Roam',
   'roam-aggressive': 'Roam (Aggr.)',
@@ -37,7 +41,8 @@ export function isRoaming(m: Mon): boolean {
 }
 
 export function nextBehavior(b: Behavior): Behavior {
-  return BEHAVIORS[(BEHAVIORS.indexOf(b) + 1) % BEHAVIORS.length] as Behavior;
+  const i = BEHAVIORS.indexOf(b);
+  return BEHAVIORS[i < 0 ? 0 : (i + 1) % BEHAVIORS.length] as Behavior;
 }
 
 /** Preferred spot relative to the trainer for the member in formation slot `slot` (0 = lead). */
@@ -289,7 +294,8 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
 // ---------------------------------------------------------------- XP
 
 export function xpToNext(level: number): number {
-  return CONFIG.party.xpBase + level * CONFIG.party.xpPerLevel;
+  const p = CONFIG.party as typeof CONFIG.party & { xpPerLevelSq?: number };
+  return Math.round(p.xpBase + level * p.xpPerLevel + level * level * (p.xpPerLevelSq ?? 0));
 }
 
 /** XP for knocking out `target`; beating something above your level pays up to double. */

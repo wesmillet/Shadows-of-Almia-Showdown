@@ -18,7 +18,7 @@ import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
-import { isRoaming, nextBehavior } from '../sim/party';
+import { BEHAVIOR_LABEL, isRoaming, nextBehavior } from '../sim/party';
 import { PHASE_SECONDS, ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
@@ -168,7 +168,7 @@ export class MatchScreen implements Screen {
         if (m && !m.fainted) {
           m.behavior = nextBehavior(m.behavior);
           m.recall = false;
-          this.say(`${m.name}: ${m.behavior.replace('-', ' ')}`, 1);
+          this.say(`${m.name}: ${BEHAVIOR_LABEL[m.behavior]}`, 1);
         }
       } else if (h?.kind === 'portrait') {
         const m = this.match.player.party[h.index];
@@ -1251,10 +1251,10 @@ export class MatchScreen implements Screen {
         h.fillRect(cx + (i - (n - 1) / 2) * 14 * s - 5 * s, y + 33 * s - 0.5 * s, 10 * s, 1.5 * s);
       }
     };
-    text(v, 'You', x + w * 0.22, y + 19 * s, 14, { align: 'center', color: '#bfe3ff' });
+    text(v, 'You', x + w * 0.22, y + 19 * s, 14, { align: 'center', color: '#bfe3ff', maxWidth: w * 0.36 });
     balls(me.trainer, x + w * 0.22);
     text(v, 'VS', v.width / 2, y + 28 * s, 18, { align: 'center', color: '#ffd36b' });
-    text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#ffb3b3' });
+    text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#ffb3b3', maxWidth: w * 0.36 });
     balls(foe.trainer, x + w * 0.78);
     if (!me.awaitingPick) return;
     // Choose the next Pokémon.
@@ -1270,8 +1270,8 @@ export class MatchScreen implements Screen {
       const ok = !m.fainted && !m.captured;
       const ry = py + 44 * s + i * rowH;
       text(v, `${i + 1}`, px + 22 * s, ry + 20 * s, 14, { color: ok ? '#ffd36b' : '#5c5670' });
-      text(v, `${m.name}  Lv ${m.level}`, px + 46 * s, ry + 20 * s, 14, { color: ok ? '#f4f1ff' : '#5c5670' });
       const bw = 90 * s;
+      text(v, `${m.name}  Lv ${m.level}`, px + 46 * s, ry + 20 * s, 14, { color: ok ? '#f4f1ff' : '#5c5670', maxWidth: pw - bw - 80 * s });
       const bx = px + pw - bw - 20 * s;
       h.fillStyle = '#2c2838';
       h.fillRect(bx, ry + 11 * s, bw, 8 * s);

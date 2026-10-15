@@ -167,7 +167,7 @@ export class MoveGallery extends MatchScreen {
     const y = 16 * s;
     panel(v, x, y, w, 100 * s);
     const color = typeColor(mv.type);
-    text(v, mv.name, v.width / 2, y + 36 * s, 26, { align: 'center', color: '#f4f1ff' });
+    text(v, mv.name, v.width / 2, y + 36 * s, 26, { align: 'center', color: '#f4f1ff', maxWidth: w - 40 * s });
     // Type chip
     h.save();
     h.font = `${Math.round(14 * s)}px BoldPixels, sans-serif`;
@@ -186,10 +186,10 @@ export class MoveGallery extends MatchScreen {
       `${mv.cooldown}s cooldown`,
     ];
     if (mv.status) facts.push(`${Math.round(mv.status.chance * 100)}% ${mv.status.kind}`);
-    text(v, facts.join('  ·  '), v.width / 2, y + 86 * s, 12, { align: 'center', color: '#cfc6ea' });
+    text(v, facts.join('  ·  '), v.width / 2, y + 86 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: w - 40 * s });
     const caster = this.caster ? species(this.caster.dex).name : '';
     const where = `${this.index + 1} / ${this.list.length}${this.typeFilter ? `  (${this.typeFilter} only)` : ''}  ·  cast by ${caster}`;
-    text(v, where, v.width / 2, v.height - 44 * s, 13, { align: 'center', color: '#e9ddff' });
-    text(v, `← → browse  ·  Space replay  ·  P ${this.auto ? 'pause' : 'play'}  ·  T type filter  ·  Esc back to title`, v.width / 2, v.height - 20 * s, 12, { align: 'center', color: '#9f97bb' });
+    text(v, where, v.width / 2, v.height - 44 * s, 13, { align: 'center', color: '#e9ddff', maxWidth: v.width - 40 * s });
+    text(v, `← → browse  ·  Space replay  ·  P ${this.auto ? 'pause' : 'play'}  ·  T type filter  ·  Esc back to title`, v.width / 2, v.height - 20 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 40 * s });
   }
 }

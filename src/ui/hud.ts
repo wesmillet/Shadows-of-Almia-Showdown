@@ -666,7 +666,7 @@ export class Hud {
       this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#1a1030' : '#e8eef6', 'center', '800', tabW - 10 * s);
       this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
     });
-    this.label(ctx, 'Tab', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
+    this.label(ctx, 'G', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
     items.forEach((entry, i) => {
       const id = entry?.id ?? null;
       const x = x0 + i * (slot + gap);

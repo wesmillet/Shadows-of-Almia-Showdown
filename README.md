@@ -141,17 +141,18 @@ impact on the body, at most one aftershock.
 | title screen: Move Gallery button, M, or `?moves=1` | every move in the game cast in turn at a practice dummy, by a Pokémon that learns it: Left/Right browse, Space replays, P pauses the slideshow, T filters by type, Esc returns to the title |
 | title screen: Demo Team button, D, or `?demo=1` | skip the roll and start with a level 100 team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton (party cap 5) |
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
-| mouse | aim: a reticle marks where a single-target move lands (up to 5.6 tiles out). Within 1.6 tiles of an enemy it snaps onto it (red) and the move goes where that Pokémon stands; nothing tracks it after the cast, so it can still step out |
-| left click / right click on the field, Q, E | cast moves 1, 2, 3, 4 at the aim point (hold a mouse button to keep casting as the move comes off cooldown); 1-4 and clicking the move wheel work too. 0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns; lines and cones fire toward the aim |
+| lock-on | your moves lock onto the nearest enemy within 9 tiles (one already fighting your team counts as closer); red brackets turn round it, orange while it is out of reach. Moves go where it stands when cast, so it can still step out |
+| Tab, or click an enemy | pick another target: Tab steps through the enemies in range, nearest first; clicking one (within 1.6 tiles of the cursor) locks onto it and casts at it. A picked target holds until it faints, is caught or leaves range. With nothing to lock onto, moves go toward the cursor |
+| left click / right click on the field, Q, E | cast moves 1, 2, 3, 4 at the locked target (hold a mouse button to keep casting as the move comes off cooldown); 1-4 and clicking the move wheel work too. 0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns; lines and cones fire toward the aim |
 | R | auto-battle on or off (on at the start): the lead picks its own moves and targets while you steer, including in one-on-one battles; you can still cast by hand |
 | Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
-| Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
+| G, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
 | Space beside a person | talk: a vendor opens the stall (1-9 buys, Space or Esc leaves; Poké Dollars come from knockouts), a healer restores the party, the Castle Champion takes your challenge (a friendly bout; beat his team for ₽3000 and prizes) |
 | Space beside an item ball | pick it up: a popup reveals the contents |
 | Space with nothing in reach | dodge: your lead dashes the way you move (or face); hits in the first 0.3 s miss; 3 s cooldown (the pill above the move wheel) |
 | hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |
-| point at a wild Pokémon, then F | brackets mark the one nearest the cursor (green in range, red out of range); F throws the armed ball at it; throws reach 7 tiles |
+| point at a wild Pokémon (or lock onto one), then F | brackets mark the one nearest the cursor (green in range, red out of range); F throws the armed ball at it; throws reach 7 tiles |
 | click a portrait | swap the lead; click a behaviour chip to cycle Attack (go after anything in range) / Guard (fight what comes near) / Follow (stay out of fights) |
 | hover a bag slot | the item's name; the count sits in the slot's corner; the red X throws the item away |
 | item balls | Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |

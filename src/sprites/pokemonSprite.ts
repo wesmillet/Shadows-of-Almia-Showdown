@@ -5,35 +5,81 @@
 import type { Dir8 } from '../core/math';
 import { Assets, imagePixels, warnOnce } from './assets';
 
-/** Preloaded sprite sets by dex number. */
+/**
+ * Sprite sets by dex number, loaded on demand through a small queue so the
+ * browser is never asked for thousands of sheets at once. `get()` never
+ * blocks: an unloaded species comes back empty (drawn as nothing) and fills
+ * in when its sheets arrive. Urgent requests (what is on screen now) jump the
+ * queue ahead of the background preload.
+ */
 export class SpriteRegistry {
   private sets = new Map<string, PokemonSprites>();
+  private urgent: Array<() => Promise<void>> = [];
+  private normal: Array<() => Promise<void>> = [];
+  private active = 0;
+  private static readonly LIMIT = 6;
 
   constructor(private readonly assets: Assets) {}
 
-  async preload(dexes: Iterable<string>, onProgress?: (done: number, total: number) => void): Promise<void> {
+  /** Loads species (and calls back as each is ready). Urgent ones go ahead of everything queued. */
+  preload(dexes: Iterable<string>, onProgress?: (done: number, total: number) => void, urgent = false): Promise<void> {
     const list = [...new Set(dexes)];
     let done = 0;
-    await Promise.all(list.map(async (dex) => {
-      const s = await PokemonSprites.load(this.assets, dex);
-      this.sets.set(dex, s);
+    return Promise.all(list.map((dex) => this.request(dex, urgent).then(() => {
       done++;
       onProgress?.(done, list.length);
-    }));
+    }))).then(() => undefined);
   }
 
-  /** True once a species' sprites have been loaded. */
+  /** True once a species' first sheet (Idle) has loaded. */
   has(dex: string): boolean {
-    return this.sets.has(dex);
+    return this.sets.get(dex)?.loaded ?? false;
   }
 
+  /** The sprite set for a species, starting an urgent load when it has not been asked for yet. */
   get(dex: string): PokemonSprites {
+    void this.request(dex, true);
+    return this.sets.get(dex) as PokemonSprites;
+  }
+
+  private request(dex: string, urgent: boolean): Promise<void> {
     let s = this.sets.get(dex);
     if (!s) {
-      s = PokemonSprites.empty(this.assets, dex);
+      s = PokemonSprites.create(this.assets, dex);
       this.sets.set(dex, s);
     }
-    return s;
+    const set = s;
+    if (set.state === 'idle') {
+      set.state = 'queued';
+      // First the Idle sheet and portrait (enough to draw it), then the rest of its core sheets.
+      const first = async (): Promise<void> => {
+        await set.loadFirst();
+        this.normal.push(() => set.loadRest());
+        this.pump();
+      };
+      set.job = first;
+      (urgent ? this.urgent : this.normal).push(first);
+      this.pump();
+    } else if (urgent && set.state === 'queued' && set.job) {
+      const i = this.normal.indexOf(set.job);
+      if (i >= 0) {
+        this.normal.splice(i, 1);
+        this.urgent.push(set.job);
+      }
+    }
+    return set.ready;
+  }
+
+  private pump(): void {
+    while (this.active < SpriteRegistry.LIMIT) {
+      const job = this.urgent.shift() ?? this.normal.shift();
+      if (!job) return;
+      this.active++;
+      void job().catch((e) => console.warn('[showdown] sprite load failed', e)).finally(() => {
+        this.active--;
+        this.pump();
+      });
+    }
   }
 }
 import { parseAnimData, type AnimData, type AnimDef, TICK_SECONDS } from './animData';
@@ -103,33 +149,48 @@ export class PokemonSprites {
   readonly sheets = new Map<string, Sheet>();
   readonly pending = new Map<string, Promise<void>>();
   portrait: HTMLImageElement | null = null;
+  data: AnimData | null = null;
+  /** idle: not asked for; queued: waiting or loading; the `ready` promise settles once Idle can be drawn. */
+  state: 'idle' | 'queued' = 'idle';
+  /** True once the AnimData and the Idle sheet are in (or known to be missing). */
+  loaded = false;
+  job: (() => Promise<void>) | null = null;
+  readonly ready: Promise<void>;
+  private markReady!: () => void;
 
-  private constructor(readonly dex: string, readonly data: AnimData | null, private readonly assets: Assets) {}
-
-  /** A sprite set with no folder: every frame is a labeled placeholder. */
-  static empty(assets: Assets, dex: string): PokemonSprites {
-    warnOnce(`pokemon/${dex}#missing`, `no sprite folder loaded for pokemon/${dex} (drawing placeholders)`);
-    return new PokemonSprites(dex, null, assets);
+  private constructor(readonly dex: string, private readonly assets: Assets) {
+    this.ready = new Promise((res) => (this.markReady = res));
   }
 
-  static async load(assets: Assets, dex: string): Promise<PokemonSprites> {
-    const xml = await assets.text(`pokemon/${dex}/AnimData.xml`);
-    let data: AnimData | null = null;
-    if (xml !== null) {
-      try {
-        data = parseAnimData(xml);
-      } catch (e) {
-        warnOnce(`${dex}/AnimData#parse`, `pokemon/${dex}/AnimData.xml failed to parse: ${(e as Error).message}`);
-      }
+  /** An empty set that fills in as its sheets load. */
+  static create(assets: Assets, dex: string): PokemonSprites {
+    return new PokemonSprites(dex, assets);
+  }
+
+  /** AnimData, the Idle sheet and the portrait: enough to draw the Pokémon standing. */
+  async loadFirst(): Promise<void> {
+    try {
+      const xml = await this.assets.text(`pokemon/${this.dex}/AnimData.xml`);
+      if (xml !== null) {
+        try {
+          this.data = parseAnimData(xml);
+        } catch (e) {
+          warnOnce(`${this.dex}/AnimData#parse`, `pokemon/${this.dex}/AnimData.xml failed to parse: ${(e as Error).message}`);
+        }
+      } else warnOnce(`pokemon/${this.dex}#missing`, `no sprite folder for pokemon/${this.dex} (drawing placeholders)`);
+      await Promise.all([
+        this.ensureSheet('Idle'),
+        this.assets.loadImage(`portraits/${this.dex}/Normal.png`).then((img) => (this.portrait = img)),
+      ]);
+    } finally {
+      this.loaded = true;
+      this.markReady();
     }
-    const s = new PokemonSprites(dex, data, assets);
-    const jobs: Promise<unknown>[] = [];
-    for (const action of CORE_ACTIONS) {
-      if (data?.anims.has(action)) jobs.push(s.ensureSheet(action));
-    }
-    jobs.push(assets.loadImage(`portraits/${dex}/Normal.png`).then((img) => (s.portrait = img)));
-    await Promise.all(jobs);
-    return s;
+  }
+
+  /** The other core sheets (walk, attack, hurt...). */
+  async loadRest(): Promise<void> {
+    await Promise.all(CORE_ACTIONS.filter((a) => a !== 'Idle' && this.data?.anims.has(a)).map((a) => this.ensureSheet(a)));
   }
 
   /** Loads the Anim, Shadow and Offsets PNGs behind an action once. */
@@ -168,6 +229,13 @@ export class PokemonSprites {
   /** The action to actually play for a request, following the fallback chain. */
   resolve(action: string): string {
     if (this.has(action)) return action;
+    // A sheet still on its way: start it and stand in with the next one that is here.
+    const def = this.data?.anims.get(action);
+    if (def && !this.sheets.has(def.sheet)) {
+      void this.ensureSheet(action);
+      for (const alt of FALLBACKS[action] ?? ['Idle']) if (this.has(alt)) return alt;
+      return this.has('Idle') ? 'Idle' : action;
+    }
     for (const alt of FALLBACKS[action] ?? ['Idle']) {
       if (this.has(alt)) {
         warnOnce(`${this.dex}/${action}`, `pokemon/${this.dex}: no ${action} sheet, playing ${alt}`);
@@ -186,9 +254,17 @@ export class PokemonSprites {
   }
 
   frame(action: string, dir: Dir8, index: number): FrameRect {
-    const def = this.def(action);
-    const img = def ? this.sheets.get(def.sheet)?.anim ?? null : null;
+    let def = this.def(action);
+    let img = def ? this.sheets.get(def.sheet)?.anim ?? null : null;
+    if ((!def || !img) && action !== 'Idle' && this.has('Idle')) {
+      // The requested sheet is still loading: stand idle meanwhile.
+      def = this.def('Idle');
+      img = def ? this.sheets.get(def.sheet)?.anim ?? null : null;
+      index = 0;
+    }
     if (!def || !img) {
+      // Still loading: draw nothing rather than an error box.
+      if (!this.loaded || (def && !this.sheets.has(def.sheet))) return { image: blankCanvas(), sx: 0, sy: 0, w: 1, h: 1, placeholder: true };
       const ph = this.assets.placeholder(`#${this.dex} ${action}`, 32, 32);
       return { image: ph, sx: 0, sy: 0, w: 32, h: 32, placeholder: true };
     }
@@ -253,9 +329,20 @@ export class PokemonSprites {
   portraitSource(): FrameRect {
     if (this.portrait) return { image: this.portrait, sx: 0, sy: 0, w: this.portrait.naturalWidth, h: this.portrait.naturalHeight, placeholder: false };
     if (this.has('Idle')) return this.frame('Idle', 0, 0);
+    if (!this.loaded) return { image: blankCanvas(), sx: 0, sy: 0, w: 1, h: 1, placeholder: true };
     const ph = this.assets.placeholder(`#${this.dex}`, 40, 40);
     return { image: ph, sx: 0, sy: 0, w: 40, h: 40, placeholder: true };
   }
+}
+
+let blank: HTMLCanvasElement | null = null;
+/** A 1x1 transparent canvas: what a Pokémon whose sheets are still loading draws. */
+function blankCanvas(): HTMLCanvasElement {
+  if (!blank) {
+    blank = document.createElement('canvas');
+    blank.width = blank.height = 1;
+  }
+  return blank;
 }
 
 /** Plays one action of one sprite set with the XML's per-frame timing. */

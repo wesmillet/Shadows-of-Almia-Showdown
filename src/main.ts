@@ -89,8 +89,9 @@ async function boot(): Promise<void> {
   await sprites.preload(first, (done, total) => {
     status = `Loading sprites ${done}/${total}`;
     drawLoading();
-  });
-  const rest = sprites.preload([...matchCast()].filter((d) => !first.has(d)));
+  }, true);
+  // Everything else trickles in behind the title at low priority; anything needed sooner jumps the queue.
+  void sprites.preload([...matchCast()].filter((d) => !first.has(d)));
   const rangers = await rangersP;
   const ui = new PixelUi(assets);
   await ui.load();
@@ -128,11 +129,25 @@ async function boot(): Promise<void> {
   let matchNo = 0;
   const matchRng = (): Rng => new Rng((currentSeed + Math.imul(0x9e3779b9, ++matchNo)) >>> 0);
 
+  /** A plain "getting ready" screen while a match's first sprites load. */
+  const loadingScreen = (label: () => string): Screen => ({
+    step() {},
+    render() {
+      status = label();
+      drawLoading();
+    },
+  });
+
   const startMatch = async (starters: string[], opts: { level?: number; partyCap?: number } = {}): Promise<void> => {
-    await rest;
-    const line = [...withEvolutions(starters)].filter((d) => !sprites.has(d));
-    if (line.length) await sprites.preload(line);
+    let progress = '';
+    game.setScreen(loadingScreen(() => `Heading out${progress}`));
     const match = new Match({ ground: currentGround, rng: matchRng(), sprites }, starters, opts);
+    // Only what is on the island at the start has to be here before play: every party and every wild.
+    const present = new Set<string>();
+    for (const t of match.trainers) for (const m of t.party) present.add(m.dex);
+    for (const w of match.wilds) present.add(w.dex);
+    await sprites.preload(present, (done, total) => (progress = ` ${done}/${total}`), true);
+    void sprites.preload(withEvolutions(starters), undefined, true);
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
@@ -150,7 +165,6 @@ async function boot(): Promise<void> {
 
   /** Move Gallery (title button, M, or ?moves=1): every move played on a practice dummy. */
   const startGallery = async (): Promise<void> => {
-    await rest;
     const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, ['0026'], { level: 50 });
     debug.showdown.match = match;
     const screen = new MoveGallery(game, match, rangers, assets, ui, sprites, () => void showTitle(false));

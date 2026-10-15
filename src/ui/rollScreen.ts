@@ -56,8 +56,6 @@ const REEL = 12;
 export class RollScreen implements Screen {
   private readonly reels: Reel[] = [];
   private t = 0;
-  /** Sprites for the reels load before they spin. */
-  private loaded = false;
 
   constructor(
     private readonly ctx: GameContext,
@@ -82,15 +80,16 @@ export class RollScreen implements Screen {
       const spinFor = SPIN + r * STAGGER;
       this.reels.push({ cards, pick, spinFor, spin: spinFor, pos: 0, since: 0 });
     }
-    const all = this.reels.flatMap((r) => r.cards);
-    void this.sprites.preload(all.map((c) => c.def.dex)).then(() => {
-      for (const c of all) c.anim = new AnimPlayer(this.sprites.get(c.def.dex));
-      this.loaded = true;
-    });
+    // The three picks load first (the reels settle on them), then the cards that fly past.
+    // The reels spin straight away; a card whose sprite is not in yet shows its name.
+    const picks = this.reels.map((r) => r.pick.def.dex);
+    void this.sprites.preload(picks, undefined, true);
+    void this.sprites.preload(this.reels.flatMap((r) => r.cards.map((c) => c.def.dex)), undefined, true);
+    for (const c of this.reels.flatMap((r) => r.cards)) c.anim = new AnimPlayer(this.sprites.get(c.def.dex));
   }
 
   private get done(): boolean {
-    return this.loaded && this.reels.every((r) => r.spin <= 0);
+    return this.reels.every((r) => r.spin <= 0);
   }
 
   /** Card rectangles, side by side. */
@@ -112,13 +111,11 @@ export class RollScreen implements Screen {
 
   step(dt: number, input: Input): void {
     this.t += dt;
-    if (this.loaded) {
-      for (const r of this.reels) {
-        if (r.spin > 0) {
-          r.spin = Math.max(0, r.spin - dt);
-          r.pos = (r.cards.length - 1) * easeOutCubic(1 - r.spin / r.spinFor);
-        } else r.since += dt;
-      }
+    for (const r of this.reels) {
+      if (r.spin > 0) {
+        r.spin = Math.max(0, r.spin - dt);
+        r.pos = (r.cards.length - 1) * easeOutCubic(1 - r.spin / r.spinFor);
+      } else r.since += dt;
     }
     for (const r of this.reels) for (const c of r.cards) c.anim?.update(dt);
     for (const c of input.takeClicks()) {
@@ -133,7 +130,15 @@ export class RollScreen implements Screen {
 
   private confirm(i: number): void {
     const r = this.reels[i];
-    if (!this.done || !r) return;
+    if (!r) return;
+    if (!this.done) {
+      // Impatient: a click or key while the reels spin stops them all on their picks.
+      for (const q of this.reels) {
+        q.spin = 0;
+        q.pos = q.cards.length - 1;
+      }
+      return;
+    }
     this.onConfirm(r.pick.def.dex);
   }
 
@@ -155,7 +160,7 @@ export class RollScreen implements Screen {
     const my = this.ctx.input.mouseY;
     this.reels.forEach((r, i) => {
       const c = this.card(i);
-      const spinning = !this.loaded || r.spin > 0;
+      const spinning = r.spin > 0;
       h.save();
       h.beginPath();
       h.roundRect(c.x, c.y, c.w, c.h, 18 * s);
@@ -228,7 +233,9 @@ export class RollScreen implements Screen {
     ctx.fillRect(x + 14 * s, y + 12 * s, w - 28 * s, 6 * s);
     ctx.globalAlpha = 1;
     text(v, card.tier.name.toUpperCase(), cx, y + 40 * s, 13, { align: 'center', color: card.tier.color, maxWidth: inner });
-    if (card.anim) {
+    if (card.anim && !card.anim.sprites.loaded) {
+      text(v, '?', cx, y + 136 * s, 48, { align: 'center', color: 'rgba(205,191,255,0.35)' });
+    } else if (card.anim) {
       // The sprite fills a fixed box whatever its size in the Pokédex, so small starters read as well as big ones.
       const f = card.anim.current();
       const body = card.def.body ?? [24, 24];

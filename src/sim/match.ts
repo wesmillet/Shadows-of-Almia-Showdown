@@ -1221,8 +1221,68 @@ export class Match {
   }
 
   /**
-   * Player input: the lead casts move `slot` toward the aim point (snapped onto an enemy near
-   * the cursor). Nothing tracks the target after the cast, so a moving Pokémon can step out.
+   * Lock-on: the Pokémon the player's moves go at. It is the nearest enemy (one already fighting
+   * your team counts as closer) until the player picks another with Tab or by clicking it; a pick
+   * holds until that Pokémon falls, is caught, or gets out of range.
+   */
+  lockTarget: Mon | null = null;
+  private lockPicked = false;
+  static readonly LOCK_RANGE = 9;
+
+  private lockScore(m: Mon, c: Mon): number {
+    const d = Math.hypot(c.x - m.x, c.y - m.y);
+    const engaged = (c.target && c.target.owner === this.player) || (c.owner && c.owner.duelId && c.owner.duelId === this.player.duelId);
+    return d - (engaged ? 4 : 0);
+  }
+
+  /** Enemies of the lead within lock range, best first. */
+  lockCandidates(): Mon[] {
+    const m = lead(this.player);
+    if (!m) return [];
+    const out: Mon[] = [];
+    for (const c of this.mons()) {
+      if (c === m || c.npc || !BattleSystem.active(c) || !this.battle.isEnemy(m, c)) continue;
+      if (Math.hypot(c.x - m.x, c.y - m.y) > Match.LOCK_RANGE) continue;
+      out.push(c);
+    }
+    return out.sort((a, b) => this.lockScore(m, a) - this.lockScore(m, b));
+  }
+
+  private stepLock(): void {
+    const m = lead(this.player);
+    const t = this.lockTarget;
+    const valid = !!m && !!t && BattleSystem.active(t) && this.battle.isEnemy(m, t) && Math.hypot(t.x - m.x, t.y - m.y) <= Match.LOCK_RANGE + 1;
+    if (valid && this.lockPicked) return;
+    const best = this.lockCandidates()[0] ?? null;
+    if (!valid) {
+      this.lockTarget = best;
+      this.lockPicked = false;
+    } else if (best && best !== t && m && this.lockScore(m, best) < this.lockScore(m, t!) - 1.5) {
+      // Not picked by hand: follow the nearest, with a little stickiness so it does not flicker.
+      this.lockTarget = best;
+    }
+  }
+
+  /** Tab: the next enemy in range (nearest first), held until it is gone. */
+  cycleLock(): Mon | null {
+    const list = this.lockCandidates();
+    if (!list.length) return null;
+    const i = this.lockTarget ? list.indexOf(this.lockTarget) : -1;
+    this.lockTarget = list[(i + 1) % list.length] ?? null;
+    this.lockPicked = true;
+    return this.lockTarget;
+  }
+
+  /** Lock onto a Pokémon the player clicked. */
+  pickLock(c: Mon): void {
+    this.lockTarget = c;
+    this.lockPicked = true;
+  }
+
+  /**
+   * Player input: the lead casts move `slot` at its locked target (or at an enemy right under the
+   * cursor, which then becomes the lock). With nothing to lock onto it fires toward the cursor.
+   * Moves go where the target stands when cast, so a moving Pokémon can still step out.
    */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
@@ -1233,7 +1293,9 @@ export class Match {
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     const f = DIR_VECTORS[p.dir] as { x: number; y: number };
     const snap = this.aimSnap();
-    const a = snap ? { x: snap.x, y: snap.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    if (snap && snap !== this.lockTarget) this.pickLock(snap);
+    const t = this.lockTarget;
+    const a = t ? { x: t.x, y: t.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
     return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
@@ -1290,7 +1352,8 @@ export class Match {
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
-    const t = this.battle.pickTarget(m, this.mons(), 5.5);
+    const lk = this.lockTarget;
+    const t = lk && Math.hypot(lk.x - m.x, lk.y - m.y) <= 5.5 ? lk : this.battle.pickTarget(m, this.mons(), 5.5);
     if (!t) return;
     const slot = this.battle.chooseMove(m, t);
     if (slot < 0) return;
@@ -1350,6 +1413,7 @@ export class Match {
     this.stepPlayer(dt);
     this.visitors.step(dt);
     this.stepDodges(dt);
+    this.stepLock();
     this.stepAutoLead(dt);
     for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);

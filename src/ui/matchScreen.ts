@@ -199,7 +199,12 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'discard') this.discardSlot(h.index);
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
-    if (input.pressed('Tab')) this.gearTab = !this.gearTab;
+    // Tab: lock onto the next enemy in range. G: the bag's other tab.
+    if (input.pressed('Tab')) {
+      const t = this.match.cycleLock();
+      if (t) this.say(`Target: ${t.name}`, 0.8);
+    }
+    if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
     // Space talks to whoever is in reach, else picks up a ball in reach, else dodges.
     if (input.pressed('Space') && !this.interact()) {
       const r = this.match.playerDodge();
@@ -304,10 +309,11 @@ export class MatchScreen implements Screen {
     const m = this.match;
     const p = m.player;
     if (p.duelId) return this.say("You can't catch another trainer's Pokémon", 1.4);
-    const t = this.throwTarget;
+    const lk = m.lockTarget;
+    const t = this.throwTarget ?? (lk && m.wilds.includes(lk) ? lk : null);
     if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {
       this.throwTarget = null;
-      return this.say('Point at a wild Pokémon, then press F', 1.4);
+      return this.say('Lock onto or point at a wild Pokémon, then press F', 1.4);
     }
     if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange) return this.say(`${t.name} is out of range`, 1);
     const slot = m.ballSlot(p, this.selectedItem);
@@ -481,28 +487,59 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /** The aim: a dotted line from the lead toward the cursor and a small reticle where a single-target move would land. */
+  /**
+   * The lock-on: a dotted line from the lead to its locked target and rotating red brackets round
+   * it. With nothing locked, the old aim: a line toward the cursor and a reticle where it would land.
+   */
   private drawAim(v: View): void {
     if (!this.showHud || this.playerDuelSide()?.awaitingPick) return;
     const m = lead(this.match.player);
-    const snap = this.match.aimSnap();
-    const a = snap ? { x: snap.x, y: snap.y } : this.match.aim;
-    if (!m || !a || m.fainted) return;
+    if (!m || m.fainted) return;
+    const lock = this.match.lockTarget;
+    const a = lock ? { x: lock.x, y: lock.y } : this.match.aim;
+    if (!a) return;
     const range = 3.5 * CONFIG.battle.rangeScale;
     let dx = a.x - m.x;
     let dy = a.y - m.y;
     const d = Math.hypot(dx, dy);
     if (d < 0.05) return;
     const k = Math.min(1, range / d);
-    dx *= k;
-    dy *= k;
     const ctx = v.ctx;
+    const s = v.baseScale;
     const ox = v.toScreenX(m.x);
     const oy = v.toScreenY(m.y);
+    ctx.save();
+    if (lock) {
+      const tx = v.toScreenX(lock.x);
+      const ty = v.toScreenY(lock.y);
+      const inReach = k >= 1;
+      ctx.strokeStyle = inReach ? 'rgba(255,120,130,0.45)' : 'rgba(255,190,120,0.4)';
+      ctx.lineWidth = Math.max(1.5, 2 * s);
+      ctx.setLineDash([6 * s, 7 * s]);
+      ctx.beginPath();
+      ctx.moveTo(ox + (tx - ox) * (0.6 / d), oy + (ty - oy) * (0.6 / d));
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Four corner brackets turning slowly round the target, sized to its body.
+      const r = Math.max(0.6 * v.pxPerTile, bodyRadius(lock.species) * v.pxPerTile * 1.25);
+      const spin = this.match.time * 1.4;
+      ctx.strokeStyle = inReach ? 'rgba(255,80,100,0.95)' : 'rgba(255,190,120,0.85)';
+      ctx.lineWidth = Math.max(2, 2.5 * s);
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const ang = spin + (i * Math.PI) / 2;
+        ctx.beginPath();
+        ctx.arc(tx, ty, r, ang - 0.38, ang + 0.38);
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+    dx *= k;
+    dy *= k;
     const tx = v.toScreenX(m.x + dx);
     const ty = v.toScreenY(m.y + dy);
-    const s = v.baseScale;
-    ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.35)';
     ctx.lineWidth = Math.max(1.5, 2 * s);
     ctx.setLineDash([6 * s, 7 * s]);
@@ -511,10 +548,9 @@ export class MatchScreen implements Screen {
     ctx.lineTo(tx, ty);
     ctx.stroke();
     ctx.setLineDash([]);
-    // Reticle: the single-target hit circle, with four ticks.
+    // Reticle: the single-target hit circle, with four ticks; orange when out of reach.
     const r = 0.65 * CONFIG.battle.rangeScale * v.pxPerTile;
-    // White when aiming at open ground, red when snapped onto an enemy, orange when out of reach.
-    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : snap ? 'rgba(255,90,110,0.95)' : 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : 'rgba(255,255,255,0.75)';
     ctx.lineWidth = Math.max(2, 2.5 * s);
     ctx.beginPath();
     ctx.arc(tx, ty, r, 0, Math.PI * 2);
@@ -1534,7 +1570,18 @@ export class MatchScreen implements Screen {
     const p = this.match.player;
     const px = Math.max(2, Math.round(v.baseScale * 3));
     for (const m of this.match.mons()) {
-      if (m.owner === p || m.captured || m.visual.alpha < 0.5) continue;
+      if (m.captured || m.visual.alpha < 0.5) continue;
+      if (m.owner === p) {
+        // Your own Pokémon on the field: a slim bar (no label) once they have taken damage.
+        if (m.stowed || m.fainted || m.hp >= m.maxHp) continue;
+        const x = m.px + (m.x - m.px) * alpha;
+        const y = m.py + (m.y - m.py) * alpha;
+        const sx = Math.round(v.toScreenX(x));
+        const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
+        const w = 16 * px;
+        this.ui.bar(v.hud, Math.round(sx - w / 2), Math.round(top - 9 * px), w, px, m.hp / m.maxHp);
+        continue;
+      }
       const near = Math.hypot(m.x - p.x, m.y - p.y) <= 6 * R();
       if (!near && m.sinceHit > 4) continue;
       const x = m.px + (m.x - m.px) * alpha;

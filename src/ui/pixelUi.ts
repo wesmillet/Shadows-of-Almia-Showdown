@@ -2,9 +2,9 @@
  * UI pieces drawn at the integer pixel scale. Panels, popups, buttons, slots
  * and tabs are Kenney's "Fantasy UI Borders" (CC0, assets/ui/fantasy): thin
  * white frames tinted in code over dark, translucent fills. Move buttons are
- * drawn rings in the same style. The segmented HP bars
- * (greenbar/redbar/bluebar_00..06, 15x7) are Sunnyside's; its 3x3 9-slice
- * boxes remain as a fallback while the frames load.
+ * drawn rings in the same style, and HP bars are drawn in code so they follow
+ * the exact fraction. Sunnyside's 3x3 9-slice boxes remain as a fallback while
+ * the frames load.
  */
 import type { Assets } from '../sprites/assets';
 
@@ -38,7 +38,12 @@ export const SKIN = {
   textOnLight: '#1a1030',
 };
 
-const BAR_FRAMES: Record<BarColor, number> = { green: 7, red: 7, blue: 6 };
+/** HP fill colours: 'blue' is the middle band (amber), kept under its old name. */
+const BAR_HUES: Record<BarColor, { light: string; mid: string; dark: string }> = {
+  green: { light: '#a8f0a0', mid: '#4cc85c', dark: '#2a8a44' },
+  blue: { light: '#ffe08a', mid: '#f0b030', dark: '#b07418' },
+  red: { light: '#ff9a9a', mid: '#e84848', dark: '#a02434' },
+};
 const SLICE_PARTS = ['tl', 'tc', 'tr', 'lc', 'c', 'rc', 'bl', 'bc', 'br'] as const;
 
 export class PixelUi {
@@ -49,7 +54,6 @@ export class PixelUi {
   async load(): Promise<void> {
     const jobs: Promise<unknown>[] = [];
     const want = (name: string) => jobs.push(this.assets.loadImage(`tiles/sunnyside/ui/${name}.png`).then((img) => this.images.set(name, img)));
-    for (const color of ['green', 'red', 'blue'] as BarColor[]) for (let i = 0; i < BAR_FRAMES[color]; i++) want(`${color}bar_${String(i).padStart(2, '0')}`);
     for (const style of ['lt', 'dt', 'w'] as BoxStyle[]) for (const part of SLICE_PARTS) want(`${style}_box_9slice_${part}`);
     for (const extra of ['label_left', 'label_middle', 'label_right', 'itemdisc_01', 'indicator']) want(extra);
     for (const f of FRAMES) jobs.push(this.assets.loadImage(`ui/fantasy/${f}.png`).then((img) => this.images.set(`f:${f}`, img)));
@@ -61,40 +65,41 @@ export class PixelUi {
   }
 
   /**
-   * A bar frame picked by fraction, drawn with its top-left at (x, y) at
-   * integer `scale` and stretched horizontally by repeating the middle
-   * column so wide bars keep their caps. Colour switches to red below 25%
-   * when `auto` is set.
+   * An HP bar 7 source pixels tall with its top-left at (x, y), drawn in code at integer
+   * `scale` so its fill follows the exact fraction at any width: a dark rim, a dark track,
+   * and a fill with a light top row and a shaded bottom row. Green over half, amber over a
+   * fifth, red below (when `auto`); `color` picks the hue otherwise.
    */
   bar(ctx: CanvasRenderingContext2D, x: number, y: number, widthPx: number, scale: number, frac: number, color: BarColor = 'green', auto = true): void {
+    const f = Math.max(0, Math.min(1, frac));
     let c = color;
-    if (auto) c = frac > 0.5 ? 'green' : frac > 0.25 ? 'blue' : 'red';
-    const frames = BAR_FRAMES[c];
-    const f = Math.round(Math.max(0, Math.min(1, frac)) * (frames - 1));
-    const img = this.img(`${c}bar_${String(f).padStart(2, '0')}`);
-    ctx.imageSmoothingEnabled = false;
-    if (!img) {
-      ctx.drawImage(this.assets.placeholder('bar', 15, 7), x, y, widthPx, 7 * scale);
-      return;
+    if (auto) c = f > 0.5 ? 'green' : f > 0.2 ? 'blue' : 'red';
+    const hue = BAR_HUES[c];
+    const X = Math.round(x);
+    const Y = Math.round(y);
+    const W = Math.max(4 * scale, Math.round(widthPx));
+    const H = 7 * scale;
+    const p = scale;
+    ctx.save();
+    // rim and track
+    ctx.fillStyle = 'rgba(10,6,22,0.92)';
+    ctx.fillRect(X + p, Y, W - 2 * p, H);
+    ctx.fillRect(X, Y + p, W, H - 2 * p);
+    ctx.fillStyle = '#3a3150';
+    ctx.fillRect(X + p, Y + p, W - 2 * p, H - 2 * p);
+    // the fill, snapped to whole source pixels but never empty while any HP is left
+    const inner = W - 2 * p;
+    let fw = Math.round((inner * f) / p) * p;
+    if (f > 0 && fw < p) fw = p;
+    if (fw > 0) {
+      ctx.fillStyle = hue.mid;
+      ctx.fillRect(X + p, Y + p, fw, H - 2 * p);
+      ctx.fillStyle = hue.light;
+      ctx.fillRect(X + p, Y + p, fw, p);
+      ctx.fillStyle = hue.dark;
+      ctx.fillRect(X + p, Y + H - 2 * p, fw, p);
     }
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    const cap = 3;
-    const total = Math.max(w * scale, widthPx);
-    const midW = total - 2 * cap * scale;
-    ctx.drawImage(img, 0, 0, cap, h, x, y, cap * scale, h * scale);
-    // Repeat a middle column sampled from the fill boundary so partial frames stretch sensibly.
-    const fillCols = w - 2 * cap;
-    const fillPx = fillCols * scale;
-    let dx = x + cap * scale;
-    let remaining = midW;
-    while (remaining > 0) {
-      const chunk = Math.min(fillPx, remaining);
-      ctx.drawImage(img, cap, 0, Math.ceil(chunk / scale), h, dx, y, chunk, h * scale);
-      dx += chunk;
-      remaining -= chunk;
-    }
-    ctx.drawImage(img, w - cap, 0, cap, h, x + total - cap * scale, y, cap * scale, h * scale);
+    ctx.restore();
   }
 
   private tinted = new Map<string, HTMLCanvasElement>();

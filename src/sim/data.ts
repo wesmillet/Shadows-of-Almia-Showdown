@@ -144,12 +144,22 @@ const scaleCache = new Map<string, number>();
  * Draw scale of a species' sprite so its body stands at its Pokédex size next to a
  * trainer (1 = the sprite's native pixel size). See scripts/measure_species.py.
  */
+/**
+ * The height a Pokémon is drawn at. Pokédex sizes hold from 1.2 m up; smaller Pokémon are
+ * lifted on a gentle ramp (0.3 m Eevee draws as about 0.8 m, 0.4 m Pikachu as about 0.85 m) so they stay
+ * readable next to a 1.6 m trainer while keeping their order: smaller is still smaller.
+ */
+export function shownHeight(heightM: number): number {
+  const { smallFloorM, smallBaseM } = CONFIG.sizes;
+  return heightM >= smallFloorM ? heightM : smallBaseM + (heightM / smallFloorM) * (smallFloorM - smallBaseM);
+}
+
 export function drawScale(s: SpeciesDef): number {
   const hit = scaleCache.get(s.dex);
   if (hit !== undefined) return hit;
   const [w, h] = s.body ?? [24, 24];
   const px = s.bodyPx ?? (s.along === 'length' ? Math.max(w, h) : h);
-  const k = (PX_PER_M * s.heightM * (s.coil ?? 1)) / Math.max(1, px);
+  const k = (PX_PER_M * shownHeight(s.heightM) * (s.coil ?? 1)) / Math.max(1, px);
   scaleCache.set(s.dex, k);
   return k;
 }

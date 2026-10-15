@@ -43,7 +43,9 @@ describe('evolution data', () => {
     }
     // Sizes follow the Pokédex: Gyarados towers over Magikarp, Pikachu stands well under a trainer.
     expect(drawScale(species('0130')) * species('0130').body[1]).toBeGreaterThan(3 * drawScale(species('0129')) * species('0129').body[1]);
-    expect(drawScale(species('0025')) * species('0025').body[1]).toBeLessThan(16);
+    expect(drawScale(species('0025')) * species('0025').body[1]).toBeLessThan(24);
+    // Small Pokémon are lifted on a ramp but keep their order: Pikachu (0.4 m) still draws smaller than Riolu (0.7 m).
+    expect(drawScale(species('0025')) * species('0025').body[1]).toBeLessThan(drawScale(species('0447')) * species('0447').body[1] + 2);
   });
 });
 

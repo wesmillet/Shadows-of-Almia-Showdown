@@ -22,9 +22,8 @@ repository path as the Vite base; the dev server stays at `/`.
 
 ## Playing
 
-Title → **Roll Starter** → a vertical reel of four candidates spins and
-stops. Click a card (or press 1-4), reroll up to three times (each reroll
-removes the strongest tier from the pool), confirm. You start at a town on
+Title → **Roll Starter** → a reel spins through the starter pool and stops
+on one Pokémon: that is your starter (no rerolls). Start with Enter or Space. You start at a town on
 the 320x224 island with seven rival trainers spread round the coast. Last
 trainer standing wins.
 

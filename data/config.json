@@ -125,8 +125,10 @@
     "dayToColdSeconds": 420
   },
   "sizes": {
-    "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall.",
+    "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall. Pokémon under smallFloorM are drawn on a ramp from smallBaseM (at 0 m) up to smallFloorM, so small ones stay readable and still smaller than bigger ones.",
     "trainerHeightM": 1.6,
-    "trainerPx": 32
+    "trainerPx": 32,
+    "smallFloorM": 1.2,
+    "smallBaseM": 0.7
   }
 }

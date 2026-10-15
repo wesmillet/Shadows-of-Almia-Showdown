@@ -492,13 +492,14 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** Telegraphs on the ground for every cast in progress. */
+  /** Ground shapes for casts in progress, only for moves with no animation (or one still loading). */
   protected drawTelegraphs(v: View): void {
     const ctx = v.ctx;
     const t = performance.now() / 1000;
     for (const m of this.match.mons()) {
       if (!m.casting) continue;
       const def = move(m.casting.moveId);
+      if (def.fx?.length && this.fx.ready(def.fx.map((p) => p.id))) continue;
       const area = makeArea(def, m, m.casting.targetX, m.casting.targetY);
       const mine = m.owner?.isPlayer;
       const base = mine ? '#9fd8ff' : '#ff5a5a';

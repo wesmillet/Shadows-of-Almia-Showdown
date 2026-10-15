@@ -110,6 +110,16 @@ export class TitleScreen implements Screen {
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, `Host: ${sheet.name} (${sheet.character})`, v.width / 2, v.height - 38 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, 'WASD move · 1-4 moves · 1-6 items · hold Space to throw · click portraits to swap', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
-    text(v, `build ${__BUILD__}`, v.width - 10 * s, v.height - 8 * s, 10, { align: 'right', weight: '500', color: '#6f6890' });
+    // Build stamp, top right on a dark pill: which deploy this browser has loaded.
+    const stamp = `Version ${__BUILD__}`;
+    h.save();
+    h.font = `600 ${Math.round(14 * s)}px "Segoe UI", Inter, system-ui, sans-serif`;
+    const sw = h.measureText(stamp).width + 20 * s;
+    h.fillStyle = 'rgba(8,4,20,0.75)';
+    h.beginPath();
+    h.roundRect(v.width - sw - 12 * s, 12 * s, sw, 28 * s, 14 * s);
+    h.fill();
+    h.restore();
+    text(v, stamp, v.width - 22 * s, 31 * s, 14, { align: 'right', weight: '600', color: '#ffe27a', shadow: false });
   }
 }

@@ -72,6 +72,7 @@ async function boot(): Promise<void> {
     },
   };
 
+  console.info(`Shadows of Almia Showdown, build ${__BUILD__}`);
   const debug = window as unknown as { showdown: Record<string, unknown> };
   debug.showdown = { view, seed };
 

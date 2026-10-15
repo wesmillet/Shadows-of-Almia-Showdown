@@ -259,7 +259,8 @@ export class TitleScreen implements Screen {
     const sx = Math.round(v.toScreenX(m.x));
     const sy = Math.round(v.toScreenY(m.y));
     const s = v.spriteScale * drawScale(m.sp) * SCENE_SCALE;
-    drawSoftShadow(v, sx, sy, Math.max(0.12, Math.min(2.5, bodyRadius(m.sp) * 0.8)) * SCENE_SCALE, 0.3 * m.alpha);
+    const [gx, gy] = m.anim.ground();
+    drawSoftShadow(v, sx + gx * s, sy + gy * s, Math.max(0.12, Math.min(2.5, bodyRadius(m.sp) * 0.8)) * SCENE_SCALE, 0.3 * m.alpha);
     const f = m.anim.current();
     ctx.save();
     ctx.globalAlpha = m.alpha;

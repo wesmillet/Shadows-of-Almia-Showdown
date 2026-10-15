@@ -71,10 +71,6 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.save();
     ctx.globalAlpha = vis.alpha;
   }
-  const shadow = m.anim.shadow();
-  if (shadow) {
-    ctx.drawImage(shadow.image, shadow.sx, shadow.sy, shadow.w, shadow.h, sx - (shadow.w * s) / 2, sy - (shadow.h * s) / 2, shadow.w * s, shadow.h * s);
-  }
   const f = m.anim.current();
   const dx = sx - (f.w * s) / 2;
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet.
@@ -251,12 +247,16 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!inView(p.x, p.y) || m.visual.alpha <= 0.05) continue;
     // Sized to the body: a Jirachi gets a small pool of shade, a Steelix a wide one.
     const r = Math.max(0.1, Math.min(2.6, bodyRadius(m.species) * 0.8)) * Math.min(1, m.visual.scale);
-    drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y), r, 0.28 * m.visual.alpha);
+    // One shadow per Pokémon, under the frame's ground point (the sprite sheet's own shadow is not drawn too).
+    const [gx, gy] = m.anim.ground();
+    const k = view.spriteScale * m.visual.scale * drawScale(m.species);
+    drawSoftShadow(view, view.toScreenX(p.x) + gx * k, view.toScreenY(p.y) + gy * k, r, 0.28 * m.visual.alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
-    if (inView(p.x, p.y)) drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y + 0.02), 0.3);
+    // Wider than the stance and centred just above the soles, so the feet stand in the shade.
+    if (inView(p.x, p.y)) drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y) - view.spriteScale, 0.5, 0.3);
   }
 
   const list: Drawable[] = [];

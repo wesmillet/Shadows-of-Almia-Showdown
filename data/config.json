@@ -43,8 +43,9 @@
     "idleMax": 4.5,
     "wanderRadius": 4,
     "aggroRange": 5.5,
-    "centerLevelBonus": 8,
-    "centerLevelRadius": 120,
+    "centerLevelBonus": 24,
+    "centerLevelRadius": 140,
+    "centerLevelCurve": 1.2,
     "spawnClearance": 12,
     "bossAggroRange": 4,
     "bossWanderRadius": 2

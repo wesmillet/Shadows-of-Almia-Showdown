@@ -37,7 +37,8 @@ Champion takes on challengers. Pokémon are drawn at their Pokédex size next
 to the trainers and evolve at their canonical levels.
 
 Wild Pokémon by land (common, uncommon, rare, boss ♛). The outer lands
-start at levels 2-7 for training; levels rise toward the crystal.
+start at levels 2-7 for training; levels climb steadily toward the crystal,
+up to about 24 extra at the centre (wild Pokémon there are met already evolved).
 
 | Land | Common | Uncommon | Rare | Boss |
 | --- | --- | --- | --- | --- |

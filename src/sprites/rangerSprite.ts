@@ -11,7 +11,7 @@
  * labeled placeholder.
  */
 import charactersJson from '../../data/characters.json';
-import { Assets, warnOnce } from './assets';
+import { Assets, imagePixels, warnOnce } from './assets';
 
 export type Facing4 = 'up' | 'down' | 'left' | 'right';
 
@@ -56,6 +56,23 @@ export class RangerSheet {
     private readonly assets: Assets,
   ) {}
 
+  private foot = -1;
+  /** One row below the lowest opaque pixel in the sheet: where the soles actually are, not the cell edge. */
+  private footRow(img: HTMLImageElement, cellH: number): number {
+    if (this.foot >= 0) return this.foot;
+    this.foot = cellH;
+    try {
+      const px = imagePixels(img);
+      const w = img.naturalWidth;
+      for (let y = Math.min(cellH, img.naturalHeight) - 1; y >= 0; y--) {
+        let hit = false;
+        for (let x = 0; x < w; x++) if ((px[(y * w + x) * 4 + 3] ?? 0) > 40) { hit = true; break; }
+        if (hit) { this.foot = y + 1; break; }
+      }
+    } catch { /* keep the cell edge */ }
+    return this.foot;
+  }
+
   /** Frame indices for an animation, resolving mirrored right-facing entries. */
   private clip(name: string): { frames: number[]; flip: boolean } {
     const m = this.manifest;
@@ -86,7 +103,7 @@ export class RangerSheet {
     const cellW = def.frame_w || Math.floor(this.image.naturalWidth / Math.max(1, def.frames));
     const cellH = def.frame_h || this.image.naturalHeight;
     const col = Math.min(idx, Math.max(0, def.frames - 1));
-    return { image: this.image, sx: col * cellW, sy: 0, w: cellW, h: cellH, footY: cellH, flip, placeholder: false };
+    return { image: this.image, sx: col * cellW, sy: 0, w: cellW, h: cellH, footY: this.footRow(this.image, cellH), flip, placeholder: false };
   }
 }
 

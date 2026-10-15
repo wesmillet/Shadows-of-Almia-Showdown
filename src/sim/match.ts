@@ -932,9 +932,8 @@ export class Match {
         const row = this.rng.weighted(t.table, (r) => r.weight);
         const lv = row.levels ?? t.levels ?? [3, 6];
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
-        // falling off steeply so the outer lands stay gentle for fresh teams.
-        const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / CONFIG.wild.centerLevelRadius);
-        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far) ** 2);
+        // easing to none at the coast, so the outer lands stay gentle for fresh teams.
+        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + this.centerBonus(spot.x, spot.y);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
         const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
@@ -942,6 +941,13 @@ export class Match {
       }
     }
     this.spawnBosses(byBiome);
+  }
+
+  /** Extra wild levels at a spot: centerLevelBonus at the Shadow Crystal, none past centerLevelRadius. */
+  centerBonus(x: number, y: number): number {
+    const w = CONFIG.wild as typeof CONFIG.wild & { centerLevelCurve?: number };
+    const far = Math.min(1, Math.hypot(x - this.centerX, y - this.centerY) / w.centerLevelRadius);
+    return Math.round(w.centerLevelBonus * (1 - far) ** (w.centerLevelCurve ?? 1.2));
   }
 
   /** For every tile, the nearest of the lands that have their own table (one breadth-first sweep). */

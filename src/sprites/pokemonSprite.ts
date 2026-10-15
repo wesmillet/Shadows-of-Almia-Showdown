@@ -57,6 +57,8 @@ interface Sheet {
   anim: HTMLImageElement | null;
   /** The Shadow sheet baked to a dark, translucent drop shadow for this folder's ShadowSize. */
   shadow: HTMLCanvasElement | null;
+  /** Raw Shadow sheet pixels, for finding each frame's ground point. */
+  ground: { px: Uint8ClampedArray; w: number; h: number } | null;
   offsets: OffsetTable | undefined;
 }
 
@@ -147,7 +149,12 @@ export class PokemonSprites {
       if (offsets && anim) {
         table = decodeOffsets(imagePixels(offsets), offsets.naturalWidth, offsets.naturalHeight, def.frameWidth, def.frameHeight);
       }
-      this.sheets.set(name, { anim, shadow: shadow ? bakeShadow(shadow, this.data?.shadowSize ?? 1) : null, offsets: table });
+      this.sheets.set(name, {
+        anim,
+        shadow: shadow ? bakeShadow(shadow, this.data?.shadowSize ?? 1) : null,
+        ground: shadow ? { px: imagePixels(shadow), w: shadow.naturalWidth, h: shadow.naturalHeight } : null,
+        offsets: table,
+      });
     });
     this.pending.set(name, p);
     return p;
@@ -199,6 +206,39 @@ export class PokemonSprites {
     const cols = Math.max(1, Math.floor(img.width / def.frameWidth));
     const rows = Math.max(1, Math.floor(img.height / def.frameHeight));
     return { image: img, sx: Math.min(index, cols - 1) * def.frameWidth, sy: Math.min(dir, rows - 1) * def.frameHeight, w: def.frameWidth, h: def.frameHeight, placeholder: false };
+  }
+
+  private readonly groundCache = new Map<string, [number, number]>();
+
+  /**
+   * Where the Pokémon touches the ground in a frame, as an offset from the
+   * frame centre in sheet pixels: the centre of the Shadow sheet's shape
+   * (its white pixel when there is one). Hops lift the body, not this point.
+   */
+  ground(action: string, dir: Dir8, index: number): [number, number] {
+    const def = this.def(action);
+    const g = def ? this.sheets.get(def.sheet)?.ground ?? null : null;
+    if (!def || !g) return [0, 0];
+    const fw = def.frameWidth;
+    const fh = def.frameHeight;
+    const col = Math.min(index, Math.max(1, Math.floor(g.w / fw)) - 1);
+    const row = Math.min(dir, Math.max(1, Math.floor(g.h / fh)) - 1);
+    const key = `${def.sheet}:${row}:${col}`;
+    const hit = this.groundCache.get(key);
+    if (hit) return hit;
+    let wx = 0, wy = 0, wn = 0, ax = 0, ay = 0, an = 0;
+    for (let y = row * fh; y < (row + 1) * fh; y++) {
+      for (let x = col * fw; x < (col + 1) * fw; x++) {
+        const i = (y * g.w + x) * 4;
+        if ((g.px[i + 3] ?? 0) < 128) continue;
+        ax += x; ay += y; an++;
+        if ((g.px[i] ?? 0) > 128 && (g.px[i + 1] ?? 0) > 128 && (g.px[i + 2] ?? 0) > 128) { wx += x; wy += y; wn++; }
+      }
+    }
+    const [cx, cy] = wn ? [wx / wn, wy / wn] : an ? [ax / an, ay / an] : [col * fw + fw / 2 - 0.5, row * fh + fh / 2 - 0.5];
+    const out: [number, number] = [cx + 0.5 - col * fw - fw / 2, cy + 0.5 - row * fh - fh / 2];
+    this.groundCache.set(key, out);
+    return out;
   }
 
   /** Effect anchor for a frame, as an offset from the frame centre in sheet pixels. */
@@ -281,6 +321,11 @@ export class AnimPlayer {
 
   shadow(): FrameRect | null {
     return this.sprites.shadowFrame(this.action, this.dir, this.frame);
+  }
+
+  /** The ground point of the current frame (see PokemonSprites.ground). */
+  ground(): [number, number] {
+    return this.sprites.ground(this.action, this.dir, this.frame);
   }
 
   anchor(): [number, number] {

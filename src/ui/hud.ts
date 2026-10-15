@@ -246,7 +246,7 @@ export class Hud {
   }
 
   private drawCounter(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
-    const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger).length;
+    const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger && !t.visitor).length;
     this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s, 14, 'rgba(12,12,22,0.35)');
     this.label(ctx, String(remaining), 34 * s, 66 * s, 44, '#ffffff', 'left', '800');
     this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800', 148 * s);
@@ -334,8 +334,29 @@ export class Hud {
       ctx.arc(x + pm.x * k, y + pm.y * k, r, 0, Math.PI * 2);
       ctx.stroke();
     }
+    // Visitors: the merchant (gold), Celeste (pink), Hoopa (violet), and any legendary loose (white ring).
+    const dot = (wx: number, wy: number, color: string, r = 2.5) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + wx * k, y + wy * k, r * s, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    for (const n of match.npcs) {
+      if (n.role === 'merchant') dot(n.x, n.y, '#ffe27a');
+      else if (n.role === 'ace') dot(n.x, n.y, '#ff9ad5');
+    }
+    for (const w of match.wilds) {
+      if (w.npc === 'hoopa') dot(w.x, w.y, '#c78bff', 3);
+      else if (w.legend) {
+        ctx.strokeStyle = '#ffcf4a';
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.arc(x + w.x * k, y + w.y * k, 4 * s, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
     for (const t of match.trainers) {
-      if (!t.alive) continue;
+      if (!t.alive || t.visitor) continue;
       ctx.fillStyle = '#ff5c5c';
       ctx.beginPath();
       ctx.arc(x + t.x * k, y + t.y * k, 3 * s, 0, Math.PI * 2);

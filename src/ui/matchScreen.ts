@@ -47,6 +47,8 @@ export const EXTRA_FX = {
   poison: 'fx_038',
   freeze: 'fx_204',
   confusion: 'fx_041',
+  /** Hoopa's ring portal. */
+  portal: 'fx_190',
   paralysis: 'fx_096',
   /** Rising sparkles while a Pokémon evolves. */
   evolve: 'fx_041',
@@ -250,6 +252,15 @@ export class MatchScreen implements Screen {
 
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
   private interact(): boolean {
+    const who = this.match.visitors.near();
+    if (who === 'ace') {
+      this.say(this.match.visitors.challengeAce(), 3);
+      return true;
+    }
+    if (who === 'hoopa') {
+      this.say(this.match.visitors.askHoopa(), 3);
+      return true;
+    }
     const s = this.match.nearService();
     if (s?.kind === 'shop') this.shopOpen = s.shop;
     else if (s?.kind === 'challenge') this.say(this.match.startChallenge(), 3);
@@ -276,7 +287,7 @@ export class MatchScreen implements Screen {
     let best: Mon | null = null;
     let bd = Infinity;
     for (const m of this.match.wilds) {
-      if (m.fainted || m.captured || m.visual.alpha < 0.5) continue;
+      if (m.fainted || m.captured || m.npc || m.visual.alpha < 0.5) continue;
       // Measure from the middle of the drawn body, so big and small Pokémon are equally easy to point at.
       const hTiles = (m.species.body[1] * drawScale(m.species)) / 16;
       const d = Math.hypot(w.x - m.x, w.y - (m.y - hTiles / 2));
@@ -355,7 +366,7 @@ export class MatchScreen implements Screen {
       return;
     }
     const line = this.stylerLine;
-    const wilds = this.match.wilds.filter((w) => !w.fainted && !w.captured && w.visual.alpha > 0.5);
+    const wilds = this.match.wilds.filter((w) => !w.fainted && !w.captured && !w.npc && w.visual.alpha > 0.5);
     // A wild Pokémon that crossed the line since last step breaks it.
     for (const w of wilds) {
       const prev = this.stylerSeen.get(w.id);
@@ -441,7 +452,7 @@ export class MatchScreen implements Screen {
     }
     // Progress rings over Pokémon being styled; a soft pink ring under calmed ones.
     for (const w of this.match.wilds) {
-      if (w.fainted || w.captured) continue;
+      if (w.fainted || w.captured || w.npc) continue;
       const x = v.toScreenX(w.x);
       const y = v.toScreenY(w.y);
       const calm = w.calm ?? 0;
@@ -687,6 +698,15 @@ export class MatchScreen implements Screen {
         break;
       case 'faint':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, `${ev.mon.name} fainted`, '#ffffff', 15);
+        break;
+      case 'scene-fx':
+        if (ev.ground) {
+          const sh = this.fx.sheet(ev.id);
+          if (sh) this.groundVfx.add(new FxAnim(sh, { x: ev.x, y: ev.y, lift: 0, scale: ev.scale, fps: 14, tint: ev.tint }));
+        } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: 0.6, scale: ev.scale, fps: 14, tint: ev.tint });
+        break;
+      case 'yield':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.8, `${ev.mon.name} stops fighting`, '#ffd36b', 16);
         break;
       case 'styler-loop':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.6, `Loop ${ev.loops}/${ev.needed}`, '#7fe3ff', 14);
@@ -1312,6 +1332,9 @@ export class MatchScreen implements Screen {
 
   private servicePrompt(): string | null {
     if (this.shopOpen || this.teach || this.match.pendingLearn.length) return null;
+    const who = this.match.visitors.near();
+    if (who === 'ace') return 'Space · Battle Ace Trainer Celeste (win a rare Pokémon)';
+    if (who === 'hoopa') return 'Space · Talk to Hoopa';
     const s = this.match.nearService();
     if (!s) return this.match.nearestItem() ? 'Space · Pick up' : null;
     if (s.kind === 'shop') return `Space · Shop at the ${s.shop.name}`;
@@ -1325,7 +1348,47 @@ export class MatchScreen implements Screen {
     for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
     for (const th of this.match.throws) list.push({ y: th.y + 0.02, draw: () => this.drawThrow(v, th) });
     list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
+    const po = this.match.visitors.portal;
+    if (po) list.push({ y: po.y - 0.1, draw: () => this.drawPortal(v, po) });
     return list;
+  }
+
+  /** Hoopa's ring: a gold hoop standing on the ground, opening, swirling dark inside, then closing. */
+  private drawPortal(v: View, po: { x: number; y: number; t: number }): void {
+    const ctx = v.ctx;
+    const open = Math.min(1, po.t / 0.6) * Math.min(1, Math.max(0, (4 - po.t) / 0.6));
+    if (open <= 0) return;
+    const x = v.toScreenX(po.x);
+    const y = v.toScreenY(po.y) - 1.3 * v.pxPerTile * open;
+    const rx = 1.1 * v.pxPerTile * open;
+    const ry = 1.3 * v.pxPerTile * open;
+    ctx.save();
+    const g = ctx.createRadialGradient(x, y, 0, x, y, ry);
+    g.addColorStop(0, 'rgba(255,240,200,0.95)');
+    g.addColorStop(0.35, 'rgba(160,90,230,0.85)');
+    g.addColorStop(1, 'rgba(40,10,70,0.9)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Swirl
+    ctx.strokeStyle = 'rgba(255,230,160,0.6)';
+    ctx.lineWidth = 2 * v.baseScale;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx * (0.3 + i * 0.22), ry * (0.3 + i * 0.22), po.t * (2 + i), 0.3, 4.2);
+      ctx.stroke();
+    }
+    // The hoop itself
+    ctx.strokeStyle = '#ffcf4a';
+    ctx.lineWidth = 6 * v.baseScale;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#9a6a10';
+    ctx.lineWidth = 2 * v.baseScale;
+    ctx.stroke();
+    ctx.restore();
   }
 
   render(alpha: number, frameDt: number): void {
@@ -1481,7 +1544,30 @@ export class MatchScreen implements Screen {
       // Bar just over the drawn body (sprites are drawn at their canonical size).
       const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
-      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.landBoss ? `${m.name} ♛` : m.elite ? `Elite ${m.name}` : m.name, m.level, m.hp / m.maxHp, v.baseScale, m.elite ? '#ffd36b' : '#fff');
+      if (m.npc === 'hoopa') {
+        drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
+        continue;
+      }
+      const label = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.elite ? `Elite ${m.name}` : m.name;
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.elite ? '#ffd36b' : '#fff');
+    }
+    // Names over the roaming visitors when close.
+    for (const n of this.match.npcs) {
+      if (n.role !== 'merchant' && n.role !== 'ace') continue;
+      if (Math.hypot(n.x - p.x, n.y - p.y) > 9) continue;
+      const sx = Math.round(v.toScreenX(n.x));
+      const top = Math.round(v.toScreenY(n.y)) - 2.4 * v.pxPerTile;
+      const h = v.hud;
+      h.save();
+      h.font = uiFont(11 * v.baseScale);
+      h.textAlign = 'center';
+      h.lineWidth = 3;
+      h.strokeStyle = 'rgba(0,0,0,0.7)';
+      const name = n.role === 'merchant' ? 'Wandering Merchant' : 'Ace Trainer Celeste';
+      h.strokeText(name, sx, top);
+      h.fillStyle = n.role === 'merchant' ? '#ffe27a' : '#ff9ad5';
+      h.fillText(name, sx, top);
+      h.restore();
     }
   }
 

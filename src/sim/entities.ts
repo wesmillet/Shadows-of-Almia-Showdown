@@ -78,6 +78,12 @@ export interface Mon {
   /** Capture Styler: loops drawn round it so far, and seconds left calmed (no fighting, easy to catch). */
   styler?: number;
   calm?: number;
+  /** A legendary from Hoopa's portal or the lake: worn down to its last HP it joins whoever beat it. */
+  legend?: boolean;
+  /** A Pokémon that is part of the scenery (Hoopa): nobody fights or catches it. */
+  npc?: 'hoopa';
+  /** A leap in progress (Lugia out of the lake): seconds in, total seconds, peak height in tiles, start and end points. */
+  leap?: { t: number; dur: number; h: number; fx: number; fy: number; tx: number; ty: number } | null;
   /** Seconds until this Pokémon can dodge again. */
   dodgeCd?: number;
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */
@@ -141,6 +147,8 @@ export interface Trainer {
   counter?: DecorItem | null;
   /** The castle challenger: not one of the battle royale's rivals. */
   challenger?: boolean;
+  /** A roaming visitor's battle team (the ace trainer): holds its ground, not a rival in the match. */
+  visitor?: boolean;
   /** The one-on-one battle this trainer is in, if any. */
   duelId?: number;
   /** Match time before which this trainer cannot be drawn into another one-on-one battle. */

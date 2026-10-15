@@ -76,6 +76,25 @@ pick the next one (1-6 or click its portrait). The battle ends when one side
 has nobody left; the loser is out of the match. The Castle Champion's bout
 works the same way (and a loss there is friendly).
 
+**Visitors.** Four things roam the island besides the rivals (`src/sim/visitors.ts`):
+
+- the **Wandering Merchant** (gold dot on the minimap): Space beside him opens a stall of rare things the
+  towns don't sell (Rare Candy, Exp. Share, Lucky Egg, a Master Ball, held items, a Crystal Shard and the
+  stone of the day);
+- **Ace Trainer Celeste** (pink dot): Space for a one-on-one battle with Garchomp, Lucario and Gyarados a
+  few levels above your best. Win and she gives you a shiny (Lucario, Garchomp, Dragonite, Tyranitar or
+  Gyarados) or a powerful Pokémon (Metagross, Salamence, Goodra, Dragapult...) at your level. Lose and she
+  patches your team up; try again a minute later;
+- **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios or
+  Rayquaza) comes through as a boss with triple HP. Legendaries never faint: worn down to their last HP
+  they join whoever's Pokémon did it, so a rival can steal yours. Once per match;
+- **Lugia** sleeps in **Tide Lake** (the new lake between the plain and the autumn wood): while you are at
+  the lakeside it may leap out (its Hop animation, a splash) and land on the shore as a legendary. Once per
+  match.
+
+The map also has more ways down from high ground: every plateau now has a flight of stairs in each long
+south face (about every 22 tiles), on top of the ones where roads climb.
+
 **Statuses.** Burn (half physical damage, ticks), paralysis (slower, sometimes
 skips a move), sleep, and three more: poison ticks 7% of max HP every 2 s until
 cured (Poison and Steel types are immune); freeze stops a Pokémon for 2.5-4 s

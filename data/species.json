@@ -20857,6 +20857,734 @@
         31,
         31
       ]
+    },
+    {
+      "dex": "0249",
+      "name": "Lugia",
+      "types": [
+        "psychic",
+        "flying"
+      ],
+      "stats": {
+        "hp": 106,
+        "atk": 90,
+        "def": 130,
+        "spa": 90,
+        "spd": 154,
+        "spe": 110
+      },
+      "tier": 0,
+      "moves": [
+        "psychic",
+        "hydro-pump",
+        "air-slash",
+        "dragon-pulse"
+      ],
+      "heightM": 3.0,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psycho-cut"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "zen-headbutt"
+        ],
+        [
+          26,
+          "air-slash"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "psychic"
+        ],
+        [
+          36,
+          "hydro-pump"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
+      ],
+      "body": [
+        55,
+        54
+      ]
+    },
+    {
+      "dex": "0250",
+      "name": "Ho-Oh",
+      "types": [
+        "fire",
+        "flying"
+      ],
+      "stats": {
+        "hp": 106,
+        "atk": 130,
+        "def": 90,
+        "spa": 110,
+        "spd": 154,
+        "spe": 90
+      },
+      "tier": 0,
+      "moves": [
+        "fire-blast",
+        "brave-bird",
+        "earthquake",
+        "psychic"
+      ],
+      "heightM": 2.8,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "brave-bird"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "psychic"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
+      ],
+      "body": [
+        69,
+        59
+      ]
+    },
+    {
+      "dex": "0720",
+      "name": "Hoopa",
+      "types": [
+        "psychic",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 110,
+        "def": 60,
+        "spa": 150,
+        "spd": 130,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "psychic",
+        "shadow-ball",
+        "dark-pulse",
+        "psybeam"
+      ],
+      "heightM": 0.5,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "night-shade"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "hex"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "shadow-ball"
+        ]
+      ],
+      "body": [
+        27,
+        21
+      ]
+    },
+    {
+      "dex": "0245",
+      "name": "Suicune",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 75,
+        "def": 115,
+        "spa": 90,
+        "spd": 115,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "ice-beam",
+        "water-pulse",
+        "aurora-beam"
+      ],
+      "heightM": 2.0,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          26,
+          "aurora-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ],
+      "body": [
+        31,
+        31
+      ]
+    },
+    {
+      "dex": "0448-shiny",
+      "name": "Lucario",
+      "types": [
+        "fighting",
+        "steel"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 110,
+        "def": 70,
+        "spa": 115,
+        "spd": 70,
+        "spe": 90
+      },
+      "tier": 0,
+      "moves": [
+        "brick-break",
+        "quick-attack",
+        "dark-pulse",
+        "dragon-pulse"
+      ],
+      "heightM": 1.2,
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "force-palm"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "metal-claw"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          22,
+          "aura-sphere"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "brick-break"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
+      ],
+      "shiny": true,
+      "body": [
+        25,
+        27
+      ]
+    },
+    {
+      "dex": "0445-shiny",
+      "name": "Garchomp",
+      "types": [
+        "dragon",
+        "ground"
+      ],
+      "stats": {
+        "hp": 108,
+        "atk": 130,
+        "def": 95,
+        "spa": 80,
+        "spd": 85,
+        "spe": 102
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "earthquake",
+        "crunch",
+        "stone-edge"
+      ],
+      "heightM": 1.9,
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "outrage"
+        ]
+      ],
+      "shiny": true,
+      "body": [
+        35,
+        30
+      ]
+    },
+    {
+      "dex": "0149-shiny",
+      "name": "Dragonite",
+      "types": [
+        "dragon",
+        "flying"
+      ],
+      "stats": {
+        "hp": 91,
+        "atk": 134,
+        "def": 95,
+        "spa": 100,
+        "spd": 100,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-pulse",
+        "aerial-ace",
+        "ice-beam",
+        "thunderbolt"
+      ],
+      "heightM": 2.2,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          44,
+          "outrage"
+        ]
+      ],
+      "shiny": true,
+      "body": [
+        27,
+        32
+      ]
+    },
+    {
+      "dex": "0248-shiny",
+      "name": "Tyranitar",
+      "types": [
+        "rock",
+        "dark"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 134,
+        "def": 110,
+        "spa": 95,
+        "spd": 100,
+        "spe": 61
+      },
+      "tier": 0,
+      "moves": [
+        "stone-edge",
+        "crunch",
+        "earthquake",
+        "dark-pulse"
+      ],
+      "heightM": 2.0,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "crunch"
+        ]
+      ],
+      "shiny": true,
+      "body": [
+        25,
+        29
+      ]
+    },
+    {
+      "dex": "0130-shiny",
+      "name": "Gyarados",
+      "types": [
+        "water",
+        "flying"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 125,
+        "def": 79,
+        "spa": 60,
+        "spd": 100,
+        "spe": 81
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "surf",
+        "howl",
+        "earthquake"
+      ],
+      "heightM": 6.5,
+      "along": "length",
+      "coil": 0.5,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ],
+      "shiny": true,
+      "body": [
+        37,
+        55
+      ]
     }
   ]
 }

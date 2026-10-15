@@ -18,6 +18,7 @@ import { TitleScreen } from './ui/titleScreen';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
+import { VISITOR_DEXES } from './sim/visitors';
 
 /** The title screen's demo team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton at level 100. */
 const DEMO_PARTY = ['0392', '0384-shiny', '0381', '0385-shiny', '0959'];
@@ -45,7 +46,7 @@ function withEvolutions(dexes: Iterable<string>): Set<string> {
  * The starter roll's pool is not in here (it is large): the roll loads its own reel, and a match loads its starter's line.
  */
 function matchCast(): Set<string> {
-  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party]);
+  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
   for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
   for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
   return withEvolutions(out);

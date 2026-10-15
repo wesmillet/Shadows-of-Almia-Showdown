@@ -75,8 +75,9 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   }
   const f = m.anim.current();
   const dx = sx - (f.w * s) / 2;
-  // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet.
-  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * drawScale(m.species) * 0.15;
+  // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet; a leap lifts it on an arc.
+  const leapLift = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) * view.pxPerTile : 0;
+  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * drawScale(m.species) * 0.15 - leapLift;
   if (m.aura) {
     ctx.save();
     ctx.shadowColor = 'rgba(150,60,255,0.95)';

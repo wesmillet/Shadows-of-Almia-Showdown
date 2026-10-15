@@ -35,6 +35,8 @@ export type BattleEvent =
   | { type: 'styler-loop'; mon: Mon; loops: number; needed: number }
   | { type: 'styler-break'; mon: Mon }
   | { type: 'calmed'; mon: Mon }
+  | { type: 'scene-fx'; id: string; x: number; y: number; scale: number; ground?: boolean; tint?: string }
+  | { type: 'yield'; mon: Mon; by: Mon | null }
   | { type: 'confused'; mon: Mon }
   | { type: 'faint'; mon: Mon; by: Mon | null }
   | { type: 'wake'; mon: Mon }
@@ -428,6 +430,12 @@ export class BattleSystem {
 
   applyDamage(target: Mon, damage: number, by: Mon | null): void {
     if (target.fainted) return;
+    // A legendary is never knocked out: at its last HP it yields to whoever wore it down.
+    if (target.legend && target.hp - damage <= 0) {
+      target.hp = 1;
+      this.events.push({ type: 'yield', mon: target, by });
+      return;
+    }
     if (target.heldItem === 'focus-sash' && target.hp === target.maxHp && damage >= target.hp) {
       target.hp = 1;
       target.heldItem = null;

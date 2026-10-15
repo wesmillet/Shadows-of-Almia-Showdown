@@ -115,6 +115,7 @@ export class FanGround implements GroundRenderer {
       npcs: (map.npcs as NonNullable<GroundRenderer['features']>['npcs']) ?? [],
       arena: map.arena as NonNullable<GroundRenderer['features']>['arena'],
       towns: (map as { towns?: Array<{ name: string; x: number; y: number }> }).towns ?? [],
+      lake: (map as { lake?: { x: number; y: number; rx: number; ry: number } }).lake,
     };
     this.chunkCols = Math.ceil(this.cols / CHUNK);
     this.chunkRows = Math.ceil(this.rows / CHUNK);

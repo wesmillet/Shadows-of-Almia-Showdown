@@ -68,6 +68,14 @@
     "trainer_g": {
       "character": "union_09",
       "name": "Juniper"
+    },
+    "merchant": {
+      "character": "civ_07",
+      "name": "Wandering Merchant"
+    },
+    "ace": {
+      "character": "civ_12",
+      "name": "Ace Trainer Celeste"
     }
   }
 }

@@ -153,7 +153,7 @@ def export(path_base, rel_base, m):
         'center': m['center'], 'outposts': m['outposts'], 'spawns': m['spawns'], 'towns': m.get('towns', []),
         'credits': m.get('credits', ''),
     }
-    for k in ('npcs', 'shops', 'arena'):
+    for k in ('npcs', 'shops', 'arena', 'lake'):
         if k in m: data[k] = m[k]
     with open(path_base + '.json', 'w') as f:
         json.dump(data, f, separators=(',', ':'))

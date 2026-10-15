@@ -64,6 +64,8 @@ export interface GroundRenderer {
     npcs?: Array<{ role: 'healer' | 'vendor' | 'challenger'; x: number; y: number; town: string; stand?: number; standX?: number; standY?: number }>;
     arena?: { x0: number; y0: number; x1: number; y1: number };
     towns?: Array<{ name: string; x: number; y: number }>;
+    /** Tide Lake: centre and radii in tiles (Lugia's lake). */
+    lake?: { x: number; y: number; rx: number; ry: number };
   };
   /** Under the forest canopy (characters there are drawn faded). */
   underCanopy(x: number, y: number): boolean;

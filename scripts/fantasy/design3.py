@@ -34,6 +34,7 @@ CASTLE_WALL = 3
 CASTLE_CENTER = (199, 172)
 CRYSTAL = (160, 112)
 PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
+TIDE_LAKE = (219, 98, 16, 9)        # Tide Lake (Lugia's): centre and radii
 
 
 def castle_region(shape=None):
@@ -135,7 +136,11 @@ class Design:
         water |= oasis
         frozen = ellipse(50, 106, 8, 5) + 0.15 * noise(seed + 14, 3) < 1
         water |= frozen
-        self.lake, self.oasis, self.frozen = lake, oasis, frozen
+        # Tide Lake: a big lake on the lowland between the plain and the autumn wood, where Lugia sleeps
+        tide = ellipse(*TIDE_LAKE) + 0.12 * noise(seed + 15, 5) < 1
+        level[ellipse(TIDE_LAKE[0], TIDE_LAKE[1], TIDE_LAKE[2] + 5, TIDE_LAKE[3] + 5) < 1] = 0
+        water |= tide
+        self.lake, self.oasis, self.frozen, self.tide = lake, oasis, frozen, tide
         self.water = water & land & (self.level == 0) & ~self.beach
         self.paths = np.zeros((H, W), np.int32)       # filled by the road network (1 road, 2 brick, 3 dark brick)
         self.stairs = []                              # (x, y, width, kind)

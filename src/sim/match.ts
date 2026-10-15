@@ -20,6 +20,7 @@ import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
+import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
@@ -141,7 +142,11 @@ export class Match {
     this.spawnTrainers();
     this.placeOutposts();
     this.scatterItems();
+    this.visitors = new Visitors(this);
   }
+
+  /** The merchant, Ace Trainer Celeste, Hoopa and Lugia (visitors.ts). */
+  visitors!: Visitors;
 
   private spawnTrainers(): void {
     for (let i = 0; i < CONFIG.trainers.count; i++) {
@@ -811,7 +816,7 @@ export class Match {
 
   private stepAi(t: Trainer, dt: number): void {
     const world = this.aiWorld();
-    world.rivals = this.allTrainers.filter((o) => o !== t && o.alive && !o.challenger);
+    world.rivals = this.allTrainers.filter((o) => o !== t && o.alive && !o.challenger && !o.visitor);
     // Beacons draw healthy trainers in.
     t.aiTimer -= dt;
     if (t.aiTimer <= 0) {
@@ -1343,9 +1348,10 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
+    this.visitors.step(dt);
     this.stepDodges(dt);
     this.stepAutoLead(dt);
-    for (const t of this.trainers) if (t.alive && !t.duelId) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
+    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();
     for (const t of this.allTrainers) {
@@ -1541,6 +1547,8 @@ export class Match {
   }
 
   private stepWild(w: Mon, dt: number): void {
+    // Hoopa moves itself (visitors.ts); a leaping legend is mid-air.
+    if (w.npc || w.leap) return;
     if (w.fainted || w.captured || w.casting || incapable(w)) return;
     if ((w.calm ?? 0) > 0) w.calm = Math.max(0, (w.calm ?? 0) - dt);
     // Anything hostile that wanders close gets attacked.
@@ -1590,7 +1598,11 @@ export class Match {
 
   /** XP for knockouts and item drops from wild Pokémon (read off this step's faint events). */
   private handleKnockouts(): void {
-    for (const ev of this.battle.events) {
+    for (const ev of [...this.battle.events]) {
+      if (ev.type === 'yield') {
+        this.visitors.legendYields(ev.mon, ev.by);
+        continue;
+      }
       if (ev.type === 'faint' && ev.mon.boss) {
         // Darkrai's defeat: a Cherish Ball with a Dark-type held item that also heals the finder's party.
         this.placeBall('cherish', [{ id: 'black-glasses', count: 1 }], ev.mon.x, ev.mon.y + 0.6, true);
@@ -1637,6 +1649,8 @@ export class Match {
   }
 
   private checkElimination(): void {
+    // Celeste's bout is friendly: settled before anyone could be knocked out of the match by it.
+    this.visitors.check();
     const ch = this.challenge;
     const pl = this.player;
     if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
@@ -1654,7 +1668,7 @@ export class Match {
       if (spill.length) this.placeBall('cherish', spill, c.foe.x, c.foe.y + 1);
       this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money} and his prizes`, seconds: 3.5 });
     }
-    const rivals = this.trainers.filter((t) => !t.challenger);
+    const rivals = this.trainers.filter((t) => !t.challenger && !t.visitor);
     if (!this.player.alive) this.outcome = 'loss';
     else if (rivals.length > 0 && rivals.every((t) => !t.alive)) this.outcome = 'win';
   }
@@ -1807,7 +1821,7 @@ export class Match {
   /** Two trainers who see each other within startRange start a one-on-one battle. */
   private findDuels(): void {
     const c = CONFIG.duel;
-    const free = this.allTrainers.filter((t) => t.alive && !t.duelId && !t.challenger && this.time >= (t.duelReadyAt ?? 0) && this.canBattle(t));
+    const free = this.allTrainers.filter((t) => t.alive && !t.duelId && !t.challenger && !t.visitor && this.time >= (t.duelReadyAt ?? 0) && this.canBattle(t));
     for (let i = 0; i < free.length; i++) {
       const a = free[i] as Trainer;
       if (a.duelId) continue;

@@ -61,25 +61,34 @@ def build_cliffs(d):
             for r in runs:
                 w = min(3, len(r)); x0 = r[0] + (len(r) - w) // 2
                 cliffs.add_stairs_h(g, x0, w)
-            if not runs:
-                # no road climbs this plateau: one flight in the middle of its longest straight south face
-                best = None
-                bottom = {}
-                for (y, x) in zip(*np.nonzero(comp)):
-                    bottom[x] = max(bottom.get(x, -1), y)
-                xs = sorted(bottom)
-                run = []
-                for x in xs + [None]:
-                    if x is not None and run and x == run[-1] + 1 and bottom[x] == bottom[run[-1]]:
-                        run.append(x); continue
-                    if len(run) >= 6 and all(south[bottom[c] + 1, c] and south[bottom[c] + 2, c] for c in run if bottom[c] + 2 < H):
-                        if best is None or len(run) > len(best): best = run
-                    run = [x] if x is not None else []
-                if best:
-                    x0 = best[len(best) // 2 - 1]
-                    cliffs.add_stairs_h(g, x0, 3)
-                else:
-                    log(f'  level {lv} plateau {i}: no straight south face for stairs')
+            # More ways down: a flight in the middle of every straight south face at least six
+            # columns long (several along long faces, ~22 columns apart), clear of the road stairs.
+            used = [x for r in runs for x in r]
+            bottom = {}
+            for (y, x) in zip(*np.nonzero(comp)):
+                bottom[x] = max(bottom.get(x, -1), y)
+            xs = sorted(bottom)
+            faces, run = [], []
+            for x in xs + [None]:
+                if x is not None and run and x == run[-1] + 1 and bottom[x] == bottom[run[-1]]:
+                    run.append(x); continue
+                if len(run) >= 6 and all(bottom[c] + 2 < H and south[bottom[c] + 1, c] and south[bottom[c] + 2, c] for c in run):
+                    faces.append(run)
+                run = [x] if x is not None else []
+            added = 0
+            for f in sorted(faces, key=len, reverse=True):
+                k = max(1, (len(f) + 6) // 22)
+                for j in range(k):
+                    mid = f[0] + (j + 1) * len(f) // (k + 1) - 1
+                    mid = max(f[0], min(f[-1] - 2, mid))
+                    if any(abs(mid - u) < 10 for u in used): continue
+                    cliffs.add_stairs_h(g, mid, 3)
+                    used += [mid, mid + 1, mid + 2]
+                    added += 1
+            if not runs and not added:
+                log(f'  level {lv} plateau {i}: no straight south face for stairs')
+            elif added:
+                log(f'  level {lv} plateau {i}: {added} extra flights')
             o = C.run(g)
             nb, miss, mm = C.coverage(g, o)
             if miss: log(f'  level {lv} plateau {i}: {miss} of {nb} slope cells without art')
@@ -299,6 +308,7 @@ def main():
             'center': {'x': D.CRYSTAL[0] + 0.5, 'y': D.CRYSTAL[1] + 0.5}, 'outposts': outposts, 'spawns': spawns,
             'towns': towns, 'npcs': npcs,
             'arena': {'x0': bx0, 'y0': by0, 'x1': bx1 + 1, 'y1': by1 + 1},
+            'lake': {'x': D.TIDE_LAKE[0] + 0.5, 'y': D.TIDE_LAKE[1] + 0.5, 'rx': D.TIDE_LAKE[2], 'ry': D.TIDE_LAKE[3]},
             'credits': 'The Fan-tasy Tileset (Premium) and its expansions'}
     base = os.path.join(ROOT, 'assets', 'maps', NAME)
     out, ntiles, nobj = export3.export(base, f'maps/{NAME}', data)

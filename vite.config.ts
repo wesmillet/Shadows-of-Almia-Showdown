@@ -46,6 +46,8 @@ const PAGES_BASE = '/Shadows-of-Almia-Showdown/';
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? PAGES_BASE : '/',
+  // A short build stamp on the title screen, so it is obvious which version is loaded.
+  define: { __BUILD__: JSON.stringify(`${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`) },
   publicDir: false,
   plugins: [assetsPlugin()],
   server: { port: 5173, host: true },

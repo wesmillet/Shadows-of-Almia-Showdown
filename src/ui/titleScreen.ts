@@ -110,5 +110,6 @@ export class TitleScreen implements Screen {
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, `Host: ${sheet.name} (${sheet.character})`, v.width / 2, v.height - 38 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
     text(v, 'WASD move · 1-4 moves · 1-6 items · hold Space to throw · click portraits to swap', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#9f97bb' });
+    text(v, `build ${__BUILD__}`, v.width - 10 * s, v.height - 8 * s, 10, { align: 'right', weight: '500', color: '#6f6890' });
   }
 }

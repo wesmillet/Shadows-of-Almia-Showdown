@@ -2,7 +2,7 @@
 
 A browser demo: a Pokémon battle royale with Pokémon Mystery Dungeon
 (PMDCollab SpriteCollab) Pokémon sprites and Pokémon Ranger: Shadows of
-Almia overworld NPCs over hi-res painted terrain. Single HTML entry,
+Almia overworld NPCs on a hand-planned island built from The Fan-tasy Tileset. Single HTML entry,
 TypeScript, Vite, Canvas 2D for the world and a WebGL lighting pass on top.
 Non-commercial fan project; see `CREDITS.md` (sources) and
 `assets/CREDITS.md` (generated per-sprite SpriteCollab credits).
@@ -24,9 +24,17 @@ repository path as the Vite base; the dev server stays at `/`.
 
 Title → **Roll Starter** → a vertical reel of four candidates spins and
 stops. Click a card (or press 1-4), reroll up to three times (each reroll
-removes the strongest tier from the pool), confirm. You spawn on the edge
-of a 48x48 island with your starter behind you; two AI trainers spawn on
-other edges. Last trainer standing wins.
+removes the strongest tier from the pool), confirm. You start at a town on
+the 320x224 island with seven rival trainers spread round the coast. Last
+trainer standing wins.
+
+The island: a castle at the centre (a walled courtyard with the palace, the
+Shadow Crystal and a battlefield where the Castle Champion takes on
+challengers), and four lands round it, each with its own wild Pokémon and a
+town with a healer and three market stalls: Frostmere in the snowfields,
+Emberwood in the autumn wood, Sunreach in the desert, Greenhollow in the
+forest. Pokémon are drawn at their Pokédex size next to the trainers and
+evolve at their canonical levels.
 
 | Input | Action |
 | --- | --- |
@@ -37,6 +45,8 @@ other edges. Last trainer standing wins.
 | Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
 | hold Space, release | aim an arc toward the nearest wild Pokémon and throw the armed ball |
+| E beside a vendor | open the stall: 1-9 buys, E or Esc leaves (Poké Dollars come from knockouts) |
+| E beside the Castle Champion | challenge him (a friendly bout; beat his team for ₽3000 and prizes) |
 | click a portrait | swap the lead; click a behaviour chip to cycle Aggressive / Guard / Passive / Hold / Roam |
 | walk over an item ball | open it: a popup reveals the contents. Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |
 | Shift+number on a Crystal Shard | clears the darkness in a 5-tile circle around you for 10 s |

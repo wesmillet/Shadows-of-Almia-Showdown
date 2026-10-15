@@ -1,5 +1,5 @@
 {
-  "_comment": "Wild spawn tables per biome. count = wild Pokémon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water.",
+  "_comment": "Wild spawn tables per biome. count = wild Pokémon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water. Levels rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^2 (config.json wild).",
   "biomes": {
     "meadow": {
       "count": 30,
@@ -18,12 +18,12 @@
         }
       ],
       "levels": [
-        10,
-        15
+        3,
+        6
       ]
     },
     "forest": {
-      "count": 27,
+      "count": 40,
       "table": [
         {
           "dex": "0406",
@@ -39,8 +39,8 @@
         }
       ],
       "levels": [
-        13,
-        19
+        4,
+        8
       ]
     },
     "shore": {
@@ -60,12 +60,12 @@
         }
       ],
       "levels": [
-        12,
-        18
+        4,
+        8
       ]
     },
     "water": {
-      "count": 21,
+      "count": 20,
       "table": [
         {
           "dex": "0129",
@@ -81,8 +81,104 @@
         }
       ],
       "levels": [
-        14,
-        20
+        5,
+        9
+      ]
+    },
+    "snow": {
+      "count": 34,
+      "table": [
+        {
+          "dex": "0459",
+          "weight": 3
+        },
+        {
+          "dex": "0220",
+          "weight": 3
+        },
+        {
+          "dex": "0361",
+          "weight": 2
+        },
+        {
+          "dex": "0363",
+          "weight": 2
+        }
+      ],
+      "levels": [
+        6,
+        11
+      ]
+    },
+    "desert": {
+      "count": 30,
+      "table": [
+        {
+          "dex": "0027",
+          "weight": 3
+        },
+        {
+          "dex": "0328",
+          "weight": 3
+        },
+        {
+          "dex": "0331",
+          "weight": 3
+        },
+        {
+          "dex": "0449",
+          "weight": 2
+        }
+      ],
+      "levels": [
+        5,
+        10
+      ]
+    },
+    "autumn": {
+      "count": 34,
+      "table": [
+        {
+          "dex": "0163",
+          "weight": 3
+        },
+        {
+          "dex": "0216",
+          "weight": 2
+        },
+        {
+          "dex": "0037",
+          "weight": 2
+        },
+        {
+          "dex": "0161",
+          "weight": 3
+        }
+      ],
+      "levels": [
+        4,
+        8
+      ]
+    },
+    "castle": {
+      "count": 12,
+      "table": [
+        {
+          "dex": "0092",
+          "weight": 3
+        },
+        {
+          "dex": "0436",
+          "weight": 2
+        },
+        {
+          "dex": "0679",
+          "weight": 2
+        }
+      ],
+      "levels": [
+        10,
+        15
       ]
     }
   },

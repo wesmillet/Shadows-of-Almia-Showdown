@@ -1,9 +1,9 @@
 {
   "map": {
-    "cols": 160,
-    "rows": 112,
+    "cols": 320,
+    "rows": 224,
     "tileSize": 16,
-    "name": "almia"
+    "name": "almia3"
   },
   "player": {
     "speedTilesPerSec": 5.5,
@@ -43,10 +43,12 @@
     "idleMax": 4.5,
     "wanderRadius": 4,
     "aggroRange": 5.5,
-    "centerLevelBonus": 12
+    "centerLevelBonus": 16,
+    "centerLevelRadius": 120,
+    "spawnClearance": 12
   },
   "trainers": {
-    "count": 4,
+    "count": 7,
     "speed": 4.8,
     "fleeHpFraction": 0.3,
     "partySize": 3,
@@ -72,7 +74,7 @@
   },
   "items": {
     "inventorySize": 6,
-    "groundItems": 40,
+    "groundItems": 120,
     "pickupRadius": 0.8
   },
   "catch": {
@@ -92,10 +94,10 @@
   "darkness": {
     "pulseSeconds": 90,
     "radiiTiles": [
-      60,
-      38,
-      20,
-      8
+      125,
+      80,
+      42,
+      12
     ],
     "sweepSeconds": 12,
     "drowsySeconds": 4,

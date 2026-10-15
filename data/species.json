@@ -2031,6 +2031,1092 @@
         31,
         20
       ]
+    },
+    {
+      "dex": "0459",
+      "name": "Snover",
+      "types": [
+        "grass",
+        "ice"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 62,
+        "def": 50,
+        "spa": 62,
+        "spd": 60,
+        "spe": 40
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "tackle",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 1.0,
+      "evolves": [
+        {
+          "to": "0460",
+          "level": 40
+        }
+      ],
+      "body": [
+        25,
+        24
+      ]
+    },
+    {
+      "dex": "0460",
+      "name": "Abomasnow",
+      "types": [
+        "grass",
+        "ice"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 92,
+        "def": 75,
+        "spa": 92,
+        "spd": 85,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "crunch",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 2.2,
+      "body": [
+        33,
+        28
+      ]
+    },
+    {
+      "dex": "0220",
+      "name": "Swinub",
+      "types": [
+        "ice",
+        "ground"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 50,
+        "def": 40,
+        "spa": 30,
+        "spd": 30,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "bulldoze",
+        "bite",
+        "howl"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0221",
+          "level": 33
+        }
+      ],
+      "body": [
+        17,
+        16
+      ]
+    },
+    {
+      "dex": "0221",
+      "name": "Piloswine",
+      "types": [
+        "ice",
+        "ground"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 100,
+        "def": 80,
+        "spa": 60,
+        "spd": 60,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "rock-throw",
+        "bulldoze",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 1.1,
+      "evolves": [
+        {
+          "to": "0473",
+          "level": 45
+        }
+      ],
+      "body": [
+        22,
+        23
+      ]
+    },
+    {
+      "dex": "0473",
+      "name": "Mamoswine",
+      "types": [
+        "ice",
+        "ground"
+      ],
+      "stats": {
+        "hp": 110,
+        "atk": 130,
+        "def": 80,
+        "spa": 70,
+        "spd": 60,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "stone-edge",
+        "earthquake",
+        "ice-beam",
+        "crunch"
+      ],
+      "heightM": 2.5,
+      "body": [
+        28,
+        29
+      ]
+    },
+    {
+      "dex": "0361",
+      "name": "Snorunt",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 50,
+        "def": 50,
+        "spa": 50,
+        "spd": 50,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "bite",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0362",
+          "level": 42
+        }
+      ],
+      "body": [
+        19,
+        23
+      ]
+    },
+    {
+      "dex": "0362",
+      "name": "Glalie",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 80,
+        "def": 80,
+        "spa": 80,
+        "spd": 80,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "bite",
+        "ice-beam",
+        "earthquake"
+      ],
+      "heightM": 1.5,
+      "body": [
+        28,
+        26
+      ]
+    },
+    {
+      "dex": "0363",
+      "name": "Spheal",
+      "types": [
+        "ice",
+        "water"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 40,
+        "def": 50,
+        "spa": 55,
+        "spd": 50,
+        "spe": 25
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "water-gun",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0364",
+          "level": 32
+        }
+      ],
+      "body": [
+        18,
+        16
+      ]
+    },
+    {
+      "dex": "0364",
+      "name": "Sealeo",
+      "types": [
+        "ice",
+        "water"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 60,
+        "def": 70,
+        "spa": 75,
+        "spd": 70,
+        "spe": 45
+      },
+      "tier": 0,
+      "moves": [
+        "bite",
+        "surf",
+        "ice-beam",
+        "howl"
+      ],
+      "heightM": 1.1,
+      "evolves": [
+        {
+          "to": "0365",
+          "level": 44
+        }
+      ],
+      "body": [
+        24,
+        21
+      ]
+    },
+    {
+      "dex": "0365",
+      "name": "Walrein",
+      "types": [
+        "ice",
+        "water"
+      ],
+      "stats": {
+        "hp": 110,
+        "atk": 80,
+        "def": 90,
+        "spa": 95,
+        "spd": 90,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "surf",
+        "ice-beam",
+        "earthquake"
+      ],
+      "heightM": 1.4,
+      "body": [
+        27,
+        26
+      ]
+    },
+    {
+      "dex": "0027",
+      "name": "Sandshrew",
+      "types": [
+        "ground"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 75,
+        "def": 85,
+        "spa": 20,
+        "spd": 30,
+        "spe": 40
+      },
+      "tier": 0,
+      "moves": [
+        "scratch",
+        "bulldoze",
+        "rock-throw",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0028",
+          "level": 22
+        }
+      ],
+      "body": [
+        17,
+        19
+      ]
+    },
+    {
+      "dex": "0028",
+      "name": "Sandslash",
+      "types": [
+        "ground"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 100,
+        "def": 110,
+        "spa": 45,
+        "spd": 55,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "x-scissor",
+        "earthquake",
+        "rock-slide",
+        "brick-break"
+      ],
+      "heightM": 1.0,
+      "body": [
+        23,
+        25
+      ]
+    },
+    {
+      "dex": "0328",
+      "name": "Trapinch",
+      "types": [
+        "ground"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 100,
+        "def": 45,
+        "spa": 45,
+        "spd": 45,
+        "spe": 10
+      },
+      "tier": 0,
+      "moves": [
+        "bite",
+        "bulldoze",
+        "rock-throw",
+        "howl"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0329",
+          "level": 35
+        }
+      ],
+      "body": [
+        17,
+        19
+      ]
+    },
+    {
+      "dex": "0329",
+      "name": "Vibrava",
+      "types": [
+        "ground",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 70,
+        "def": 50,
+        "spa": 50,
+        "spd": 50,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "bulldoze",
+        "dragon-pulse",
+        "rock-slide"
+      ],
+      "heightM": 1.1,
+      "evolves": [
+        {
+          "to": "0330",
+          "level": 45
+        }
+      ],
+      "body": [
+        29,
+        24
+      ]
+    },
+    {
+      "dex": "0330",
+      "name": "Flygon",
+      "types": [
+        "ground",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 100,
+        "def": 80,
+        "spa": 80,
+        "spd": 80,
+        "spe": 100
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "earthquake",
+        "dragon-pulse",
+        "stone-edge"
+      ],
+      "heightM": 2.0,
+      "body": [
+        31,
+        32
+      ]
+    },
+    {
+      "dex": "0331",
+      "name": "Cacnea",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 85,
+        "def": 40,
+        "spa": 85,
+        "spd": 40,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "bite",
+        "poison-jab",
+        "sleep-powder"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0332",
+          "level": 32
+        }
+      ],
+      "body": [
+        29,
+        19
+      ]
+    },
+    {
+      "dex": "0332",
+      "name": "Cacturne",
+      "types": [
+        "grass",
+        "dark"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 115,
+        "def": 60,
+        "spa": 115,
+        "spd": 60,
+        "spe": 55
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "dark-pulse",
+        "poison-jab",
+        "sleep-powder"
+      ],
+      "heightM": 1.3,
+      "body": [
+        31,
+        31
+      ]
+    },
+    {
+      "dex": "0449",
+      "name": "Hippopotas",
+      "types": [
+        "ground"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 72,
+        "def": 78,
+        "spa": 38,
+        "spd": 42,
+        "spe": 32
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "bulldoze",
+        "bite",
+        "howl"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0450",
+          "level": 34
+        }
+      ],
+      "body": [
+        18,
+        20
+      ]
+    },
+    {
+      "dex": "0450",
+      "name": "Hippowdon",
+      "types": [
+        "ground"
+      ],
+      "stats": {
+        "hp": 108,
+        "atk": 112,
+        "def": 118,
+        "spa": 68,
+        "spd": 72,
+        "spe": 47
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "earthquake",
+        "stone-edge",
+        "howl"
+      ],
+      "heightM": 2.0,
+      "body": [
+        23,
+        25
+      ]
+    },
+    {
+      "dex": "0163",
+      "name": "Hoothoot",
+      "types": [
+        "normal",
+        "flying"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 30,
+        "def": 30,
+        "spa": 36,
+        "spd": 56,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "wing-attack",
+        "psybeam",
+        "sleep-powder"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0164",
+          "level": 20
+        }
+      ],
+      "body": [
+        19,
+        19
+      ]
+    },
+    {
+      "dex": "0164",
+      "name": "Noctowl",
+      "types": [
+        "normal",
+        "flying"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 50,
+        "def": 50,
+        "spa": 86,
+        "spd": 96,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "shadow-ball",
+        "aerial-ace",
+        "psybeam",
+        "sleep-powder"
+      ],
+      "heightM": 1.6,
+      "body": [
+        37,
+        26
+      ]
+    },
+    {
+      "dex": "0216",
+      "name": "Teddiursa",
+      "types": [
+        "normal"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 80,
+        "def": 50,
+        "spa": 50,
+        "spd": 50,
+        "spe": 40
+      },
+      "tier": 0,
+      "moves": [
+        "scratch",
+        "bite",
+        "quick-attack",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0217",
+          "level": 30
+        }
+      ],
+      "body": [
+        19,
+        19
+      ]
+    },
+    {
+      "dex": "0217",
+      "name": "Ursaring",
+      "types": [
+        "normal"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 130,
+        "def": 75,
+        "spa": 75,
+        "spd": 75,
+        "spe": 55
+      },
+      "tier": 0,
+      "moves": [
+        "return",
+        "crunch",
+        "brick-break",
+        "howl"
+      ],
+      "heightM": 1.8,
+      "body": [
+        33,
+        32
+      ]
+    },
+    {
+      "dex": "0037",
+      "name": "Vulpix",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 38,
+        "atk": 41,
+        "def": 40,
+        "spa": 50,
+        "spd": 65,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "ember",
+        "quick-attack",
+        "will-o-wisp",
+        "bite"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0038",
+          "level": 30
+        }
+      ],
+      "body": [
+        19,
+        21
+      ]
+    },
+    {
+      "dex": "0038",
+      "name": "Ninetales",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 73,
+        "atk": 76,
+        "def": 75,
+        "spa": 81,
+        "spd": 100,
+        "spe": 100
+      },
+      "tier": 0,
+      "moves": [
+        "flamethrower",
+        "quick-attack",
+        "will-o-wisp",
+        "dark-pulse"
+      ],
+      "heightM": 1.1,
+      "body": [
+        28,
+        26
+      ]
+    },
+    {
+      "dex": "0161",
+      "name": "Sentret",
+      "types": [
+        "normal"
+      ],
+      "stats": {
+        "hp": 35,
+        "atk": 46,
+        "def": 34,
+        "spa": 35,
+        "spd": 45,
+        "spe": 20
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "quick-attack",
+        "bite",
+        "howl"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0162",
+          "level": 15
+        }
+      ],
+      "body": [
+        23,
+        32
+      ]
+    },
+    {
+      "dex": "0162",
+      "name": "Furret",
+      "types": [
+        "normal"
+      ],
+      "stats": {
+        "hp": 85,
+        "atk": 76,
+        "def": 64,
+        "spa": 45,
+        "spd": 55,
+        "spe": 90
+      },
+      "tier": 0,
+      "moves": [
+        "return",
+        "quick-attack",
+        "crunch",
+        "howl"
+      ],
+      "heightM": 1.8,
+      "body": [
+        23,
+        26
+      ]
+    },
+    {
+      "dex": "0092",
+      "name": "Gastly",
+      "types": [
+        "ghost",
+        "poison"
+      ],
+      "stats": {
+        "hp": 30,
+        "atk": 35,
+        "def": 30,
+        "spa": 100,
+        "spd": 35,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "bite",
+        "shadow-ball",
+        "sleep-powder",
+        "will-o-wisp"
+      ],
+      "heightM": 1.3,
+      "evolves": [
+        {
+          "to": "0093",
+          "level": 25
+        }
+      ],
+      "body": [
+        26,
+        30
+      ]
+    },
+    {
+      "dex": "0093",
+      "name": "Haunter",
+      "types": [
+        "ghost",
+        "poison"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 50,
+        "def": 45,
+        "spa": 115,
+        "spd": 55,
+        "spe": 95
+      },
+      "tier": 0,
+      "moves": [
+        "dark-pulse",
+        "shadow-ball",
+        "sludge-bomb",
+        "sleep-powder"
+      ],
+      "heightM": 1.6,
+      "evolves": [
+        {
+          "to": "0094",
+          "level": 38
+        }
+      ],
+      "body": [
+        24,
+        24
+      ]
+    },
+    {
+      "dex": "0094",
+      "name": "Gengar",
+      "types": [
+        "ghost",
+        "poison"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 65,
+        "def": 60,
+        "spa": 130,
+        "spd": 75,
+        "spe": 110
+      },
+      "tier": 0,
+      "moves": [
+        "dark-pulse",
+        "shadow-ball",
+        "sludge-bomb",
+        "thunderbolt"
+      ],
+      "heightM": 1.5,
+      "body": [
+        25,
+        25
+      ]
+    },
+    {
+      "dex": "0436",
+      "name": "Bronzor",
+      "types": [
+        "steel",
+        "psychic"
+      ],
+      "stats": {
+        "hp": 57,
+        "atk": 24,
+        "def": 86,
+        "spa": 24,
+        "spd": 86,
+        "spe": 23
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "psybeam",
+        "rock-throw",
+        "howl"
+      ],
+      "heightM": 0.5,
+      "evolves": [
+        {
+          "to": "0437",
+          "level": 33
+        }
+      ],
+      "body": [
+        18,
+        18
+      ]
+    },
+    {
+      "dex": "0437",
+      "name": "Bronzong",
+      "types": [
+        "steel",
+        "psychic"
+      ],
+      "stats": {
+        "hp": 67,
+        "atk": 89,
+        "def": 116,
+        "spa": 79,
+        "spd": 116,
+        "spe": 33
+      },
+      "tier": 0,
+      "moves": [
+        "earthquake",
+        "psybeam",
+        "rock-slide",
+        "howl"
+      ],
+      "heightM": 1.3,
+      "body": [
+        33,
+        25
+      ]
+    },
+    {
+      "dex": "0679",
+      "name": "Honedge",
+      "types": [
+        "steel",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 80,
+        "def": 100,
+        "spa": 35,
+        "spd": 37,
+        "spe": 28
+      },
+      "tier": 0,
+      "moves": [
+        "scratch",
+        "bite",
+        "shadow-ball",
+        "howl"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0680",
+          "level": 35
+        }
+      ],
+      "body": [
+        21,
+        26
+      ]
+    },
+    {
+      "dex": "0680",
+      "name": "Doublade",
+      "types": [
+        "steel",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 59,
+        "atk": 110,
+        "def": 150,
+        "spa": 45,
+        "spd": 49,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "x-scissor",
+        "brick-break",
+        "shadow-ball",
+        "howl"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0681",
+          "level": 45
+        }
+      ],
+      "body": [
+        36,
+        25
+      ]
+    },
+    {
+      "dex": "0681",
+      "name": "Aegislash",
+      "types": [
+        "steel",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 50,
+        "def": 140,
+        "spa": 50,
+        "spd": 140,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "x-scissor",
+        "brick-break",
+        "shadow-ball",
+        "stone-edge"
+      ],
+      "heightM": 1.7,
+      "body": [
+        25,
+        29
+      ]
     }
   ]
 }

@@ -1,0 +1,142 @@
+{
+  "_comment": "Money and shops. Every trainer starts with startMoney Poké Dollars and earns koMoney for each Pokémon their party knocks out (wild: base + perLevel x level; trainer-owned: that times trainerMult). Vendors stand at the market stalls of each town (stall index 0-2 in the map's npcs); every town's gear stall also sells that town's type-boosting item. The challenger waits in the castle courtyard: press E beside him to battle; beat his whole team for the reward (once per match). It is a friendly bout: if your party faints he withdraws, your Pokémon are patched up at the castle healer, and you may try again after retrySeconds.",
+  "startMoney": 300,
+  "koMoney": {
+    "wildBase": 20,
+    "perLevel": 3,
+    "trainerMult": 3
+  },
+  "stalls": [
+    {
+      "name": "Poké Ball stall",
+      "stock": [
+        [
+          "poke-ball",
+          100
+        ],
+        [
+          "great-ball",
+          300
+        ],
+        [
+          "ultra-ball",
+          700
+        ],
+        [
+          "net-ball",
+          400
+        ],
+        [
+          "dive-ball",
+          400
+        ],
+        [
+          "dusk-ball",
+          500
+        ],
+        [
+          "quick-ball",
+          600
+        ],
+        [
+          "timer-ball",
+          450
+        ]
+      ]
+    },
+    {
+      "name": "Medicine stall",
+      "stock": [
+        [
+          "potion",
+          150
+        ],
+        [
+          "super-potion",
+          400
+        ],
+        [
+          "hyper-potion",
+          900
+        ],
+        [
+          "full-heal",
+          300
+        ],
+        [
+          "revive",
+          1200
+        ]
+      ]
+    },
+    {
+      "name": "Battle gear",
+      "stock": [
+        [
+          "x-attack",
+          350
+        ],
+        [
+          "x-defend",
+          350
+        ],
+        [
+          "x-speed",
+          350
+        ],
+        [
+          "leftovers",
+          2500
+        ],
+        [
+          "focus-sash",
+          2000
+        ],
+        [
+          "life-orb",
+          3000
+        ],
+        [
+          "choice-band",
+          3000
+        ]
+      ]
+    }
+  ],
+  "townItems": {
+    "Frostmere": "never-melt-ice",
+    "Emberwood": "charcoal",
+    "Sunreach": "soft-sand",
+    "Greenhollow": "miracle-seed",
+    "Castle": "metal-coat"
+  },
+  "townItemPrice": 1500,
+  "challenger": {
+    "name": "Castle Champion",
+    "party": [
+      "0448",
+      "0445",
+      "0130"
+    ],
+    "levelOver": 3,
+    "minLevel": 10,
+    "reward": {
+      "money": 3000,
+      "items": [
+        [
+          "ultra-ball",
+          3
+        ],
+        [
+          "hyper-potion",
+          2
+        ],
+        [
+          "life-orb",
+          1
+        ]
+      ]
+    },
+    "retrySeconds": 60
+  }
+}

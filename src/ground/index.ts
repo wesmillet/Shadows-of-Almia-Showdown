@@ -1,4 +1,5 @@
 import type { Assets } from '../sprites/assets';
+import { FanGround } from './fanGround';
 import { StaticGround } from './staticGround';
 import { SunnysideGround } from './sunnysideGround';
 import type { GroundRenderer } from './types';
@@ -11,6 +12,8 @@ export type { GroundRenderer, Biome, DecorItem } from './types';
  * the Sunnyside World tileset at the configured size.
  */
 export async function createGround(assets: Assets, cols: number, rows: number, seed: number, onProgress?: (p: number) => void, mapName = 'almia'): Promise<GroundRenderer> {
+  const fan = await FanGround.load(assets, mapName, onProgress);
+  if (fan) return fan;
   const authored = await StaticGround.load(assets, mapName, onProgress);
   if (authored) return authored;
   return SunnysideGround.create(assets, cols, rows, seed, onProgress);

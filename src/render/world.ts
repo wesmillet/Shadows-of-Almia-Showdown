@@ -9,7 +9,7 @@ import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import type { View } from './view';
-import type { GroundRenderer } from '../ground/types';
+import type { DecorItem, GroundRenderer } from '../ground/types';
 
 interface Drawable {
   y: number;
@@ -193,6 +193,36 @@ export function drawSheetFrame(ctx: CanvasRenderingContext2D, f: { image: Canvas
 
 let worldTime = 0;
 
+/** One map object (tree, building, prop) at its place; shared by the match and the title screen. */
+export function drawDecorItem(view: View, d: DecorItem, tileSize: number, time: number): void {
+  const ctx = view.ctx;
+  const k = view.pxPerTile / tileSize;
+  ctx.imageSmoothingEnabled = false;
+  if (d.kind === 'tree' && !d.extent) drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), 0.5, 0.22);
+  const f = d.frames > 1 ? (Math.floor(time * d.fps) + (d.phase ?? 0)) % d.frames : 0;
+  const sx = Math.round(view.toScreenX(d.x));
+  const sy = Math.round(view.toScreenY(d.y) - d.anchorY * k);
+  if (d.flip) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(-1, 1);
+    ctx.drawImage(d.image, (d.srcX ?? 0) + f * d.frameW, d.srcY ?? 0, d.frameW, d.frameH, Math.round(-(d.frameW - d.anchorX) * k), 0, d.frameW * k, d.frameH * k);
+    ctx.restore();
+  } else {
+    ctx.drawImage(d.image, (d.srcX ?? 0) + f * d.frameW, d.srcY ?? 0, d.frameW, d.frameH, Math.round(sx - d.anchorX * k), sy, d.frameW * k, d.frameH * k);
+  }
+}
+
+/** Every map object in view, in depth order (no characters): the title screen's backdrop. */
+export function drawDecor(view: View, ground: GroundRenderer, time: number): void {
+  const vis = view.visibleTiles();
+  for (const d of ground.decor) {
+    const pad = Math.max(3, d.extent ?? 0);
+    if (d.x < vis.x0 - pad || d.x > vis.x1 + pad || d.y < vis.y0 - pad || d.y > vis.y1 + pad) continue;
+    drawDecorItem(view, d, ground.tileSize, time);
+  }
+}
+
 export function renderWorld(view: View, match: Match, opts: WorldRenderOptions): void {
   const { alpha } = opts;
   const ctx = view.ctx;
@@ -220,23 +250,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!inView(d.x, d.y, Math.max(3, d.extent ?? 0))) continue;
     list.push({
       y: d.sortY ?? d.y,
-      draw: () => {
-        const k = view.pxPerTile / match.ground.tileSize;
-        ctx.imageSmoothingEnabled = false;
-        if (d.kind === 'tree' && !d.extent) drawSoftShadow(view, view.toScreenX(d.x), view.toScreenY(d.y), 0.5, 0.22);
-        const f = d.frames > 1 ? (Math.floor(worldTime * d.fps) + (d.phase ?? 0)) % d.frames : 0;
-        const sx = Math.round(view.toScreenX(d.x));
-        const sy = Math.round(view.toScreenY(d.y) - d.anchorY * k);
-        if (d.flip) {
-          ctx.save();
-          ctx.translate(sx, sy);
-          ctx.scale(-1, 1);
-          ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(-(d.frameW - d.anchorX) * k), 0, d.frameW * k, d.frameH * k);
-          ctx.restore();
-        } else {
-          ctx.drawImage(d.image, f * d.frameW, 0, d.frameW, d.frameH, Math.round(sx - d.anchorX * k), sy, d.frameW * k, d.frameH * k);
-        }
-      },
+      draw: () => drawDecorItem(view, d, match.ground.tileSize, worldTime),
     });
   }
   for (const m of match.renderMons()) {

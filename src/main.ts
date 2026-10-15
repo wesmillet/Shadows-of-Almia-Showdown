@@ -56,10 +56,12 @@ async function boot(): Promise<void> {
     await verifyDemoRoom(assets, view);
     return;
   }
+  // ?map=<name> loads assets/maps/<name>.json instead of the configured map (testing).
+  const mapName = params.get('map') ?? CONFIG.map.name;
   const ground = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, seed, (p) => {
     status = `Painting terrain ${Math.round(p * 100)}%`;
     drawLoading();
-  });
+  }, mapName);
 
   let screen: Screen | null = null;
   const game: GameContext = {
@@ -108,7 +110,7 @@ async function boot(): Promise<void> {
       currentGround = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, currentSeed, (p) => {
         status = `Painting terrain ${Math.round(p * 100)}%`;
         drawLoading();
-      });
+      }, mapName);
     }
     game.setScreen(new TitleScreen(game, currentGround, rangers, showRoll, startDemo));
   };

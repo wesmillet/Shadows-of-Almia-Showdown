@@ -9,6 +9,7 @@ import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
+import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon } from '../sim/entities';
 import { lead } from '../sim/entities';
@@ -61,6 +62,8 @@ export class MatchScreen implements Screen {
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
+  /** The vendor whose stall is open (the match waits while you shop). */
+  private shopOpen: Shop | null = null;
   private readonly strips = new Map<string, HTMLImageElement | null>();
   protected readonly fx: FxLibrary;
   /** Sunnyside glint strip (6 frames of 7x7) that sparkles on ground balls. */
@@ -115,6 +118,10 @@ export class MatchScreen implements Screen {
       this.handleTeachInput(input);
       return;
     }
+    if (this.shopOpen) {
+      this.handleShopInput(input);
+      return;
+    }
     this.handleInput(input);
     this.match.step(dt, input);
     this.consumeEvents();
@@ -146,6 +153,7 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
+    if (input.pressed('KeyE')) this.interact();
     if (input.pressed('KeyR')) {
       const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
       const m = i >= 0 ? this.match.player.party[i] : undefined;
@@ -187,6 +195,29 @@ export class MatchScreen implements Screen {
       this.aimPower = 0;
     }
     void v;
+  }
+
+  /** The shop: 1-9 buys that line, E or Escape closes it. */
+  private handleShopInput(input: Input): void {
+    const shop = this.shopOpen;
+    if (!shop) return;
+    if (input.pressed('Escape') || input.pressed('KeyE')) {
+      this.shopOpen = null;
+      return;
+    }
+    for (let i = 0; i < 9; i++) {
+      if (!input.pressed(`Digit${i + 1}`)) continue;
+      const msg = this.match.buy(shop, i);
+      if (msg) this.say(msg, 1.6);
+    }
+  }
+
+  /** E beside a vendor opens the stall; beside the challenger, starts the battle. */
+  private interact(): void {
+    const s = this.match.nearService();
+    if (!s) return;
+    if (s.kind === 'shop') this.shopOpen = s.shop;
+    else if (s.kind === 'challenge') this.say(this.match.startChallenge(), 3);
   }
 
   /** The TM prompt: 1-4 replaces that move, Escape keeps the current moves. */
@@ -384,6 +415,9 @@ export class MatchScreen implements Screen {
       case 'evolved':
         if (ev.mon.owner?.isPlayer) this.say(`${ev.from} evolved into ${ev.mon.name}!`, 2.6);
         this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 3, fps: 18 });
+        break;
+      case 'money':
+        if (ev.trainer.isPlayer) this.floaters.add(ev.x, ev.y - 1.2, `+₽${ev.amount}`, '#ffe27a', 13);
         break;
       case 'eliminated':
         this.say(ev.trainer.isPlayer ? 'Your whole party fainted…' : `${ev.trainer.name} was eliminated!`, 2.5);
@@ -811,8 +845,23 @@ export class MatchScreen implements Screen {
         return { moveName: def?.name.replace('TM ', '') ?? '?', moves: m ? m.moves.map((id) => move(id).name) : [], mon: m?.name ?? '?' };
       })(this.teach.slot) : null,
       aiming: this.aiming ? Math.max(0.02, this.aimPower) : 0,
+      money: this.match.player.money,
+      prompt: this.servicePrompt(),
+      shop: this.shopOpen ? {
+        name: this.shopOpen.name,
+        entries: this.shopOpen.stock.map((e) => ({ name: ITEMS[e.id]?.name ?? e.id, price: e.price, affordable: this.match.player.money >= e.price })),
+      } : null,
       lightingMode: this.lighting.mode,
     };
+  }
+
+  private servicePrompt(): string | null {
+    if (this.shopOpen || this.teach) return null;
+    const s = this.match.nearService();
+    if (!s) return null;
+    if (s.kind === 'shop') return `E · Shop at the ${s.shop.name}`;
+    if (s.kind === 'challenge') return `E · Challenge the ${SHOPS.challenger.name}`;
+    return 'Stand here to heal your party';
   }
 
   protected drawExtraWorld(v: View): Array<{ y: number; draw: () => void }> {

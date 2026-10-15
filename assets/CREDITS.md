@@ -29,6 +29,26 @@ license, sheets). The current artists per folder, resolved through
 - <@!217653022094786560>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 - <@!276369635304275968>: Trip,HitGround,Faint
 
+### 0027 Sandshrew
+- CHUNSOFT (https://www.spike-chunsoft.com/): Attack,Charge,Double,Hop,Hurt,Idle,Rotate,Sleep,Strike,Swing,Walk,Withdraw
+- <@!237286997645983744>: EventSleep,Laying,Wake
+- <@!169247379453640706>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!169247379453640706>: Eat,Sit
+- <@!169247379453640706>: Pull,Sit
+
+### 0028 Sandslash
+- CHUNSOFT (https://www.spike-chunsoft.com/): Attack,Charge,Double,Hop,Hurt,Idle,Rotate,Sleep,Strike,Swing,Walk,Withdraw
+- <@!356635814668664832>: Attack,Charge,Cringe,DeepBreath,Double,Eat,EventSleep,Faint,Float,Head,HitGround,Hop,Hurt,Idle,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,Rotate,Sink,Sit,Sleep,Strike,Swing,Trip,Tumble,TumbleBack,Wake,Walk,Withdraw
+- <@!365627932888268800> (earlier version): Nod
+- <@!356635814668664832>: Eat,Sit
+
+### 0037 Vulpix
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Appeal,SpAttack,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,Faint,HitGround
+
+### 0038 Ninetales
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Appeal,SpAttack,RearUp,Swing,Double,Rotate,Hop
+- <@!544245909639397378>: Walk,Attack,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
 ### 0054 Psyduck
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,MultiScratch,Twirl,Swing,Double,Rotate,Hop,Pose
 
@@ -46,6 +66,16 @@ license, sheets). The current artists per folder, resolved through
 ### 0076 Golem
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Withdraw,Swing,Double,Rotate,Hop
 - <@!356635814668664832>: Special0
+
+### 0092 Gastly
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Lick,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0093 Haunter
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,MultiStrike,Lick,Swing,Double,Rotate,Hop
+
+### 0094 Gengar
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Lick,Twirl,Swing,Double,Rotate,Hop
+- <@!237286997645983744>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 
 ### 0098 Krabby
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Slam,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
@@ -88,6 +118,22 @@ license, sheets). The current artists per folder, resolved through
 - <@!157796074457661440>: Special0
 - <@!157796074457661440>: Special0
 
+### 0161 Sentret
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Appeal,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!356635814668664832>: EventSleep,Float,Laying,Cringe
+- <@!181900575934382081>: Wake,Eat,Tumble,Pose,Pull,Pain,DeepBreath,Nod,Sit,LookUp,Sink,Trip,LeapForth,Head,LostBalance,TumbleBack,HitGround,Faint
+
+### 0162 Furret
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Appeal,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!181900575934382081>: EventSleep,Wake,Laying
+
+### 0163 Hoothoot
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0164 Noctowl
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!356635814668664832>: Eat,Cringe
+
 ### 0196 Espeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -96,6 +142,20 @@ license, sheets). The current artists per folder, resolved through
 - <@!702275233125630042> (earlier version): Attack,Charge,Cringe,DeepBreath,Double,Eat,EventSleep,Faint,Float,Head,HitGround,Hop,Hurt,Idle,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,Rotate,Shoot,Sink,Sit,Sleep,Swing,Trip,Tumble,TumbleBack,Wake,Walk,Withdraw
 - <@!356635814668664832>: Attack,Charge,Cringe,DeepBreath,Double,Eat,EventSleep,Faint,Float,Head,HitGround,Hop,Hurt,Idle,Laying,LookUp,LostBalance,Nod,Pose,Pull,Rotate,Shoot,Sink,Sit,Sleep,Swing,Trip,Tumble,TumbleBack,Wake,Walk,Withdraw
 - <@!356635814668664832>: Head
+
+### 0216 Teddiursa
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,MultiScratch,Shoot,Appeal,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!356635814668664832>: EventSleep,Float,Laying
+
+### 0217 Ursaring
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,MultiStrike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0220 Swinub
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Shake,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!330751862590406656>: EventSleep,Wake,Eat,Float,DeepBreath,Nod,Laying,Cringe
+
+### 0221 Piloswine
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
 ### 0246 Larvitar
 - CHUNSOFT (https://www.spike-chunsoft.com/): Attack,Charge,Double,Hop,Hurt,Idle,Rotate,Shoot,Sleep,Swing,Walk
@@ -116,6 +176,40 @@ license, sheets). The current artists per folder, resolved through
 ### 0315 Roselia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 - <@!702275233125630042>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
+### 0328 Trapinch
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Bite,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!330751862590406656>: EventSleep,Eat,Laying,Cringe
+- <@!356635814668664832>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,LostBalance,TumbleBack,HitGround,Faint
+
+### 0329 Vibrava
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0330 Flygon
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,FlapAround,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0331 Cacnea
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0332 Cacturne
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0361 Snorunt
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
+- <@!702275233125630042>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
+### 0362 Glalie
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Bite,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0363 Spheal
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!702275233125630042>: EventSleep,Wake,Float,Laying
+
+### 0364 Sealeo
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0365 Walrein
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,SpAttack,RearUp,Swing,Double,Rotate,Hop
 
 ### 0381 Latios
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,SpAttack,RearUp,Swing,Double,Rotate,Hop
@@ -221,6 +315,12 @@ license, sheets). The current artists per folder, resolved through
 ### 0423 Gastrodon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0436 Bronzor
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0437 Bronzong
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Emit,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
 ### 0443 Gible
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -238,6 +338,18 @@ license, sheets). The current artists per folder, resolved through
 - <@!356635814668664832>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 - <@!356635814668664832>: EventSleep,Wake,Float,Trip,Laying,HitGround
 
+### 0449 Hippopotas
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0450 Hippowdon
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Rumble,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0459 Snover
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack,RearUp,Swing,Double,Rotate,Hop
+
+### 0460 Abomasnow
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
 ### 0470 Leafeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Attack,Charge,Double,Hop,Hurt,Idle,QuickStrike,Rotate,Shoot,Sleep,Swing,TailWhip,Walk
 - <@!544245909639397378>: Attack,Charge,Cringe,DeepBreath,Double,Eat,EventSleep,Faint,Float,Head,HitGround,Hop,Hurt,Idle,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,QuickStrike,Rotate,Shoot,Sink,Sit,Sleep,Swing,TailWhip,Trip,Tumble,TumbleBack,Wake,Walk
@@ -247,9 +359,26 @@ license, sheets). The current artists per folder, resolved through
 - <@!702275233125630042>: Attack,Charge,Cringe,DeepBreath,Double,Eat,EventSleep,Faint,Float,Head,HitGround,Hop,Hurt,Idle,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,QuickStrike,Rotate,Shoot,Sink,Sit,Sleep,Swing,TailWhip,Trip,Tumble,TumbleBack,Wake,Walk
 - <@!544245909639397378>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 
+### 0473 Mamoswine
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack,RearUp,Swing,Double,Rotate,Hop
+
 ### 0491 Darkrai
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,SpAttack,RearUp,Swing,Double,Rotate,Hop,QuickStrike
 - <@!544245909639397378>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
+### 0679 Honedge
+- <@!702275233125630042> (earlier version): Attack,Charge,Double,Hop,Hurt,Idle,Rotate,Shoot,Sleep,Swing,Walk
+- <@!702275233125630042> (earlier version): Cringe,DeepBreath,Eat,EventSleep,Faint,Float,Head,HitGround,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,Sink,Sit,Trip,Tumble,TumbleBack,Wake
+- <@!350050109741858829> (earlier version): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Slice,Twirl,SpAttack,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+
+### 0680 Doublade
+- <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Slice,SpAttack,Swing,Double,Rotate,Hop,Cringe,Special0
+
+### 0681 Aegislash
+- <@!276369635304275968>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop,Special0
+- <@!276369635304275968>: Special0
+- <@!276369635304275968>: Special0
 
 ### 0700 Sylveon
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,SpAttack,Swing,Double,Rotate,Hop,QuickStrike
@@ -291,6 +420,25 @@ license, sheets). The current artists per folder, resolved through
 - <@!270755102178934785> (earlier version): Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 - <@!350050109741858829>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
+### 0027 Sandshrew
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!157339721729572864>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!157339721729572864>: Joyous,Surprised,Normal
+- <@!576876006636519434>: Sad,Joyous,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0028 Sandslash
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!365627932888268800>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!365627932888268800>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!238146046146904069>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0037 Vulpix
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Happy,Pain,Angry,Worried,Sad,Crying,Shouting,Teary-Eyed,Determined,Joyous,Inspired,Surprised,Dizzy,Sigh,Stunned
+
+### 0038 Ninetales
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!544245909639397378>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0
+
 ### 0054 Psyduck
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Sad,Happy,Crying,Inspired,Pain,Shouting,Surprised,Angry,Teary-Eyed,Worried
 - <@!273594331577974785>: Sigh,Stunned,Dizzy,Determined
@@ -313,6 +461,18 @@ license, sheets). The current artists per folder, resolved through
 ### 0076 Golem
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!544245909639397378>: Surprised
+
+### 0092 Gastly
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0093 Haunter
+- CHUNSOFT (https://www.spike-chunsoft.com/): Angry,Dizzy,Joyous,Normal,Pain,Surprised
+- <@!772726854188400641>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Special1,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!772726854188400641>: Sad,Special1,Happy,Crying,Inspired,Sigh,Shouting,Stunned,Teary-Eyed,Worried,Determined,Special0
+
+### 0094 Gengar
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Sad,Happy,Pain,Surprised,Angry
 
 ### 0098 Krabby
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -378,6 +538,28 @@ license, sheets). The current artists per folder, resolved through
 - <@!237286997645983744>: Special0
 - <@!141718238336778241>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
 
+### 0161 Sentret
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!273958644788363265>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special1,Special2,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!273958644788363265>: Angry,Crying,Determined,Dizzy,Inspired,Joyous,Pain,Shouting,Sigh,Special1,Special2,Special3,Stunned,Surprised,Teary-Eyed
+- <@!356635814668664832>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special3
+
+### 0162 Furret
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!739304144552198285>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special1,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!739304144552198285>: Crying,Pain,Sigh,Stunned,Surprised,Normal
+
+### 0163 Hoothoot
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0164 Noctowl
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!350050109741858829>: Happy,Pain,Determined
+- <@!108260609241423872>: Joyous,Angry
+- <@!108260609241423872>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
 ### 0196 Espeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!327927398941196289>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Stunned,Surprised,Teary-Eyed,Worried
@@ -387,6 +569,26 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!314519507869761556> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0216 Teddiursa
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
+- <@!861005464682889266>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+- <@!772726854188400641>: Sad^,Joyous^,Happy^,Crying^,Inspired^,Sigh^,Pain^,Shouting^,Surprised^,Stunned^,Angry^,Teary-Eyed^,Dizzy^,Special0,Special3,Worried^,Determined^,Special0^,Special3^
+
+### 0217 Ursaring
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!544245909639397378>: Angry,Determined,Happy,Normal
+- <@!283571466891427841>: Pain,Shouting,Worried
+- <@!772726854188400641>: Sad,Joyous,Crying,Inspired,Sigh,Shouting,Surprised,Stunned,Teary-Eyed,Dizzy,Special3
+- <@!544245909639397378>: Determined
+
+### 0220 Swinub
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0221 Piloswine
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!356635814668664832>: Surprised
 
 ### 0246 Larvitar
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -413,6 +615,49 @@ license, sheets). The current artists per folder, resolved through
 - <@!702275233125630042> (earlier version): Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Special0,Special0^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^
 - <@!350050109741858829>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special0,Worried^,Determined^,Special0^
 - <@!350050109741858829>: Sad,Sigh,Pain,Angry,Teary-Eyed
+
+### 0328 Trapinch
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!330751862590406656>: Sad,Pain,Angry
+
+### 0329 Vibrava
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!173505019268694016>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0330 Flygon
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!276369635304275968>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0331 Cacnea
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!237286997645983744>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0332 Cacturne
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!544245909639397378>: Pain,Surprised,Stunned,Angry,Worried
+- <@!217899432652308480>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Shouting,Teary-Eyed,Dizzy,Determined
+
+### 0361 Snorunt
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Happy,Angry,Surprised
+- <@!330751862590406656>: Sad,Joyous,Crying,Inspired,Sigh,Pain,Shouting,Stunned,Teary-Eyed,Dizzy,Worried,Determined,Special3
+
+### 0362 Glalie
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0363 Spheal
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!356635814668664832>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
+
+### 0364 Sealeo
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!356635814668664832>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0365 Walrein
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 
 ### 0381 Latios
 - CHUNSOFT (https://www.spike-chunsoft.com/): Happy,Normal
@@ -548,6 +793,13 @@ license, sheets). The current artists per folder, resolved through
 - <@!356635814668664832>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 - <@!356635814668664832>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
+### 0436 Bronzor
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!183561486893842432>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Special1,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0437 Bronzong
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+
 ### 0443 Gible
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
@@ -577,6 +829,22 @@ license, sheets). The current artists per folder, resolved through
 - <@!157796074457661440>: Special0
 - <@!350050109741858829>: Special1
 
+### 0449 Hippopotas
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!356635814668664832>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0450 Hippowdon
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!544245909639397378>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0
+
+### 0459 Snover
+- CHUNSOFT (https://www.spike-chunsoft.com/): Inspired,Normal,Pain,Surprised,Worried
+- JARLEYPENO: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0460 Abomasnow
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!220580080194289664>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
 ### 0470 Leafeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!544245909639397378>: Sigh,Joyous,Sad,Shouting,Determined,Pain,Crying,Normal,Teary-Eyed,Dizzy,Inspired,Surprised,Angry,Worried,Stunned,Happy
@@ -588,10 +856,29 @@ license, sheets). The current artists per folder, resolved through
 - <@!772726854188400641>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0,Special3
 - <@!772726854188400641>: Sad,Inspired,Sigh,Pain,Stunned,Angry,Teary-Eyed,Worried,Determined
 
+### 0473 Mamoswine
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!350050109741858829>: Pain,Angry
+
 ### 0491 Darkrai
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
 - <@!288067476963721216> (earlier version): Angry,Crying,Determined,Dizzy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!544245909639397378>: Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Special0,Special0^,Special1,Special1^,Special2,Special2^,Special3,Special3^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^,Normal
+
+### 0679 Honedge
+- <@!208313475246718976> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Special1,Special2,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!330751862590406656> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special0,Special1,Special2,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!350050109741858829>: Normal,Sad,Joyous,Special1,Normal^,Sad^,Joyous^,Special1^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Special2,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special0,Special3,Worried^,Determined^,Special0^
+- <@!356635814668664832>: Normal,Sad,Joyous,Special1,Normal^,Sad^,Joyous^,Special1^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special0,Worried^,Determined^,Special0^
+- <@!350050109741858829>: Joyous^,Crying^,Surprised^,Stunned^,Worried^
+- <@!350050109741858829>: Joyous,Joyous^,Happy,Happy^
+
+### 0680 Doublade
+- <@!544245909639397378>: Normal
+
+### 0681 Aegislash
+- <@!544245909639397378>: Normal
+- <@!356635814668664832>: Normal,Normal^
 
 ### 0700 Sylveon
 - <@!356635814668664832>: Normal,Sad,Joyous,Normal^,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^

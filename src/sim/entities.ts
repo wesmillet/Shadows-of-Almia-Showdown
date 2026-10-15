@@ -114,6 +114,10 @@ export interface Trainer {
   attackTimer: number;
   /** AI: seconds until it reconsiders sending a member roaming. */
   roamTimer: number;
+  /** Poké Dollars (data/shops.json). */
+  money: number;
+  /** The castle challenger: not one of the battle royale's rivals. */
+  challenger?: boolean;
 }
 
 export interface InventorySlot {

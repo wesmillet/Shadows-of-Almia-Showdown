@@ -2,7 +2,7 @@
 import type { Input } from '../core/input';
 import type { GroundRenderer } from '../ground/types';
 import { Lighting } from '../render/lighting';
-import { drawSheetFrame, drawSoftShadow } from '../render/world';
+import { drawDecor, drawSheetFrame, drawSoftShadow } from '../render/world';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { button, hit, text, type GameContext, type Screen } from './screens';
 
@@ -23,7 +23,8 @@ export class TitleScreen implements Screen {
     this.lighting = new Lighting(ctx.view);
     const v = ctx.view;
     v.zoom = v.targetZoom = 1;
-    v.snapTo(ground.cols / 2, ground.rows / 2 + 3.2);
+    // The palace front behind the title (the centre is the crystal terrace on the castle map).
+    v.snapTo(ground.cols / 2, ground.rows / 2 - 8);
   }
 
   private buttonRect(): { x: number; y: number; w: number; h: number } {
@@ -62,7 +63,7 @@ export class TitleScreen implements Screen {
   private hostRow(): number {
     if (this.row !== null) return this.row;
     const cx = Math.floor(this.ground.cols / 2);
-    const base = Math.floor(this.ground.rows / 2 + 4);
+    const base = Math.floor(this.ground.rows / 2 - 3);
     const clear = (r: number) => [-3, -2, -1, 0, 1, 2].every((dx) => this.ground.walkable(cx + dx, r));
     this.row = base;
     for (let k = 0; k <= 6; k++) {
@@ -80,6 +81,7 @@ export class TitleScreen implements Screen {
     v.ctx.fillStyle = '#0b0a12';
     v.ctx.fillRect(0, 0, v.width, v.height);
     this.ground.drawGround(v);
+    drawDecor(v, this.ground, this.t);
     // Host on the ground.
     const hx = v.toScreenX(this.ground.cols / 2 + this.hostX);
     const hy = v.toScreenY(this.hostRow() + 0.2);

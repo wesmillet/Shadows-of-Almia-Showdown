@@ -41,6 +41,12 @@ export interface HudState {
   armedBall: string | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
   teach: { moveName: string; moves: string[]; mon: string } | null;
+  /** Poké Dollars. */
+  money: number;
+  /** What E would do here (shop, challenge), or a hint. */
+  prompt: string | null;
+  /** An open stall: its lines with prices. */
+  shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }> } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
 }
@@ -191,6 +197,30 @@ export class Hud {
         this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700');
       });
     }
+    if (st.shop) {
+      const w = 360 * s;
+      const h = (74 + st.shop.entries.length * 20) * s;
+      const x = v.width / 2 - w / 2;
+      const y = v.height / 2 - h / 2;
+      this.popupBox(ctx, x, y, w, h);
+      this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
+      this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600');
+      st.shop.entries.forEach((e, i) => {
+        const yy = y + 70 * s + i * 20 * s;
+        const col = e.affordable ? '#2a1a10' : '#9a8a7a';
+        this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700');
+        this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
+      });
+    }
+    if (st.prompt && !st.shop && !st.teach) {
+      const y = v.height - 170 * s;
+      ctx.save();
+      ctx.font = this.font(13, '700');
+      const tw = ctx.measureText(st.prompt).width + 28 * s;
+      ctx.restore();
+      this.panel(ctx, v.width / 2 - tw / 2, y - 18 * s, tw, 28 * s, 12, 'rgba(12,12,22,0.55)');
+      this.label(ctx, st.prompt, v.width / 2, y + 1 * s, 13, '#ffe9a8', 'center', '700');
+    }
     if (st.aiming > 0) {
       const w = 220 * s;
       const x = v.width / 2 - w / 2;
@@ -207,7 +237,7 @@ export class Hud {
   }
 
   private drawCounter(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
-    const remaining = [match.player, ...match.trainers].filter((t) => t.alive).length;
+    const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger).length;
     this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s, 14, 'rgba(12,12,22,0.35)');
     this.label(ctx, String(remaining), 34 * s, 66 * s, 44, '#ffffff', 'left', '800');
     this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800');
@@ -216,6 +246,9 @@ export class Hud {
     const ss = String(t % 60).padStart(2, '0');
     this.label(ctx, `${mm}:${ss}  ·  ${st.darkPhaseLabel}`, 92 * s, 66 * s, 13, '#e8e4f8', 'left', '500');
     if (st.nextPulseIn >= 0) this.label(ctx, `pulse in ${Math.ceil(st.nextPulseIn)}s`, 92 * s, 82 * s, 11, '#b9b4cc', 'left', '500');
+    // Poké Dollars under the counter
+    this.panel(ctx, 16 * s, 96 * s, 120 * s, 26 * s, 12, 'rgba(12,12,22,0.35)');
+    this.label(ctx, `₽ ${st.money.toLocaleString()}`, 30 * s, 114 * s, 14, '#ffe27a', 'left', '800');
   }
 
   private buildMinimap(match: Match): HTMLCanvasElement {

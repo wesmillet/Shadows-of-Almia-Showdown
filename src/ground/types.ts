@@ -5,8 +5,8 @@
  */
 import type { View } from '../render/view';
 
-export type Biome = 'meadow' | 'forest' | 'shore' | 'water';
-export const BIOMES: readonly Biome[] = ['meadow', 'forest', 'shore', 'water'];
+export type Biome = 'meadow' | 'forest' | 'shore' | 'water' | 'snow' | 'desert' | 'autumn' | 'castle';
+export const BIOMES: readonly Biome[] = ['meadow', 'forest', 'shore', 'water', 'snow', 'desert', 'autumn', 'castle'];
 
 export interface DecorItem {
   kind: 'tree' | 'rock' | 'bush' | 'flower' | 'mushroom' | 'building' | 'prop';
@@ -15,6 +15,9 @@ export interface DecorItem {
   y: number;
   /** Source image: a baked canvas or a strip; `frames` > 1 animates left to right. */
   image: CanvasImageSource;
+  /** Where the first frame starts inside `image` (packed object sheets). */
+  srcX?: number;
+  srcY?: number;
   frameW: number;
   frameH: number;
   frames: number;
@@ -54,6 +57,14 @@ export interface GroundRenderer {
   reachable(tx: number, ty: number): boolean;
   /** On a ladder (characters climb it facing the cliff). */
   onLadder?(tx: number, ty: number): boolean;
+  /** On a flight of stairs. */
+  onStairs?(tx: number, ty: number): boolean;
+  /** People and places the map file defines (healers, vendors, the challenger's battlefield). */
+  readonly features?: {
+    npcs?: Array<{ role: 'healer' | 'vendor' | 'challenger'; x: number; y: number; town: string; stand?: number }>;
+    arena?: { x0: number; y0: number; x1: number; y1: number };
+    towns?: Array<{ name: string; x: number; y: number }>;
+  };
   /** Under the forest canopy (characters there are drawn faded). */
   underCanopy(x: number, y: number): boolean;
   minimapColor(tx: number, ty: number): string;

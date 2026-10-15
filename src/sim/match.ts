@@ -19,12 +19,18 @@ import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type Loot
 import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
+import { SHOPS, challengerLevel, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution } from './evolution';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
   ['Marlo', 'trainer_b'],
+  ['Wynne', 'trainer_c'],
+  ['Brigg', 'trainer_d'],
+  ['Tamsin', 'trainer_e'],
+  ['Dale', 'trainer_f'],
+  ['Juniper', 'trainer_g'],
 ];
 
 export interface MatchDeps {
@@ -48,6 +54,10 @@ export class Match {
   wilds: Mon[] = [];
   items: GroundItem[] = [];
   outposts: Array<{ x: number; y: number; users: Trainer[]; beacon: number }> = [];
+  /** Market stall vendors (maps with towns). */
+  shops: Shop[] = [];
+  /** The castle challenger and his battlefield (maps with one). */
+  challenge: Challenge | null = null;
   /** Patrolling Rangers: decorative trainers with routes and no party. */
   npcs: Trainer[] = [];
   routes = new Map<number, { points: Array<{ x: number; y: number }>; index: number; wait: number }>();
@@ -114,8 +124,90 @@ export class Match {
     }
   }
 
+  /** Healers, vendors and the challenger the map file places (maps without them get patrolled outposts). */
+  private placeServices(npcs: MapNpc[]): void {
+    let v = 0;
+    for (const n of npcs) {
+      if (n.role === 'healer') {
+        this.outposts.push({ x: n.x, y: n.y, users: [], beacon: 0 });
+        this.npcs.push(this.makeTrainer('Healer', 'healer', false, n.x, n.y - 0.6));
+      } else if (n.role === 'vendor') {
+        const npc = this.makeTrainer('Vendor', ['vendor_a', 'vendor_b', 'vendor_c'][v++ % 3] as string, false, n.x, n.y);
+        this.npcs.push(npc);
+        const st = stallStock(n.town, n.stand ?? 0);
+        this.shops.push({ npc, town: n.town, name: `${n.town} ${st.name}`, stock: st.stock });
+      } else if (n.role === 'challenger' && this.ground.features?.arena) {
+        const npc = this.makeTrainer(SHOPS.challenger.name, 'challenger', false, n.x, n.y);
+        this.npcs.push(npc);
+        this.challenge = { npc, arena: this.ground.features.arena, state: 'idle', foe: null, readyAt: 0 };
+      }
+    }
+  }
+
+  /** The vendor, challenger or healer within reach of the player, nearest first. */
+  nearService(reach = 1.8): { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } | null {
+    const p = this.player;
+    let best: { d: number; s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } } | null = null;
+    const consider = (x: number, y: number, s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' }) => {
+      const d = Math.hypot(x - p.x, y - p.y);
+      if (d <= reach && (!best || d < best.d)) best = { d, s };
+    };
+    for (const sh of this.shops) consider(sh.npc.x, sh.npc.y, { kind: 'shop', shop: sh });
+    if (this.challenge?.state === 'idle') consider(this.challenge.npc.x, this.challenge.npc.y, { kind: 'challenge' });
+    for (const o of this.outposts) consider(o.x, o.y, { kind: 'healer' });
+    return best ? (best as { s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } }).s : null;
+  }
+
+  /** Buys entry `i` of a shop for the player. Returns what happened. */
+  buy(shop: Shop, i: number): string {
+    const e = shop.stock[i];
+    if (!e) return '';
+    const p = this.player;
+    const name = ITEMS[e.id]?.name ?? e.id;
+    if (p.money < e.price) return `Not enough money for ${name} (₽${e.price})`;
+    if (!this.giveItem(p, e.id, 1)) return 'Your bag is full';
+    p.money -= e.price;
+    return `Bought ${name} for ₽${e.price}`;
+  }
+
+  /** The challenger sends out a team a few levels above the player's best (once per match). */
+  startChallenge(): string {
+    const c = this.challenge;
+    if (!c || c.state !== 'idle') return '';
+    if (this.time < c.readyAt) return `${SHOPS.challenger.name}: "Rest up first. Come back in ${Math.ceil(c.readyAt - this.time)}s."`;
+    const lvl = challengerLevel(this.player);
+    const foe = this.makeTrainer(SHOPS.challenger.name, 'challenger', false, c.npc.x, c.npc.y);
+    foe.challenger = true;
+    for (const dex of SHOPS.challenger.party) {
+      const m = this.makeMon(dex, lvl, foe, foe.x, foe.y + 1);
+      m.behavior = 'aggressive';
+      foe.party.push(m);
+    }
+    this.placeParty(foe);
+    this.trainers.push(foe);
+    this.npcs = this.npcs.filter((n) => n !== c.npc);
+    c.foe = foe;
+    c.state = 'battle';
+    return `${SHOPS.challenger.name}: "Show me what you've got!" (Lv ${lvl})`;
+  }
+
+  /** The challenger holds his ground at the battlefield's north end, facing the action. */
+  private stepChallenger(t: Trainer): void {
+    const c = this.challenge;
+    if (!c) return;
+    t.x = t.px = (c.arena.x0 + c.arena.x1) / 2;
+    t.y = t.py = c.arena.y0 + 1;
+    t.moving = false;
+    t.dir = dirFromVector(this.player.x - t.x, this.player.y - t.y, t.dir);
+  }
+
   /** The outposts the island generator laid trails to, each with a member of staff on patrol. */
   private placeOutposts(): void {
+    const npcs = this.ground.features?.npcs;
+    if (npcs?.length) {
+      this.placeServices(npcs);
+      return;
+    }
     for (let i = 0; i < 2; i++) {
       const planned = this.ground.outposts[i];
       if (!planned) continue;
@@ -532,7 +624,7 @@ export class Match {
 
   private stepAi(t: Trainer, dt: number): void {
     const world = this.aiWorld();
-    world.rivals = this.allTrainers.filter((o) => o !== t && o.alive);
+    world.rivals = this.allTrainers.filter((o) => o !== t && o.alive && !o.challenger);
     // Beacons draw healthy trainers in.
     t.aiTimer -= dt;
     if (t.aiTimer <= 0) {
@@ -638,7 +730,7 @@ export class Match {
       party: [], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null),
       held: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
       stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
-      ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0,
+      ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0, money: SHOPS.startMoney,
     };
   }
 
@@ -660,12 +752,15 @@ export class Match {
 
   private spawnWilds(): void {
     const g = this.ground;
-    const byBiome: Record<Biome, Array<{ x: number; y: number }>> = { meadow: [], forest: [], shore: [], water: [] };
+    const byBiome: Record<Biome, Array<{ x: number; y: number }>> = { meadow: [], forest: [], shore: [], water: [], snow: [], desert: [], autumn: [], castle: [] };
     for (let ty = 0; ty < g.rows; ty++) {
       for (let tx = 0; tx < g.cols; tx++) {
         if (!g.reachable(tx, ty)) continue;
         if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 2) continue;
-        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 10) continue;
+        // none right beside a trainer's starting point (the planned starts, or the player)
+        const clear = CONFIG.wild.spawnClearance;
+        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < clear) continue;
+        if (this.ground.spawns.some((s) => Math.hypot(tx - s.x, ty - s.y) < clear)) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
         if (b !== 'water') {
@@ -684,9 +779,10 @@ export class Match {
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
         const row = this.rng.weighted(table.table, (r) => r.weight);
-        // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre.
-        const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / Math.hypot(this.centerX, this.centerY));
-        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far));
+        // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
+        // falling off steeply so the outer lands stay gentle for fresh teams.
+        const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / CONFIG.wild.centerLevelRadius);
+        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far) ** 2);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
         const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
@@ -793,7 +889,7 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
-    for (const t of this.trainers) if (t.alive) this.stepAi(t, dt);
+    for (const t of this.trainers) if (t.alive) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();
     for (const t of this.allTrainers) {
@@ -1006,6 +1102,9 @@ export class Match {
       if (ev.type !== 'faint' || !ev.by || ev.by.boss) continue;
       const owner = ev.by.owner;
       if (owner) {
+        const cash = koMoney(ev.mon);
+        owner.money += cash;
+        this.battle.events.push({ type: 'money', trainer: owner, amount: cash, x: ev.mon.x, y: ev.mon.y });
         for (const r of shareKnockoutXp(ev.by, ev.mon, owner.party, CONFIG.party.xpShareRange)) {
           this.battle.events.push({ type: 'xp', mon: r.mon, xp: r.xp, levels: r.levels });
         }
@@ -1014,13 +1113,52 @@ export class Match {
     }
   }
 
+  /** A lost bout with the challenger: he withdraws, the player's team is patched up at the castle. */
+  private loseChallenge(c: Challenge): void {
+    const foe = c.foe;
+    if (foe) {
+      foe.alive = false;
+      for (const m of foe.party) m.captured = true;
+      this.trainers = this.trainers.filter((t) => t !== foe);
+    }
+    c.foe = null;
+    c.state = 'idle';
+    c.readyAt = this.time + SHOPS.challenger.retrySeconds;
+    this.npcs.push(c.npc);
+    const p = this.player;
+    for (const m of p.party) {
+      if (m.captured) continue;
+      m.fainted = false;
+      m.hp = Math.max(1, Math.round(m.maxHp * 0.25));
+      m.status = null;
+      m.anim.play('Idle', { restart: true });
+      m.x = m.px = p.x;
+      m.y = m.py = p.y + 0.6;
+    }
+    this.battle.events.push({ type: 'notice', text: `${SHOPS.challenger.name} wins this bout. Your Pokémon were patched up.`, seconds: 3.5 });
+  }
+
   private checkElimination(): void {
+    const ch = this.challenge;
+    const pl = this.player;
+    if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
     for (const t of this.allTrainers) {
       // Out only when nothing is left standing; members out roaming still count.
       if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) this.eliminate(t);
     }
+    const c = this.challenge;
+    if (c?.state === 'battle' && c.foe && !c.foe.alive) {
+      c.state = 'won';
+      const r = SHOPS.challenger.reward;
+      this.player.money += r.money;
+      const spill: InventorySlot[] = [];
+      for (const [id, n] of r.items) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
+      if (spill.length) this.placeBall('cherish', spill, c.foe.x, c.foe.y + 1);
+      this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money} and his prizes`, seconds: 3.5 });
+    }
+    const rivals = this.trainers.filter((t) => !t.challenger);
     if (!this.player.alive) this.outcome = 'loss';
-    else if (this.trainers.length > 0 && this.trainers.every((t) => !t.alive)) this.outcome = 'win';
+    else if (rivals.length > 0 && rivals.every((t) => !t.alive)) this.outcome = 'win';
   }
 
   private stepDarkness(dt: number): void {

@@ -38,6 +38,7 @@ export type BattleEvent =
   | { type: 'eliminated'; trainer: Trainer }
   | { type: 'xp'; mon: Mon; xp: number; levels: number }
   | { type: 'evolve-start'; mon: Mon }
+  | { type: 'money'; trainer: Trainer; amount: number; x: number; y: number }
   | { type: 'evolved'; mon: Mon; from: string }
   | { type: 'ball-hit'; mon: Mon; x: number; y: number }
   | { type: 'ball-absorb'; mon: Mon; x: number; y: number }

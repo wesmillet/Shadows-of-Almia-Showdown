@@ -820,7 +820,7 @@ export class TitleScreen implements Screen {
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     const g = this.galleryRect();
     button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');
-    text(v, 'WASD move · mouse aims · left/right click, Q, E cast · R auto-battle · Space talk / pick up · F throws at the Pokémon you point at', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
+    text(v, 'WASD move · mouse aims · click, right click, Q, E cast · Space dodge / talk / pick up · hold C to draw styler loops · F throws · R auto', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     h.save();

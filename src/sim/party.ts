@@ -17,7 +17,7 @@ import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
 import { CONFIG, hitPad, statsAtLevel } from './data';
-import type { Mon, Trainer } from './entities';
+import { incapable, type Mon, type Trainer } from './entities';
 import { canStand, tryMove } from './movement';
 import type { Nav } from './nav';
 
@@ -148,7 +148,7 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, speed:
 }
 
 function setWalking(m: Mon, walking: boolean): void {
-  if (m.casting || m.status === 'sleep' || m.anim.action === 'Hurt') return;
+  if (m.casting || incapable(m) || m.anim.action === 'Hurt') return;
   if (walking !== m.moving) {
     m.moving = walking;
     m.anim.play(walking ? 'Walk' : 'Idle');
@@ -160,7 +160,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
   const c = CONFIG.party;
   let slot = 0;
   for (const m of t.party) {
-    if (!w.active(m) || m.status === 'sleep') continue;
+    if (!w.active(m) || incapable(m)) continue;
     if (m.casting) {
       m.anim.dir = m.dir;
       continue;
@@ -333,19 +333,30 @@ export function gainXp(m: Mon, amount: number): number {
 export function shareKnockoutXp(dealer: Mon, target: Mon, party: Mon[], shareRange: number): Array<{ mon: Mon; xp: number; levels: number }> {
   const out: Array<{ mon: Mon; xp: number; levels: number }> = [];
   const total = xpForKnockout(target, dealer.level);
-  if (!dealer.fainted) out.push({ mon: dealer, xp: total, levels: gainXp(dealer, total) });
+  // A Lucky Egg makes its holder's share half again as big.
+  const egg = (m: Mon, xp: number) => (m.heldItem === 'lucky-egg' ? Math.round(xp * 1.5) : xp);
+  if (!dealer.fainted) {
+    const xp = egg(dealer, total);
+    out.push({ mon: dealer, xp, levels: gainXp(dealer, xp) });
+  }
   if (isRoaming(dealer)) return out;
   const bench = (CONFIG.party as typeof CONFIG.party & { benchShare?: number }).benchShare ?? 0;
   for (const m of party) {
     if (m === dealer || m.fainted || isRoaming(m)) continue;
+    // An Exp. Share holder takes the full amount wherever it is.
+    if (m.heldItem === 'exp-share') {
+      const xp = egg(m, total);
+      out.push({ mon: m, xp, levels: gainXp(m, xp) });
+      continue;
+    }
     // Waiting in a ball: a small share. Out on the field nearby: half.
     if (m.stowed) {
-      const part = Math.floor(total * bench);
+      const part = egg(m, Math.floor(total * bench));
       if (part > 0) out.push({ mon: m, xp: part, levels: gainXp(m, part) });
       continue;
     }
     if (Math.hypot(m.x - target.x, m.y - target.y) > shareRange) continue;
-    const half = Math.floor(total / 2);
+    const half = egg(m, Math.floor(total / 2));
     out.push({ mon: m, xp: half, levels: gainXp(m, half) });
   }
   return out;

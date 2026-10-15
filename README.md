@@ -76,6 +76,23 @@ pick the next one (1-6 or click its portrait). The battle ends when one side
 has nobody left; the loser is out of the match. The Castle Champion's bout
 works the same way (and a loss there is friendly).
 
+**Statuses.** Burn (half physical damage, ticks), paralysis (slower, sometimes
+skips a move), sleep, and three more: poison ticks 7% of max HP every 2 s until
+cured (Poison and Steel types are immune); freeze stops a Pokémon for 2.5-4 s
+and a Fire hit thaws it (Ice and Fire types are immune); confusion lasts 4-6 s
+and sends 40% of its moves off in a random direction. Poison, ice and psychic
+moves cause them (`EXTRA_STATUS` in `scripts/moves.py`). Full Heal cures all.
+
+**Items for levels and evolution.** Rare Candy (a level for the lead), Exp.
+Share (held: full XP even waiting in its ball), Lucky Egg (held: 1.5x XP).
+Evolution stones (Fire, Water, Thunder, Leaf, Ice, Moon, Sun, Shiny, Dusk,
+Dawn) evolve the lead when its species has that stone evolution: Pikachu,
+Eevee (five of its forms; Espeon, Umbreon and Sylveon still come by level),
+Kirlia to Gallade, Roselia, Doublade, Charjabug, Vulpix and Alolan Vulpix.
+Each town's medicine stall sells its own stone; the rest turn up in item
+balls. The old Capture Styler item is now the Snag Machine (claims a rival's
+fainted Pokémon).
+
 **Two out at a time.** Every trainer has at most two Pokémon out: the first
 two in party order that can still fight. The others wait in their balls (a
 small ball on their portrait) and one comes out when an outside Pokémon
@@ -113,6 +130,8 @@ impact on the body, at most one aftershock.
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
 | Space beside a person | talk: a vendor opens the stall (1-9 buys, Space or Esc leaves; Poké Dollars come from knockouts), a healer restores the party, the Castle Champion takes your challenge (a friendly bout; beat his team for ₽3000 and prizes) |
 | Space beside an item ball | pick it up: a popup reveals the contents |
+| Space with nothing in reach | dodge: your lead dashes the way you move (or face); hits in the first 0.3 s miss; 3 s cooldown (the pill above the move wheel) |
+| hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |
 | point at a wild Pokémon, then F | brackets mark the one nearest the cursor (green in range, red out of range); F throws the armed ball at it; throws reach 7 tiles |
 | click a portrait | swap the lead; click a behaviour chip to cycle Attack (go after anything in range) / Guard (fight what comes near) / Follow (stay out of fights) |
 | hover a bag slot | the item's name; the count sits in the slot's corner; the red X throws the item away |
@@ -271,14 +290,13 @@ no `fx`, or whose sheet is missing, falls back to the procedural family in
 
 ### Balls
 
-All fifteen balls use `assets/items/balls/` in the bag, on the ground and
-in flight; the open frame (top half lifted, white flash) and the ±20°
-wobble are built in code. Catch modifiers: Poké ×1, Great ×1.5, Ultra ×2,
-Master always, Net ×3 on Bug/Water, Dive ×3.5 on a target standing in
-water, Nest better on low levels, Repeat ×3 on species already in the
-party, Timer up to ×4 as the match goes on, Dusk ×3 inside the darkness,
-Heal fully heals its catch, Quick ×5 before the first darkness pulse (two Quick Balls sit near your start), Luxury, Premier
-and Cherish ×1 (`ballModifier` in `src/sim/catching.ts`).
+Seven balls, each with a reason to carry it: Poké ×1, Great ×1.5, Ultra ×2,
+Quick ×5 before the first darkness pulse (two sit near your start), Dusk ×3
+inside the darkness, Net ×3 on Bug and Water Pokémon, and the Master Ball,
+which never fails (`ballModifier` in `src/sim/catching.ts`). They use
+`assets/items/balls/` in the bag, on the ground and in flight; the open frame
+and the wobble are built in code. Premier and Cherish Balls still appear on
+the ground as containers (an eliminated trainer's bag, Darkrai's reward).
 
 ## Architecture
 

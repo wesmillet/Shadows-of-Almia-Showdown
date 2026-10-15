@@ -1,5 +1,5 @@
 {
-  "_comment": "dex = SpriteCollab folder under assets/pokemon. Stats are the species' base stats. tier ranks starter candidates (3 = strongest; rerolls remove the top tier). biome places wild spawns (see spawns.json). moves are ids from moves.json (first four are the kit). Tier 4 entries are the demo team (title screen 'Demo Team'); a dex of the form <dex>-shiny loads assets/pokemon/<dex>-shiny (SpriteCollab's 0000/0001 shiny set). heightM/along/coil/bodyPx size the sprite to its Pokédex height next to a trainer; body is measured by scripts/measure_species.py. evolves lists [{to, level}]: the Pokémon evolves on reaching that level (several entries = one picked at random, e.g. Eevee). tier 0 = evolved forms, never rolled.",
+  "_comment": "dex = SpriteCollab folder under assets/pokemon. Stats are the species' base stats. tier ranks starter candidates (3 = strongest; rerolls remove the top tier). biome places wild spawns (see spawns.json). moves are ids from moves.json (first four are the kit). Tier 4 entries are the demo team (title screen 'Demo Team'); a dex of the form <dex>-shiny loads assets/pokemon/<dex>-shiny (SpriteCollab's 0000/0001 shiny set). heightM/along/coil/bodyPx size the sprite to its Pokédex height next to a trainer; body is measured by scripts/measure_species.py. evolves lists [{to, level}] or [{to, item}] for stone evolutions (the stone used on the lead; no level-up evolution): the Pokémon evolves on reaching that level (several entries = one picked at random, e.g. Eevee). tier 0 = evolved forms, never rolled.",
   "species": [
     {
       "dex": "0387",
@@ -295,7 +295,8 @@
       "evolves": [
         {
           "to": "0026",
-          "level": 22
+          "level": 22,
+          "item": "thunder-stone"
         }
       ],
       "learnset": [
@@ -382,15 +383,18 @@
       "evolves": [
         {
           "to": "0134",
-          "level": 22
+          "level": 22,
+          "item": "water-stone"
         },
         {
           "to": "0135",
-          "level": 22
+          "level": 22,
+          "item": "thunder-stone"
         },
         {
           "to": "0136",
-          "level": 22
+          "level": 22,
+          "item": "fire-stone"
         },
         {
           "to": "0196",
@@ -402,11 +406,13 @@
         },
         {
           "to": "0470",
-          "level": 22
+          "level": 22,
+          "item": "leaf-stone"
         },
         {
           "to": "0471",
-          "level": 22
+          "level": 22,
+          "item": "ice-stone"
         },
         {
           "to": "0700",
@@ -4494,7 +4500,8 @@
       "evolves": [
         {
           "to": "0407",
-          "level": 32
+          "level": 32,
+          "item": "shiny-stone"
         }
       ],
       "body": [
@@ -7439,7 +7446,8 @@
       "evolves": [
         {
           "to": "0038",
-          "level": 30
+          "level": 30,
+          "item": "fire-stone"
         }
       ],
       "body": [
@@ -8264,7 +8272,8 @@
       "evolves": [
         {
           "to": "0681",
-          "level": 45
+          "level": 45,
+          "item": "dusk-stone"
         }
       ],
       "body": [
@@ -8538,7 +8547,8 @@
       "evolves": [
         {
           "to": "0738",
-          "level": 32
+          "level": 32,
+          "item": "thunder-stone"
         }
       ],
       "body": [
@@ -9800,7 +9810,8 @@
         },
         {
           "to": "0475",
-          "level": 30
+          "level": 30,
+          "item": "dawn-stone"
         }
       ],
       "body": [
@@ -11326,7 +11337,8 @@
       "evolves": [
         {
           "to": "0038-alola",
-          "level": 30
+          "level": 30,
+          "item": "ice-stone"
         }
       ],
       "body": [

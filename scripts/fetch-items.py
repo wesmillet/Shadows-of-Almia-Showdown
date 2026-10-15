@@ -41,6 +41,10 @@ ITEMS = {
     'never-melt-ice': 'nevermeltice', 'black-belt': 'black_belt', 'soft-sand': 'soft_sand', 'sharp-beak': 'sharp_beak',
     'twisted-spoon': 'twistedspoon', 'poison-barb': 'poison_barb', 'hard-stone': 'hard_stone', 'spell-tag': 'spell_tag',
     'dragon-fang': 'dragon_fang', 'black-glasses': 'blackglasses', 'metal-coat': 'metal_coat', 'silk-scarf': 'silk_scarf',
+    'rare-candy': 'rare_candy', 'exp-share': 'exp_share', 'lucky-egg': 'lucky_egg',
+    'fire-stone': 'fire_stone', 'water-stone': 'water_stone', 'thunder-stone': 'thunderstone', 'leaf-stone': 'leaf_stone',
+    'moon-stone': 'moon_stone', 'sun-stone': 'sun_stone', 'shiny-stone': 'shiny_stone', 'dusk-stone': 'dusk_stone',
+    'dawn-stone': 'dawn_stone',
 }
 TM_TYPES = ['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying',
             'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel']
@@ -54,6 +58,7 @@ Non-commercial fan project use only.
 <item>.png            32x32 Gen 4 bag icon (medicine, X items, held items)
 tm-<type>.png         the TM disc in that type's colour
 balls/                every ball and the Crystal Shard vial: see balls/README.md
+ice-stone.png         the Water Stone recoloured icy (Gen 4 has no Ice Stone)
 """
 
 

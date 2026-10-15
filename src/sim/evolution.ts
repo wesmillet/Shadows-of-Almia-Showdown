@@ -16,7 +16,13 @@ export const EVOLVE_SECONDS = 1.9;
 
 /** The evolutions open to a species at a level (empty when none is due). */
 export function evolutionsAt(sp: SpeciesDef, level: number): string[] {
-  return (sp.evolves ?? []).filter((e) => level >= e.level && SPECIES.has(e.to)).map((e) => e.to);
+  return (sp.evolves ?? []).filter((e) => !e.item && level >= e.level && SPECIES.has(e.to)).map((e) => e.to);
+}
+
+/** The species a stone turns this one into, or null when the stone does nothing for it. */
+export function stoneEvolution(sp: SpeciesDef, stone: string): string | null {
+  const e = (sp.evolves ?? []).find((x) => x.item === stone && SPECIES.has(x.to));
+  return e ? e.to : null;
 }
 
 /** Picks one due evolution, or null. */
@@ -37,7 +43,7 @@ export function formAtLevel(dex: string, level: number, rng: Rng, wild = false):
     const next = sp ? pickEvolution(sp, level, rng) : null;
     if (!next || !sp) break;
     if (wild) {
-      const at = Math.min(...(sp.evolves ?? []).map((e) => e.level));
+      const at = Math.min(...(sp.evolves ?? []).filter((e) => !e.item).map((e) => e.level));
       if (!rng.chance(Math.min(0.5, 0.1 + 0.04 * (level - at)))) break;
     }
     cur = next;

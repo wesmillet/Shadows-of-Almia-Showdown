@@ -14,14 +14,14 @@ import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw 
 import { CONFIG, MOVES, SPAWNS, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
-import { activeParty, lead } from './entities';
+import { activeParty, incapable, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type LootTier } from './items';
 import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
-import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution } from './evolution';
-import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, type PartyWorld } from './party';
+import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
+import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
@@ -453,6 +453,25 @@ export class Match {
       }
       case 'hold':
         return this.equip(t, slot);
+      case 'candy': {
+        if (!m) return 'No Pokémon to use it on';
+        if (m.level >= 100) return `${m.name} can't level up any more`;
+        const before = m.level;
+        gainXp(m, Math.max(1, xpToNext(m.level) - m.xp));
+        this.takeItem(t, slot);
+        this.battle.events.push({ type: 'xp', mon: m, xp: 0, levels: m.level - before });
+        this.learnOnLevelUp(m, before);
+        return `${m.name} grew to Lv ${m.level}!`;
+      }
+      case 'stone': {
+        if (!m) return 'No Pokémon to use it on';
+        const to = stoneEvolution(m.species, def.id);
+        if (!to || m.evolving) return `The ${def.name} had no effect on ${m.name}`;
+        this.takeItem(t, slot);
+        m.evolving = { to, t: 0, swapped: false };
+        this.battle.events.push({ type: 'evolve-start', mon: m });
+        return '';
+      }
       case 'tm':
         return 'Pick a move slot to replace';
       case 'shard': {
@@ -549,6 +568,8 @@ export class Match {
           inWater: this.ground.inWater(Math.floor(best.x), Math.floor(best.y)),
           inDark: this.isDark(best.x, best.y),
         });
+        // Calmed by the Capture Styler: much easier to catch.
+        if ((best.calm ?? 0) > 0) th.modifier *= CONFIG.styler.catchMultiplier;
         th.roll = rollCatch(this.rng, best, th.modifier);
         th.phase = 'hit';
         th.phaseT = 0;
@@ -592,7 +613,7 @@ export class Match {
           const leadMon = lead(th.thrower);
           const share = (CONFIG.party as typeof CONFIG.party & { catchXpShare?: number }).catchXpShare ?? 0;
           if (leadMon && leadMon !== w && share > 0) {
-            const xp = Math.round(xpForKnockout(w, leadMon.level) * share);
+            const xp = Math.round(xpForKnockout(w, leadMon.level) * share * (leadMon.heldItem === 'lucky-egg' ? 1.5 : 1));
             const levels = gainXp(leadMon, xp);
             this.battle.events.push({ type: 'xp', mon: leadMon, xp, levels });
             if (levels > 0) this.learnOnLevelUp(leadMon, leadMon.level - levels);
@@ -1202,7 +1223,7 @@ export class Match {
     const p = this.player;
     const m = lead(p);
     if (!m) return 'no-lead';
-    if (m.status === 'sleep') return 'asleep';
+    if (incapable(m)) return 'asleep';
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     const f = DIR_VECTORS[p.dir] as { x: number; y: number };
@@ -1213,11 +1234,54 @@ export class Match {
     return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
   }
 
+  /** Dodge: the lead dashes the way the player is moving (or the trainer faces), briefly untouchable. */
+  playerDodge(): 'ok' | 'cooldown' | 'none' {
+    const m = lead(this.player);
+    if (!m || incapable(m)) return 'none';
+    if ((m.dodgeCd ?? 0) > 0 || m.dodge) return 'cooldown';
+    let dx = this.moveX;
+    let dy = this.moveY;
+    if (!dx && !dy) {
+      const f = DIR_VECTORS[m.dir] as { x: number; y: number };
+      dx = f.x;
+      dy = f.y;
+    }
+    this.startDodge(m, dx, dy);
+    return 'ok';
+  }
+
+  startDodge(m: Mon, dx: number, dy: number): void {
+    const c = CONFIG.dodge;
+    const n = Math.hypot(dx, dy) || 1;
+    const speed = c.dashTiles / c.dashSeconds;
+    m.dodge = { vx: (dx / n) * speed, vy: (dy / n) * speed, dash: c.dashSeconds, safe: c.safeSeconds };
+    m.dodgeCd = c.cooldown;
+    m.casting = null;
+    m.dir = dirFromVector(dx, dy, m.dir);
+    this.battle.events.push({ type: 'dodge-start', mon: m });
+  }
+
+  /** Dashes in progress move their Pokémon; cooldowns tick. */
+  private stepDodges(dt: number): void {
+    for (const m of this.mons()) {
+      if ((m.dodgeCd ?? 0) > 0) m.dodgeCd = Math.max(0, (m.dodgeCd ?? 0) - dt);
+      const d = m.dodge;
+      if (!d) continue;
+      if (d.dash > 0) {
+        const step = Math.min(dt, d.dash);
+        tryMove(this.ground, m, d.vx * step, d.vy * step, 0.22);
+        d.dash -= step;
+      }
+      d.safe -= dt;
+      if (d.safe <= 0 && d.dash <= 0) m.dodge = null;
+    }
+  }
+
   /** Auto-battle for the player's lead: the best ready move at the nearest enemy in reach. */
   private stepAutoLead(dt: number): void {
     if (!this.auto) return;
     const m = lead(this.player);
-    if (!m || m.casting || m.status === 'sleep') return;
+    if (!m || m.casting || incapable(m)) return;
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
@@ -1232,7 +1296,7 @@ export class Match {
 
   /** Hostile Pokémon pick their own targets: nearest enemy within `aggro`, then cast on cooldown. */
   private stepHostile(m: Mon, dt: number, aggro: number): boolean {
-    if (!BattleSystem.active(m) || m.casting || m.status === 'sleep') return false;
+    if (!BattleSystem.active(m) || m.casting || incapable(m)) return false;
     if (m.target && (!BattleSystem.active(m.target) || Math.hypot(m.target.x - m.x, m.target.y - m.y) > aggro + 1.5)) m.target = null;
     if (!m.target) m.target = this.battle.pickTarget(m, this.mons(), aggro);
     const t = m.target;
@@ -1279,6 +1343,7 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
+    this.stepDodges(dt);
     this.stepAutoLead(dt);
     for (const t of this.trainers) if (t.alive && !t.duelId) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
@@ -1310,7 +1375,8 @@ export class Match {
       this.battle.stepMon(m, dt, () => this.mons());
       // Pokémon on a ladder face the cliff while they climb.
       m.anim.dir = this.ground.onLadder?.(Math.floor(m.x), Math.floor(m.y)) ? 4 : m.dir;
-      m.anim.update(dt);
+      // Frozen solid: the pose holds until it thaws.
+      if (m.status !== 'freeze') m.anim.update(dt);
     }
     for (const gone of this.battle.stepFainting(dt)) {
       const i = this.wilds.indexOf(gone);
@@ -1437,7 +1503,7 @@ export class Match {
 
   /** A party member attacks on its own timer (the player's 1-4 casts bypass this). */
   private autoAttack(m: Mon, target: Mon, range: number): void {
-    if (m.casting || m.status === 'sleep') return;
+    if (m.casting || incapable(m)) return;
     if (Math.hypot(target.x - m.x, target.y - m.y) > range) return;
     if (m.busy > 0) return;
     const slot = this.battle.chooseMove(m, target);
@@ -1446,8 +1512,37 @@ export class Match {
     if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = this.rng.range(0.8, 1.6);
   }
 
+  /** Loops of the Capture Styler a wild Pokémon needs before it calms down. */
+  stylerLoopsNeeded(m: Mon): number {
+    const c = CONFIG.styler;
+    return Math.min(c.maxLoops, c.baseLoops + Math.floor(m.level / c.perLevel) + (m.elite ? c.eliteLoops : 0) + (m.landBoss ? c.bossLoops : 0));
+  }
+
+  /** One loop of the styler line closed round `m`. */
+  stylerLoop(m: Mon): void {
+    if (!m.wild || m.fainted || m.captured || (m.calm ?? 0) > 0) return;
+    m.styler = (m.styler ?? 0) + 1;
+    const needed = this.stylerLoopsNeeded(m);
+    this.battle.events.push({ type: 'styler-loop', mon: m, loops: m.styler, needed });
+    if (m.styler >= needed) {
+      m.styler = 0;
+      m.calm = CONFIG.styler.calmSeconds;
+      m.target = null;
+      m.casting = null;
+      m.aura = false;
+      this.battle.events.push({ type: 'calmed', mon: m });
+    }
+  }
+
+  /** The Pokémon ran through the line: it breaks and a loop is lost. */
+  stylerBreak(m: Mon): void {
+    m.styler = Math.max(0, (m.styler ?? 0) - 1);
+    this.battle.events.push({ type: 'styler-break', mon: m });
+  }
+
   private stepWild(w: Mon, dt: number): void {
-    if (w.fainted || w.captured || w.casting || w.status === 'sleep') return;
+    if (w.fainted || w.captured || w.casting || incapable(w)) return;
+    if ((w.calm ?? 0) > 0) w.calm = Math.max(0, (w.calm ?? 0) - dt);
     // Anything hostile that wanders close gets attacked.
     if (this.stepHostile(w, dt, w.landBoss ? CONFIG.wild.bossAggroRange : CONFIG.wild.aggroRange)) {
       if (w.moving) {
@@ -1899,7 +1994,7 @@ export class Match {
 
   /** The player's Pokémon follows the movement keys; 1-4 cast as usual. */
   private stepDuelPlayerMon(m: Mon, dt: number): void {
-    if (m.casting || m.status === 'sleep') {
+    if (m.casting || incapable(m)) {
       if (m.moving) {
         m.moving = false;
         m.anim.play('Idle');
@@ -1927,7 +2022,16 @@ export class Match {
 
   /** A rival's Pokémon keeps to mid range, circles, and attacks on its own timer. */
   private stepDuelAiMon(m: Mon, foe: Mon | null, dt: number): void {
-    if (m.casting || m.status === 'sleep') return;
+    if (m.casting || incapable(m)) return;
+    // Standing in the player's telegraph: sometimes dash out of it sideways.
+    if (foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
+      if (this.rng.chance(CONFIG.dodge.aiChance)) {
+        const side = this.rng.chance(0.5) ? 1 : -1;
+        this.startDodge(m, -(foe.y - m.y) * side, (foe.x - m.x) * side);
+        return;
+      }
+      m.dodgeCd = 1;
+    }
     if (!foe || foe.fainted || m.visual.scale < 1) {
       if (m.moving) {
         m.moving = false;

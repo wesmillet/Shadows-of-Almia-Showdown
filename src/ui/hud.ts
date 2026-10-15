@@ -5,7 +5,7 @@
  */
 import { clamp } from '../core/math';
 import type { View } from '../render/view';
-import { lead } from '../sim/entities';
+import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
 import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
@@ -71,7 +71,7 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
 /** The key or button that casts each move slot (1-4 work too). */
 const MOVE_KEYS = ['LMB', 'RMB', 'Q', 'E'];
 
-const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f' };
+const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f', poison: '#b06cff', freeze: '#8fe0ff', confusion: '#ff8fd0' };
 
 export class Hud {
   private portraitRects: Rect[] = [];
@@ -463,7 +463,7 @@ export class Hud {
       }
       if (m.status) {
         const color = STATUS_COLORS[m.status] ?? '#fff';
-        const tag = m.status === 'paralysis' ? 'PAR' : m.status === 'burn' ? 'BRN' : 'SLP';
+        const tag = ({ paralysis: 'PAR', burn: 'BRN', sleep: 'SLP', poison: 'PSN', freeze: 'FRZ', confusion: 'CNF' } as Record<string, string>)[m.status] ?? '';
         ctx.fillStyle = color;
         ctx.beginPath();
         // On the portrait's top-left corner, clear of the HP bar.
@@ -510,13 +510,32 @@ export class Hud {
     ctx.roundRect(cx - aw / 2, ay, aw, 18 * s, 9 * s);
     ctx.fill();
     this.label(ctx, autoText, cx, ay + 13 * s, 10, '#ffffff', 'center', '800');
+    // Dodge readiness: the pill fills back up over the cooldown.
+    const dcd = m.dodgeCd ?? 0;
+    const dText = dcd > 0 ? `DODGE ${dcd.toFixed(1)}` : 'DODGE · SPACE';
+    ctx.font = this.font(10, '800');
+    const dw = Math.max(aw, ctx.measureText(dText).width + 16 * s);
+    const dy = ay - 22 * s;
+    ctx.fillStyle = 'rgba(30,24,52,0.85)';
+    ctx.beginPath();
+    ctx.roundRect(cx - dw / 2, dy, dw, 18 * s, 9 * s);
+    ctx.fill();
+    const fill = 1 - Math.min(1, dcd / 3);
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cx - dw / 2, dy, dw, 18 * s, 9 * s);
+    ctx.clip();
+    ctx.fillStyle = dcd > 0 ? 'rgba(120,100,200,0.7)' : 'rgba(110,90,220,0.95)';
+    ctx.fillRect(cx - dw / 2, dy, dw * fill, 18 * s);
+    ctx.restore();
+    this.label(ctx, dText, cx, dy + 13 * s, 10, '#ffffff', 'center', '800');
     m.moves.forEach((id, i) => {
       const def = move(id);
       const [ox, oy] = offsets[i] as [number, number];
       const x = cx + ox;
       const y = cy + oy;
       const cd = m.cooldowns[i] ?? 0;
-      const ready = cd <= 0 && m.status !== 'sleep';
+      const ready = cd <= 0 && !incapable(m);
       const hover = Math.hypot(st.mouseX - x, st.mouseY - y) < r;
       const color = typeColor(def.type);
       // A wood ring frame (Kenney pixel kit) round a type-coloured face.

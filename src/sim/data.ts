@@ -34,7 +34,8 @@ export interface SpeciesDef {
   /** Measured opaque extent of the down-facing Idle frames, [width, height] in sprite pixels. */
   body: [number, number];
   /** Evolutions: the species it becomes on reaching `level` (several = one at random). */
-  evolves?: Array<{ to: string; level: number }>;
+  /** Level evolutions, and stone evolutions (`item`: only that stone, used on the Pokémon, evolves it). */
+  evolves?: Array<{ to: string; level: number; item?: string }>;
   /** Level-up moves, [level, move id] in level order (scripts/learnsets.py). Without one, `moves` is the fixed kit. */
   learnset?: Array<[number, string]>;
 }
@@ -57,7 +58,7 @@ export function movesLearnedBetween(sp: SpeciesDef, from: number, to: number): s
 
 export type MoveShape = 'single' | 'line' | 'cone' | 'ring' | 'self';
 export type VfxFamily = 'burst' | 'projectile' | 'beam' | 'ring' | 'cloud';
-export type StatusKind = 'sleep' | 'burn' | 'paralysis';
+export type StatusKind = 'sleep' | 'burn' | 'paralysis' | 'poison' | 'freeze' | 'confusion';
 
 /** One Guardian Signs effect in a move's fx list (see data/moves.json `_fx`). */
 export interface FxPart {

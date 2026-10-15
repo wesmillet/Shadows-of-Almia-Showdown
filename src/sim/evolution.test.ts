@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
 import { MOVES, SPECIES, drawScale, movesAt, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
-import { applyEvolution, evolutionsAt, formAtLevel } from './evolution';
+import { applyEvolution, evolutionsAt, formAtLevel, stoneEvolution } from './evolution';
 import spawns from '../../data/spawns.json';
 
 const stubSprites = { resolve: (a: string) => a, ensureSheet: () => Promise.resolve(), def: () => null } as unknown as Mon['sprites'];
@@ -57,9 +57,14 @@ describe('evolving', () => {
     expect(formAtLevel('0387', 18, rng)).toBe('0388');
     expect(formAtLevel('0387', 40, rng)).toBe('0389');
     expect(formAtLevel('0129', 25, rng)).toBe('0130');
-    expect(evolutionsAt(species('0133'), 22)).toHaveLength(8);
+    // Eevee: Espeon, Umbreon and Sylveon by level; the other five only by their stones.
+    expect(evolutionsAt(species('0133'), 22).sort()).toEqual(['0196', '0197', '0700']);
     const eeveelutions = new Set(Array.from({ length: 40 }, () => formAtLevel('0133', 30, rng)));
-    expect(eeveelutions.size).toBeGreaterThan(3);
+    expect(eeveelutions.size).toBeGreaterThan(2);
+    expect(stoneEvolution(species('0133'), 'fire-stone')).toBe('0136');
+    expect(stoneEvolution(species('0025'), 'thunder-stone')).toBe('0026');
+    expect(stoneEvolution(species('0025'), 'fire-stone')).toBeNull();
+    expect(formAtLevel('0025', 60, rng)).toBe('0025');
     // In the wild most stay unevolved, some don't.
     const wild = Array.from({ length: 200 }, () => formAtLevel('0010', 12, rng, true));
     const base = wild.filter((d) => d === '0010').length;

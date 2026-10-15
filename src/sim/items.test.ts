@@ -6,7 +6,7 @@ import { MOVES, SPECIES } from './data';
 describe('items and loot', () => {
   it('defines every loot entry, fifteen balls and at least ten TMs with real moves', () => {
     for (const tier of Object.values(LOOT)) for (const e of tier.entries) if (e.id !== 'tm' && e.id !== 'rare-tm') expect(ITEMS[e.id], e.id).toBeDefined();
-    expect(BALL_LIST.length).toBe(15);
+    expect(BALL_LIST.map((b) => b.id).sort()).toEqual(['dusk-ball', 'great-ball', 'master-ball', 'net-ball', 'poke-ball', 'quick-ball', 'ultra-ball']);
     for (const b of BALL_LIST) expect(b.id.endsWith('-ball'), b.id).toBe(true);
     expect(ITEMS['master-ball']?.special).toBe('master');
     expect(TM_LIST.length).toBeGreaterThanOrEqual(10);

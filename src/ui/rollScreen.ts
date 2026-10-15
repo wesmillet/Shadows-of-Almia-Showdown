@@ -272,7 +272,18 @@ function evolutionLine(def: SpeciesDef): string {
   const parts: string[] = [];
   let cur: SpeciesDef | undefined = def;
   for (let guard = 0; cur && guard < 4; guard++) {
-    const evo: Array<{ to: string; level: number }> = cur.evolves ?? [];
+    const all: Array<{ to: string; level: number; item?: string }> = cur.evolves ?? [];
+    const stones = all.filter((e) => e.item);
+    const evo = all.filter((e) => !e.item);
+    if (stones.length && !evo.length && stones.length === 1) {
+      const st = stones[0] as { to: string; item?: string };
+      parts.push(`${(st.item ?? '').replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase())} ${SPECIES.get(st.to)?.name ?? st.to}`);
+      break;
+    }
+    if (stones.length) {
+      parts.push(`stones and levels, ${all.length} forms`);
+      break;
+    }
     if (!evo.length) break;
     const first = evo[0] as { to: string; level: number };
     if (evo.length > 1) {

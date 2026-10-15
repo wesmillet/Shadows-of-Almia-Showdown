@@ -7,7 +7,7 @@ import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
-import type { InventorySlot, Mon, Trainer } from './entities';
+import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
 
 export interface Area {
@@ -28,7 +28,14 @@ export type BattleEvent =
   | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean }
   | { type: 'status'; target: Mon; status: StatusKind }
   | { type: 'stages'; target: Mon; stat: 'atk' | 'def' | 'spe'; delta: number }
-  | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' }
+  | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' | 'poison' }
+  | { type: 'thaw'; mon: Mon }
+  | { type: 'dodged'; mon: Mon }
+  | { type: 'dodge-start'; mon: Mon }
+  | { type: 'styler-loop'; mon: Mon; loops: number; needed: number }
+  | { type: 'styler-break'; mon: Mon }
+  | { type: 'calmed'; mon: Mon }
+  | { type: 'confused'; mon: Mon }
   | { type: 'faint'; mon: Mon; by: Mon | null }
   | { type: 'wake'; mon: Mon }
   | { type: 'text'; mon: Mon; text: string }
@@ -227,7 +234,7 @@ export class BattleSystem {
     const id = attacker.moves[slot];
     if (!id || attacker.fainted || attacker.casting) return false;
     if ((attacker.cooldowns[slot] ?? 0) > 0) return false;
-    if (attacker.status === 'sleep') return false;
+    if (incapable(attacker)) return false;
     const m = move(id);
     if (attacker.status === 'paralysis' && this.rng.chance(CONFIG.battle.paralysisSkipChance)) {
       attacker.cooldowns[slot] = 1;
@@ -236,6 +243,15 @@ export class BattleSystem {
     }
     // X Speed stages shorten cooldowns (10% per stage).
     attacker.cooldowns[slot] = m.cooldown * Math.max(0.4, 1 - 0.1 * attacker.stages.spe);
+    // Confused: the move often flies off somewhere else.
+    if (attacker.status === 'confusion' && m.shape !== 'self' && this.rng.chance(CONFIG.battle.confusionMissChance ?? 0.4)) {
+      const a = Math.atan2(targetY - attacker.y, targetX - attacker.x) + (this.rng.chance(0.5) ? 1 : -1) * this.rng.range(0.9, 2.6);
+      const d = Math.hypot(targetX - attacker.x, targetY - attacker.y) || 2;
+      targetX = attacker.x + Math.cos(a) * d;
+      targetY = attacker.y + Math.sin(a) * d;
+      targetId = null;
+      this.events.push({ type: 'confused', mon: attacker });
+    }
     const area = makeArea(m, attacker, targetX, targetY);
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId };
     attacker.dir = dirFromVector(area.fx, area.fy, attacker.dir);
@@ -258,6 +274,24 @@ export class BattleSystem {
         mon.status = null;
         mon.anim.play('Idle');
         this.events.push({ type: 'wake', mon });
+      }
+    } else if (mon.status === 'freeze' || mon.status === 'confusion') {
+      mon.statusTimer -= dt;
+      if (mon.statusTimer <= 0) {
+        const was = mon.status;
+        mon.status = null;
+        if (was === 'freeze') {
+          mon.anim.play('Idle');
+          this.events.push({ type: 'thaw', mon });
+        }
+      }
+    } else if (mon.status === 'poison') {
+      mon.statusTimer -= dt;
+      if (mon.statusTimer <= 0) {
+        mon.statusTimer = 2;
+        const dmg = Math.max(1, Math.floor(mon.maxHp * (CONFIG.battle.poisonDamageFraction ?? 0.07)));
+        this.applyDamage(mon, dmg, null);
+        this.events.push({ type: 'tick', target: mon, damage: dmg, source: 'poison' });
       }
     } else if (mon.status === 'burn') {
       mon.statusTimer -= dt;
@@ -289,7 +323,13 @@ export class BattleSystem {
       for (const c of candidates) {
         if (c === attacker || !BattleSystem.active(c)) continue;
         if (!this.isEnemy(attacker, c)) continue;
-        if (areaContains(area, c.x, c.y, hitPad(c.species))) hits.push(c);
+        if (!areaContains(area, c.x, c.y, hitPad(c.species))) continue;
+        // Mid-dodge: the move passes through.
+        if (c.dodge && c.dodge.safe > 0) {
+          this.events.push({ type: 'dodged', mon: c });
+          continue;
+        }
+        hits.push(c);
       }
       // A single-target move lands on the one Pokémon nearest its point.
       if (m.shape === 'single' && hits.length > 1) {
@@ -313,6 +353,13 @@ export class BattleSystem {
           }
         }
         this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });
+        // A Fire hit thaws a frozen Pokémon.
+        if (target.status === 'freeze' && m.type === 'fire' && r.damage > 0) {
+          target.status = null;
+          target.statusTimer = 0;
+          target.anim.play('Idle');
+          this.events.push({ type: 'thaw', mon: target });
+        }
         if (r.effectiveness === 0) continue;
         if (m.status && !target.status && !target.fainted && this.rng.chance(m.status.chance)) this.applyStatus(target, m.status.kind);
         if (m.stages?.target && this.rng.chance(m.stages.chance)) {
@@ -326,6 +373,8 @@ export class BattleSystem {
   }
 
   isEnemy(a: Mon, b: Mon): boolean {
+    // A Pokémon calmed by the Capture Styler is nobody's enemy until it wears off.
+    if ((a.calm ?? 0) > 0 || (b.calm ?? 0) > 0) return false;
     // A one-on-one battle is sealed off: its two Pokémon fight only each other.
     if (a.duelId || b.duelId) return a.duelId === b.duelId && a.owner !== b.owner;
     if (a.owner && b.owner) return a.owner !== b.owner;
@@ -341,13 +390,28 @@ export class BattleSystem {
 
   applyStatus(mon: Mon, status: StatusKind): void {
     if (mon.status || mon.fainted) return;
+    // Type immunities.
+    const t = mon.types;
+    if (status === 'poison' && (t.includes('poison') || t.includes('steel'))) return;
+    if (status === 'freeze' && (t.includes('ice') || t.includes('fire'))) return;
+    if (status === 'burn' && t.includes('fire')) return;
+    if (status === 'paralysis' && t.includes('electric')) return;
     mon.status = status;
     if (status === 'sleep') {
       mon.statusTimer = this.rng.range(CONFIG.battle.sleepSeconds[0] ?? 3, CONFIG.battle.sleepSeconds[1] ?? 6);
       mon.casting = null;
       mon.moving = false;
       mon.anim.play('Sleep', { restart: true });
-    } else if (status === 'burn') mon.statusTimer = 2;
+    } else if (status === 'burn' || status === 'poison') mon.statusTimer = 2;
+    else if (status === 'freeze') {
+      const [a, b] = CONFIG.battle.freezeSeconds ?? [2.5, 4];
+      mon.statusTimer = this.rng.range(a ?? 2.5, b ?? 4);
+      mon.casting = null;
+      mon.moving = false;
+    } else if (status === 'confusion') {
+      const [a, b] = CONFIG.battle.confusionSeconds ?? [4, 6];
+      mon.statusTimer = this.rng.range(a ?? 4, b ?? 6);
+    }
     this.events.push({ type: 'status', target: mon, status });
   }
 

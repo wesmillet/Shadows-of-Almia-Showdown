@@ -78,6 +78,11 @@
     "damageScale": 0.55,
     "critChance": 0.06,
     "burnDamageFraction": 0.0625,
+    "_statusComment": "poison ticks poisonDamageFraction of max HP every 2 s until cured (Poison and Steel types are immune); freeze stops a Pokémon for freezeSeconds (a Fire hit thaws it; Ice and Fire types are immune); confusion lasts confusionSeconds and sends each move off in a random direction confusionMissChance of the time.",
+    "poisonDamageFraction": 0.07,
+    "freezeSeconds": [2.5, 4],
+    "confusionSeconds": [4, 6],
+    "confusionMissChance": 0.4,
     "paralysisSkipChance": 0.25,
     "paralysisSpeed": 0.5,
     "sleepSeconds": [
@@ -93,6 +98,25 @@
     "groundItems": 120,
     "pickupRadius": 0.8,
     "playerReach": 1.4
+  },
+  "styler": {
+    "_comment": "Capture Styler: hold C and draw loops round a wild Pokémon. It needs baseLoops + 1 per perLevel levels (+eliteLoops for elites, +bossLoops for land bosses, at most maxLoops). A full set calms it for calmSeconds: it stops fighting and every ball thrown at it counts catchMultiplier times. The line reaches maxRange tiles from the trainer; if the Pokémon runs through the line it breaks and one loop is lost.",
+    "baseLoops": 2,
+    "perLevel": 10,
+    "eliteLoops": 2,
+    "bossLoops": 4,
+    "maxLoops": 8,
+    "calmSeconds": 12,
+    "catchMultiplier": 4,
+    "maxRange": 7
+  },
+  "dodge": {
+    "_comment": "Space (when nothing is in reach to talk to or pick up) dashes your lead dashTiles in the direction you move (or face) over dashSeconds; hits that land in the first safeSeconds miss. Rivals in one-on-one battles dodge telegraphed moves aiChance of the time.",
+    "dashTiles": 2.2,
+    "dashSeconds": 0.18,
+    "safeSeconds": 0.3,
+    "cooldown": 3,
+    "aiChance": 0.35
   },
   "duel": {
     "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed. A rival picks its next Pokémon after aiPickSeconds; zoom is the camera zoom while the player battles.",

@@ -55,3 +55,34 @@ describe('damage', () => {
     expect(moveScore(pika, mon('0074'), move('thunder-shock'))).toBeLessThan(moveScore(pika, mon('0074'), move('quick-attack')));
   });
 });
+
+describe('statuses', () => {
+  const quiet = { play: () => {}, dir: 0 } as unknown as Mon['anim'];
+  it('poison ticks, freeze holds then thaws, and types are immune', async () => {
+    const { BattleSystem } = await import('./battle');
+    const b = new BattleSystem(new Rng(2));
+    const a = mon('0025');
+    a.anim = quiet;
+    b.applyStatus(a, 'poison');
+    expect(a.status).toBe('poison');
+    const hp = a.hp;
+    b.stepMon(a, 2.1, () => []);
+    expect(a.hp).toBeLessThan(hp);
+    // Steel and Poison types shrug poison off; Ice types cannot freeze.
+    const steel = mon('0208');
+    steel.anim = quiet;
+    b.applyStatus(steel, 'poison');
+    expect(steel.status).toBeNull();
+    const ice = mon('0459');
+    ice.anim = quiet;
+    b.applyStatus(ice, 'freeze');
+    expect(ice.status).toBeNull();
+    const f = mon('0387');
+    f.anim = quiet;
+    b.applyStatus(f, 'freeze');
+    expect(f.status).toBe('freeze');
+    expect(b.tryCast(f, 0, 0, 0, null)).toBe(false);
+    b.stepMon(f, 5, () => []);
+    expect(f.status).toBeNull();
+  });
+});

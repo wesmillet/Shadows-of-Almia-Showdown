@@ -58,15 +58,7 @@
           "weight": 6
         },
         {
-          "id": "nest-ball",
-          "weight": 1
-        },
-        {
           "id": "net-ball",
-          "weight": 1
-        },
-        {
-          "id": "dive-ball",
           "weight": 1
         },
         {
@@ -74,19 +66,51 @@
           "weight": 1
         },
         {
-          "id": "timer-ball",
-          "weight": 1
-        },
-        {
           "id": "quick-ball",
           "weight": 1
         },
         {
-          "id": "repeat-ball",
+          "id": "rare-candy",
+          "weight": 3
+        },
+        {
+          "id": "fire-stone",
           "weight": 1
         },
         {
-          "id": "heal-ball",
+          "id": "water-stone",
+          "weight": 1
+        },
+        {
+          "id": "thunder-stone",
+          "weight": 1
+        },
+        {
+          "id": "leaf-stone",
+          "weight": 1
+        },
+        {
+          "id": "ice-stone",
+          "weight": 1
+        },
+        {
+          "id": "moon-stone",
+          "weight": 1
+        },
+        {
+          "id": "sun-stone",
+          "weight": 1
+        },
+        {
+          "id": "shiny-stone",
+          "weight": 1
+        },
+        {
+          "id": "dusk-stone",
+          "weight": 1
+        },
+        {
+          "id": "dawn-stone",
           "weight": 1
         }
       ]
@@ -193,15 +217,7 @@
           "weight": 1
         },
         {
-          "id": "nest-ball",
-          "weight": 1
-        },
-        {
           "id": "net-ball",
-          "weight": 1
-        },
-        {
-          "id": "dive-ball",
           "weight": 1
         },
         {
@@ -209,20 +225,21 @@
           "weight": 1
         },
         {
-          "id": "timer-ball",
-          "weight": 1
-        },
-        {
           "id": "quick-ball",
           "weight": 1
         },
         {
-          "id": "repeat-ball",
-          "weight": 1
+          "id": "rare-candy",
+          "weight": 4,
+          "count": 2
         },
         {
-          "id": "heal-ball",
-          "weight": 1
+          "id": "exp-share",
+          "weight": 2
+        },
+        {
+          "id": "lucky-egg",
+          "weight": 2
         }
       ]
     }

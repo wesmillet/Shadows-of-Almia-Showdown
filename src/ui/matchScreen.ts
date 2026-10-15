@@ -44,6 +44,9 @@ export const EXTRA_FX = {
   dreams: 'fx_158',
   sleep: 'fx_015',
   burn: 'fx_134',
+  poison: 'fx_038',
+  freeze: 'fx_204',
+  confusion: 'fx_041',
   paralysis: 'fx_096',
   /** Rising sparkles while a Pokémon evolves. */
   evolve: 'fx_041',
@@ -73,6 +76,10 @@ export class MatchScreen implements Screen {
   private selectedItem = -1;
   /** The wild Pokémon clicked as the throw target. */
   private throwTarget: Mon | null = null;
+  /** Capture Styler: the line drawn while C is held (world points), closed loops flashing, and where each wild was last step. */
+  private stylerLine: Array<{ x: number; y: number }> = [];
+  private stylerFlash: Array<{ pts: Array<{ x: number; y: number }>; t: number }> = [];
+  private stylerSeen = new Map<number, { x: number; y: number }>();
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
@@ -143,6 +150,7 @@ export class MatchScreen implements Screen {
     }
     this.handleInput(input);
     this.match.step(dt, input);
+    this.stepStyler(dt, input);
     this.consumeEvents();
     if (this.noticeT > 0) {
       this.noticeT -= dt;
@@ -190,8 +198,11 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
-    // Space talks to whoever is in reach, else picks up a ball in reach.
-    if (input.pressed('Space')) this.interact();
+    // Space talks to whoever is in reach, else picks up a ball in reach, else dodges.
+    if (input.pressed('Space') && !this.interact()) {
+      const r = this.match.playerDodge();
+      if (r === 'cooldown') this.say('Dodge not ready', 0.5);
+    }
     // R: auto-battle on or off (the lead picks its own moves while you steer).
     if (input.pressed('KeyR')) {
       this.match.auto = !this.match.auto;
@@ -322,6 +333,138 @@ export class MatchScreen implements Screen {
     for (let i = 0; i < 4; i++) {
       ctx.beginPath();
       ctx.arc(0, 0, r * pulse, i * (Math.PI / 2) + 0.25, i * (Math.PI / 2) + Math.PI / 2 - 0.25);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Capture Styler (hold C): the cursor draws a glowing line on the ground. Closing a loop round
+   * a wild Pokémon counts one loop toward calming it; a Pokémon that runs through the line breaks
+   * it. Calmed Pokémon stop fighting and are far easier to catch (Match.stylerLoop).
+   */
+  private stepStyler(dt: number, input: Input): void {
+    for (const f of this.stylerFlash) f.t -= dt;
+    this.stylerFlash = this.stylerFlash.filter((f) => f.t > 0);
+    const p = this.match.player;
+    const a = this.match.aim;
+    const holding = input.down('KeyC') && !p.duelId && !!a;
+    if (!holding || !a) {
+      this.stylerLine = [];
+      this.stylerSeen.clear();
+      return;
+    }
+    const line = this.stylerLine;
+    const wilds = this.match.wilds.filter((w) => !w.fainted && !w.captured && w.visual.alpha > 0.5);
+    // A wild Pokémon that crossed the line since last step breaks it.
+    for (const w of wilds) {
+      const prev = this.stylerSeen.get(w.id);
+      this.stylerSeen.set(w.id, { x: w.x, y: w.y });
+      if (!prev || line.length < 2 || (w.calm ?? 0) > 0) continue;
+      if (Math.hypot(w.x - prev.x, w.y - prev.y) < 1e-4) continue;
+      for (let i = 0; i + 1 < line.length; i++) {
+        if (segHit(prev, w, line[i] as { x: number; y: number }, line[i + 1] as { x: number; y: number })) {
+          this.match.stylerBreak(w);
+          this.stylerLine = [];
+          return;
+        }
+      }
+    }
+    // The line reaches so far from the trainer.
+    if (Math.hypot(a.x - p.x, a.y - p.y) > CONFIG.styler.maxRange) return;
+    const last = line[line.length - 1];
+    if (last && Math.hypot(a.x - last.x, a.y - last.y) < 0.12) return;
+    const next = { x: a.x, y: a.y };
+    // Did the new segment cross an older one? Then the part between is a closed loop.
+    if (last && line.length >= 4) {
+      for (let i = 0; i + 1 < line.length - 2; i++) {
+        const p1 = line[i] as { x: number; y: number };
+        const p2 = line[i + 1] as { x: number; y: number };
+        const at = segPoint(last, next, p1, p2);
+        if (!at) continue;
+        const poly = [at, ...line.slice(i + 1)];
+        if (polyArea(poly) > 0.5) {
+          let any = false;
+          for (const w of wilds) {
+            if ((w.calm ?? 0) > 0) continue;
+            if (inPoly(poly, w.x, w.y - 0.2)) {
+              this.match.stylerLoop(w);
+              any = true;
+            }
+          }
+          this.stylerFlash.push({ pts: poly, t: any ? 0.45 : 0.2 });
+        }
+        this.stylerLine = [next];
+        return;
+      }
+    }
+    line.push(next);
+    if (line.length > 160) line.shift();
+  }
+
+  /** The styler line (a bright core in a soft glow), loops flashing as they close, and progress rings. */
+  private drawStyler(v: View): void {
+    const ctx = v.ctx;
+    const s = v.baseScale;
+    const path = (pts: Array<{ x: number; y: number }>, close: boolean) => {
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(v.toScreenX(p.x), v.toScreenY(p.y)) : ctx.moveTo(v.toScreenX(p.x), v.toScreenY(p.y))));
+      if (close) ctx.closePath();
+    };
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const f of this.stylerFlash) {
+      path(f.pts, true);
+      ctx.fillStyle = `rgba(120,230,255,${0.35 * (f.t / 0.45)})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(200,250,255,${f.t / 0.45})`;
+      ctx.lineWidth = 3 * s;
+      ctx.stroke();
+    }
+    if (this.stylerLine.length > 1) {
+      path(this.stylerLine, false);
+      ctx.strokeStyle = 'rgba(90,200,255,0.35)';
+      ctx.lineWidth = 9 * s;
+      ctx.stroke();
+      ctx.strokeStyle = '#d8f6ff';
+      ctx.lineWidth = 3 * s;
+      ctx.stroke();
+    }
+    // The styler's tip at the cursor.
+    const a = this.match.aim;
+    if (this.stylerLine.length && a) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(v.toScreenX(a.x), v.toScreenY(a.y), 4 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Progress rings over Pokémon being styled; a soft pink ring under calmed ones.
+    for (const w of this.match.wilds) {
+      if (w.fainted || w.captured) continue;
+      const x = v.toScreenX(w.x);
+      const y = v.toScreenY(w.y);
+      const calm = w.calm ?? 0;
+      if (calm > 0) {
+        ctx.strokeStyle = 'rgba(255,170,220,0.85)';
+        ctx.lineWidth = 2.5 * s;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 0.7 * v.pxPerTile, 0.32 * v.pxPerTile, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (calm / CONFIG.styler.calmSeconds));
+        ctx.stroke();
+        continue;
+      }
+      const loops = w.styler ?? 0;
+      if (loops <= 0) continue;
+      const need = this.match.stylerLoopsNeeded(w);
+      ctx.strokeStyle = 'rgba(20,40,60,0.6)';
+      ctx.lineWidth = 5 * s;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 0.75 * v.pxPerTile, 0.34 * v.pxPerTile, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#7fe3ff';
+      ctx.lineWidth = 3 * s;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 0.75 * v.pxPerTile, 0.34 * v.pxPerTile, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (loops / need));
       ctx.stroke();
     }
     ctx.restore();
@@ -483,7 +626,7 @@ export class MatchScreen implements Screen {
 
   private castFeedback(r: ReturnType<Match['playerCast']>): void {
     if (r === 'cooldown') this.say('Not ready', 0.6);
-    else if (r === 'asleep') this.say('Fast asleep…', 0.8);
+    else if (r === 'asleep') this.say(lead(this.match.player)?.status === 'freeze' ? 'Frozen solid!' : 'Fast asleep…', 0.8);
     else if (r === 'no-lead') this.say('No Pokémon able to fight', 1);
   }
 
@@ -525,8 +668,12 @@ export class MatchScreen implements Screen {
         break;
       }
       case 'status': {
-        const label = ev.status === 'sleep' ? 'Fell asleep!' : ev.status === 'burn' ? 'Burned!' : 'Paralyzed!';
-        this.floaters.add(ev.target.x, ev.target.y - 0.3, label, ev.status === 'sleep' ? '#b39dff' : ev.status === 'burn' ? '#ff8a65' : '#ffe76b', 16);
+        const LABEL: Record<string, [string, string]> = {
+          sleep: ['Fell asleep!', '#b39dff'], burn: ['Burned!', '#ff8a65'], paralysis: ['Paralyzed!', '#ffe76b'],
+          poison: ['Poisoned!', '#c77dff'], freeze: ['Frozen solid!', '#a8e8ff'], confusion: ['Confused!', '#ff9ad5'],
+        };
+        const [label, color] = LABEL[ev.status] ?? ['', '#fff'];
+        this.floaters.add(ev.target.x, ev.target.y - 0.3, label, color, 16);
         this.playFx(EXTRA_FX[ev.status], { x: ev.target.x, y: ev.target.y, lift: 1.15, scale: 2, fps: 12, loopSeconds: 1.6, follow: ev.target });
         break;
       }
@@ -534,12 +681,36 @@ export class MatchScreen implements Screen {
         this.floaters.add(ev.target.x, ev.target.y - 0.3, `${ev.stat.toUpperCase()} ${ev.delta > 0 ? '▲' : '▼'}`, ev.delta > 0 ? '#9be7ff' : '#ff9e9e', 16);
         break;
       case 'tick':
-        this.floaters.add(ev.target.x, ev.target.y, String(ev.damage), ev.source === 'burn' ? '#ff8a65' : '#c38bff', 15);
+        this.floaters.add(ev.target.x, ev.target.y, String(ev.damage), ev.source === 'burn' ? '#ff8a65' : ev.source === 'poison' ? '#c77dff' : '#c38bff', 15);
         // Bad Dreams: the nightmare cloud loops over the sleeper until the next tick.
         if (ev.source === 'dreams') this.playFx(EXTRA_FX.dreams, { x: ev.target.x, y: ev.target.y, lift: 1.1, scale: 2, fps: 10, loopSeconds: 1.05, follow: ev.target });
         break;
       case 'faint':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, `${ev.mon.name} fainted`, '#ffffff', 15);
+        break;
+      case 'styler-loop':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.6, `Loop ${ev.loops}/${ev.needed}`, '#7fe3ff', 14);
+        this.playFx(EXTRA_FX.click, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 1.4, fps: 16 });
+        break;
+      case 'styler-break':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.6, 'The line broke!', '#ff9e9e', 14);
+        break;
+      case 'calmed':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.8, `${ev.mon.name} calmed down!`, '#ffb3e6', 16);
+        this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 1.6, fps: 14 });
+        this.say(`${ev.mon.name} is calm: throw a ball now (F) for a much better catch`, 2.2);
+        break;
+      case 'dodge-start':
+        this.playFx(EXTRA_FX.burst, { x: ev.mon.x, y: ev.mon.y, lift: 0.2, scale: 1, fps: 18 });
+        break;
+      case 'dodged':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.4, 'Dodged!', '#e9ddff', 13);
+        break;
+      case 'thaw':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.2, 'Thawed out', '#a8e8ff', 13);
+        break;
+      case 'confused':
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.4, 'Hit the wrong way!', '#ff9ad5', 12);
         break;
       case 'wake':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, 'Woke up', '#e8e4f8', 13);
@@ -606,7 +777,7 @@ export class MatchScreen implements Screen {
         break;
       case 'xp':
         if (ev.mon.owner?.isPlayer) {
-          this.floaters.add(ev.mon.x, ev.mon.y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
+          if (ev.xp > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
           if (ev.levels > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.9, `Level ${ev.mon.level}!`, '#ffe76b', 18);
         }
         break;
@@ -915,7 +1086,8 @@ export class MatchScreen implements Screen {
     }
     this.drawThrowTarget(v);
     this.drawDuelRing(v);
-    this.drawAim(v);
+    if (!this.stylerLine.length) this.drawAim(v);
+    this.drawStyler(v);
   }
 
   /** Items on the ground are item balls: the sprite of the ball that holds them, bobbing slowly with a periodic glint. */
@@ -1328,4 +1500,43 @@ export class MatchScreen implements Screen {
   }
 
   protected drawOverlay(_v: View): void {}
+}
+
+type Pt = { x: number; y: number };
+
+/** Where segments ab and cd cross, or null. */
+function segPoint(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
+  const r = { x: b.x - a.x, y: b.y - a.y };
+  const q = { x: d.x - c.x, y: d.y - c.y };
+  const den = r.x * q.y - r.y * q.x;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((c.x - a.x) * q.y - (c.y - a.y) * q.x) / den;
+  const u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / den;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: a.x + r.x * t, y: a.y + r.y * t };
+}
+
+function segHit(a: Pt, b: Pt, c: Pt, d: Pt): boolean {
+  return segPoint(a, b, c, d) !== null;
+}
+
+function polyArea(pts: Pt[]): number {
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i] as Pt;
+    const q = pts[(i + 1) % pts.length] as Pt;
+    s += p.x * q.y - q.x * p.y;
+  }
+  return Math.abs(s) / 2;
+}
+
+/** Even-odd point in polygon. */
+function inPoly(pts: Pt[], x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i] as Pt;
+    const b = pts[j] as Pt;
+    if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
 }

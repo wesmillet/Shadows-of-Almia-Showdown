@@ -343,7 +343,11 @@
           "scale": 1.6,
           "fps": 16
         }
-      ]
+      ],
+      "status": {
+        "kind": "confusion",
+        "chance": 0.2
+      }
     },
     {
       "id": "ice-beam",
@@ -372,7 +376,11 @@
           "fps": 16,
           "delay": 0.2
         }
-      ]
+      ],
+      "status": {
+        "kind": "freeze",
+        "chance": 0.12
+      }
     },
     {
       "id": "dark-pulse",
@@ -886,7 +894,11 @@
           "fps": 12,
           "delay": 0.08
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.3
+      }
     },
     {
       "id": "sludge-bomb",
@@ -917,7 +929,11 @@
           "fps": 14
         }
       ],
-      "shake": 0.15
+      "shake": 0.15,
+      "status": {
+        "kind": "poison",
+        "chance": 0.3
+      }
     },
     {
       "id": "rock-slide",
@@ -1089,7 +1105,11 @@
           "scale": 1.6,
           "fps": 12
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.3
+      }
     },
     {
       "id": "bug-bite",
@@ -1166,7 +1186,11 @@
           "scale": 1.6,
           "fps": 16
         }
-      ]
+      ],
+      "status": {
+        "kind": "freeze",
+        "chance": 0.12
+      }
     },
     {
       "id": "ice-shard",
@@ -1308,7 +1332,11 @@
           "scale": 1.6,
           "fps": 18
         }
-      ]
+      ],
+      "status": {
+        "kind": "confusion",
+        "chance": 0.2
+      }
     },
     {
       "id": "psycho-cut",
@@ -2372,7 +2400,11 @@
           "ground": true,
           "fps": 14
         }
-      ]
+      ],
+      "status": {
+        "kind": "confusion",
+        "chance": 0.2
+      }
     },
     {
       "id": "aqua-tail",
@@ -2850,7 +2882,11 @@
           "fps": 16,
           "delay": 0.1
         }
-      ]
+      ],
+      "status": {
+        "kind": "freeze",
+        "chance": 0.1
+      }
     },
     {
       "id": "ice-punch",
@@ -2879,7 +2915,11 @@
           "delay": 0.08
         }
       ],
-      "shake": 0.15
+      "shake": 0.15,
+      "status": {
+        "kind": "freeze",
+        "chance": 0.12
+      }
     },
     {
       "id": "aurora-beam",
@@ -3006,7 +3046,11 @@
           "delay": 0.2
         }
       ],
-      "shake": 0.3
+      "shake": 0.3,
+      "status": {
+        "kind": "freeze",
+        "chance": 0.12
+      }
     },
     {
       "id": "acid",
@@ -3042,7 +3086,11 @@
           "ground": true,
           "fps": 16
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.15
+      }
     },
     {
       "id": "smog",
@@ -3062,7 +3110,11 @@
           "scale": 1.8,
           "fps": 14
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.4
+      }
     },
     {
       "id": "poison-fang",
@@ -3090,7 +3142,11 @@
           "fps": 12,
           "delay": 0.1
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.5
+      }
     },
     {
       "id": "sludge",
@@ -3119,7 +3175,11 @@
           "scale": 1.6,
           "fps": 14
         }
-      ]
+      ],
+      "status": {
+        "kind": "poison",
+        "chance": 0.3
+      }
     },
     {
       "id": "mud-slap",
@@ -3383,7 +3443,11 @@
           "fps": 16,
           "tint": "#e0ff6b"
         }
-      ]
+      ],
+      "status": {
+        "kind": "confusion",
+        "chance": 0.15
+      }
     },
     {
       "id": "bug-buzz",

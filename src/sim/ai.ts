@@ -7,7 +7,7 @@ import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
 import { CONFIG } from './data';
 import type { GroundItem, Mon, Trainer, TrainerAi } from './entities';
-import { activeParty, lead } from './entities';
+import { activeParty, incapable, lead } from './entities';
 
 export interface AiWorld {
   ground: GroundRenderer;
@@ -148,6 +148,6 @@ export function decide(t: Trainer, w: AiWorld): { ai: TrainerAi; target: { x: nu
 
 /** The AI's lead picks a move at its opponent. Returns the slot or -1. */
 export function pickMove(attacker: Mon, target: Mon, choose: (a: Mon, t: Mon) => number): number {
-  if (attacker.casting || attacker.status === 'sleep') return -1;
+  if (attacker.casting || incapable(attacker)) return -1;
   return choose(attacker, target);
 }

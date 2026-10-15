@@ -5,7 +5,12 @@ import type { Behavior } from './party';
 import type { BallKind, LootTier } from './items';
 import type { DecorItem } from '../ground/types';
 
-export type Status = 'sleep' | 'burn' | 'paralysis' | null;
+export type Status = 'sleep' | 'burn' | 'paralysis' | 'poison' | 'freeze' | 'confusion' | null;
+
+/** Asleep or frozen: cannot move or use moves. */
+export function incapable(m: { status: Status }): boolean {
+  return m.status === 'sleep' || m.status === 'freeze';
+}
 
 export interface Mon {
   id: number;
@@ -68,6 +73,13 @@ export interface Mon {
   recall: boolean;
   /** Seconds since this Pokémon last took damage (info bars show after a hit). */
   sinceHit: number;
+  /** A dodge in progress: dash velocity (tiles/s) and seconds of dash and of untouchability left. */
+  dodge?: { vx: number; vy: number; dash: number; safe: number } | null;
+  /** Capture Styler: loops drawn round it so far, and seconds left calmed (no fighting, easy to catch). */
+  styler?: number;
+  calm?: number;
+  /** Seconds until this Pokémon can dodge again. */
+  dodgeCd?: number;
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */
   visual: { scale: number; alpha: number; flash: number };
   /** Evolving in the field: the species it becomes, seconds in, and whether the swap happened. */

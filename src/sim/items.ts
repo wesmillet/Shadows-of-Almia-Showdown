@@ -6,7 +6,7 @@ import type { Rng } from '../core/rng';
 import type { InventorySlot } from './entities';
 import { MOVES } from './data';
 
-export type HeldEffect = 'regen' | 'sash' | 'choice-band' | 'life-orb' | 'type-boost';
+export type HeldEffect = 'regen' | 'sash' | 'choice-band' | 'life-orb' | 'type-boost' | 'exp-share' | 'lucky-egg';
 
 /** Ball rules beyond a flat modifier (see ballModifier in catching.ts). */
 export type BallSpecial = 'master' | 'net' | 'dive' | 'nest' | 'repeat' | 'timer' | 'dusk' | 'heal' | 'quick';
@@ -20,7 +20,7 @@ export interface ItemDef {
   id: string;
   name: string;
   short: string;
-  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'shard';
+  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'shard' | 'candy' | 'stone';
   /** Balls: base catch modifier. */
   tier?: number;
   special?: BallSpecial;

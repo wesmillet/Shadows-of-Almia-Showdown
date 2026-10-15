@@ -66,10 +66,12 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   // Sprites shrunk below one screen pixel per art pixel are filtered rather than decimated.
   ctx.imageSmoothingEnabled = s < 1;
   ctx.imageSmoothingQuality = 'high';
-  const tween = vis.scale < 1 || vis.alpha < 1 || vis.flash > 0;
+  // Mid-dodge the sprite goes see-through, so the dash reads at a glance.
+  const ghost = !!m.dodge && m.dodge.safe > 0;
+  const tween = vis.scale < 1 || vis.alpha < 1 || vis.flash > 0 || ghost;
   if (tween) {
     ctx.save();
-    ctx.globalAlpha = vis.alpha;
+    ctx.globalAlpha = vis.alpha * (ghost ? 0.55 : 1);
   }
   const f = m.anim.current();
   const dx = sx - (f.w * s) / 2;
@@ -91,6 +93,14 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.restore();
     const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
     ctx.drawImage(c, dx, dy, f.w * s, f.h * s);
+  }
+  if (m.status === 'freeze') {
+    // Frozen: an icy glaze over the held pose.
+    const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
+    ctx.save();
+    ctx.globalAlpha = 0.5 * vis.alpha;
+    ctx.drawImage(tint(c, '#9fe6ff'), dx, dy, f.w * s, f.h * s);
+    ctx.restore();
   }
   if (vis.flash > 0) {
     const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);

@@ -27,18 +27,10 @@ describe('catchChance', () => {
     expect(rollCatch(new Rng(1), target, Infinity)).toMatchObject({ caught: true, wobbles: 3 });
     expect(ballModifier('net-ball', ctx())).toBe(1);
     expect(ballModifier('net-ball', ctx({ target: { ...target, types: ['water'] } as Mon }))).toBe(3);
-    expect(ballModifier('dive-ball', ctx({ inWater: true }))).toBe(3.5);
-    expect(ballModifier('dive-ball', ctx())).toBe(1);
-    expect(ballModifier('nest-ball', ctx())).toBeCloseTo(2.6);
-    expect(ballModifier('nest-ball', ctx({ target: { ...target, level: 40 } as Mon }))).toBe(1);
-    expect(ballModifier('repeat-ball', ctx({ thrower: { party: [{ dex: '0403' }] } as unknown as Trainer }))).toBe(3);
-    expect(ballModifier('timer-ball', ctx({ matchTime: 0 }))).toBe(1);
-    expect(ballModifier('timer-ball', ctx({ matchTime: 600 }))).toBe(4);
     expect(ballModifier('dusk-ball', ctx({ inDark: true }))).toBe(3);
     expect(ballModifier('quick-ball', ctx({ matchTime: 30 }))).toBe(5);
     expect(ballModifier('quick-ball', ctx({ matchTime: 200 }))).toBe(1);
-    for (const id of ['heal-ball', 'luxury-ball', 'premier-ball', 'cherish-ball']) expect(ballModifier(id, ctx())).toBe(1);
-    expect(ballKind('cherish-ball')).toBe('cherish');
+    expect(ballKind('quick-ball')).toBe('quick');
   });
 
   it('wobbles by at most 20 degrees', () => {

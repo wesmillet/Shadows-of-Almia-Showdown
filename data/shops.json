@@ -1,5 +1,5 @@
 {
-  "_comment": "Money and shops. Every trainer starts with startMoney Poké Dollars and earns koMoney for each Pokémon their party knocks out (wild: base + perLevel x level; trainer-owned: that times trainerMult). Vendors stand at the market stalls of each town (stall index 0-2 in the map's npcs); every town's gear stall also sells that town's type-boosting item. The challenger waits in the castle courtyard: press E beside him to battle; beat his whole team for the reward (once per match). It is a friendly bout: if your party faints he withdraws, your Pokémon are patched up at the castle healer, and you may try again after retrySeconds.",
+  "_comment": "Money and shops. Every trainer starts with startMoney Poké Dollars and earns koMoney for each Pokémon their party knocks out (wild: base + perLevel x level; trainer-owned: that times trainerMult). Vendors stand at the market stalls of each town (stall index 0-2 in the map's npcs); every town's gear stall also sells that town's type-boosting item. The challenger waits in the castle courtyard: press E beside him to battle; beat his whole team for the reward (once per match). It is a friendly bout: if your party faints he withdraws, your Pokémon are patched up at the castle healer, and you may try again after retrySeconds. The medicine stall of each town also sells its town stone (townStones) at townStonePrice; the other stones turn up in item balls.",
   "startMoney": 300,
   "koMoney": {
     "wildBase": 20,
@@ -27,20 +27,12 @@
           400
         ],
         [
-          "dive-ball",
-          400
-        ],
-        [
           "dusk-ball",
           500
         ],
         [
           "quick-ball",
           600
-        ],
-        [
-          "timer-ball",
-          450
         ]
       ]
     },
@@ -65,6 +57,10 @@
         ],
         [
           "revive",
+          1200
+        ],
+        [
+          "rare-candy",
           1200
         ]
       ]
@@ -97,8 +93,12 @@
           3000
         ],
         [
-          "choice-band",
-          3000
+          "exp-share",
+          2500
+        ],
+        [
+          "lucky-egg",
+          2500
         ]
       ]
     }
@@ -138,5 +138,13 @@
       ]
     },
     "retrySeconds": 60
-  }
+  },
+  "townStones": {
+    "Frostmere": "ice-stone",
+    "Emberwood": "fire-stone",
+    "Sunreach": "sun-stone",
+    "Greenhollow": "leaf-stone",
+    "Castle": "moon-stone"
+  },
+  "townStonePrice": 1800
 }

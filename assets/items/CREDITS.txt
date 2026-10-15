@@ -7,3 +7,4 @@ Non-commercial fan project use only.
 <item>.png            32x32 Gen 4 bag icon (medicine, X items, held items)
 tm-<type>.png         the TM disc in that type's colour
 balls/                every ball and the Crystal Shard vial: see balls/README.md
+ice-stone.png         the Water Stone recoloured icy (Gen 4 has no Ice Stone)

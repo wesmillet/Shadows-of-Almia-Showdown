@@ -1,5 +1,5 @@
 {
-  "_comment": "Items. kind: ball (tier = base catch modifier, special = rule in catching.ts ballModifier), heal, revive, cure, boost, hold, styler, shard. Icons: assets/items/<id>.png, balls assets/items/balls/<kind>_ball.png, the shard assets/items/balls/vial.png.",
+  "_comment": "Items. kind: ball (tier = base catch modifier, special = rule in catching.ts ballModifier), heal, revive, cure, boost, hold, styler (the Snag Machine), shard, candy (a level for the lead), stone (evolves the lead when its species has that stone evolution). Icons: assets/items/<id>.png, balls assets/items/balls/<kind>_ball.png, the shard assets/items/balls/vial.png.",
   "items": [
     {
       "id": "poke-ball",
@@ -45,48 +45,8 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x3 on Bug and Water types",
+      "desc": "x3 on Bug and Water Pokémon",
       "special": "net"
-    },
-    {
-      "id": "dive-ball",
-      "name": "Dive Ball",
-      "short": "Dive",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "x3.5 on targets standing in water",
-      "special": "dive"
-    },
-    {
-      "id": "nest-ball",
-      "name": "Nest Ball",
-      "short": "Nest",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Better on low-level targets",
-      "special": "nest"
-    },
-    {
-      "id": "repeat-ball",
-      "name": "Repeat Ball",
-      "short": "Repeat",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "x3 on species already in the party",
-      "special": "repeat"
-    },
-    {
-      "id": "timer-ball",
-      "name": "Timer Ball",
-      "short": "Timer",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Improves as the match goes on (up to x4)",
-      "special": "timer"
     },
     {
       "id": "dusk-ball",
@@ -99,16 +59,6 @@
       "special": "dusk"
     },
     {
-      "id": "heal-ball",
-      "name": "Heal Ball",
-      "short": "Heal",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Fully heals what it catches",
-      "special": "heal"
-    },
-    {
       "id": "quick-ball",
       "name": "Quick Ball",
       "short": "Quick",
@@ -117,33 +67,6 @@
       "stack": 1,
       "desc": "x5 before the first darkness pulse",
       "special": "quick"
-    },
-    {
-      "id": "luxury-ball",
-      "name": "Luxury Ball",
-      "short": "Luxury",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Catch rate x1 (cosmetic)"
-    },
-    {
-      "id": "premier-ball",
-      "name": "Premier Ball",
-      "short": "Premier",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Catch rate x1 (cosmetic)"
-    },
-    {
-      "id": "cherish-ball",
-      "name": "Cherish Ball",
-      "short": "Cherish",
-      "kind": "ball",
-      "tier": 1,
-      "stack": 1,
-      "desc": "Catch rate x1 (cosmetic)"
     },
     {
       "id": "potion",
@@ -196,9 +119,10 @@
     },
     {
       "id": "capture-styler",
-      "name": "Capture Styler",
-      "short": "Styler",
-      "kind": "styler"
+      "name": "Snag Machine",
+      "short": "Snag",
+      "kind": "styler",
+      "desc": "Claims a rival's fainted Pokémon nearby"
     },
     {
       "id": "hyper-potion",
@@ -373,6 +297,99 @@
       "radius": 5,
       "seconds": 10,
       "desc": "Clears the darkness around you for 10 s"
+    },
+    {
+      "id": "rare-candy",
+      "name": "Rare Candy",
+      "short": "Candy",
+      "kind": "candy",
+      "desc": "Your lead gains a level"
+    },
+    {
+      "id": "exp-share",
+      "name": "Exp. Share",
+      "short": "Exp.Sh",
+      "kind": "hold",
+      "effect": "exp-share",
+      "desc": "Holder gets full XP even waiting in its ball"
+    },
+    {
+      "id": "lucky-egg",
+      "name": "Lucky Egg",
+      "short": "L.Egg",
+      "kind": "hold",
+      "effect": "lucky-egg",
+      "desc": "Holder gains 1.5x XP"
+    },
+    {
+      "id": "fire-stone",
+      "name": "Fire Stone",
+      "short": "Fire St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "water-stone",
+      "name": "Water Stone",
+      "short": "Water St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "thunder-stone",
+      "name": "Thunder Stone",
+      "short": "Thndr St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "leaf-stone",
+      "name": "Leaf Stone",
+      "short": "Leaf St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "ice-stone",
+      "name": "Ice Stone",
+      "short": "Ice St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "moon-stone",
+      "name": "Moon Stone",
+      "short": "Moon St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "sun-stone",
+      "name": "Sun Stone",
+      "short": "Sun St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "shiny-stone",
+      "name": "Shiny Stone",
+      "short": "Shiny St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "dusk-stone",
+      "name": "Dusk Stone",
+      "short": "Dusk St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "dawn-stone",
+      "name": "Dawn Stone",
+      "short": "Dawn St.",
+      "kind": "stone",
+      "desc": "Evolves certain Pokémon"
     }
   ]
 }

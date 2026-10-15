@@ -314,6 +314,15 @@ NEW = {
 }
 VFX = {S: 'burst', L: 'beam', C: 'cloud', RG: 'ring', SF: 'ring'}
 
+# Poison, freeze and confusion on the moves that cause them in the games (applied to any move in moves.json).
+EXTRA_STATUS = {
+    'poison-sting': ('poison', 0.3), 'poison-jab': ('poison', 0.3), 'sludge': ('poison', 0.3), 'sludge-bomb': ('poison', 0.3),
+    'smog': ('poison', 0.4), 'poison-fang': ('poison', 0.5), 'acid': ('poison', 0.15),
+    'ice-beam': ('freeze', 0.12), 'blizzard': ('freeze', 0.12), 'powder-snow': ('freeze', 0.12), 'ice-punch': ('freeze', 0.12),
+    'ice-fang': ('freeze', 0.1),
+    'confusion': ('confusion', 0.2), 'psybeam': ('confusion', 0.2), 'water-pulse': ('confusion', 0.2), 'signal-beam': ('confusion', 0.15),
+}
+
 
 def main():
     data = json.load(open(PATH))
@@ -326,6 +335,8 @@ def main():
         by[mid] = m
     missing = [mid for mid in by if mid not in RECIPES]
     if missing: sys.exit(f'no recipe for: {missing}')
+    for mid, (kind, chance) in EXTRA_STATUS.items():
+        if mid in by and 'status' not in by[mid]: by[mid]['status'] = {'kind': kind, 'chance': chance}
     for mid, m in by.items():
         parts, shake = RECIPES[mid]
         m['fx'] = parts

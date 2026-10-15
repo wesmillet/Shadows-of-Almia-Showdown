@@ -1,185 +1,201 @@
 {
-  "_comment": "Wild spawn tables per biome. count = wild Pokémon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water. Levels rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^2 (config.json wild).",
+  "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start; levels = [min, max] for its common Pokémon, an entry's own levels override that (uncommon and rare ones come a little stronger). weight sets how often an entry is picked: 10 common, 4 uncommon, 1.2 rare. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^2 (config.json wild). bosses: one per land, placed deep inside it, slow to anger (bossAggroRange) and slow to wander.",
   "biomes": {
-    "meadow": {
-      "count": 30,
+    "forest": {
+      "count": 46,
+      "levels": [
+        2,
+        5
+      ],
       "table": [
+        {
+          "dex": "0736",
+          "weight": 10
+        },
         {
           "dex": "0396",
-          "weight": 4
+          "weight": 10
         },
         {
-          "dex": "0399",
-          "weight": 4
+          "dex": "0840",
+          "weight": 8.0
         },
-        {
-          "dex": "0403",
-          "weight": 2
-        }
-      ],
-      "levels": [
-        3,
-        6
-      ]
-    },
-    "forest": {
-      "count": 40,
-      "table": [
         {
           "dex": "0406",
-          "weight": 3
+          "weight": 10
         },
         {
-          "dex": "0010",
-          "weight": 4
+          "dex": "0265",
+          "weight": 12.0
         },
         {
-          "dex": "0401",
-          "weight": 3
+          "dex": "0357",
+          "weight": 4,
+          "levels": [
+            5,
+            8
+          ]
+        },
+        {
+          "dex": "0387",
+          "weight": 1.2,
+          "levels": [
+            5,
+            7
+          ]
+        },
+        {
+          "dex": "0252",
+          "weight": 1.2,
+          "levels": [
+            5,
+            7
+          ]
+        },
+        {
+          "dex": "0280",
+          "weight": 1.2,
+          "levels": [
+            5,
+            7
+          ]
         }
-      ],
-      "levels": [
-        4,
-        8
-      ]
-    },
-    "shore": {
-      "count": 24,
-      "table": [
-        {
-          "dex": "0074",
-          "weight": 3
-        },
-        {
-          "dex": "0098",
-          "weight": 3
-        },
-        {
-          "dex": "0422",
-          "weight": 3
-        }
-      ],
-      "levels": [
-        4,
-        8
-      ]
-    },
-    "water": {
-      "count": 20,
-      "table": [
-        {
-          "dex": "0129",
-          "weight": 4
-        },
-        {
-          "dex": "0054",
-          "weight": 2
-        },
-        {
-          "dex": "0278",
-          "weight": 3
-        }
-      ],
-      "levels": [
-        5,
-        9
-      ]
-    },
-    "snow": {
-      "count": 34,
-      "table": [
-        {
-          "dex": "0459",
-          "weight": 3
-        },
-        {
-          "dex": "0220",
-          "weight": 3
-        },
-        {
-          "dex": "0361",
-          "weight": 2
-        },
-        {
-          "dex": "0363",
-          "weight": 2
-        }
-      ],
-      "levels": [
-        6,
-        11
-      ]
-    },
-    "desert": {
-      "count": 30,
-      "table": [
-        {
-          "dex": "0027",
-          "weight": 3
-        },
-        {
-          "dex": "0328",
-          "weight": 3
-        },
-        {
-          "dex": "0331",
-          "weight": 3
-        },
-        {
-          "dex": "0449",
-          "weight": 2
-        }
-      ],
-      "levels": [
-        5,
-        10
       ]
     },
     "autumn": {
-      "count": 34,
+      "count": 42,
+      "levels": [
+        3,
+        6
+      ],
       "table": [
         {
-          "dex": "0163",
-          "weight": 3
+          "dex": "0577",
+          "weight": 10
         },
         {
-          "dex": "0216",
-          "weight": 2
+          "dex": "0753",
+          "weight": 10
         },
         {
-          "dex": "0037",
-          "weight": 2
+          "dex": "0859",
+          "weight": 10
         },
         {
-          "dex": "0161",
-          "weight": 3
+          "dex": "0935",
+          "weight": 8.0
+        },
+        {
+          "dex": "0585",
+          "weight": 10
+        },
+        {
+          "dex": "0518",
+          "weight": 4,
+          "levels": [
+            8,
+            11
+          ]
+        },
+        {
+          "dex": "0570",
+          "weight": 1.2,
+          "levels": [
+            7,
+            10
+          ]
         }
-      ],
-      "levels": [
-        4,
-        8
       ]
     },
-    "castle": {
-      "count": 12,
+    "snow": {
+      "count": 40,
+      "levels": [
+        4,
+        7
+      ],
       "table": [
         {
-          "dex": "0092",
-          "weight": 3
+          "dex": "0459",
+          "weight": 10
         },
         {
-          "dex": "0436",
-          "weight": 2
+          "dex": "0037-alola",
+          "weight": 10
         },
         {
-          "dex": "0679",
-          "weight": 2
+          "dex": "0698",
+          "weight": 7.0
+        },
+        {
+          "dex": "0363",
+          "weight": 10
+        },
+        {
+          "dex": "0359",
+          "weight": 4,
+          "levels": [
+            9,
+            12
+          ]
+        },
+        {
+          "dex": "0996",
+          "weight": 1.2,
+          "levels": [
+            8,
+            11
+          ]
         }
-      ],
-      "levels": [
-        10,
-        15
       ]
+    },
+    "desert": {
+      "count": 38,
+      "levels": [
+        4,
+        7
+      ],
+      "table": [
+        {
+          "dex": "0551",
+          "weight": 10
+        },
+        {
+          "dex": "0328",
+          "weight": 10
+        },
+        {
+          "dex": "0554",
+          "weight": 10
+        },
+        {
+          "dex": "0450",
+          "weight": 5.0
+        },
+        {
+          "dex": "0246",
+          "weight": 1.2,
+          "levels": [
+            8,
+            11
+          ]
+        }
+      ]
+    },
+    "meadow": {
+      "count": 26,
+      "use": "nearest"
+    },
+    "shore": {
+      "count": 18,
+      "use": "nearest"
+    },
+    "water": {
+      "count": 0,
+      "table": []
+    },
+    "castle": {
+      "count": 0,
+      "table": []
     }
   },
   "starterPool": [
@@ -206,5 +222,27 @@
     "0403",
     "0074",
     "0054"
+  ],
+  "bosses": [
+    {
+      "biome": "forest",
+      "dex": "0217",
+      "level": 20
+    },
+    {
+      "biome": "autumn",
+      "dex": "0475",
+      "level": 26
+    },
+    {
+      "biome": "snow",
+      "dex": "0713",
+      "level": 28
+    },
+    {
+      "biome": "desert",
+      "dex": "0208",
+      "level": 36
+    }
   ]
 }

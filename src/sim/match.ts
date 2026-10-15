@@ -19,7 +19,7 @@ import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type Loot
 import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
-import { SHOPS, challengerLevel, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
+import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution } from './evolution';
 import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
 
@@ -322,7 +322,7 @@ export class Match {
     const m = lead(t);
     switch (def.kind) {
       case 'ball':
-        return 'Hold Space to aim, release to throw';
+        return 'Hold F to aim, release to throw';
       case 'heal': {
         if (!m) return 'No Pokémon to heal';
         if (m.hp >= m.maxHp) return `${m.name} is at full HP`;
@@ -506,32 +506,81 @@ export class Match {
     this.throws = this.throws.filter((th) => th.phase !== 'done');
   }
 
+  /** The ground ball nearest the player within reach, if any. */
+  nearestItem(reach = CONFIG.items.playerReach): GroundItem | null {
+    let best: GroundItem | null = null;
+    let bd = reach;
+    for (const it of this.items) {
+      const d = Math.hypot(it.x - this.player.x, it.y - this.player.y);
+      if (d <= bd) {
+        bd = d;
+        best = it;
+      }
+    }
+    return best;
+  }
+
+  /** Space: the player picks up the nearest ball in reach. Returns false when there is none. */
+  pickUp(): boolean {
+    const it = this.nearestItem();
+    if (!it) return false;
+    if (!this.openBall(this.player, this.items.indexOf(it))) this.battle.events.push({ type: 'notice', text: 'Bag is full', seconds: 1 });
+    return true;
+  }
+
+  /** Opens ground ball `i` for a trainer: whatever fits goes in the bag, the rest stays in the ball. */
+  private openBall(t: Trainer, i: number): boolean {
+    const it = this.items[i] as GroundItem | undefined;
+    if (!it) return false;
+    if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common')];
+    const got: InventorySlot[] = [];
+    it.contents = it.contents.filter((c) => {
+      if (!this.giveItem(t, c.id, c.count)) return true;
+      got.push(c);
+      return false;
+    });
+    if (!got.length) return false;
+    const healed = !!it.heal;
+    if (healed) for (const m of t.party) if (!m.fainted) {
+      m.hp = m.maxHp;
+      this.battle.cureStatus(m);
+    }
+    it.heal = false;
+    if (it.contents.length === 0) this.items.splice(i, 1);
+    this.battle.events.push({ type: 'pickup', trainer: t, items: got, ball: it.ball, healed });
+    return true;
+  }
+
+  /** Space beside a healer: the whole party is restored (once every 20 s). */
+  healAtHealer(): string {
+    const t = this.player;
+    if (this.time < t.outpostReady) return `The healer needs a moment (${Math.ceil(t.outpostReady - this.time)}s)`;
+    const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
+    if (!needs) return 'Your party is already in top shape';
+    t.outpostReady = this.time + 20;
+    for (const m of t.party) {
+      if (isRoaming(m)) continue;
+      m.fainted = false;
+      m.hp = m.maxHp;
+      m.status = null;
+      m.drowsy = 0;
+      m.anim.play('Idle', { restart: true });
+      m.x = t.x;
+      m.y = t.y;
+    }
+    return 'Your Pokémon are fully healed!';
+  }
+
   private stepItems(dt: number): void {
     for (const it of this.items) it.bob += dt;
     for (const t of this.allTrainers) {
       if (!t.alive) continue;
-      for (let i = this.items.length - 1; i >= 0; i--) {
-        const it = this.items[i] as GroundItem;
-        if (Math.hypot(it.x - t.x, it.y - t.y) > CONFIG.items.pickupRadius) continue;
-        // Contents are revealed when the ball is opened; whatever does not fit stays in the ball.
-        if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common')];
-        const got: InventorySlot[] = [];
-        it.contents = it.contents.filter((c) => {
-          if (!this.giveItem(t, c.id, c.count)) return true;
-          got.push(c);
-          return false;
-        });
-        if (got.length) {
-          const healed = !!it.heal;
-          if (healed) for (const m of t.party) if (!m.fainted) {
-            m.hp = m.maxHp;
-            this.battle.cureStatus(m);
-          }
-          it.heal = false;
-          if (it.contents.length === 0) this.items.splice(i, 1);
-          this.battle.events.push({ type: 'pickup', trainer: t, items: got, ball: it.ball, healed });
-        } else if (t.isPlayer && it.bob % 3 < dt) {
-          this.battle.events.push({ type: 'notice', text: 'Bag is full', seconds: 0.8 });
+      // Rivals scoop balls up as they pass; the player picks them up with Space (pickUp).
+      if (!t.isPlayer) {
+        for (let i = this.items.length - 1; i >= 0; i--) {
+          const it = this.items[i] as GroundItem;
+          if (Math.hypot(it.x - t.x, it.y - t.y) > CONFIG.items.pickupRadius) continue;
+          this.openBall(t, i);
         }
       }
       // Leftovers regenerate the holder.
@@ -552,6 +601,7 @@ export class Match {
       o.users = [];
       for (const t of this.allTrainers) {
         if (!t.alive || this.time < t.outpostReady) continue;
+        if (t.isPlayer && this.ground.features?.npcs?.length) continue;
         if (Math.hypot(t.x - o.x, t.y - o.y) > CONFIG.outpost.radius) {
           if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;
           continue;
@@ -753,14 +803,15 @@ export class Match {
   private spawnWilds(): void {
     const g = this.ground;
     const byBiome: Record<Biome, Array<{ x: number; y: number }>> = { meadow: [], forest: [], shore: [], water: [], snow: [], desert: [], autumn: [], castle: [] };
+    const clear = CONFIG.wild.spawnClearance;
     for (let ty = 0; ty < g.rows; ty++) {
       for (let tx = 0; tx < g.cols; tx++) {
         if (!g.reachable(tx, ty)) continue;
         if (Math.hypot(tx + 0.5 - this.centerX, ty + 0.5 - this.centerY) < 2) continue;
         // none right beside a trainer's starting point (the planned starts, or the player)
-        const clear = CONFIG.wild.spawnClearance;
         if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < clear) continue;
         if (this.ground.spawns.some((s) => Math.hypot(tx - s.x, ty - s.y) < clear)) continue;
+        if (this.ground.features?.arena && inArena(this.ground.features.arena, tx + 0.5, ty + 0.5, 3)) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
         if (b !== 'water') {
@@ -773,21 +824,96 @@ export class Match {
         }
       }
     }
-    for (const [biome, table] of Object.entries(SPAWNS.biomes) as Array<[Biome, { count: number; levels: number[]; table: Array<{ dex: string; weight: number }> }]>) {
+    type Row = { dex: string; weight: number; levels?: number[] };
+    type Table = { count: number; levels?: number[]; table?: Row[]; use?: string };
+    const tables = SPAWNS.biomes as unknown as Record<Biome, Table>;
+    const nearest = (tables.meadow?.use || tables.shore?.use) ? this.nearestLand(tables) : null;
+    for (const [biome, table] of Object.entries(tables) as Array<[Biome, Table]>) {
       const spots = this.rng.shuffle([...byBiome[biome]]);
       const n = Math.min(table.count, spots.length);
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
-        const row = this.rng.weighted(table.table, (r) => r.weight);
+        // Meadows and beaches borrow the table of the land they border.
+        const land = table.use && nearest ? nearest[Math.floor(spot.y) * g.cols + Math.floor(spot.x)] : biome;
+        const t = land ? tables[land as Biome] : undefined;
+        if (!t?.table?.length) continue;
+        const row = this.rng.weighted(t.table, (r) => r.weight);
+        const lv = row.levels ?? t.levels ?? [3, 6];
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
         // falling off steeply so the outer lands stay gentle for fresh teams.
         const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / CONFIG.wild.centerLevelRadius);
-        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far) ** 2);
+        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far) ** 2);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
         const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
       }
+    }
+    this.spawnBosses(byBiome);
+  }
+
+  /** For every tile, the nearest of the lands that have their own table (one breadth-first sweep). */
+  private nearestLand(tables: Record<Biome, { table?: unknown[]; use?: string }>): Array<Biome | null> {
+    const g = this.ground;
+    const own = (b: Biome) => !tables[b]?.use && (tables[b]?.table?.length ?? 0) > 0;
+    const out: Array<Biome | null> = new Array(g.cols * g.rows).fill(null);
+    let queue: number[] = [];
+    for (let ty = 0; ty < g.rows; ty++) {
+      for (let tx = 0; tx < g.cols; tx++) {
+        const b = g.biomeAt(tx, ty);
+        if (own(b)) {
+          out[ty * g.cols + tx] = b;
+          queue.push(ty * g.cols + tx);
+        }
+      }
+    }
+    while (queue.length) {
+      const next: number[] = [];
+      for (const i of queue) {
+        const x = i % g.cols;
+        const y = (i - x) / g.cols;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= g.cols || ny >= g.rows) continue;
+          const j = ny * g.cols + nx;
+          if (out[j] !== null) continue;
+          out[j] = out[i] ?? null;
+          next.push(j);
+        }
+      }
+      queue = next;
+    }
+    return out;
+  }
+
+  /** One boss per land, at the reachable spot nearest the middle of that land. */
+  private spawnBosses(byBiome: Record<Biome, Array<{ x: number; y: number }>>): void {
+    const bosses = (SPAWNS as unknown as { bosses?: Array<{ biome: Biome; dex: string; level: number }> }).bosses ?? [];
+    for (const b of bosses) {
+      const spots = byBiome[b.biome];
+      if (!spots?.length) continue;
+      let cx = 0;
+      let cy = 0;
+      for (const p of spots) {
+        cx += p.x;
+        cy += p.y;
+      }
+      cx /= spots.length;
+      cy /= spots.length;
+      let best = spots[0] as { x: number; y: number };
+      let bd = Infinity;
+      for (const p of spots) {
+        const d = Math.hypot(p.x - cx, p.y - cy);
+        if (d < bd) {
+          bd = d;
+          best = p;
+        }
+      }
+      const mon = this.makeMon(b.dex, b.level, null, best.x, best.y);
+      mon.landBoss = true;
+      mon.dir = 0 as Dir8;
+      this.wilds.push(mon);
     }
   }
 
@@ -1047,7 +1173,7 @@ export class Match {
   private stepWild(w: Mon, dt: number): void {
     if (w.fainted || w.captured || w.casting || w.status === 'sleep') return;
     // Anything hostile that wanders close gets attacked.
-    if (this.stepHostile(w, dt, CONFIG.wild.aggroRange)) {
+    if (this.stepHostile(w, dt, w.landBoss ? CONFIG.wild.bossAggroRange : CONFIG.wild.aggroRange)) {
       if (w.moving) {
         w.moving = false;
         w.anim.play('Idle');
@@ -1057,7 +1183,7 @@ export class Match {
     if (!w.moving) {
       w.idleTimer -= dt;
       if (w.idleTimer <= 0) {
-        const r = CONFIG.wild.wanderRadius;
+        const r = w.landBoss ? CONFIG.wild.bossWanderRadius : CONFIG.wild.wanderRadius;
         for (let tries = 0; tries < 6; tries++) {
           const tx = w.homeX + this.rng.range(-r, r);
           const ty = w.homeY + this.rng.range(-r, r);

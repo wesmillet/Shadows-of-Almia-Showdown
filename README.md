@@ -28,13 +28,26 @@ removes the strongest tier from the pool), confirm. You start at a town on
 the 320x224 island with seven rival trainers spread round the coast. Last
 trainer standing wins.
 
-The island: a castle at the centre (a walled courtyard with the palace, the
-Shadow Crystal and a battlefield where the Castle Champion takes on
-challengers), and four lands round it, each with its own wild Pokémon and a
-town with a healer and three market stalls: Frostmere in the snowfields,
-Emberwood in the autumn wood, Sunreach in the desert, Greenhollow in the
-forest. Pokémon are drawn at their Pokédex size next to the trainers and
-evolve at their canonical levels.
+The island: the Shadow Crystal on a terrace in an open plain at the centre,
+and four lands round it, each with its own wild Pokémon, a boss, and a town
+with a healer and three market stalls: Frostmere in the snowfields,
+Emberwood in the red autumn wood, Sunreach in the desert, Greenhollow in the
+forest. The castle stands in a clearing in the south-east forest: a stepped
+walled hold with a keep and a courtyard battlefield where the Castle
+Champion takes on challengers. Pokémon are drawn at their Pokédex size next
+to the trainers and evolve at their canonical levels.
+
+Wild Pokémon by land (common, uncommon, rare, boss ♛). The outer lands
+start at levels 2-7 for training; levels rise toward the crystal.
+
+| Land | Common | Uncommon | Rare | Boss |
+| --- | --- | --- | --- | --- |
+| Forest | Grubbin, Starly, Applin, Budew, Wurmple | Tropius | Turtwig, Treecko, Ralts | Ursaring (Lv 20) |
+| Red forest | Solosis, Fomantis, Impidimp, Charcadet, Deerling | Musharna | Zorua | Gallade (Lv 26) |
+| Snow | Snover, Alolan Vulpix, Amaura, Spheal | Absol | Frigibax | Avalugg (Lv 28) |
+| Desert | Sandile, Trapinch, Darumaka, Hippowdon | | Larvitar | Steelix (Lv 36) |
+
+The central plain and the beaches take the table of the nearest land.
 
 | Input | Action |
 | --- | --- |
@@ -44,13 +57,13 @@ evolve at their canonical levels.
 | Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
 | Tab, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-4, Esc to keep them) |
-| hold Space, release | aim an arc toward the nearest wild Pokémon and throw the armed ball |
-| E beside a vendor | open the stall: 1-9 buys, E or Esc leaves (Poké Dollars come from knockouts) |
-| E beside the Castle Champion | challenge him (a friendly bout; beat his team for ₽3000 and prizes) |
+| Space beside a person | talk: a vendor opens the stall (1-9 buys, Space or Esc leaves; Poké Dollars come from knockouts), a healer restores the party, the Castle Champion takes your challenge (a friendly bout; beat his team for ₽3000 and prizes). E works too |
+| Space beside an item ball | pick it up: a popup reveals the contents |
+| hold F (or Space with nobody and nothing in reach), release | aim an arc toward the nearest wild Pokémon and throw the armed ball |
 | click a portrait | swap the lead; click a behaviour chip to cycle Aggressive / Guard / Passive / Hold / Roam |
-| walk over an item ball | open it: a popup reveals the contents. Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |
+| item balls | Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |
 | Shift+number on a Crystal Shard | clears the darkness in a 5-tile circle around you for 10 s |
-| stand on a Ranger outpost pad | full party heal over 3 s; a beacon tells every trainer you are there |
+| healers (one per town and one in the castle courtyard) | Space for a full party heal, every 20 s |
 
 Every 90 s the Shadow Crystal pulses and darkness sweeps inward from the
 edges. In the dark a Pokémon grows drowsy after 4 s and falls asleep,

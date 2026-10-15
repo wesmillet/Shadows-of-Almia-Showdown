@@ -5,6 +5,7 @@
 Usage:
   python3 scripts/fetch-sprites.py 0025 0491
   python3 scripts/fetch-sprites.py 0384:shiny     # the shiny set -> assets/pokemon/0384-shiny
+  python3 scripts/fetch-sprites.py 0037:alola     # a named form -> assets/pokemon/0037-alola
   python3 scripts/fetch-sprites.py --list scripts/species-list.txt
   python3 scripts/fetch-sprites.py --credits      # only rebuild assets/CREDITS.md
 
@@ -176,7 +177,12 @@ def main(argv):
                 continue
             targets.append((f'{dex}-shiny', f'{dex}/0000/0001', f'{tracker[dex]["name"]} (shiny)'))
         elif variant:
-            print(f'!! {s}: unknown variant (only :shiny is supported)', file=sys.stderr)
+            # a named form, e.g. 0037:alola -> subgroup whose name is "Alola" -> assets/pokemon/0037-alola
+            hit = [(k, v) for k, v in node.get('subgroups', {}).items() if v.get('name', '').lower() == variant.lower()]
+            if not hit or hit[0][1].get('sprite_complete', 0) == 0:
+                print(f'!! {s}: no such form with sprites', file=sys.stderr)
+                continue
+            targets.append((f'{dex}-{variant.lower()}', f'{dex}/{hit[0][0]}', f'{tracker[dex]["name"]} ({hit[0][1]["name"]})'))
         elif node.get('sprite_complete', 0) == 0:
             print(f'!! {dex} ({node.get("name")}): no sprites drawn yet', file=sys.stderr)
         else:

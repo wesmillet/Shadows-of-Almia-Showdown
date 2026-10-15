@@ -4,7 +4,7 @@
  */
 import { lerp, dir8To4 } from '../core/math';
 import type { Match } from '../sim/match';
-import { drawScale } from '../sim/data';
+import { bodyRadius, drawScale } from '../sim/data';
 import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
@@ -236,8 +236,10 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   // Soft shadows under everyone.
   for (const m of match.renderMons()) {
     const p = monPos(m, alpha);
-    if (!inView(p.x, p.y)) continue;
-    drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y), 0.42);
+    if (!inView(p.x, p.y) || m.visual.alpha <= 0.05) continue;
+    // Sized to the body: a Jirachi gets a small pool of shade, a Steelix a wide one.
+    const r = Math.max(0.1, Math.min(2.6, bodyRadius(m.species) * 0.8)) * Math.min(1, m.visual.scale);
+    drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y), r, 0.28 * m.visual.alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
     if (!t.alive) continue;

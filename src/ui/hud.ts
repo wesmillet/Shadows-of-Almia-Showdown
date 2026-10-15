@@ -37,7 +37,7 @@ export interface HudState {
   gearTab: boolean;
   /** Pickup popup: item id and seconds left. */
   popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null;
-  /** Name of the ball Space will throw, if one is armed. */
+  /** Name of the ball F will throw, if one is armed. */
   armedBall: string | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
   teach: { moveName: string; moves: string[]; mon: string } | null;
@@ -181,7 +181,7 @@ export class Hud {
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
-        : def?.kind === 'ball' ? (def.desc ?? 'Hold Space to throw')
+        : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
       this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#6b4a30', 'left', '600');
     }

@@ -43,9 +43,11 @@
     "idleMax": 4.5,
     "wanderRadius": 4,
     "aggroRange": 5.5,
-    "centerLevelBonus": 16,
+    "centerLevelBonus": 8,
     "centerLevelRadius": 120,
-    "spawnClearance": 12
+    "spawnClearance": 12,
+    "bossAggroRange": 4,
+    "bossWanderRadius": 2
   },
   "trainers": {
     "count": 7,
@@ -75,7 +77,8 @@
   "items": {
     "inventorySize": 6,
     "groundItems": 120,
-    "pickupRadius": 0.8
+    "pickupRadius": 0.8,
+    "playerReach": 1.4
   },
   "catch": {
     "aimMaxTiles": 8,

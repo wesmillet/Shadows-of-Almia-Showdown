@@ -107,12 +107,10 @@ def flat_spot(d, cx, cy, r=14):
     return best[1], best[2]
 
 
-def castle_ring(d):
-    c = D.CASTLE_RING
-    W = np.zeros(d.land.shape, bool)
-    t = c['wall']
-    W[c['y0']:c['y1'], c['x0']:c['x1']] = True
-    W[c['y0'] + t:c['y1'] - t, c['x0'] + t:c['x1'] - t] = False
+def castle_walls(d):
+    """The wall walkway: the castle region's outer CASTLE_WALL tiles, open at the gates."""
+    R = d.castle
+    W = R & ~ndimage.binary_erosion(R, iterations=D.CASTLE_WALL)
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():
         if horiz: W[gy - 3:gy + 4, gx - half:gx + half + 1] = False
@@ -148,25 +146,29 @@ def main():
     stack.append(('Road', paint3.roads(d)))
 
     log('castle')
-    W = castle_ring(d)
+    W = castle_walls(d)
     walls = castle.Walls()
     F = wang.WangSet('Atlas_Castle_Floor', seed=8)
-    c = D.CASTLE_RING; t = c['wall']
-    court = np.zeros_like(W)
-    court[c['y0'] + t:c['y1'] - t, c['x0'] + t:c['x1'] - t] = True
+    court = ndimage.binary_erosion(d.castle, iterations=D.CASTLE_WALL)
     # the courtyard: slab paving round a battlefield of lighter slabs
     pav = np.zeros(W.shape, np.int32)
-    bx0, bx1, by0, by1 = 140, 181, 117, 137
-    pav[by0 - 3:by1 + 4, bx0 - 4:bx1 + 5] = F.color('Slab Floor')
+    bx0, bx1, by0, by1 = 184, 209, 166, 179
+    pav[by0 - 3:by1 + 4, bx0 - 4:bx1 + 4] = F.color('Slab Floor')
     pav[by0:by1 + 1, bx0:bx1 + 1] = F.color('Mid Slab Floor')
-    pav[106:118, 150:171] = F.color('Slab Floor')              # the crystal's terrace
+    pav[159:166, 194:209] = F.color('Slab Floor')               # the keep's forecourt
     for (gx, gy, horiz) in D.GATES.values():                    # paved gateways
-        if horiz: pav[gy - 3:gy + 4, gx - 3:gx + 4] = F.color('Slab Floor')
-        else: pav[gy - 3:gy + 4, gx - 3:gx + 4] = F.color('Slab Floor')
-    # two fountains on paved pads either side of the battlefield
-    fountains = [(121, 120), (193, 120)]
+        pav[gy - 3:gy + 4, gx - 3:gx + 4] = F.color('Slab Floor')
+    # the crystal's terrace in the middle of the plain
+    cx, cy = D.CRYSTAL
+    terrace = D.ellipse(cx + 0.5, cy + 0.5, 8, 6) < 1
+    pav[terrace] = F.color('Slab Floor')
+    pav[D.ellipse(cx + 0.5, cy + 0.5, 4.5, 3.4) < 1] = F.color('Mid Slab Floor')
+    d.paths[terrace] = 0
+    # one fountain on a paved pad east of the battlefield
+    fountains = [(215, 162)]
     for (fx, fy) in fountains:
         pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
+    pav[W] = 0
     stack.append(('Courtyard', F.paint(pav)))
     fountain_layer = np.full(W.shape, None, dtype=object)
     for (fx, fy) in fountains:
@@ -190,54 +192,49 @@ def main():
     occupied |= town_area
     placer = content3.Placer(~occupied)
     objects = list(town_objects)
-    # the palace on the courtyard's north side, the crystal terrace in front of it
-    img, foot = stamps.stamp('palace')
-    ph, pw = img.shape[0] // 16, img.shape[1] // 16
-    px0, py1 = 160 - pw // 2, 105
-    objects.append({'img': img, 'name': 'palace', 'x': px0 * 16, 'y': py1 * 16 + 16})
     blocked_stamps = np.zeros(W.shape, bool)
-    blocked_stamps[py1 + 1 - ph:py1 + 1, px0:px0 + pw] |= foot
-    placer.free[py1 + 1 - ph:py1 + 3, px0 - 1:px0 + pw + 1] = False
-    # towers at the corners and beside each gate
+    # the keep in the castle's north wing, its door on the forecourt
+    img, foot = stamps.stamp('keep_red')
+    kh, kw = img.shape[0] // 16, img.shape[1] // 16
+    kx0, ky1 = 201 - kw // 2, 160
+    objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16})
+    blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
+    placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
+    # towers on the outer corners and beside each gate
     timg, tfoot = stamps.stamp('tower_cone')
     th, tw = timg.shape[0] // 16, timg.shape[1] // 16
-    spots = [(c['x0'] - 1, c['y0'] + 2), (c['x1'] - tw + 1, c['y0'] + 2), (c['x0'] - 1, c['y1'] + 1), (c['x1'] - tw + 1, c['y1'] + 1)]
+    spots = [(222, 159), (187, 151), (211, 151), (171, 193), (222, 185), (165, 167)]
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():
-        if horiz:
-            yb = gy + 4 if gy > D.CY else gy + 4
-            spots += [(gx - half - tw, yb), (gx + half + 1, yb)]
-        else:
-            spots += [(gx - tw // 2, gy - half - 1), (gx - tw // 2, gy + half + 5)]
+        if horiz: spots += [(gx - half - tw, gy + 4), (gx + half + 1, gy + 4)]
     for (tx, yb) in spots:
         objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})
         blocked_stamps[yb - th:yb, tx:tx + tw] |= tfoot
         placer.free[max(0, yb - th):yb + 1, max(0, tx - 1):tx + tw + 1] = False
     log('courtyard')
     yard = content3.Placer(np.ones(W.shape, bool))
-    yard.free = placer.free.copy()
+    yard.free = placer.free.copy() | (court & (pav == 0) & (face == 0))
+    yard.free &= ~blocked_stamps
     trees = content3.catalogue('Objects_Trees_Castle', r'Tree_(Light|Emerald)_[1-6]')
     import random as _r; rr = _r.Random(3)
-    for y in range(80, 142, 7):
-        if abs(y - 108) < 6: continue
-        for x in (117, 202):
-            yard.put(rr.choice(trees), x, y, clear=1)
-    for x in list(range(120, 136, 6)) + list(range(186, 202, 6)):
-        yard.put(rr.choice(trees), x, 79, clear=1)
+    for (x, y) in [(171, 168), (171, 179), (177, 187), (190, 187), (204, 187), (219, 177), (219, 172), (176, 163)]:
+        yard.put(rr.choice(trees), x, y, clear=1)
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')
     lamp = content3.catalogue('Objects_Props_Castle', r'LampPost(_\d+)?')
     for (x, y) in [(bx0 - 3, by0 - 1), (bx1 + 3, by0 - 1), (bx0 - 3, by1 + 1), (bx1 + 3, by1 + 1)]:
         if banner: yard.put(rr.choice(banner), x, y, clear=0, shadow=False)
-    for x in range(bx0 + 4, bx1 - 2, 8):
-        if bench: yard.put(bench[0], x, by1 + 5, clear=0, shadow=False)
-    for (x, y) in [(148, 109), (172, 109), (148, 116), (172, 116)]:
+    for x in range(bx0 + 3, bx1 - 2, 7):
+        if bench: yard.put(bench[0], x, by1 + 3, clear=0, shadow=False)
+    for (x, y) in [(194, 163), (208, 163), (cx - 7, cy - 1), (cx + 8, cy - 1), (cx - 7, cy + 3), (cx + 8, cy + 3)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
     placer.free &= yard.free
     log('woods')
     clearing = (D.noise(91, 9) > 0.8) & np.isin(d.biome, [D.MEADOW, D.FOREST, D.AUTUMN, D.SNOW])
-    open_mask = clearing | (d.biome == D.CASTLE)
+    px, py, prx, pry = D.PLAIN
+    open_mask = clearing | (d.biome == D.CASTLE) | (D.ellipse(px, py, prx - 10, pry - 8) < 1)
+    open_mask |= D.ellipse(D.CASTLE_CENTER[0], D.CASTLE_CENTER[1], 40, 30) < 1   # the castle's clearing
     n_trees = content3.woods(d, placer, open_mask)
     n_bush = content3.scatter(d, placer, content3.BUSHES, 0.02, seed=12)
     n_rock = content3.scatter(d, placer, content3.ROCKS, 0.006, seed=13, clear=1)
@@ -272,7 +269,7 @@ def main():
 
     towns = [{'name': n, 'x': x + 0.5, 'y': y + 0.5} for n, (x, y, b) in D.TOWNS.items()]
     # healers: one per town and one in the castle courtyard; the challenger at the battlefield's north edge
-    npcs.append({'role': 'healer', 'x': 148.5, 'y': 114.5, 'town': 'Castle'})
+    npcs.append({'role': 'healer', 'x': bx0 - 2.5, 'y': by0 + 1.5, 'town': 'Castle'})
     npcs.append({'role': 'challenger', 'x': (bx0 + bx1 + 1) / 2, 'y': by0 + 1.5, 'town': 'Castle'})
     outposts = [{'x': n['x'], 'y': n['y']} for n in npcs if n['role'] == 'healer']
     # trainer starts (tile coordinates): the reachable road tile nearest each planned point
@@ -280,7 +277,9 @@ def main():
     open_ground = reach & ~ndimage.binary_dilation(~walk, iterations=1)
     ry, rx = np.nonzero(open_ground)
     spawns = []
-    for (x, y) in [(71, 88), (246, 96), (112, 190), (262, 142), (160, 32), (226, 170), (40, 120), (292, 62)]:
+    open_ground &= d.biome != D.CASTLE
+    ry, rx = np.nonzero(open_ground)
+    for (x, y) in [(71, 88), (246, 96), (112, 190), (262, 145), (160, 32), (296, 176), (40, 120), (292, 62)]:
         order = np.argsort((rx - x) ** 2 + (ry - y) ** 2)
         for i in order:
             px, py = int(rx[i]), int(ry[i])

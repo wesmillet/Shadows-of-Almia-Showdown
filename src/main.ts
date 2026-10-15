@@ -4,7 +4,8 @@ import { hashSeed, Rng } from './core/rng';
 import { createGround } from './ground';
 import { Sunnyside } from './ground/sunnyside';
 import { View } from './render/view';
-import { CONFIG, SPECIES } from './sim/data';
+import { CONFIG, SPAWNS, SPECIES } from './sim/data';
+import { SHOPS } from './sim/town';
 import { Match } from './sim/match';
 import { Assets } from './sprites/assets';
 import { SpriteRegistry } from './sprites/pokemonSprite';
@@ -20,6 +21,25 @@ import type { GroundRenderer } from './ground/types';
 /** The title screen's demo team: Infernape, shiny Rayquaza, Latios, shiny Jirachi, Tinkaton at level 100. */
 const DEMO_PARTY = ['0392', '0384-shiny', '0381', '0385-shiny', '0959'];
 const DEMO_LEVEL = 100;
+
+/** Pokémon on the title screen: Darkrai and the ones it puts to sleep. */
+export const TITLE_CAST = ['0491', '0025', '0387', '0133', '0393', '0390', '0447'];
+
+/** Every species a match can show: wild tables, land bosses, rivals, the champion, the demo team, and their evolutions. */
+function matchCast(): Set<string> {
+  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.starterPool, ...SPAWNS.trainerPool, ...SHOPS.challenger.party]);
+  for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
+  for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
+  const queue = [...out];
+  while (queue.length) {
+    const d = queue.pop() as string;
+    for (const e of SPECIES.get(d)?.evolves ?? []) if (!out.has(e.to)) {
+      out.add(e.to);
+      queue.push(e.to);
+    }
+  }
+  return new Set([...out].filter((d) => SPECIES.has(d)));
+}
 
 async function boot(): Promise<void> {
   const stage = document.getElementById('stage')!;
@@ -44,10 +64,14 @@ async function boot(): Promise<void> {
   const t0 = performance.now();
   const sprites = new SpriteRegistry(assets);
   const rangersP = RangerSprites.load(assets);
-  await sprites.preload(SPECIES.keys(), (done, total) => {
+  // The title scene and the starter roll load first; every other Pokémon the match can meet
+  // (wild tables, bosses, rivals, the champion, and all their evolutions) loads behind the title screen.
+  const first = new Set([...TITLE_CAST, ...SPAWNS.starterPool]);
+  await sprites.preload(first, (done, total) => {
     status = `Loading sprites ${done}/${total}`;
     drawLoading();
   });
+  const rest = sprites.preload([...matchCast()].filter((d) => !first.has(d)));
   const rangers = await rangersP;
   const ui = new PixelUi(assets);
   await ui.load();
@@ -81,7 +105,8 @@ async function boot(): Promise<void> {
   let currentGround: GroundRenderer = ground;
   let currentSeed = seed;
 
-  const startMatch = (starters: string[], opts: { level?: number; partyCap?: number } = {}): void => {
+  const startMatch = async (starters: string[], opts: { level?: number; partyCap?: number } = {}): Promise<void> => {
+    await rest;
     const match = new Match({ ground: currentGround, rng: new Rng(currentSeed), sprites }, starters, opts);
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
@@ -95,11 +120,11 @@ async function boot(): Promise<void> {
   /** Demo mode: a max-level showcase team, no starter roll (title button, D, or ?demo=1). */
   const startDemo = (): void => {
     const team = DEMO_PARTY.filter((d) => SPECIES.has(d));
-    startMatch(team.length ? team : ['0025'], { level: DEMO_LEVEL, partyCap: team.length });
+    void startMatch(team.length ? team : ['0025'], { level: DEMO_LEVEL, partyCap: team.length });
   };
 
   const showRoll = (): void => {
-    game.setScreen(new RollScreen(game, sprites, currentSeed, (dex) => startMatch([dex])));
+    game.setScreen(new RollScreen(game, sprites, currentSeed, (dex) => void startMatch([dex])));
   };
 
   const showTitle = async (regenerate: boolean): Promise<void> => {
@@ -112,7 +137,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    game.setScreen(new TitleScreen(game, currentGround, rangers, showRoll, startDemo));
+    game.setScreen(new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo));
   };
 
   // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).
@@ -121,7 +146,7 @@ async function boot(): Promise<void> {
     startDemo();
   } else if (party) {
     const starters = party.split(',').filter((d) => SPECIES.has(d));
-    startMatch(starters.length ? starters : ['0025']);
+    void startMatch(starters.length ? starters : ['0025']);
   } else {
     void showTitle(false);
   }

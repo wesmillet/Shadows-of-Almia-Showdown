@@ -3117,6 +3117,1557 @@
         25,
         29
       ]
+    },
+    {
+      "dex": "0736",
+      "name": "Grubbin",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 47,
+        "atk": 62,
+        "def": 45,
+        "spa": 55,
+        "spd": 45,
+        "spe": 46
+      },
+      "tier": 0,
+      "moves": [
+        "bug-bite",
+        "tackle",
+        "bite",
+        "mud-shot"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0737",
+          "level": 20
+        }
+      ],
+      "body": [
+        14,
+        19
+      ]
+    },
+    {
+      "dex": "0737",
+      "name": "Charjabug",
+      "types": [
+        "bug",
+        "electric"
+      ],
+      "stats": {
+        "hp": 57,
+        "atk": 82,
+        "def": 95,
+        "spa": 55,
+        "spd": 75,
+        "spe": 36
+      },
+      "tier": 0,
+      "moves": [
+        "bug-bite",
+        "thunder-shock",
+        "discharge",
+        "x-scissor"
+      ],
+      "heightM": 0.5,
+      "along": "length",
+      "evolves": [
+        {
+          "to": "0738",
+          "level": 32
+        }
+      ],
+      "body": [
+        12,
+        19
+      ]
+    },
+    {
+      "dex": "0738",
+      "name": "Vikavolt",
+      "types": [
+        "bug",
+        "electric"
+      ],
+      "stats": {
+        "hp": 77,
+        "atk": 70,
+        "def": 90,
+        "spa": 145,
+        "spd": 75,
+        "spe": 43
+      },
+      "tier": 0,
+      "moves": [
+        "thunderbolt",
+        "x-scissor",
+        "discharge",
+        "energy-ball"
+      ],
+      "heightM": 1.5,
+      "along": "length",
+      "body": [
+        30,
+        29
+      ]
+    },
+    {
+      "dex": "0840",
+      "name": "Applin",
+      "types": [
+        "grass",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 40,
+        "def": 80,
+        "spa": 40,
+        "spd": 40,
+        "spe": 20
+      },
+      "tier": 0,
+      "moves": [
+        "leafage",
+        "dragon-breath",
+        "tackle",
+        "howl"
+      ],
+      "heightM": 0.2,
+      "evolves": [
+        {
+          "to": "0841",
+          "level": 25
+        },
+        {
+          "to": "0842",
+          "level": 25
+        }
+      ],
+      "body": [
+        12,
+        18
+      ]
+    },
+    {
+      "dex": "0841",
+      "name": "Flapple",
+      "types": [
+        "grass",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 110,
+        "def": 80,
+        "spa": 95,
+        "spd": 60,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "wing-attack",
+        "dragon-breath",
+        "energy-ball",
+        "dragon-pulse"
+      ],
+      "heightM": 0.3,
+      "body": [
+        39,
+        23
+      ]
+    },
+    {
+      "dex": "0842",
+      "name": "Appletun",
+      "types": [
+        "grass",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 110,
+        "atk": 85,
+        "def": 80,
+        "spa": 100,
+        "spd": 80,
+        "spe": 30
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "dragon-pulse",
+        "bulldoze",
+        "howl"
+      ],
+      "heightM": 0.4,
+      "body": [
+        19,
+        23
+      ]
+    },
+    {
+      "dex": "0265",
+      "name": "Wurmple",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 45,
+        "def": 35,
+        "spa": 20,
+        "spd": 30,
+        "spe": 20
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "poison-sting",
+        "bug-bite",
+        "howl"
+      ],
+      "heightM": 0.3,
+      "along": "length",
+      "evolves": [
+        {
+          "to": "0266",
+          "level": 7
+        },
+        {
+          "to": "0268",
+          "level": 7
+        }
+      ],
+      "body": [
+        13,
+        21
+      ]
+    },
+    {
+      "dex": "0266",
+      "name": "Silcoon",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 35,
+        "def": 55,
+        "spa": 25,
+        "spd": 25,
+        "spe": 15
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "poison-sting",
+        "bug-bite",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0267",
+          "level": 10
+        }
+      ],
+      "body": [
+        23,
+        18
+      ]
+    },
+    {
+      "dex": "0267",
+      "name": "Beautifly",
+      "types": [
+        "bug",
+        "flying"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 70,
+        "def": 50,
+        "spa": 100,
+        "spd": 50,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "wing-attack",
+        "bug-bite",
+        "energy-ball",
+        "aerial-ace"
+      ],
+      "heightM": 1.0,
+      "body": [
+        37,
+        26
+      ]
+    },
+    {
+      "dex": "0268",
+      "name": "Cascoon",
+      "types": [
+        "bug"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 35,
+        "def": 55,
+        "spa": 25,
+        "spd": 25,
+        "spe": 15
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "poison-sting",
+        "bug-bite",
+        "howl"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0269",
+          "level": 10
+        }
+      ],
+      "body": [
+        22,
+        22
+      ]
+    },
+    {
+      "dex": "0269",
+      "name": "Dustox",
+      "types": [
+        "bug",
+        "poison"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 50,
+        "def": 70,
+        "spa": 50,
+        "spd": 90,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "sludge-bomb",
+        "bug-bite",
+        "psybeam",
+        "wing-attack"
+      ],
+      "heightM": 1.2,
+      "body": [
+        30,
+        23
+      ]
+    },
+    {
+      "dex": "0357",
+      "name": "Tropius",
+      "types": [
+        "grass",
+        "flying"
+      ],
+      "stats": {
+        "hp": 99,
+        "atk": 68,
+        "def": 83,
+        "spa": 72,
+        "spd": 87,
+        "spe": 51
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "wing-attack",
+        "energy-ball",
+        "aerial-ace"
+      ],
+      "heightM": 2.0,
+      "body": [
+        39,
+        34
+      ]
+    },
+    {
+      "dex": "0252",
+      "name": "Treecko",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 45,
+        "def": 35,
+        "spa": 65,
+        "spd": 55,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "scratch",
+        "leafage",
+        "quick-attack",
+        "razor-leaf"
+      ],
+      "heightM": 0.5,
+      "evolves": [
+        {
+          "to": "0253",
+          "level": 16
+        }
+      ],
+      "body": [
+        21,
+        21
+      ]
+    },
+    {
+      "dex": "0253",
+      "name": "Grovyle",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 65,
+        "def": 45,
+        "spa": 85,
+        "spd": 65,
+        "spe": 95
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "quick-attack",
+        "x-scissor",
+        "energy-ball"
+      ],
+      "heightM": 0.9,
+      "evolves": [
+        {
+          "to": "0254",
+          "level": 36
+        }
+      ],
+      "body": [
+        26,
+        27
+      ]
+    },
+    {
+      "dex": "0254",
+      "name": "Sceptile",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 85,
+        "def": 65,
+        "spa": 105,
+        "spd": 85,
+        "spe": 120
+      },
+      "tier": 0,
+      "moves": [
+        "energy-ball",
+        "x-scissor",
+        "dragon-pulse",
+        "aerial-ace"
+      ],
+      "heightM": 1.7,
+      "body": [
+        27,
+        24
+      ]
+    },
+    {
+      "dex": "0280",
+      "name": "Ralts",
+      "types": [
+        "psychic",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 28,
+        "atk": 25,
+        "def": 25,
+        "spa": 45,
+        "spd": 35,
+        "spe": 40
+      },
+      "tier": 0,
+      "moves": [
+        "confusion",
+        "fairy-wind",
+        "tackle",
+        "hypnosis"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0281",
+          "level": 20
+        }
+      ],
+      "body": [
+        13,
+        20
+      ]
+    },
+    {
+      "dex": "0281",
+      "name": "Kirlia",
+      "types": [
+        "psychic",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 38,
+        "atk": 35,
+        "def": 35,
+        "spa": 65,
+        "spd": 55,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "confusion",
+        "psybeam",
+        "dazzling-gleam",
+        "hypnosis"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0282",
+          "level": 30
+        },
+        {
+          "to": "0475",
+          "level": 30
+        }
+      ],
+      "body": [
+        17,
+        22
+      ]
+    },
+    {
+      "dex": "0282",
+      "name": "Gardevoir",
+      "types": [
+        "psychic",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 65,
+        "def": 65,
+        "spa": 125,
+        "spd": 115,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "dazzling-gleam",
+        "shadow-ball",
+        "hypnosis"
+      ],
+      "heightM": 1.6,
+      "body": [
+        17,
+        23
+      ]
+    },
+    {
+      "dex": "0475",
+      "name": "Gallade",
+      "types": [
+        "psychic",
+        "fighting"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 125,
+        "def": 65,
+        "spa": 65,
+        "spd": 115,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "psycho-cut",
+        "brick-break",
+        "x-scissor",
+        "aerial-ace"
+      ],
+      "heightM": 1.6,
+      "body": [
+        19,
+        30
+      ]
+    },
+    {
+      "dex": "0577",
+      "name": "Solosis",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 30,
+        "def": 40,
+        "spa": 105,
+        "spd": 50,
+        "spe": 20
+      },
+      "tier": 0,
+      "moves": [
+        "confusion",
+        "tackle",
+        "psybeam",
+        "shadow-ball"
+      ],
+      "heightM": 0.3,
+      "evolves": [
+        {
+          "to": "0578",
+          "level": 32
+        }
+      ],
+      "body": [
+        15,
+        15
+      ]
+    },
+    {
+      "dex": "0578",
+      "name": "Duosion",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 40,
+        "def": 50,
+        "spa": 125,
+        "spd": 60,
+        "spe": 30
+      },
+      "tier": 0,
+      "moves": [
+        "confusion",
+        "psybeam",
+        "shadow-ball",
+        "hypnosis"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0579",
+          "level": 41
+        }
+      ],
+      "body": [
+        19,
+        21
+      ]
+    },
+    {
+      "dex": "0579",
+      "name": "Reuniclus",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 110,
+        "atk": 65,
+        "def": 75,
+        "spa": 125,
+        "spd": 85,
+        "spe": 30
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "shadow-ball",
+        "brick-break",
+        "energy-ball"
+      ],
+      "heightM": 1.0,
+      "body": [
+        51,
+        25
+      ]
+    },
+    {
+      "dex": "0753",
+      "name": "Fomantis",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 55,
+        "def": 35,
+        "spa": 50,
+        "spd": 35,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "leafage",
+        "bug-bite",
+        "razor-leaf",
+        "howl"
+      ],
+      "heightM": 0.3,
+      "evolves": [
+        {
+          "to": "0754",
+          "level": 34
+        }
+      ],
+      "body": [
+        13,
+        23
+      ]
+    },
+    {
+      "dex": "0754",
+      "name": "Lurantis",
+      "types": [
+        "grass"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 105,
+        "def": 90,
+        "spa": 80,
+        "spd": 90,
+        "spe": 45
+      },
+      "tier": 0,
+      "moves": [
+        "razor-leaf",
+        "x-scissor",
+        "energy-ball",
+        "howl"
+      ],
+      "heightM": 0.9,
+      "body": [
+        23,
+        28
+      ]
+    },
+    {
+      "dex": "0859",
+      "name": "Impidimp",
+      "types": [
+        "dark",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 45,
+        "def": 30,
+        "spa": 55,
+        "spd": 40,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "fairy-wind",
+        "bite",
+        "scratch",
+        "howl"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0860",
+          "level": 32
+        }
+      ],
+      "body": [
+        19,
+        21
+      ]
+    },
+    {
+      "dex": "0860",
+      "name": "Morgrem",
+      "types": [
+        "dark",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 60,
+        "def": 45,
+        "spa": 75,
+        "spd": 55,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "fairy-wind",
+        "bite",
+        "dark-pulse",
+        "dazzling-gleam"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0861",
+          "level": 42
+        }
+      ],
+      "body": [
+        21,
+        23
+      ]
+    },
+    {
+      "dex": "0861",
+      "name": "Grimmsnarl",
+      "types": [
+        "dark",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 120,
+        "def": 65,
+        "spa": 95,
+        "spd": 75,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "dazzling-gleam",
+        "brick-break",
+        "dark-pulse"
+      ],
+      "heightM": 1.5,
+      "body": [
+        37,
+        30
+      ]
+    },
+    {
+      "dex": "0935",
+      "name": "Charcadet",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 50,
+        "def": 40,
+        "spa": 50,
+        "spd": 40,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "ember",
+        "scratch",
+        "will-o-wisp",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0936",
+          "level": 30
+        },
+        {
+          "to": "0937",
+          "level": 30
+        }
+      ],
+      "body": [
+        14,
+        27
+      ]
+    },
+    {
+      "dex": "0936",
+      "name": "Armarouge",
+      "types": [
+        "fire",
+        "psychic"
+      ],
+      "stats": {
+        "hp": 85,
+        "atk": 60,
+        "def": 100,
+        "spa": 125,
+        "spd": 80,
+        "spe": 75
+      },
+      "tier": 0,
+      "moves": [
+        "flamethrower",
+        "psybeam",
+        "will-o-wisp",
+        "shadow-ball"
+      ],
+      "heightM": 1.5,
+      "body": [
+        21,
+        31
+      ]
+    },
+    {
+      "dex": "0937",
+      "name": "Ceruledge",
+      "types": [
+        "fire",
+        "ghost"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 125,
+        "def": 80,
+        "spa": 60,
+        "spd": 100,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "flamethrower",
+        "shadow-ball",
+        "psycho-cut",
+        "x-scissor"
+      ],
+      "heightM": 1.6,
+      "body": [
+        31,
+        32
+      ]
+    },
+    {
+      "dex": "0585",
+      "name": "Deerling",
+      "types": [
+        "normal",
+        "grass"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 60,
+        "def": 50,
+        "spa": 40,
+        "spd": 50,
+        "spe": 75
+      },
+      "tier": 0,
+      "moves": [
+        "tackle",
+        "leafage",
+        "quick-attack",
+        "razor-leaf"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0586",
+          "level": 34
+        }
+      ],
+      "body": [
+        19,
+        26
+      ]
+    },
+    {
+      "dex": "0586",
+      "name": "Sawsbuck",
+      "types": [
+        "normal",
+        "grass"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 100,
+        "def": 70,
+        "spa": 60,
+        "spd": 70,
+        "spe": 95
+      },
+      "tier": 0,
+      "moves": [
+        "return",
+        "razor-leaf",
+        "energy-ball",
+        "brick-break"
+      ],
+      "heightM": 1.9,
+      "body": [
+        25,
+        30
+      ]
+    },
+    {
+      "dex": "0518",
+      "name": "Musharna",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 116,
+        "atk": 55,
+        "def": 85,
+        "spa": 107,
+        "spd": 95,
+        "spe": 29
+      },
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "hypnosis",
+        "shadow-ball",
+        "dazzling-gleam"
+      ],
+      "heightM": 1.1,
+      "body": [
+        21,
+        27
+      ]
+    },
+    {
+      "dex": "0570",
+      "name": "Zorua",
+      "types": [
+        "dark"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 65,
+        "def": 40,
+        "spa": 80,
+        "spd": 40,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "scratch",
+        "bite",
+        "dark-pulse",
+        "howl"
+      ],
+      "heightM": 0.7,
+      "evolves": [
+        {
+          "to": "0571",
+          "level": 30
+        }
+      ],
+      "body": [
+        15,
+        20
+      ]
+    },
+    {
+      "dex": "0571",
+      "name": "Zoroark",
+      "types": [
+        "dark"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 105,
+        "def": 60,
+        "spa": 120,
+        "spd": 60,
+        "spe": 105
+      },
+      "tier": 0,
+      "moves": [
+        "dark-pulse",
+        "crunch",
+        "shadow-ball",
+        "flamethrower"
+      ],
+      "heightM": 1.6,
+      "body": [
+        23,
+        32
+      ]
+    },
+    {
+      "dex": "0037-alola",
+      "name": "Alolan Vulpix",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 38,
+        "atk": 41,
+        "def": 40,
+        "spa": 50,
+        "spd": 65,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "powder-snow",
+        "ice-shard",
+        "quick-attack",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0038-alola",
+          "level": 30
+        }
+      ],
+      "body": [
+        19,
+        21
+      ]
+    },
+    {
+      "dex": "0038-alola",
+      "name": "Alolan Ninetales",
+      "types": [
+        "ice",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 73,
+        "atk": 67,
+        "def": 75,
+        "spa": 81,
+        "spd": 100,
+        "spe": 109
+      },
+      "tier": 0,
+      "moves": [
+        "ice-beam",
+        "dazzling-gleam",
+        "powder-snow",
+        "hypnosis"
+      ],
+      "heightM": 1.1,
+      "body": [
+        30,
+        26
+      ]
+    },
+    {
+      "dex": "0698",
+      "name": "Amaura",
+      "types": [
+        "rock",
+        "ice"
+      ],
+      "stats": {
+        "hp": 77,
+        "atk": 59,
+        "def": 50,
+        "spa": 67,
+        "spd": 63,
+        "spe": 46
+      },
+      "tier": 0,
+      "moves": [
+        "powder-snow",
+        "rock-throw",
+        "ice-beam",
+        "thunder-wave"
+      ],
+      "heightM": 1.3,
+      "evolves": [
+        {
+          "to": "0699",
+          "level": 39
+        }
+      ],
+      "body": [
+        13,
+        27
+      ]
+    },
+    {
+      "dex": "0699",
+      "name": "Aurorus",
+      "types": [
+        "rock",
+        "ice"
+      ],
+      "stats": {
+        "hp": 123,
+        "atk": 77,
+        "def": 72,
+        "spa": 99,
+        "spd": 92,
+        "spe": 58
+      },
+      "tier": 0,
+      "moves": [
+        "ice-beam",
+        "rock-slide",
+        "thunderbolt",
+        "dragon-pulse"
+      ],
+      "heightM": 2.7,
+      "body": [
+        21,
+        44
+      ]
+    },
+    {
+      "dex": "0359",
+      "name": "Absol",
+      "types": [
+        "dark"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 130,
+        "def": 60,
+        "spa": 75,
+        "spd": 60,
+        "spe": 75
+      },
+      "tier": 0,
+      "moves": [
+        "bite",
+        "psycho-cut",
+        "crunch",
+        "quick-attack"
+      ],
+      "heightM": 1.2,
+      "body": [
+        20,
+        32
+      ]
+    },
+    {
+      "dex": "0996",
+      "name": "Frigibax",
+      "types": [
+        "dragon",
+        "ice"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 75,
+        "def": 45,
+        "spa": 35,
+        "spd": 45,
+        "spe": 55
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-breath",
+        "ice-shard",
+        "bite",
+        "tackle"
+      ],
+      "heightM": 0.5,
+      "evolves": [
+        {
+          "to": "0997",
+          "level": 35
+        }
+      ],
+      "body": [
+        17,
+        21
+      ]
+    },
+    {
+      "dex": "0997",
+      "name": "Arctibax",
+      "types": [
+        "dragon",
+        "ice"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 95,
+        "def": 66,
+        "spa": 45,
+        "spd": 65,
+        "spe": 62
+      },
+      "tier": 0,
+      "moves": [
+        "dragon-breath",
+        "icicle-crash",
+        "bite",
+        "ice-shard"
+      ],
+      "heightM": 0.8,
+      "evolves": [
+        {
+          "to": "0998",
+          "level": 54
+        }
+      ],
+      "body": [
+        25,
+        27
+      ]
+    },
+    {
+      "dex": "0998",
+      "name": "Baxcalibur",
+      "types": [
+        "dragon",
+        "ice"
+      ],
+      "stats": {
+        "hp": 115,
+        "atk": 145,
+        "def": 92,
+        "spa": 75,
+        "spd": 86,
+        "spe": 87
+      },
+      "tier": 0,
+      "moves": [
+        "icicle-crash",
+        "dragon-pulse",
+        "crunch",
+        "earthquake"
+      ],
+      "heightM": 1.8,
+      "body": [
+        31,
+        34
+      ]
+    },
+    {
+      "dex": "0713",
+      "name": "Avalugg",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 117,
+        "def": 184,
+        "spa": 44,
+        "spd": 46,
+        "spe": 28
+      },
+      "tier": 0,
+      "moves": [
+        "icicle-crash",
+        "crunch",
+        "earthquake",
+        "ice-shard"
+      ],
+      "heightM": 2.0,
+      "body": [
+        33,
+        34
+      ]
+    },
+    {
+      "dex": "0551",
+      "name": "Sandile",
+      "types": [
+        "ground",
+        "dark"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 72,
+        "def": 35,
+        "spa": 35,
+        "spd": 35,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "bite",
+        "mud-shot",
+        "scratch",
+        "bulldoze"
+      ],
+      "heightM": 0.7,
+      "along": "length",
+      "evolves": [
+        {
+          "to": "0552",
+          "level": 29
+        }
+      ],
+      "body": [
+        16,
+        21
+      ]
+    },
+    {
+      "dex": "0552",
+      "name": "Krokorok",
+      "types": [
+        "ground",
+        "dark"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 82,
+        "def": 45,
+        "spa": 45,
+        "spd": 45,
+        "spe": 74
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "bulldoze",
+        "mud-shot",
+        "bite"
+      ],
+      "heightM": 1.0,
+      "evolves": [
+        {
+          "to": "0553",
+          "level": 40
+        }
+      ],
+      "body": [
+        23,
+        27
+      ]
+    },
+    {
+      "dex": "0553",
+      "name": "Krookodile",
+      "types": [
+        "ground",
+        "dark"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 117,
+        "def": 80,
+        "spa": 65,
+        "spd": 70,
+        "spe": 92
+      },
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "earthquake",
+        "stone-edge",
+        "brick-break"
+      ],
+      "heightM": 1.5,
+      "body": [
+        31,
+        30
+      ]
+    },
+    {
+      "dex": "0554",
+      "name": "Darumaka",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 90,
+        "def": 45,
+        "spa": 15,
+        "spd": 45,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "ember",
+        "tackle",
+        "bite",
+        "howl"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0555",
+          "level": 35
+        }
+      ],
+      "body": [
+        23,
+        20
+      ]
+    },
+    {
+      "dex": "0555",
+      "name": "Darmanitan",
+      "types": [
+        "fire"
+      ],
+      "stats": {
+        "hp": 105,
+        "atk": 140,
+        "def": 55,
+        "spa": 30,
+        "spd": 55,
+        "spe": 95
+      },
+      "tier": 0,
+      "moves": [
+        "flamethrower",
+        "brick-break",
+        "crunch",
+        "return"
+      ],
+      "heightM": 1.3,
+      "body": [
+        33,
+        28
+      ]
+    },
+    {
+      "dex": "0208",
+      "name": "Steelix",
+      "types": [
+        "steel",
+        "ground"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 85,
+        "def": 200,
+        "spa": 55,
+        "spd": 65,
+        "spe": 30
+      },
+      "tier": 0,
+      "moves": [
+        "iron-head",
+        "earthquake",
+        "crunch",
+        "stone-edge"
+      ],
+      "heightM": 9.2,
+      "along": "length",
+      "coil": 0.42,
+      "body": [
+        36,
+        45
+      ]
     }
   ]
 }

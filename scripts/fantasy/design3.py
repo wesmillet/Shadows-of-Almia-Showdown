@@ -1,13 +1,15 @@
 """The shape of Almia, third map (The Fan-tasy Tileset), 320 x 224 tiles.
 
-An island in the sea. The Shadow Crystal's castle stands at the centre; four
-lands surround it:
+An island in the sea. The Shadow Crystal stands on a terrace in an open plain
+at the centre; four lands surround it:
   north-west  snowfields rising to a two-step mountain
   north-east  the autumn wood (red and gold), a ridge along the coast
   south-west  the desert, with mesas and an oasis
-  south-east  the green forest and its lake
-Roads leave the castle's four gates for a town in each land. Every land keeps
-wide open ground (meadows, flats, plazas) for battles.
+  south-east  the green forest, its lake, and the castle in a clearing
+The castle is a stepped walled hold (keep, bastion, notched corner) round a
+courtyard with the champion's battlefield. Roads cross the plain and run to a
+town in each land and to the castle's gates. Every land keeps wide open
+ground (meadows, flats, plazas) for battles.
 
 Grids (h, w):
   land    bool   island (beach included)
@@ -24,9 +26,22 @@ CX, CY = 160, 112
 # biome codes shared with the runtime (src/ground/fanGround.ts BIOME_CODES)
 WATER, MEADOW, FOREST, SHORE, SNOW, DESERT, AUTUMN, CASTLE = range(8)
 
-# the castle ring (outer edge of the wall walkway), courtyard inside
-CASTLE_RING = dict(x0=110, y0=68, x1=210, y1=148, wall=3)
+# the castle: the union of these rectangles (x0, y0, x1, y1, exclusive ends) minus the cut-outs;
+# the outer 3 tiles are the wall walkway, the rest the courtyard
+CASTLE_RECTS = [(172, 156, 226, 192), (188, 148, 214, 158), (166, 164, 174, 184)]
+CASTLE_CUTS = [(216, 184, 226, 192)]
+CASTLE_WALL = 3
+CASTLE_CENTER = (199, 172)
 CRYSTAL = (160, 112)
+PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
+
+
+def castle_region(shape=None):
+    shape = shape or (H, W)
+    R = np.zeros(shape, bool)
+    for (x0, y0, x1, y1) in CASTLE_RECTS: R[y0:y1, x0:x1] = True
+    for (x0, y0, x1, y1) in CASTLE_CUTS: R[y0:y1, x0:x1] = False
+    return R
 
 
 def noise(seed, scale, shape=(H, W)):
@@ -64,10 +79,11 @@ class Design:
         biome[(ang >= 270) & (ang < 360)] = AUTUMN      # north-east
         biome[(ang >= 90) & (ang < 180)] = DESERT       # south-west
         biome[(ang >= 0) & (ang < 90)] = FOREST         # south-east
-        c = CASTLE_RING
-        green = ellipse(CX, CY, (c['x1'] - c['x0']) / 2 + 20, (c['y1'] - c['y0']) / 2 + 16) + 0.08 * noise(seed + 4, 6) < 1
+        px, py, prx, pry = PLAIN
+        green = ellipse(px, py, prx, pry) + 0.08 * noise(seed + 4, 6) < 1
         biome[green] = MEADOW
-        biome[c['y0']:c['y1'], c['x0']:c['x1']] = CASTLE        # the courtyard and its walls
+        self.castle = castle_region()
+        biome[self.castle] = CASTLE                             # the courtyard and its walls
         self.beach = land & (dist_sea <= 4 + 1.5 * noise(seed + 5, 6).clip(-1, 1))
         biome[~land] = WATER
         self.biome = biome
@@ -86,14 +102,17 @@ class Design:
         # autumn ridge along the north-east
         r_ridge = ellipse(262, 40, 46, 24) + 0.12 * noise(seed + 10, 7)
         level[(r_ridge < 1) & inland & (biome == AUTUMN)] = 1
-        # forest hill
-        r_hill = ellipse(270, 168, 22, 14) + 0.12 * noise(seed + 11, 6)
+        # forest hill on the east coast
+        r_hill = ellipse(292, 152, 14, 10) + 0.12 * noise(seed + 11, 6)
         level[(r_hill < 1) & inland & (biome == FOREST)] = 1
-        # the castle green stays level, with room for the ring road
-        c = CASTLE_RING
-        keep_flat = ellipse(CX, CY, (c['x1'] - c['x0']) / 2 + 22, (c['y1'] - c['y0']) / 2 + 20) < 1
-        level[keep_flat] = 0
-        level[52:165, 93:228] = 0          # the ring road and a margin outside it
+        # the plain, the castle's clearing and a margin round every road stay level
+        px, py, prx, pry = PLAIN
+        level[ellipse(px, py, prx + 6, pry + 6) < 1] = 0
+        level[136:204, 156:238] = 0
+        roads = np.zeros((H, W), np.int32)
+        paint_roads(self, [r for r in ROADS if (70, 74) not in r[1]], out=roads)
+        flat = ndimage.binary_dilation(roads > 0, iterations=5)
+        level[flat] = 0
         level = self._clean_levels(level)
         # a straight face where each road climbs a plateau (stairs need one): find where the
         # road's column meets the plateau coming from the south and square the edge off there
@@ -110,7 +129,7 @@ class Design:
         self.level = level
         # ---------------------------------------------------------------- water
         water = np.zeros((H, W), bool)
-        lake = ellipse(226, 170, 18, 11) + 0.15 * noise(seed + 12, 4) < 1
+        lake = ellipse(262, 186, 16, 8) + 0.15 * noise(seed + 12, 4) < 1
         water |= lake
         oasis = ellipse(64, 182, 7, 5) + 0.15 * noise(seed + 13, 3) < 1
         water |= oasis
@@ -146,15 +165,8 @@ def preview(d, path):
     img[d.beach & d.land] = (240, 225, 160)
     img = img.astype(int) - (d.level[..., None] * 28)
     img[d.water] = (70, 150, 220)
-    c = CASTLE_RING
-    img[c['y0']:c['y1'], c['x0']:c['x1']] = (img[c['y0']:c['y1'], c['x0']:c['x1']] * 0.6 + np.array([180, 180, 180]) * 0.4)
+    img[d.castle] = (img[d.castle] * 0.6 + np.array([180, 180, 180]) * 0.4)
     Image.fromarray(img.clip(0, 255).astype(np.uint8)).resize((W * 3, H * 3), Image.NEAREST).save(path)
-
-
-if __name__ == '__main__':
-    d = Design()
-    preview(d, '/tmp/claude-0/-home-claude/86dc628d-a991-50f0-a5a3-7c895ed35f84/scratchpad/design3.png')
-    print('land', int(d.land.sum()), 'levels', np.bincount(d.level.ravel()))
 
 
 # towns: (name, centre x, centre y, biome)
@@ -164,34 +176,36 @@ TOWNS = {
     'Sunreach': (112, 176, DESERT),
     'Greenhollow': (262, 128, FOREST),
 }
-# gates in the castle ring: (x, y) of the gap's middle, and whether the gap is in a N/S wall
-GATES = {'N': (160, 69, True), 'S': (160, 146, True), 'W': (111, 108, False), 'E': (208, 108, False)}
+# gates in the castle wall: (x, y) of the gap's middle, and whether the gap is in a N/S wall
+GATES = {'N': (180, 157, True), 'W': (167, 174, False)}
 GATE_W = 5
 
 # (x, y): a road climbing north from row y meets a south-facing plateau edge in column x
-STAIR_SITES = [(84, 108)]
+STAIR_SITES = [(84, 112)]
 
 ROADS = [
-    # the ring road round the castle green
-    ('1', [(100, 58), (220, 58), (220, 158), (100, 158), (100, 58)]),
-    # west to the snow town, climbing the plateau
-    ('1', [(100, 108), (84, 108), (84, 74), (70, 74)]),
-    # north to the coast; the autumn town off the ring's north-east
-    ('1', [(160, 58), (160, 30)]),
-    ('1', [(220, 82), (246, 82)]),
-    # east to the forest town
-    ('1', [(220, 108), (262, 108), (262, 128)]),
-    # south to the desert town and the lake
-    ('1', [(160, 158), (160, 166), (136, 166), (136, 179), (124, 179)]),
-    ('1', [(160, 166), (226, 166)]),
-    # gate approaches in brick
-    ('2', [(160, 58), (160, 69)]), ('2', [(160, 146), (160, 158)]),
-    ('2', [(100, 108), (111, 108)]), ('2', [(208, 108), (220, 108)]),
+    # the cross over the plain, and on east to the forest town
+    ('1', [(120, 112), (262, 112), (262, 128)]),
+    ('1', [(160, 84), (160, 166)]),
+    # west to the snow town, climbing the plateau (CLIMB: no flattening round this one)
+    ('1', [(120, 112), (84, 112)]),
+    ('1', [(84, 112), (84, 74), (70, 74)]),
+    # north to the coast
+    ('1', [(160, 84), (160, 30)]),
+    # north-east to the autumn town
+    ('1', [(200, 112), (200, 82), (246, 82)]),
+    # south-west to the desert town
+    ('1', [(160, 166), (136, 166), (136, 179), (124, 179)]),
+    # to the castle's north and west gates, brick at the gates
+    ('1', [(200, 112), (200, 140), (180, 140), (180, 148)]),
+    ('1', [(160, 166), (160, 174), (161, 174)]),
+    ('2', [(180, 146), (180, 159)]), ('2', [(160, 174), (169, 174)]),
 ]
 
 
-def paint_roads(d, roads=ROADS, w=3):
+def paint_roads(d, roads=ROADS, w=3, out=None):
     o = (w - 1) // 2
+    target = d.paths if out is None else out
     for kind, pts in roads:
         k = int(kind)
         for (ax, ay), (bx, by) in zip(pts, pts[1:]):
@@ -200,6 +214,14 @@ def paint_roads(d, roads=ROADS, w=3):
             for i in range(n + 1):
                 x = ax + (np.sign(dx) * i if dx else 0)
                 y = ay + (np.sign(dy) * i if dy else 0)
-                d.paths[y - o:y - o + w, x - o:x - o + w] = np.maximum(d.paths[y - o:y - o + w, x - o:x - o + w], k)
+                target[y - o:y - o + w, x - o:x - o + w] = np.maximum(target[y - o:y - o + w, x - o:x - o + w], k)
+    if out is not None: return
     d.paths[~d.land] = 0
     d.paths[d.water] = 0
+    d.paths[d.castle & ~ndimage.binary_erosion(d.castle, iterations=CASTLE_WALL)] = 0   # no road over the wall
+
+
+if __name__ == '__main__':
+    d = Design()
+    preview(d, '/tmp/claude-0/-home-claude/86dc628d-a991-50f0-a5a3-7c895ed35f84/scratchpad/design3.png')
+    print('land', int(d.land.sum()), 'levels', np.bincount(d.level.ravel()))

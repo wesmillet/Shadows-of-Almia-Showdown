@@ -40,7 +40,10 @@ describe('species data', () => {
       for (const id of s.moves) expect(MOVES.has(id), `${s.name} knows unknown move ${id}`).toBe(true);
     }
     for (const biome of Object.values(spawns.biomes)) {
-      for (const row of biome.table) expect(SPECIES.has(row.dex)).toBe(true);
+      for (const row of (biome as { table?: Array<{ dex: string }> }).table ?? []) expect(SPECIES.has(row.dex)).toBe(true);
+    }
+    for (const b of spawns.bosses) {
+      expect(SPECIES.has(b.dex)).toBe(true);
     }
     for (const dex of spawns.starterPool) expect(SPECIES.has(dex)).toBe(true);
   });

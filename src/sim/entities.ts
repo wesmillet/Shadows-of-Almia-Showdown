@@ -71,6 +71,8 @@ export interface Mon {
   visual: { scale: number; alpha: number; flash: number };
   /** Evolving in the field: the species it becomes, seconds in, and whether the swap happened. */
   evolving: { to: string; t: number; swapped: boolean } | null;
+  /** A land's boss: stays near its lair and only fights what comes close. */
+  landBoss?: boolean;
 }
 
 export interface TrainerStats {

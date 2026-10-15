@@ -32,8 +32,9 @@ describe('evolution data', () => {
     }
   });
 
-  it('every starter and wild species has an evolution line, and every species a canonical size', () => {
-    const bases = [...spawns.starterPool, ...Object.values(spawns.biomes).flatMap((b) => b.table.map((r) => r.dex))];
+  it('every starter has an evolution line, every evolution target exists, and every species a canonical size', () => {
+    const bases = [...spawns.starterPool];
+    for (const s of SPECIES.values()) for (const e of s.evolves ?? []) expect(SPECIES.has(e.to), `${s.name} -> ${e.to}`).toBe(true);
     for (const dex of bases) expect(species(dex).evolves?.length, dex).toBeGreaterThan(0);
     for (const s of SPECIES.values()) {
       expect(s.heightM, s.name).toBeGreaterThan(0);

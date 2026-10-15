@@ -59,6 +59,8 @@ export class MatchScreen implements Screen {
   private selectedItem = -1;
   private aimPower = 0;
   private aiming = false;
+  /** Space went to talking or picking up this press, so holding it must not start a throw. */
+  private spaceUsed = false;
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
@@ -153,7 +155,12 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
-    if (input.pressed('KeyE')) this.interact();
+    // Space talks to whoever is in reach, else picks up a ball in reach; otherwise holding it aims a throw.
+    if (input.pressed('Space') || input.pressed('KeyE')) {
+      const used = this.interact();
+      if (input.pressed('Space')) this.spaceUsed = used;
+    }
+    if (!input.down('Space')) this.spaceUsed = false;
     if (input.pressed('KeyR')) {
       const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
       const m = i >= 0 ? this.match.player.party[i] : undefined;
@@ -170,13 +177,13 @@ export class MatchScreen implements Screen {
       if (shift) this.onItemSlot(i);
       else if (i < 4) this.castFeedback(this.match.playerCast(i));
     }
-    // Hold Space to aim a throw, release to let fly.
+    // Hold F (or Space with nothing in reach) to aim a throw, release to let fly.
     const m = this.match;
-    if (input.down('Space')) {
+    if ((input.down('Space') && !this.spaceUsed) || input.down('KeyF')) {
       if (!this.aiming) {
         const slot = m.ballSlot(m.player, this.selectedItem);
         if (slot < 0) {
-          if (input.pressed('Space')) this.say('No Poké Balls in the bag', 1);
+          if ((input.pressed('Space') && !this.spaceUsed) || input.pressed('KeyF')) this.say('No Poké Balls in the bag', 1);
         } else {
           this.selectedItem = slot;
           this.aiming = true;
@@ -201,8 +208,9 @@ export class MatchScreen implements Screen {
   private handleShopInput(input: Input): void {
     const shop = this.shopOpen;
     if (!shop) return;
-    if (input.pressed('Escape') || input.pressed('KeyE')) {
+    if (input.pressed('Escape') || input.pressed('KeyE') || input.pressed('Space')) {
       this.shopOpen = null;
+      this.spaceUsed = true;
       return;
     }
     for (let i = 0; i < 9; i++) {
@@ -212,12 +220,14 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** E beside a vendor opens the stall; beside the challenger, starts the battle. */
-  private interact(): void {
+  /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
+  private interact(): boolean {
     const s = this.match.nearService();
-    if (!s) return;
-    if (s.kind === 'shop') this.shopOpen = s.shop;
-    else if (s.kind === 'challenge') this.say(this.match.startChallenge(), 3);
+    if (s?.kind === 'shop') this.shopOpen = s.shop;
+    else if (s?.kind === 'challenge') this.say(this.match.startChallenge(), 3);
+    else if (s?.kind === 'healer') this.say(this.match.healAtHealer(), 2);
+    else return this.match.pickUp();
+    return true;
   }
 
   /** The TM prompt: 1-4 replaces that move, Escape keeps the current moves. */
@@ -296,7 +306,7 @@ export class MatchScreen implements Screen {
       // A ball's key arms it; the armed ball's key again cycles to the next ball type in the bag.
       this.selectedItem = this.selectedItem === index ? this.nextBallSlot(index) : index;
       const cur = ITEMS[p.items[this.selectedItem]?.id ?? ''];
-      if (cur) this.say(`${cur.name} ready: hold Space to aim${cur.desc ? ` · ${cur.desc}` : ''}`, 1.6);
+      if (cur) this.say(`${cur.name} ready: hold F to aim${cur.desc ? ` · ${cur.desc}` : ''}`, 1.6);
       return;
     }
     const msg = this.match.useItem(p, index);
@@ -593,6 +603,38 @@ export class MatchScreen implements Screen {
   protected drawGroundExtras(v: View): void {
     const ctx = v.ctx;
     const t = performance.now() / 1000;
+    // The champion's battlefield: painted lines, a centre circle and a box at each end.
+    const arena = this.match.ground.features?.arena;
+    if (arena) {
+      const x0 = v.toScreenX(arena.x0 + 0.5);
+      const y0 = v.toScreenY(arena.y0 + 0.5);
+      const x1 = v.toScreenX(arena.x1 - 0.5);
+      const y1 = v.toScreenY(arena.y1 - 0.5);
+      const w = x1 - x0;
+      const h = y1 - y0;
+      const my = (y0 + y1) / 2;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = Math.max(3, 5 * v.baseScale);
+      ctx.strokeRect(x0, y0, w, h);
+      ctx.beginPath();
+      ctx.moveTo(x0, my);
+      ctx.lineTo(x1, my);
+      ctx.stroke();
+      const r = Math.min(w, h) * 0.17;
+      ctx.beginPath();
+      ctx.arc((x0 + x1) / 2, my, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(214,72,72,0.35)';
+      ctx.beginPath();
+      ctx.arc((x0 + x1) / 2, my, r, Math.PI, Math.PI * 2);
+      ctx.fill();
+      const bw = w * 0.32;
+      const bh = h * 0.18;
+      ctx.strokeRect((x0 + x1) / 2 - bw / 2, y0, bw, bh);
+      ctx.strokeRect((x0 + x1) / 2 - bw / 2, y1 - bh, bw, bh);
+      ctx.restore();
+    }
     // Outpost pads.
     for (const o of this.match.outposts) {
       const sx = v.toScreenX(o.x);
@@ -858,10 +900,10 @@ export class MatchScreen implements Screen {
   private servicePrompt(): string | null {
     if (this.shopOpen || this.teach) return null;
     const s = this.match.nearService();
-    if (!s) return null;
-    if (s.kind === 'shop') return `E · Shop at the ${s.shop.name}`;
-    if (s.kind === 'challenge') return `E · Challenge the ${SHOPS.challenger.name}`;
-    return 'Stand here to heal your party';
+    if (!s) return this.match.nearestItem() ? 'Space · Pick up' : null;
+    if (s.kind === 'shop') return `Space · Shop at the ${s.shop.name}`;
+    if (s.kind === 'challenge') return `Space · Challenge the ${SHOPS.challenger.name}`;
+    return 'Space · Heal your party';
   }
 
   protected drawExtraWorld(v: View): Array<{ y: number; draw: () => void }> {
@@ -930,7 +972,7 @@ export class MatchScreen implements Screen {
       // Bar just over the drawn body (sprites are drawn at their canonical size).
       const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
-      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.name, m.level, m.hp / m.maxHp, v.baseScale);
+      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.landBoss ? `${m.name} ♛` : m.name, m.level, m.hp / m.maxHp, v.baseScale);
     }
   }
 

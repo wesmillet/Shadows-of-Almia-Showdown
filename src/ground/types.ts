@@ -61,7 +61,7 @@ export interface GroundRenderer {
   onStairs?(tx: number, ty: number): boolean;
   /** People and places the map file defines (healers, vendors, the challenger's battlefield). */
   readonly features?: {
-    npcs?: Array<{ role: 'healer' | 'vendor' | 'challenger'; x: number; y: number; town: string; stand?: number }>;
+    npcs?: Array<{ role: 'healer' | 'vendor' | 'challenger'; x: number; y: number; town: string; stand?: number; standX?: number; standY?: number }>;
     arena?: { x0: number; y0: number; x1: number; y1: number };
     towns?: Array<{ name: string; x: number; y: number }>;
   };

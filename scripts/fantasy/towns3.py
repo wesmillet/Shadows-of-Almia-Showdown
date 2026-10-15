@@ -88,7 +88,9 @@ def build_town(name, cx, cy, biome, d, seed, ok=None):
         if not k: continue
         sx = px0 + 1 + i * 6
         wt, ht = place(k, sx, py0 + 4)
-        npcs.append({'role': 'vendor', 'x': sx + wt / 2, 'y': py0 + 5.6, 'town': name, 'stand': i})
+        # the vendor stands behind the counter, facing the plaza; standX/standY is the stand's base point
+        cxs = sx + wh(k)[0] / 32
+        npcs.append({'role': 'vendor', 'x': cxs, 'y': py0 + 5 - 0.6, 'town': name, 'stand': i, 'standX': cxs, 'standY': py0 + 5})
     # the well on the east half, lamps and props round the edge
     if kit['well']:
         k = find(kit['build'], re.escape(kit['well']), rng)

@@ -4,31 +4,31 @@
  * pass and the HUD on top.
  */
 import type { Input } from '../core/input';
-import { clamp } from '../core/math';
+import { clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
-import type { GroundItem, InventorySlot, Mon } from '../sim/entities';
+import { CONFIG, MOVES, bodyRadius, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
-import type { Match } from '../sim/match';
+import type { DuelSide, Match } from '../sim/match';
 import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { isRoaming, nextBehavior } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
-import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer } from '../vfx/visuals';
+import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
 import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
 import { FxLibrary } from '../vfx/fxLibrary';
-import { FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
+import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
 import { drawSoftShadow } from '../render/world';
-import { rgba, type GameContext, type Screen } from './screens';
+import { rgba, text, uiFont, type GameContext, type Screen } from './screens';
 
 /** Effects used outside moves: the capture sequence, Bad Dreams and status icons. */
 export const EXTRA_FX = {
@@ -53,14 +53,20 @@ export class MatchScreen implements Screen {
   private readonly lighting: Lighting;
   private readonly hud: Hud;
   private readonly vfx = new VfxLayer();
+  /** Effects drawn flat on the ground, under the Pokémon (rings, puddles, cracks). */
+  private readonly groundVfx = new VfxLayer();
+  /** Camera zoom override for inspecting effects (showdown.screen.debugZoom). */
+  debugZoom: number | null = null;
+  /** Hit feedback waiting for its projectile to land. */
+  private later: Array<{ t: number; fn: () => void }> = [];
+  /** Camera shake, 0..1, decaying. */
+  private shake = 0;
   private readonly floaters = new Floaters();
   private notice = '';
   private noticeT = 0;
   private selectedItem = -1;
-  private aimPower = 0;
-  private aiming = false;
-  /** Space went to talking or picking up this press, so holding it must not start a throw. */
-  private spaceUsed = false;
+  /** The wild Pokémon clicked as the throw target. */
+  private throwTarget: Mon | null = null;
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
@@ -106,6 +112,7 @@ export class MatchScreen implements Screen {
       if (this.endTimer < 0) this.endTimer = 1.6;
       this.endTimer -= dt;
       this.vfx.update(dt);
+      this.groundVfx.update(dt);
       if (this.endTimer <= 0 && this.onEnd) {
         this.onEnd();
         this.endTimer = 99;
@@ -118,6 +125,10 @@ export class MatchScreen implements Screen {
     }
     if (this.teach) {
       this.handleTeachInput(input);
+      return;
+    }
+    if (this.match.pendingLearn.length) {
+      this.handleLearnInput(input);
       return;
     }
     if (this.shopOpen) {
@@ -135,9 +146,15 @@ export class MatchScreen implements Screen {
 
   protected handleInput(input: Input): void {
     const v = this.ctx.view;
+    const duelSide = this.playerDuelSide();
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
-      if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
+      if (duelSide?.awaitingPick) {
+        if (h?.kind === 'portrait') this.pickNext(h.index);
+        continue;
+      }
+      if (!h) this.clickWorld(c.x, c.y);
+      else if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
       else if (h?.kind === 'behavior') {
         const m = this.match.player.party[h.index];
         if (m && !m.fainted) {
@@ -155,12 +172,8 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
-    // Space talks to whoever is in reach, else picks up a ball in reach; otherwise holding it aims a throw.
-    if (input.pressed('Space') || input.pressed('KeyE')) {
-      const used = this.interact();
-      if (input.pressed('Space')) this.spaceUsed = used;
-    }
-    if (!input.down('Space')) this.spaceUsed = false;
+    // Space talks to whoever is in reach, else picks up a ball in reach.
+    if (input.pressed('Space') || input.pressed('KeyE')) this.interact();
     if (input.pressed('KeyR')) {
       const i = this.hud.hoveredPortrait(input.mouseX, input.mouseY);
       const m = i >= 0 ? this.match.player.party[i] : undefined;
@@ -170,37 +183,19 @@ export class MatchScreen implements Screen {
       }
     }
     if (this.hud.ping) this.hud.ping.t -= 1 / 60;
-    // 1-4 always cast; Shift+1-6 (or the bag panel) uses items.
+    // 1-4 always cast; Shift+1-6 (or the bag panel) uses items. After a knockout in a battle, 1-6 picks who goes next.
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    if (duelSide?.awaitingPick) {
+      for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.pickNext(i);
+      return;
+    }
     for (let i = 0; i < 6; i++) {
       if (!input.pressed(`Digit${i + 1}`)) continue;
       if (shift) this.onItemSlot(i);
       else if (i < 4) this.castFeedback(this.match.playerCast(i));
     }
-    // Hold F (or Space with nothing in reach) to aim a throw, release to let fly.
-    const m = this.match;
-    if ((input.down('Space') && !this.spaceUsed) || input.down('KeyF')) {
-      if (!this.aiming) {
-        const slot = m.ballSlot(m.player, this.selectedItem);
-        if (slot < 0) {
-          if ((input.pressed('Space') && !this.spaceUsed) || input.pressed('KeyF')) this.say('No Poké Balls in the bag', 1);
-        } else {
-          this.selectedItem = slot;
-          this.aiming = true;
-          this.aimPower = 0;
-        }
-      } else this.aimPower = Math.min(1, this.aimPower + (1 / 60) / CONFIG.catch.aimSeconds);
-    } else if (this.aiming) {
-      this.aiming = false;
-      const slot = m.ballSlot(m.player, this.selectedItem);
-      if (slot >= 0) {
-        const to = this.aimPoint();
-        const ballName = ITEMS[m.player.items[slot]?.id ?? '']?.name ?? 'Poké Ball';
-        if (m.throwBall(m.player, slot, to)) this.say(`Go, ${ballName}!`, 0.8);
-        if (!m.player.items[slot]) this.selectedItem = m.ballSlot(m.player);
-      }
-      this.aimPower = 0;
-    }
+    // Throwing: click a wild Pokémon to target it, then F throws the armed ball at it.
+    if (input.pressed('KeyF')) this.throwAtTarget();
     void v;
   }
 
@@ -210,7 +205,6 @@ export class MatchScreen implements Screen {
     if (!shop) return;
     if (input.pressed('Escape') || input.pressed('KeyE') || input.pressed('Space')) {
       this.shopOpen = null;
-      this.spaceUsed = true;
       return;
     }
     for (let i = 0; i < 9; i++) {
@@ -228,6 +222,109 @@ export class MatchScreen implements Screen {
     else if (s?.kind === 'healer') this.say(this.match.healAtHealer(), 2);
     else return this.match.pickUp();
     return true;
+  }
+
+  /** The player's side of the battle in progress, if any. */
+  private playerDuelSide(): DuelSide | null {
+    const d = this.match.playerDuel;
+    if (!d || d.state === 'over') return null;
+    return d.a.trainer === this.match.player ? d.a : d.b;
+  }
+
+  private pickNext(index: number): void {
+    const msg = this.match.duelPick(index);
+    if (msg) this.say(msg, 1.2);
+  }
+
+  /** A click on the field: a wild Pokémon under the cursor becomes the throw target. */
+  private clickWorld(sx: number, sy: number): void {
+    const v = this.ctx.view;
+    const w = v.toWorld(sx, sy);
+    let best: Mon | null = null;
+    let bd = Infinity;
+    for (const m of this.match.wilds) {
+      if (m.fainted || m.captured || m.visual.alpha < 0.5) continue;
+      // Measure from the middle of the drawn body, so big and small Pokémon are equally easy to click.
+      const hTiles = (m.species.body[1] * drawScale(m.species)) / 16;
+      const d = Math.hypot(w.x - m.x, w.y - (m.y - hTiles / 2));
+      if (d < Math.max(0.7, hTiles * 0.65) && d < bd) {
+        bd = d;
+        best = m;
+      }
+    }
+    if (!best) {
+      this.throwTarget = null;
+      return;
+    }
+    this.throwTarget = best;
+    const p = this.match.player;
+    const far = Math.hypot(best.x - p.x, best.y - p.y) > CONFIG.catch.throwRange;
+    this.say(`Target: ${best.name} Lv ${best.level}${far ? ' (move closer to throw)' : ' · F to throw'}`, 1.4);
+  }
+
+  /** F: throw the armed ball (or the first ball in the bag) at the target, if it is in range. */
+  private throwAtTarget(): void {
+    const m = this.match;
+    const p = m.player;
+    if (p.duelId) return this.say("You can't catch another trainer's Pokémon", 1.4);
+    const t = this.throwTarget;
+    if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {
+      this.throwTarget = null;
+      return this.say('Click a wild Pokémon to target it first', 1.4);
+    }
+    if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange) return this.say(`${t.name} is out of range`, 1);
+    const slot = m.ballSlot(p, this.selectedItem);
+    if (slot < 0) return this.say('No Poké Balls in the bag', 1);
+    this.selectedItem = slot;
+    const ballName = ITEMS[p.items[slot]?.id ?? '']?.name ?? 'Poké Ball';
+    p.dir = dirFromVector(t.x - p.x, t.y - p.y, p.dir);
+    if (m.throwBall(p, slot, { x: t.x, y: t.y })) this.say(`Go, ${ballName}!`, 0.8);
+    if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
+  }
+
+  /** Corner brackets round the throw target: green in range, red out of range. */
+  private drawThrowTarget(v: View): void {
+    const t = this.throwTarget;
+    if (!t) return;
+    if (t.fainted || t.captured || !this.match.wilds.includes(t)) {
+      this.throwTarget = null;
+      return;
+    }
+    const p = this.match.player;
+    const inRange = Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.catch.throwRange;
+    const ctx = v.ctx;
+    const sx = v.toScreenX(t.x);
+    const sy = v.toScreenY(t.y);
+    const r = Math.max(0.55, bodyRadius(t.species) * 1.3) * v.pxPerTile;
+    const time = performance.now() / 1000;
+    const pulse = 1 + 0.08 * Math.sin(time * 6);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(1, 0.5);
+    ctx.rotate(time * 0.8);
+    ctx.strokeStyle = inRange ? 'rgba(125,255,176,0.95)' : 'rgba(255,107,107,0.95)';
+    ctx.lineWidth = Math.max(2, 3 * v.baseScale);
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * pulse, i * (Math.PI / 2) + 0.25, i * (Math.PI / 2) + Math.PI / 2 - 0.25);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** While the player battles: a faint ring marking where the fight stays. */
+  private drawDuelRing(v: View): void {
+    const d = this.match.playerDuel;
+    if (!d || d.state === 'over') return;
+    const ctx = v.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = Math.max(2, 3 * v.baseScale);
+    ctx.setLineDash([10 * v.baseScale, 8 * v.baseScale]);
+    ctx.beginPath();
+    ctx.ellipse(v.toScreenX(d.cx), v.toScreenY(d.cy), CONFIG.duel.arenaRadius * v.pxPerTile, CONFIG.duel.arenaRadius * v.pxPerTile, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   /** The TM prompt: 1-4 replaces that move, Escape keeps the current moves. */
@@ -249,23 +346,19 @@ export class MatchScreen implements Screen {
     input.takeClicks();
   }
 
-  /** Where the aimed ball will land: toward the nearest wild Pokémon, else straight ahead; distance from the hold time. */
-  protected aimPoint(): { x: number; y: number } {
-    const p = this.match.player;
-    const dist = 0.8 + this.aimPower * (CONFIG.catch.aimMaxTiles - 0.8);
-    const enemy = this.match.nearestEnemyMon(p, p.x, p.y, 6);
-    let dx: number;
-    let dy: number;
-    if (enemy && enemy.wild) {
-      dx = enemy.x - p.x;
-      dy = enemy.y - p.y;
-    } else {
-      const d = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]][p.dir] as [number, number];
-      dx = d[0];
-      dy = d[1];
+  /** A level-up move with four moves known: 1-4 forgets that move, Escape keeps the current four. */
+  private handleLearnInput(input: Input): void {
+    if (input.pressed('Escape')) {
+      this.say(this.match.answerLearn(-1), 1.8);
+      return;
     }
-    const n = Math.hypot(dx, dy) || 1;
-    return { x: p.x + (dx / n) * dist, y: p.y + (dy / n) * dist };
+    for (let i = 0; i < 4; i++) {
+      if (input.pressed(`Digit${i + 1}`)) {
+        this.say(this.match.answerLearn(i), 2.2);
+        break;
+      }
+    }
+    input.takeClicks();
   }
 
   /** The next bag slot after `from` that holds a ball (wrapping), or `from` itself. */
@@ -289,6 +382,8 @@ export class MatchScreen implements Screen {
         const m = lead(p);
         if (!m) return this.say('No Pokémon to teach', 1.2);
         if (!m.types.includes(def.tmType ?? '')) return this.say(`${m.name} cannot learn ${def.name.replace('TM ', '')} (${def.tmType} type)`, 2);
+        // A free move slot takes the TM at once; with four moves, ask which to forget.
+        if (m.moves.length < 4) return this.say(this.match.teach(p, index, -1), 2);
         this.teach = { slot: index };
         return;
       }
@@ -306,7 +401,7 @@ export class MatchScreen implements Screen {
       // A ball's key arms it; the armed ball's key again cycles to the next ball type in the bag.
       this.selectedItem = this.selectedItem === index ? this.nextBallSlot(index) : index;
       const cur = ITEMS[p.items[this.selectedItem]?.id ?? ''];
-      if (cur) this.say(`${cur.name} ready: hold F to aim${cur.desc ? ` · ${cur.desc}` : ''}`, 1.6);
+      if (cur) this.say(`${cur.name} ready: click a wild Pokémon, then F to throw${cur.desc ? ` · ${cur.desc}` : ''}`, 1.8);
       return;
     }
     const msg = this.match.useItem(p, index);
@@ -335,23 +430,25 @@ export class MatchScreen implements Screen {
     for (const ev of events) this.onEvent(ev, v);
   }
 
-  protected onEvent(ev: BattleEvent, v: View): void {
+  protected onEvent(ev: BattleEvent, v: View, arrived = false): void {
+    if (arrived && ev.type === 'hit') return this.showHit(ev);
     switch (ev.type) {
       case 'resolve':
         this.spawnMoveVfx(ev.attacker, ev.move, ev.area, ev.hits);
         break;
       case 'hit': {
-        const color = typeColor(ev.move.type);
-        if (ev.effectiveness === 0) this.floaters.add(ev.target.x, ev.target.y, 'No effect', '#cfd8dc', 16);
-        else if (ev.damage > 0) {
-          this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
-          if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
-          else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
-          // Hit-stop only for hits the player is part of; distant AI fights stay quiet.
-          if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
-            this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
-          }
+        // The numbers and the flash land with the effect: a thrown or falling move hits on arrival.
+        const wait = this.impactDelay(ev.attacker, ev.target, ev.move);
+        if (wait > 0.04) {
+          const flash = ev.target.flash;
+          ev.target.flash = 0;
+          this.later.push({ t: wait, fn: () => {
+            ev.target.flash = Math.max(ev.target.flash, flash);
+            this.onEvent(ev, v, true);
+          } });
+          break;
         }
+        this.showHit(ev);
         break;
       }
       case 'status': {
@@ -380,6 +477,28 @@ export class MatchScreen implements Screen {
       case 'notice':
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
+      case 'learned':
+        if (ev.mon.owner === this.match.player && !ev.forgot) {
+          this.say(`${ev.mon.name} learned ${move(ev.moveId).name}!`, 2);
+          this.floaters.add(ev.mon.x, ev.mon.y - 0.4, `New move: ${move(ev.moveId).name}`, '#9be7ff', 15);
+        }
+        break;
+      case 'duel-send': {
+        // The ball pops open where the Pokémon appears.
+        this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2.5, fps: 20 });
+        const mine = ev.trainer === this.match.player;
+        if (mine || ev.duel.a.trainer === this.match.player || ev.duel.b.trainer === this.match.player) {
+          this.say(mine ? `Go, ${ev.mon.name}!` : `${ev.trainer.name} sent out ${ev.mon.name}!`, 1.6);
+        }
+        break;
+      }
+      case 'duel-end': {
+        const p = this.match.player;
+        if (ev.duel.a.trainer !== p && ev.duel.b.trainer !== p) break;
+        const foe = ev.duel.a.trainer === p ? ev.duel.b.trainer : ev.duel.a.trainer;
+        this.say(ev.winner === p ? `You defeated ${foe.name}!` : `${foe.name} won the battle`, 2.6);
+        break;
+      }
       case 'ball-hit':
         // The ball opens: white flash over it.
         if (!this.playFx(EXTRA_FX.flash, { x: ev.x, y: ev.y, lift: 0.85, scale: 2, fps: 20 })) this.vfx.add(new ImpactBurst(ev.mon.x, ev.mon.y, '#ff6b6b', 0.6));
@@ -450,60 +569,124 @@ export class MatchScreen implements Screen {
    * streams run to the aim point), target parts play on every Pokémon hit (or the aimed tile),
    * a projectile flies to each target and the target parts listed after it play on arrival.
    */
+  /** Damage number, effectiveness and hit-stop for one hit. */
+  private showHit(ev: Extract<BattleEvent, { type: 'hit' }>): void {
+    const color = typeColor(ev.move.type);
+    if (ev.effectiveness === 0) this.floaters.add(ev.target.x, ev.target.y, 'No effect', '#cfd8dc', 16);
+    else if (ev.damage > 0) {
+      this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
+      if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
+      else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
+      // Hit-stop only for hits the player is part of; distant AI fights stay quiet.
+      if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
+        this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
+      }
+    }
+  }
+
+  /** Seconds from a move's resolve until its effect reaches `target` (projectile flight, a fall, a beam reaching out). */
+  private impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
+    const carrier = m.fx?.find((p) => p.anchor === 'projectile' || p.anchor === 'sky');
+    if (carrier?.anchor === 'projectile') return Math.max(0.12, Math.hypot(target.x - attacker.x, target.y - attacker.y) / (carrier.speed ?? 11));
+    if (carrier?.anchor === 'sky') return Math.max(0.12, Math.abs((carrier.height ?? 6) - this.bodyLift(target)) / (carrier.speed ?? 14));
+    if (m.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'beam')) return 0.1;
+    return 0;
+  }
+
+  /** Height of the middle of a Pokémon's drawn body above its feet, in tiles (where hits land). */
+  private bodyLift(m: Mon | null): number {
+    if (!m) return 0.45;
+    return Math.max(0.2, (m.species.body[1] * drawScale(m.species)) / 16 / 2);
+  }
+
+  /** Impacts grow a little on big bodies so a hit on a Steelix still reads, and never swamp a Jirachi. */
+  private bodyScale(m: Mon | null): number {
+    if (!m) return 1;
+    return Math.max(0.75, Math.min(1.5, Math.sqrt(bodyRadius(m.species) / 0.45)));
+  }
+
+  private addVfx(v: MoveVisual, part: FxPart): void {
+    const layer = part.ground ? this.groundVfx : this.vfx;
+    layer.add(part.delay ? new Delayed(part.delay, v) : v);
+  }
+
+  /**
+   * A move's effect parts, in the grammar of moves.json: parts on the attacker, a projectile or
+   * sky drop that carries the target parts to each Pokémon hit, or target parts played at once.
+   * Target parts land on the middle of the body and scale gently with its size.
+   */
   private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[]): void {
     const from = { x: attacker.x, y: attacker.y };
+    const fromLift = this.bodyLift(attacker);
     const targets: Array<{ x: number; y: number; mon: Mon | null }> = hits.length
       ? hits.map((h) => ({ x: h.x, y: h.y, mon: h }))
       : [{ x: area.tx, y: area.ty, mon: null }];
     const focus = hits[0] ? { x: hits[0].x, y: hits[0].y } : { x: area.fx, y: area.fy };
-    const playAt = (part: FxPart, t: { x: number; y: number; mon: Mon | null }): void => {
+    const playAt = (part: FxPart, t: { x: number; y: number; mon: Mon | null }, onBody: boolean): void => {
       const sheet = this.fx.sheet(part.id);
       if (!sheet) return;
+      const k = onBody ? this.bodyScale(t.mon) : 1;
       if (part.mode === 'status') {
-        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: 1.15, scale: part.scale ?? 2, fps: part.fps ?? 15, loopSeconds: 1.6, follow: t.mon, tint: part.tint }));
-      } else {
-        this.vfx.add(new FxAnim(sheet, { x: t.x, y: t.y, lift: part.lift ?? 0.45, scale: part.scale ?? 3, fps: part.fps ?? 15, tint: part.tint }));
+        this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift: this.bodyLift(t.mon) * 2 + 0.35, scale: part.scale ?? 2, fps: part.fps ?? 15, loopSeconds: 1.6, follow: t.mon, tint: part.tint }), part);
+        return;
       }
+      const lift = part.ground ? (part.lift ?? 0) : part.lift ?? (onBody ? this.bodyLift(t.mon) : fromLift);
+      // Impacts stay about the size of the body they land on: never more than ~2.3 tiles across (3.2 on the ground).
+      let scale = (part.scale ?? 2) * k;
+      if (onBody) scale = Math.min(scale, ((part.ground ? 3.2 : 2.3) * k * 48) / Math.max(sheet.fw, sheet.fh));
+      this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift, scale, fps: part.fps ?? 15, tint: part.tint }), part);
     };
-    let projectile: FxPart | null = null;
+    let carrier: FxPart | null = null;
     const impacts: FxPart[] = [];
     for (const part of parts) {
-      if (part.anchor === 'projectile') {
-        projectile = part;
+      if (part.anchor === 'projectile' || part.anchor === 'sky') {
+        carrier = part;
         continue;
       }
       if (part.anchor === 'attacker') {
         const sheet = this.fx.sheet(part.id);
         if (!sheet) continue;
         if (part.mode === 'beam' || part.mode === 'stream') {
-          this.vfx.add(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? 0.5, scale: part.scale ?? 3, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing }));
-        } else playAt(part, { x: attacker.x, y: attacker.y, mon: attacker });
+          this.addVfx(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? fromLift, scale: part.scale ?? 2, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing }), part);
+        } else playAt(part, { x: attacker.x, y: attacker.y, mon: attacker }, false);
         continue;
       }
-      if (projectile) impacts.push(part);
-      else for (const t of targets) playAt(part, t);
+      if (carrier) impacts.push(part);
+      else for (const t of targets) playAt(part, t, true);
     }
-    if (projectile) {
-      const sheet = this.fx.sheet(projectile.id);
-      const proj = projectile;
-      for (const t of targets) {
-        if (!sheet) {
-          for (const p of impacts) playAt(p, t);
-          continue;
-        }
-        this.vfx.add(new FxProjectile(sheet, {
-          from, to: { x: t.x, y: t.y }, lift: proj.lift ?? 0.5, scale: proj.scale ?? 3, fps: proj.fps ?? 15, tint: proj.tint, facing: proj.facing,
-          onHit: () => {
-            for (const p of impacts) playAt(p, t);
-          },
-        }));
+    if (!carrier) return;
+    const sheet = this.fx.sheet(carrier.id);
+    const c = carrier;
+    for (const t of targets) {
+      if (!sheet) {
+        for (const p of impacts) playAt(p, t, true);
+        continue;
       }
+      const sky = c.anchor === 'sky';
+      this.addVfx(new FxProjectile(sheet, {
+        from: sky ? { x: t.x, y: t.y } : from,
+        to: { x: t.x, y: t.y },
+        lift: c.lift ?? this.bodyLift(t.mon),
+        fromLift: sky ? (c.height ?? 6) : fromLift,
+        arc: c.arc,
+        speed: c.speed ?? (sky ? 14 : 11),
+        scale: c.scale ?? 2,
+        fps: c.fps ?? 15,
+        tint: c.tint,
+        facing: c.facing,
+        onHit: () => {
+          for (const p of impacts) playAt({ ...p, delay: p.delay }, t, true);
+        },
+      }), c);
     }
   }
 
   private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[]): void {
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
       this.spawnFx(attacker, m.fx, area, hits);
+      if (m.shake && (attacker.owner === this.match.player || hits.some((h) => h.owner === this.match.player) || Math.hypot(attacker.x - this.match.player.x, attacker.y - this.match.player.y) < 10)) {
+        this.shake = Math.max(this.shake, m.shake);
+      }
       return;
     }
     // Procedural families: only for moves with no effect assigned (or one still loading).
@@ -657,51 +840,24 @@ export class MatchScreen implements Screen {
       ctx.stroke();
       ctx.restore();
     }
-    // Aim arc.
-    if (this.aiming) {
-      const p = this.match.player;
-      const to = this.aimPoint();
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,230,150,0.9)';
-      ctx.lineWidth = 2 * v.baseScale;
-      ctx.setLineDash([5 * v.baseScale, 7 * v.baseScale]);
-      ctx.beginPath();
-      const steps = 16;
-      for (let i = 0; i <= steps; i++) {
-        const k = i / steps;
-        const x = p.x + (to.x - p.x) * k;
-        const y = p.y + (to.y - p.y) * k;
-        const h = Math.sin(k * Math.PI) * (0.6 + this.aimPower * 1.2);
-        const sx = v.toScreenX(x);
-        const sy = v.toScreenY(y) - h * v.pxPerTile;
-        if (i === 0) ctx.moveTo(sx, sy);
-        else ctx.lineTo(sx, sy);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(255,230,150,0.25)';
-      ctx.beginPath();
-      ctx.arc(v.toScreenX(to.x), v.toScreenY(to.y), 0.9 * v.pxPerTile, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
+    this.drawThrowTarget(v);
+    this.drawDuelRing(v);
   }
 
   /** Items on the ground are item balls: the sprite of the ball that holds them, bobbing slowly with a periodic glint. */
   private drawGroundItem(v: View, it: GroundItem): void {
     const sx = Math.round(v.toScreenX(it.x));
     const sy = Math.round(v.toScreenY(it.y));
-    const s = Math.max(1, v.spriteScale - 2); // item balls draw at 1x: small pickups under the 3x characters
-    const lift = Math.round((Math.sin(it.bob * 1.8) * 0.5 + 0.5) * 2) * s;
-    drawSoftShadow(v, sx, sy, 0.1, 0.3);
+    const s = v.spriteScale / 3; // item balls draw at 1x: small pickups under the 3x characters
+    // Resting on the ground: a tight contact shadow and the ball's base a pixel into the grass.
+    drawSoftShadow(v, sx, sy - s, 0.09, 0.35);
     const img = this.icons.ball(it.ball);
     const ctx = v.ctx;
     ctx.imageSmoothingEnabled = false;
     const w = (img ? img.width : 18) * s;
     const h = (img ? img.height : 18) * s;
     const x0 = sx - Math.floor(w / 2);
-    const y0 = sy - h - lift;
+    const y0 = sy - h + s;
     if (img) ctx.drawImage(img, x0, y0, w, h);
     else ctx.drawImage(this.assets.placeholder(`${it.ball} ball`, 18, 18), x0, y0, w, h);
     // Sunnyside glint: six 7x7 frames over the highlight, once every three seconds.
@@ -729,7 +885,7 @@ export class MatchScreen implements Screen {
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `800 ${Math.round(0.12 * v.pxPerTile)}px sans-serif`;
+    ctx.font = uiFont(0.12 * v.pxPerTile);
     ctx.textAlign = 'center';
     ctx.fillText('R', sx + 3 * s + 0.16 * v.pxPerTile, sy - h + 0.21 * v.pxPerTile);
     ctx.restore();
@@ -885,8 +1041,13 @@ export class MatchScreen implements Screen {
         const entry = this.match.player.held[slot];
         const def = entry ? ITEMS[entry.id] : undefined;
         return { moveName: def?.name.replace('TM ', '') ?? '?', moves: m ? m.moves.map((id) => move(id).name) : [], mon: m?.name ?? '?' };
-      })(this.teach.slot) : null,
-      aiming: this.aiming ? Math.max(0.02, this.aimPower) : 0,
+      })(this.teach.slot) : this.match.pendingLearn[0] ? ((pl) => ({
+        moveName: move(pl.moveId).name,
+        moves: pl.mon.moves.map((id) => move(id).name),
+        mon: pl.mon.name,
+        title: `${pl.mon.name} wants to learn ${move(pl.moveId).name}`,
+      }))(this.match.pendingLearn[0]) : null,
+      aiming: 0,
       money: this.match.player.money,
       prompt: this.servicePrompt(),
       shop: this.shopOpen ? {
@@ -898,7 +1059,7 @@ export class MatchScreen implements Screen {
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.teach) return null;
+    if (this.shopOpen || this.teach || this.match.pendingLearn.length) return null;
     const s = this.match.nearService();
     if (!s) return this.match.nearestItem() ? 'Space · Pick up' : null;
     if (s.kind === 'shop') return `Space · Shop at the ${s.shop.name}`;
@@ -919,8 +1080,38 @@ export class MatchScreen implements Screen {
     const v = this.ctx.view;
     const p = this.match.player;
     this.vfx.update(frameDt);
+    this.groundVfx.update(frameDt);
     this.floaters.update(frameDt);
-    v.follow(p.px + (p.x - p.px) * alpha, p.py + (p.y - p.py) * alpha, frameDt, this.match.ground.cols, this.match.ground.rows);
+    for (let i = this.later.length - 1; i >= 0; i--) {
+      const l = this.later[i] as { t: number; fn: () => void };
+      l.t -= frameDt;
+      if (l.t <= 0) {
+        this.later.splice(i, 1);
+        l.fn();
+      }
+    }
+    // In a one-on-one battle the camera closes in on the two Pokémon.
+    const duel = this.match.playerDuel;
+    const fighting = !!duel && duel.state !== 'over';
+    const targetZoom = fighting ? CONFIG.duel.zoom : this.debugZoom ?? 1;
+    v.zoom += (targetZoom - v.zoom) * (1 - Math.exp(-frameDt * 3.5));
+    if (Math.abs(targetZoom - v.zoom) < 0.003) v.zoom = targetZoom;
+    let fx = p.px + (p.x - p.px) * alpha;
+    let fy = p.py + (p.y - p.py) * alpha;
+    if (duel && fighting) {
+      const ma = duel.a.mon;
+      const mb = duel.b.mon;
+      fx = ma && mb ? (ma.x + mb.x) / 2 : duel.cx;
+      fy = ma && mb ? (ma.y + mb.y) / 2 : duel.cy;
+    }
+    v.follow(fx, fy, frameDt, this.match.ground.cols, this.match.ground.rows);
+    // Heavy hits shake the camera for a moment (offset undone after the frame is drawn).
+    this.shake = Math.max(0, this.shake - frameDt * 2.2);
+    const shk = this.shake * this.shake * 0.22;
+    const ox = (Math.random() - 0.5) * shk;
+    const oy = (Math.random() - 0.5) * shk;
+    v.camX += ox;
+    v.camY += oy;
     v.ctx.setTransform(1, 0, 0, 1, 0, 0);
     v.ctx.fillStyle = '#0b0a12';
     v.ctx.fillRect(0, 0, v.width, v.height);
@@ -929,6 +1120,7 @@ export class MatchScreen implements Screen {
       rangers: this.rangers,
       groundOverlay: (view) => {
         this.drawGroundExtras(view);
+        this.groundVfx.draw(view);
         this.drawTelegraphs(view);
       },
       extra: this.drawExtraWorld(v),
@@ -936,6 +1128,7 @@ export class MatchScreen implements Screen {
     this.vfx.draw(v);
     this.drawMotes(v);
     v.beginLights();
+    this.groundVfx.drawLights(v);
     this.drawLights(v);
     const lp = this.lightingParams(v);
     const zone = this.match.lightZones[this.match.lightZones.length - 1];
@@ -954,7 +1147,78 @@ export class MatchScreen implements Screen {
     this.hud.draw(this.match, this.hudState(v));
     this.drawInfoBars(v, alpha);
     this.floaters.draw(v, v.hud);
+    this.drawDuelHud(v);
     this.drawOverlay(v);
+    v.camX -= ox;
+    v.camY -= oy;
+  }
+
+  /** The battle banner (both trainers and their remaining Pokémon) and, after a knockout, the pick panel. */
+  private drawDuelHud(v: View): void {
+    const d = this.match.playerDuel;
+    if (!d || d.state === 'over') return;
+    const h = v.hud;
+    const s = v.baseScale;
+    const me = d.a.trainer === this.match.player ? d.a : d.b;
+    const foe = me === d.a ? d.b : d.a;
+    const w = 420 * s;
+    const x = v.width / 2 - w / 2;
+    const y = 12 * s;
+    h.save();
+    h.fillStyle = 'rgba(14,8,28,0.82)';
+    h.beginPath();
+    h.roundRect(x, y, w, 44 * s, 10 * s);
+    h.fill();
+    h.restore();
+    const balls = (t: Trainer, cx: number) => {
+      const n = t.party.length;
+      for (let i = 0; i < n; i++) {
+        const m = t.party[i] as Mon;
+        const ok = !m.fainted && !m.captured;
+        h.fillStyle = ok ? '#ff5d5d' : '#4a4458';
+        h.beginPath();
+        h.arc(cx + (i - (n - 1) / 2) * 14 * s, y + 33 * s, 5 * s, 0, Math.PI * 2);
+        h.fill();
+        h.fillStyle = ok ? '#ffffff' : '#2c2838';
+        h.fillRect(cx + (i - (n - 1) / 2) * 14 * s - 5 * s, y + 33 * s - 0.5 * s, 10 * s, 1.5 * s);
+      }
+    };
+    text(v, 'You', x + w * 0.22, y + 19 * s, 14, { align: 'center', color: '#bfe3ff' });
+    balls(me.trainer, x + w * 0.22);
+    text(v, 'VS', v.width / 2, y + 28 * s, 18, { align: 'center', color: '#ffd36b' });
+    text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#ffb3b3' });
+    balls(foe.trainer, x + w * 0.78);
+    if (!me.awaitingPick) return;
+    // Choose the next Pokémon.
+    const party = this.match.player.party;
+    const pw = 360 * s;
+    const rowH = 30 * s;
+    const ph = (58 + party.length * 30) * s;
+    const px = v.width / 2 - pw / 2;
+    const py = v.height * 0.32;
+    h.save();
+    h.fillStyle = 'rgba(14,8,28,0.9)';
+    h.beginPath();
+    h.roundRect(px, py, pw, ph, 12 * s);
+    h.fill();
+    h.strokeStyle = 'rgba(180,140,255,0.6)';
+    h.lineWidth = 2 * s;
+    h.stroke();
+    h.restore();
+    text(v, 'Choose your next Pokémon', v.width / 2, py + 28 * s, 16, { align: 'center', color: '#e9ddff' });
+    party.forEach((m, i) => {
+      const ok = !m.fainted && !m.captured;
+      const ry = py + 44 * s + i * rowH;
+      text(v, `${i + 1}`, px + 22 * s, ry + 20 * s, 14, { color: ok ? '#ffd36b' : '#5c5670' });
+      text(v, `${m.name}  Lv ${m.level}`, px + 46 * s, ry + 20 * s, 14, { color: ok ? '#f4f1ff' : '#5c5670' });
+      const bw = 90 * s;
+      const bx = px + pw - bw - 20 * s;
+      h.fillStyle = '#2c2838';
+      h.fillRect(bx, ry + 11 * s, bw, 8 * s);
+      const f = m.hp / m.maxHp;
+      h.fillStyle = !ok ? '#5c5670' : f > 0.5 ? '#5fe08a' : f > 0.2 ? '#ffd36b' : '#ff6b6b';
+      h.fillRect(bx, ry + 11 * s, bw * Math.max(0, f), 8 * s);
+    });
   }
 
   /** HP bar, name and level over every wild or enemy Pokémon within 6 tiles of the player or hit in the last 4 s. */

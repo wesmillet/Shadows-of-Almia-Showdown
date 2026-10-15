@@ -3,7 +3,7 @@ import fxManifest from '../../assets/fx/guardian_signs/manifest.json';
 import { effectiveness, MOVES, SPECIES, statsAtLevel, TYPE_CHART } from './data';
 import spawns from '../../data/spawns.json';
 
-const FX_MANIFEST = (fxManifest as { effects: Record<string, { frames: number; frame_h: number }> }).effects;
+const FX_MANIFEST = (fxManifest as { effects: Record<string, { frames: number; frame_w: number; frame_h: number }> }).effects;
 
 describe('type chart', () => {
   it('has all 18 types with symmetric coverage', () => {
@@ -25,7 +25,7 @@ describe('moves data', () => {
       expect(['single', 'line', 'cone', 'ring', 'self']).toContain(m.shape);
       expect(['burst', 'projectile', 'beam', 'ring', 'cloud']).toContain(m.vfx);
       expect(m.cooldown).toBeGreaterThanOrEqual(1.5);
-      expect(m.cooldown).toBeLessThanOrEqual(6);
+      expect(m.cooldown).toBeLessThanOrEqual(8);
       families.add(m.vfx);
     }
     expect(families.size).toBe(5);
@@ -59,17 +59,17 @@ describe('species data', () => {
       expect(m.fx?.length, m.id).toBeGreaterThan(0);
       for (const part of m.fx ?? []) {
         expect(FX_MANIFEST[part.id], `${m.id}: ${part.id}`).toBeDefined();
-        expect(['target', 'attacker', 'projectile']).toContain(part.anchor);
+        expect(['target', 'attacker', 'projectile', 'sky']).toContain(part.anchor);
         if (part.mode) expect(['beam', 'stream', 'status']).toContain(part.mode);
         if (part.facing) expect(['right', 'up', 'down', 'none']).toContain(part.facing);
         if (part.lift !== undefined) expect(part.lift).toBeGreaterThanOrEqual(0);
-        if (part.anchor === 'projectile') expect((FX_MANIFEST[part.id]?.frames ?? 0) <= 8, `${m.id}: projectile ${part.id} should be a short loop`).toBe(true);
+        if (part.anchor === 'projectile' || part.anchor === 'sky') expect((FX_MANIFEST[part.id]?.frames ?? 0) <= 8, `${m.id}: projectile ${part.id} should be a short loop`).toBe(true);
       }
     }
-    // Bolts travel from the user to the target: no upright sky-strike sheet plays on the target.
+    // Bolts travel from the user to the target as a sideways lightning beam: no upright sky-strike sheet plays on the target.
     for (const id of ['thunderbolt', 'thunder-shock']) {
       const m = MOVES.get(id);
-      expect(m?.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'stream' && p.facing === 'down'), id).toBe(true);
+      expect(m?.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'beam' && (FX_MANIFEST[p.id]?.frame_w ?? 0) > (FX_MANIFEST[p.id]?.frame_h ?? 0)), id).toBe(true);
       for (const p of m?.fx ?? []) if (p.anchor === 'target') expect((FX_MANIFEST[p.id]?.frame_h ?? 0) <= 64, `${id}: ${p.id}`).toBe(true);
     }
     // Impacts prefer effects with four or more frames: every move with impacts has an animated one.

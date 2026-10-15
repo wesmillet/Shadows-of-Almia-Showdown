@@ -28,10 +28,20 @@ export function panel(view: View, x: number, y: number, w: number, h: number, ra
   ctx.restore();
 }
 
+/** UI lettering: BoldPixels by YukiPixels (CC BY-SA 4.0), falling back to the system UI font for missing glyphs. */
+export const FONT_FAMILY = '"BoldPixels", "Segoe UI", Inter, system-ui, sans-serif';
+/** BoldPixels' capitals are half an em tall (8 of 16 pixels), so sizes are scaled up to read like the old UI font. */
+export const FONT_SCALE = 1.3;
+
+/** A canvas font string for `px` canvas pixels of the old UI font. */
+export function uiFont(px: number): string {
+  return `${Math.max(8, Math.round(px * FONT_SCALE))}px ${FONT_FAMILY}`;
+}
+
 export function text(view: View, s: string, x: number, y: number, size: number, opts: { color?: string; align?: CanvasTextAlign; weight?: string; shadow?: boolean; baseline?: CanvasTextBaseline; ctx?: CanvasRenderingContext2D } = {}): void {
   const ctx = opts.ctx ?? view.hud;
   ctx.save();
-  ctx.font = `${opts.weight ?? '600'} ${Math.round(size * view.baseScale)}px "Segoe UI", Inter, system-ui, sans-serif`;
+  ctx.font = uiFont(size * view.baseScale);
   ctx.textAlign = opts.align ?? 'left';
   ctx.textBaseline = opts.baseline ?? 'alphabetic';
   if (opts.shadow !== false) {

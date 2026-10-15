@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { SPECIES, drawScale, species, statsAtLevel } from './data';
+import { MOVES, SPECIES, drawScale, movesAt, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 import { applyEvolution, evolutionsAt, formAtLevel } from './evolution';
 import spawns from '../../data/spawns.json';
@@ -64,15 +64,27 @@ describe('evolving', () => {
     expect(base).toBeLessThan(200);
   });
 
-  it('swaps species, types and stats, keeps the HP share and TM moves', () => {
+  it('swaps species, types and stats, keeps the HP share and the moves it knows', () => {
     const m = mon('0387', 18);
     m.moves[3] = 'earthquake'; // taught by a TM
+    const before = [...m.moves];
     applyEvolution(m, species('0388'), stubSprites);
     expect(m.name).toBe('Grotle');
     expect(m.dex).toBe('0388');
-    expect(m.moves).toEqual(['razor-leaf', 'energy-ball', 'bite', 'earthquake']);
+    expect(m.moves).toEqual(before);
     expect(m.stats).toEqual(statsAtLevel(species('0388').stats, 18));
     expect(m.hp / m.maxHp).toBeCloseTo(0.5, 1);
     expect(m.anim.dir).toBe(2);
+  });
+
+  it('learnsets: low levels start with fewer moves, later levels know the last four reached', () => {
+    const sp = species('0387');
+    expect(movesAt(sp, 1).length).toBeLessThan(4);
+    expect(movesAt(sp, 1)).toContain('tackle');
+    const at40 = movesAt(sp, 40);
+    expect(at40.length).toBe(4);
+    const reached = (sp.learnset ?? []).filter(([lv]) => lv <= 40).map(([, id]) => id);
+    expect(at40).toEqual(reached.slice(-4));
+    for (const s of SPECIES.values()) for (const [, id] of s.learnset ?? []) expect(MOVES.has(id), `${s.name}: ${id}`).toBe(true);
   });
 });

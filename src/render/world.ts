@@ -9,6 +9,7 @@ import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import type { View } from './view';
+import { uiFont } from '../ui/screens';
 import type { DecorItem, GroundRenderer } from '../ground/types';
 
 interface Drawable {
@@ -149,7 +150,7 @@ function flashCanvas(img: CanvasImageSource, sx: number, sy: number, w: number, 
 function drawZzz(view: View, sx: number, top: number, t: number): void {
   const ctx = view.ctx;
   ctx.save();
-  ctx.font = `bold ${Math.round(14 * view.baseScale)}px sans-serif`;
+  ctx.font = uiFont(14 * view.baseScale);
   ctx.textAlign = 'center';
   for (let i = 0; i < 3; i++) {
     const ph = (t * 0.8 + i * 0.33) % 1;
@@ -213,6 +214,17 @@ export function drawDecorItem(view: View, d: DecorItem, tileSize: number, time: 
   }
 }
 
+/** The bottom of a market stand picture (its counter), redrawn over the vendor standing behind it. */
+const COUNTER_FRACTION = 0.38;
+function drawCounterFront(view: View, d: DecorItem, tileSize: number): void {
+  const k = view.pxPerTile / tileSize;
+  const rows = Math.round(d.frameH * COUNTER_FRACTION);
+  const sx = Math.round(view.toScreenX(d.x));
+  const sy = Math.round(view.toScreenY(d.y) - d.anchorY * k);
+  view.ctx.imageSmoothingEnabled = false;
+  view.ctx.drawImage(d.image, d.srcX ?? 0, (d.srcY ?? 0) + d.frameH - rows, d.frameW, rows, Math.round(sx - d.anchorX * k), sy + (d.frameH - rows) * k, d.frameW * k, rows * k);
+}
+
 /** Every map object in view, in depth order (no characters): the title screen's backdrop. */
 export function drawDecor(view: View, ground: GroundRenderer, time: number): void {
   const vis = view.visibleTiles();
@@ -264,7 +276,14 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
     if (!inView(p.x, p.y)) continue;
-    list.push({ y: p.y, draw: () => drawTrainer(view, t, opts.rangers, alpha, match.ground) });
+    const c = t.counter;
+    if (c) {
+      // A vendor behind the counter: drawn just after the stand, then the counter's front over the legs.
+      list.push({ y: (c.sortY ?? c.y) + 0.001, draw: () => {
+        drawTrainer(view, t, opts.rangers, alpha, match.ground);
+        drawCounterFront(view, c, match.ground.tileSize);
+      } });
+    } else list.push({ y: p.y, draw: () => drawTrainer(view, t, opts.rangers, alpha, match.ground) });
   }
   if (opts.extra) list.push(...opts.extra);
   list.sort((a, b) => a.y - b.y);

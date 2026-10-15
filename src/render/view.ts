@@ -79,12 +79,13 @@ export class View {
   /** Everything in the world draws at one integer scale: 16 px tiles at 3x = 48 px, sprites at 3x. */
   static readonly PIXEL_SCALE = 3;
 
+  /** Screen pixels per art pixel: the integer pixel scale times the camera zoom (1 normally, closer in battles). */
   get pxPerTile(): number {
-    return this.tileSize * View.PIXEL_SCALE;
+    return this.tileSize * View.PIXEL_SCALE * this.zoom;
   }
 
   get spriteScale(): number {
-    return View.PIXEL_SCALE;
+    return View.PIXEL_SCALE * this.zoom;
   }
 
   /** Overworld (human) sheets are 1x art drawn at the same integer scale. */

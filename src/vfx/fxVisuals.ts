@@ -114,8 +114,8 @@ export class FxAnim implements MoveVisual {
   draw(view: View): void {
     const ctx = view.ctx;
     const f = this.frame();
-    const w = this.sheet.fw * this.scale;
-    const h = this.sheet.fh * this.scale;
+    const w = this.sheet.fw * (this.scale * view.zoom);
+    const h = this.sheet.fh * (this.scale * view.zoom);
     const sx = Math.round(view.toScreenX(this.x));
     const sy = Math.round(view.toScreenY(this.wy) - this.lift * view.pxPerTile);
     ctx.save();
@@ -130,7 +130,7 @@ export class FxAnim implements MoveVisual {
   drawLight(view: View): void {
     if (this.light <= 0) return;
     const k = this.loopSeconds > 0 ? this.alpha() : 1 - this.t / this.life;
-    const r = Math.max(this.sheet.fw, this.sheet.fh) * this.scale * 0.6;
+    const r = Math.max(this.sheet.fw, this.sheet.fh) * (this.scale * view.zoom) * 0.6;
     glow(view.lightCtx, view.toScreenX(this.x), view.toScreenY(this.wy) - this.lift * view.pxPerTile, r, this.sheet.color, 0.4 * k * this.light);
   }
 }
@@ -145,6 +145,10 @@ export interface FxProjectileOptions {
   facing?: FxFacing;
   /** Tiles per second. */
   speed?: number;
+  /** Height of a lobbed arc, in tiles. */
+  arc?: number;
+  /** Height at the start, in tiles (a fall from the sky); `lift` is the height at the end. */
+  fromLift?: number;
   onHit?: () => void;
 }
 
@@ -157,16 +161,18 @@ export class FxProjectile implements MoveVisual {
   private readonly source: CanvasImageSource;
   private x: number;
   private wy: number;
-  private readonly lift: number;
+  private lift: number;
   private readonly scale: number;
   private readonly fps: number;
   private hit = false;
   y: number;
 
   constructor(private readonly sheet: FxSheet, private readonly o: FxProjectileOptions) {
-    const d = Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y);
+    const fall = o.fromLift !== undefined ? Math.abs(o.fromLift - (o.lift ?? 0.45)) : 0;
+    const d = Math.max(Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y), fall);
     this.dur = Math.max(0.12, d / (o.speed ?? 11));
-    const ang = Math.atan2(o.to.y - o.from.y, o.to.x - o.from.x);
+    // A fall points straight down; otherwise along the ground path.
+    const ang = o.fromLift !== undefined && fall > 0.5 ? Math.PI / 2 : Math.atan2(o.to.y - o.from.y, o.to.x - o.from.x);
     // Only clearly elongated art (a streak, a dart) turns to its flight path; balls,
     // rocks, bubbles and upright flames fly as drawn.
     const facing = o.facing ?? defaultFacing(sheet, 1.6);
@@ -186,6 +192,11 @@ export class FxProjectile implements MoveVisual {
     const p = Math.min(1, this.t / this.dur);
     this.x = this.o.from.x + (this.o.to.x - this.o.from.x) * p;
     this.wy = this.o.from.y + (this.o.to.y - this.o.from.y) * p;
+    const end = this.o.lift ?? 0.45;
+    const start = this.o.fromLift ?? end;
+    // Falls accelerate; lobs follow a parabola.
+    const pp = this.o.fromLift !== undefined ? p * p : p;
+    this.lift = start + (end - start) * pp + (this.o.arc ?? 0) * 4 * p * (1 - p);
     this.y = this.wy + 0.02;
     if (p >= 1 && !this.hit) {
       this.hit = true;
@@ -198,8 +209,8 @@ export class FxProjectile implements MoveVisual {
   draw(view: View): void {
     const ctx = view.ctx;
     const f = Math.floor(this.t * this.fps) % this.sheet.frames;
-    const w = this.sheet.fw * this.scale;
-    const h = this.sheet.fh * this.scale;
+    const w = this.sheet.fw * (this.scale * view.zoom);
+    const h = this.sheet.fh * (this.scale * view.zoom);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(Math.round(view.toScreenX(this.x)), Math.round(view.toScreenY(this.wy) - this.lift * view.pxPerTile));
@@ -209,7 +220,7 @@ export class FxProjectile implements MoveVisual {
   }
 
   drawLight(view: View): void {
-    const r = Math.max(this.sheet.fw, this.sheet.fh) * this.scale * 0.7;
+    const r = Math.max(this.sheet.fw, this.sheet.fh) * (this.scale * view.zoom) * 0.7;
     glow(view.lightCtx, view.toScreenX(this.x), view.toScreenY(this.wy) - this.lift * view.pxPerTile, r, this.sheet.color, 0.45);
   }
 }
@@ -275,8 +286,8 @@ export class FxBeam implements MoveVisual {
     // Rotate so the frame's long axis runs along the attacker -> target line, source end at the attacker.
     ctx.rotate(this.ang + facingOffset(this.facing));
     const tall = this.facing === 'up' || this.facing === 'down';
-    const along = tall ? fh * this.scale : fw * this.scale; // frame length along the beam
-    const across = tall ? fw * this.scale : fh * this.scale;
+    const along = tall ? fh * (this.scale * view.zoom) : fw * (this.scale * view.zoom); // frame length along the beam
+    const across = tall ? fw * (this.scale * view.zoom) : fh * (this.scale * view.zoom);
     const half = -Math.floor(across / 2);
     if (this.o.mode === 'stream') {
       if (this.facing === 'up') ctx.drawImage(this.source, f * fw, 0, fw, fh, half, -lenPx, across, lenPx);
@@ -300,7 +311,7 @@ export class FxBeam implements MoveVisual {
 
   drawLight(view: View): void {
     const k = this.alpha();
-    const r = Math.min(this.sheet.fw, this.sheet.fh) * this.scale * 1.1;
+    const r = Math.min(this.sheet.fw, this.sheet.fh) * (this.scale * view.zoom) * 1.1;
     const n = Math.max(2, Math.ceil(this.len / 1.2));
     for (let i = 0; i <= n; i++) {
       const p = i / n;
@@ -308,5 +319,29 @@ export class FxBeam implements MoveVisual {
       const y = this.o.from.y + (this.o.to.y - this.o.from.y) * p;
       glow(view.lightCtx, view.toScreenX(x), view.toScreenY(y) - this.lift * view.pxPerTile, r, this.sheet.color, 0.25 * k);
     }
+  }
+}
+
+/** Holds a visual back for `delay` seconds, then plays it. */
+export class Delayed implements MoveVisual {
+  private t = 0;
+  constructor(private readonly delay: number, private readonly inner: MoveVisual) {}
+
+  get y(): number {
+    return this.inner.y;
+  }
+
+  update(dt: number): boolean {
+    this.t += dt;
+    if (this.t < this.delay) return true;
+    return this.inner.update(dt);
+  }
+
+  draw(view: View): void {
+    if (this.t >= this.delay) this.inner.draw(view);
+  }
+
+  drawLight(view: View): void {
+    if (this.t >= this.delay) this.inner.drawLight(view);
   }
 }

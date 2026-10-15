@@ -32,6 +32,56 @@
           "to": "0388",
           "level": 18
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -65,6 +115,64 @@
           "to": "0391",
           "level": 14
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -98,6 +206,64 @@
           "to": "0394",
           "level": 16
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -131,6 +297,60 @@
           "to": "0026",
           "level": 22
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "spark"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "thunder-fang"
+        ],
+        [
+          26,
+          "discharge"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "wild-charge"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -192,6 +412,48 @@
           "to": "0700",
           "level": 22
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -225,6 +487,72 @@
           "to": "0448",
           "level": 24
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "karate-chop"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "low-kick"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "double-kick"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "brick-break"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "close-combat"
+        ]
       ]
     },
     {
@@ -259,6 +587,64 @@
           "to": "0444",
           "level": 24
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          7,
+          "tackle"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          16,
+          "rock-throw"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -294,6 +680,60 @@
           "to": "0148",
           "level": 30
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          12,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -328,6 +768,60 @@
           "to": "0247",
           "level": 30
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -363,6 +857,52 @@
           "to": "0397",
           "level": 14
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "tackle"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -397,6 +937,48 @@
           "to": "0400",
           "level": 15
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -431,6 +1013,52 @@
           "to": "0404",
           "level": 15
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "spark"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "thunder-fang"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "wild-charge"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -466,6 +1094,68 @@
           "to": "0315",
           "level": 16
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -500,6 +1190,60 @@
           "to": "0011",
           "level": 7
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -534,6 +1278,60 @@
           "to": "0402",
           "level": 10
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          16,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -569,6 +1367,56 @@
           "to": "0075",
           "level": 25
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -603,6 +1451,52 @@
           "to": "0099",
           "level": 28
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -637,6 +1531,60 @@
           "to": "0423",
           "level": 30
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "bulldoze"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -672,6 +1620,60 @@
           "to": "0130",
           "level": 20
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -706,6 +1708,60 @@
           "to": "0055",
           "level": 33
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          7,
+          "scratch"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -741,6 +1797,60 @@
           "to": "0279",
           "level": 25
         }
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -796,6 +1906,68 @@
       "body": [
         29,
         33
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          9,
+          "karate-chop"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          18,
+          "low-kick"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "double-kick"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "brick-break"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -827,6 +1999,60 @@
       "body": [
         62,
         67
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -856,6 +2082,56 @@
       "body": [
         51,
         31
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "psybeam"
+        ],
+        [
+          22,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "psychic"
+        ],
+        [
+          44,
+          "draco-meteor"
+        ]
       ]
     },
     {
@@ -885,6 +2161,72 @@
       "body": [
         22,
         22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "psycho-cut"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "zen-headbutt"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -914,6 +2256,68 @@
       "body": [
         57,
         51
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fairy-wind"
+        ],
+        [
+          9,
+          "metal-claw"
+        ],
+        [
+          11,
+          "charm"
+        ],
+        [
+          14,
+          "disarming-voice"
+        ],
+        [
+          18,
+          "bullet-punch"
+        ],
+        [
+          22,
+          "play-rough"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "iron-head"
+        ],
+        [
+          36,
+          "dazzling-gleam"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          38,
+          "iron-tail"
+        ]
       ]
     },
     {
@@ -947,6 +2351,60 @@
       "body": [
         21,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -975,6 +2433,68 @@
       "body": [
         29,
         31
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -1009,6 +2529,64 @@
       "body": [
         25,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "karate-chop"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "low-kick"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          28,
+          "double-kick"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "brick-break"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -1042,6 +2620,60 @@
       "body": [
         21,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -1070,6 +2702,56 @@
       "body": [
         29,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "metal-claw"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "flash-cannon"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -1097,6 +2779,56 @@
       "body": [
         29,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "spark"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "thunder-fang"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "wild-charge"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1124,6 +2856,56 @@
       "body": [
         23,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -1151,6 +2933,56 @@
       "body": [
         21,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "charge-beam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "discharge"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "thunder"
+        ]
       ]
     },
     {
@@ -1178,6 +3010,64 @@
       "body": [
         21,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -1205,6 +3095,52 @@
       "body": [
         25,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -1232,6 +3168,60 @@
       "body": [
         17,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "crunch"
+        ],
+        [
+          36,
+          "dark-pulse"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1259,6 +3249,60 @@
       "body": [
         21,
         28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1286,6 +3330,56 @@
       "body": [
         23,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -1313,6 +3407,64 @@
       "body": [
         23,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fairy-wind"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "charm"
+        ],
+        [
+          14,
+          "disarming-voice"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "draining-kiss"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "dazzling-gleam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "moonblast"
+        ]
       ]
     },
     {
@@ -1341,6 +3493,52 @@
       "body": [
         25,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "force-palm"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "metal-claw"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          22,
+          "aura-sphere"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "brick-break"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
       ]
     },
     {
@@ -1375,6 +3573,64 @@
       "body": [
         30,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -1403,6 +3659,68 @@
       "body": [
         35,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -1438,6 +3756,64 @@
       "body": [
         26,
         37
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          12,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -1466,6 +3842,60 @@
       "body": [
         27,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -1500,6 +3930,60 @@
       "body": [
         19,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -1528,6 +4012,60 @@
       "body": [
         25,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "crunch"
+        ]
       ]
     },
     {
@@ -1562,6 +4100,52 @@
       "body": [
         15,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "tackle"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -1590,6 +4174,56 @@
       "body": [
         17,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "peck"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "tackle"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -1618,6 +4252,60 @@
       "body": [
         21,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          9,
+          "water-gun"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "water-pulse"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "aqua-tail"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -1651,6 +4339,56 @@
       "body": [
         24,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "spark"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "thunder-fang"
+        ],
+        [
+          26,
+          "discharge"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "wild-charge"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1678,6 +4416,56 @@
       "body": [
         24,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "spark"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "thunder-fang"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "wild-charge"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1712,6 +4500,68 @@
       "body": [
         28,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          26,
+          "poison-jab"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -1740,6 +4590,64 @@
       "body": [
         28,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -1773,6 +4681,56 @@
       "body": [
         19,
         22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "struggle-bug"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "signal-beam"
+        ],
+        [
+          32,
+          "bug-buzz"
+        ],
+        [
+          36,
+          "x-scissor"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -1801,6 +4759,56 @@
       "body": [
         28,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "struggle-bug"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          22,
+          "signal-beam"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "bug-buzz"
+        ]
       ]
     },
     {
@@ -1828,6 +4836,56 @@
       "body": [
         23,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -1862,6 +4920,56 @@
       "body": [
         23,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          7,
+          "rock-smash"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -1890,6 +4998,60 @@
       "body": [
         28,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -1917,6 +5079,60 @@
       "body": [
         28,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -1945,6 +5161,64 @@
       "body": [
         19,
         22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "mud-shot"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          36,
+          "sludge-bomb"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "earth-power"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -1975,6 +5249,60 @@
       "body": [
         37,
         55
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -2002,6 +5330,56 @@
       "body": [
         27,
         28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -2030,6 +5408,56 @@
       "body": [
         31,
         20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     },
     {
@@ -2064,6 +5492,64 @@
       "body": [
         25,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ]
       ]
     },
     {
@@ -2092,6 +5578,68 @@
       "body": [
         33,
         28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ]
       ]
     },
     {
@@ -2126,6 +5674,56 @@
       "body": [
         17,
         16
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -2160,6 +5758,60 @@
       "body": [
         22,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          16,
+          "rock-throw"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -2188,6 +5840,64 @@
       "body": [
         28,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "drill-run"
+        ]
       ]
     },
     {
@@ -2221,6 +5931,56 @@
       "body": [
         19,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -2248,6 +6008,60 @@
       "body": [
         28,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -2282,6 +6096,60 @@
       "body": [
         18,
         16
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          7,
+          "water-gun"
+        ],
+        [
+          9,
+          "bubble"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          18,
+          "water-pulse"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          28,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "surf"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -2316,6 +6184,60 @@
       "body": [
         24,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          9,
+          "bubble"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "water-pulse"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          28,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "surf"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -2344,6 +6266,60 @@
       "body": [
         27,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          9,
+          "bubble"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          18,
+          "water-pulse"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "surf"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -2377,6 +6353,64 @@
       "body": [
         17,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          7,
+          "scratch"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          16,
+          "rock-throw"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2404,6 +6438,64 @@
       "body": [
         23,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2437,6 +6529,64 @@
       "body": [
         17,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          16,
+          "rock-throw"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2471,6 +6621,64 @@
       "body": [
         29,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2499,6 +6707,64 @@
       "body": [
         31,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2532,6 +6798,64 @@
       "body": [
         29,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "poison-jab"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -2560,6 +6884,68 @@
       "body": [
         31,
         31
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          26,
+          "poison-jab"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ],
+        [
+          38,
+          "crunch"
+        ]
       ]
     },
     {
@@ -2593,6 +6979,60 @@
       "body": [
         18,
         20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2620,6 +7060,64 @@
       "body": [
         23,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -2654,6 +7152,48 @@
       "body": [
         19,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "swift"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "hyper-voice"
+        ],
+        [
+          36,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -2682,6 +7222,48 @@
       "body": [
         37,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "swift"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -2715,6 +7297,48 @@
       "body": [
         19,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "tackle"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -2742,6 +7366,52 @@
       "body": [
         33,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "tackle"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -2775,6 +7445,56 @@
       "body": [
         19,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "fire-spin"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "flamethrower"
+        ],
+        [
+          36,
+          "fire-punch"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -2802,6 +7522,56 @@
       "body": [
         28,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "fire-spin"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "flamethrower"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          36,
+          "fire-punch"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -2835,6 +7605,44 @@
       "body": [
         23,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -2862,6 +7670,48 @@
       "body": [
         23,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -2896,6 +7746,56 @@
       "body": [
         26,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "night-shade"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          12,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "hex"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "shadow-ball"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ]
       ]
     },
     {
@@ -2930,6 +7830,52 @@
       "body": [
         24,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "night-shade"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          12,
+          "sleep-powder"
+        ],
+        [
+          14,
+          "hex"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "shadow-ball"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ]
       ]
     },
     {
@@ -2958,6 +7904,52 @@
       "body": [
         25,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "night-shade"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          14,
+          "hex"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "shadow-ball"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ]
       ]
     },
     {
@@ -2992,6 +7984,68 @@
       "body": [
         18,
         18
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          16,
+          "rock-throw"
+        ],
+        [
+          18,
+          "psycho-cut"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          28,
+          "zen-headbutt"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "flash-cannon"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -3020,6 +8074,72 @@
       "body": [
         33,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "psycho-cut"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "zen-headbutt"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -3054,6 +8174,68 @@
       "body": [
         21,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          7,
+          "scratch"
+        ],
+        [
+          9,
+          "astonish"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "shadow-sneak"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "shadow-claw"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -3088,6 +8270,68 @@
       "body": [
         36,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "astonish"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "shadow-sneak"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "shadow-claw"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -3116,6 +8360,72 @@
       "body": [
         25,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "astonish"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "shadow-sneak"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "shadow-claw"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     },
     {
@@ -3149,6 +8459,56 @@
       "body": [
         14,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          16,
+          "mud-shot"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3184,6 +8544,52 @@
       "body": [
         12,
         19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          9,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          18,
+          "spark"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          26,
+          "discharge"
+        ],
+        [
+          28,
+          "thunder-fang"
+        ],
+        [
+          38,
+          "wild-charge"
+        ]
       ]
     },
     {
@@ -3213,6 +8619,56 @@
       "body": [
         30,
         29
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "struggle-bug"
+        ],
+        [
+          9,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          18,
+          "charge-beam"
+        ],
+        [
+          22,
+          "signal-beam"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "discharge"
+        ],
+        [
+          32,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "thunderbolt"
+        ]
       ]
     },
     {
@@ -3251,6 +8707,60 @@
       "body": [
         12,
         18
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          7,
+          "leafage"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ]
       ]
     },
     {
@@ -3279,6 +8789,60 @@
       "body": [
         39,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
       ]
     },
     {
@@ -3307,6 +8871,60 @@
       "body": [
         19,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "bulldoze"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          28,
+          "dragon-pulse"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -3345,6 +8963,52 @@
       "body": [
         13,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          7,
+          "poison-sting"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3378,6 +9042,56 @@
       "body": [
         23,
         18
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          7,
+          "poison-sting"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3406,6 +9120,56 @@
       "body": [
         37,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "struggle-bug"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          16,
+          "bug-bite"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          22,
+          "signal-beam"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "bug-buzz"
+        ]
       ]
     },
     {
@@ -3439,6 +9203,56 @@
       "body": [
         22,
         22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          7,
+          "poison-sting"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3467,6 +9281,60 @@
       "body": [
         30,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fury-cutter"
+        ],
+        [
+          9,
+          "poison-sting"
+        ],
+        [
+          11,
+          "string-shot"
+        ],
+        [
+          14,
+          "bug-bite"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          18,
+          "poison-fang"
+        ],
+        [
+          22,
+          "x-scissor"
+        ],
+        [
+          26,
+          "psybeam"
+        ],
+        [
+          28,
+          "poison-jab"
+        ],
+        [
+          36,
+          "bug-buzz"
+        ],
+        [
+          36,
+          "sludge-bomb"
+        ]
       ]
     },
     {
@@ -3495,6 +9363,64 @@
       "body": [
         39,
         34
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "wing-attack"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          36,
+          "leaf-blade"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -3528,6 +9454,64 @@
       "body": [
         21,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          7,
+          "leafage"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -3561,6 +9545,64 @@
       "body": [
         26,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -3588,6 +9630,64 @@
       "body": [
         27,
         24
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "absorb"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          14,
+          "mega-drain"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "magical-leaf"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          32,
+          "energy-ball"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "solar-beam"
+        ]
       ]
     },
     {
@@ -3622,6 +9722,52 @@
       "body": [
         13,
         20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
       ]
     },
     {
@@ -3660,6 +9806,52 @@
       "body": [
         17,
         22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
       ]
     },
     {
@@ -3688,6 +9880,56 @@
       "body": [
         17,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
       ]
     },
     {
@@ -3716,6 +9958,56 @@
       "body": [
         19,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "karate-chop"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psycho-cut"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          18,
+          "low-kick"
+        ],
+        [
+          22,
+          "zen-headbutt"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          28,
+          "double-kick"
+        ],
+        [
+          38,
+          "brick-break"
+        ]
       ]
     },
     {
@@ -3749,6 +10041,44 @@
       "body": [
         15,
         15
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -3782,6 +10112,48 @@
       "body": [
         19,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -3809,6 +10181,52 @@
       "body": [
         51,
         25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -3842,6 +10260,68 @@
       "body": [
         13,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          7,
+          "leafage"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          16,
+          "bug-bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          36,
+          "energy-ball"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3869,6 +10349,64 @@
       "body": [
         23,
         28
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "vine-whip"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "stun-spore"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "razor-leaf"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "seed-bomb"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "leaf-blade"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -3903,6 +10441,60 @@
       "body": [
         19,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "snarl"
+        ],
+        [
+          7,
+          "scratch"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          22,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          36,
+          "crunch"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
       ]
     },
     {
@@ -3937,6 +10529,48 @@
       "body": [
         21,
         23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "snarl"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          22,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
       ]
     },
     {
@@ -3965,6 +10599,60 @@
       "body": [
         37,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          26,
+          "dazzling-gleam"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "play-rough"
+        ],
+        [
+          32,
+          "crunch"
+        ]
       ]
     },
     {
@@ -4002,6 +10690,64 @@
       "body": [
         14,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          7,
+          "scratch"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -4030,6 +10776,52 @@
       "body": [
         21,
         31
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "fire-spin"
+        ],
+        [
+          18,
+          "psybeam"
+        ],
+        [
+          22,
+          "flamethrower"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          38,
+          "psychic"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -4058,6 +10850,68 @@
       "body": [
         31,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          9,
+          "astonish"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "shadow-sneak"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          26,
+          "psycho-cut"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          28,
+          "shadow-claw"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -4092,6 +10946,56 @@
       "body": [
         19,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          7,
+          "leafage"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "vine-whip"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "razor-leaf"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          28,
+          "seed-bomb"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          38,
+          "leaf-blade"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -4120,6 +11024,60 @@
       "body": [
         25,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          9,
+          "vine-whip"
+        ],
+        [
+          14,
+          "headbutt"
+        ],
+        [
+          18,
+          "razor-leaf"
+        ],
+        [
+          22,
+          "slash"
+        ],
+        [
+          26,
+          "energy-ball"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "seed-bomb"
+        ],
+        [
+          32,
+          "body-slam"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          38,
+          "leaf-blade"
+        ],
+        [
+          44,
+          "double-edge"
+        ]
       ]
     },
     {
@@ -4147,6 +11105,52 @@
       "body": [
         21,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          26,
+          "dazzling-gleam"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -4180,6 +11184,48 @@
       "body": [
         15,
         20
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "snarl"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "dark-pulse"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -4207,6 +11253,52 @@
       "body": [
         23,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "snarl"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "dark-pulse"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ]
       ]
     },
     {
@@ -4240,6 +11332,60 @@
       "body": [
         19,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          7,
+          "ice-shard"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          36,
+          "icicle-crash"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -4268,6 +11414,56 @@
       "body": [
         30,
         26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
       ]
     },
     {
@@ -4302,6 +11498,56 @@
       "body": [
         13,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "powder-snow"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          12,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "ancient-power"
+        ],
+        [
+          18,
+          "icy-wind"
+        ],
+        [
+          28,
+          "aurora-beam"
+        ],
+        [
+          32,
+          "power-gem"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "ice-beam"
+        ]
       ]
     },
     {
@@ -4330,6 +11576,60 @@
       "body": [
         21,
         44
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "powder-snow"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "ancient-power"
+        ],
+        [
+          18,
+          "icy-wind"
+        ],
+        [
+          26,
+          "rock-slide"
+        ],
+        [
+          28,
+          "aurora-beam"
+        ],
+        [
+          32,
+          "power-gem"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          38,
+          "ice-beam"
+        ]
       ]
     },
     {
@@ -4357,6 +11657,60 @@
       "body": [
         20,
         32
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          26,
+          "psycho-cut"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "crunch"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -4391,6 +11745,56 @@
       "body": [
         17,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -4425,6 +11829,56 @@
       "body": [
         25,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -4453,6 +11907,64 @@
       "body": [
         31,
         34
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "dragon-claw"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ],
+        [
+          44,
+          "outrage"
+        ]
       ]
     },
     {
@@ -4480,6 +11992,52 @@
       "body": [
         33,
         34
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
       ]
     },
     {
@@ -4515,6 +12073,60 @@
       "body": [
         16,
         21
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          16,
+          "mud-shot"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "crunch"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -4549,6 +12161,60 @@
       "body": [
         23,
         27
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          16,
+          "mud-shot"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          38,
+          "crunch"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -4577,6 +12243,64 @@
       "body": [
         31,
         30
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "mud-slap"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "sand-attack"
+        ],
+        [
+          14,
+          "sand-tomb"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "bulldoze"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "drill-run"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "crunch"
+        ],
+        [
+          44,
+          "earthquake"
+        ]
       ]
     },
     {
@@ -4610,6 +12334,60 @@
       "body": [
         23,
         20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          12,
+          "howl"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -4637,6 +12415,68 @@
       "body": [
         33,
         28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "flame-wheel"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "fire-fang"
+        ],
+        [
+          26,
+          "brick-break"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
+        ],
+        [
+          36,
+          "return"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
       ]
     },
     {
@@ -4667,6 +12507,68 @@
       "body": [
         36,
         45
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
       ]
     }
   ]

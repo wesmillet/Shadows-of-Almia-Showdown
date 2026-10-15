@@ -14,7 +14,7 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { FxAnim } from '../vfx/fxVisuals';
 import { VfxLayer } from '../vfx/visuals';
-import { button, hit, text, type GameContext, type Screen } from './screens';
+import { button, hit, text, uiFont, type GameContext, type Screen } from './screens';
 
 const DARKRAI = '0491';
 const VICTIMS = ['0025', '0387', '0133', '0393', '0390', '0447'];
@@ -389,7 +389,7 @@ export class TitleScreen implements Screen {
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     h.save();
-    h.font = `600 ${Math.round(14 * s)}px "Segoe UI", Inter, system-ui, sans-serif`;
+    h.font = uiFont(14 * s);
     const sw = h.measureText(stamp).width + 20 * s;
     h.fillStyle = 'rgba(8,4,20,0.75)';
     h.beginPath();

@@ -341,12 +341,16 @@ export class FanGround implements GroundRenderer {
     const y0 = Math.max(0, Math.floor(vis.y0));
     const x1 = Math.min(this.cols - 1, Math.ceil(vis.x1));
     const y1 = Math.min(this.rows - 1, Math.ceil(vis.y1));
-    const chunkPx = CHUNK * view.pxPerTile;
+    // Chunk edges snap to whole screen pixels from both ends, so a fractional zoom leaves no seams.
     for (let cr = Math.floor(y0 / CHUNK); cr <= Math.floor(y1 / CHUNK); cr++) {
       for (let cc = Math.floor(x0 / CHUNK); cc <= Math.floor(x1 / CHUNK); cc++) {
         const canvas = this.chunkCanvas(cr * this.chunkCols + cc);
         if (!canvas) continue;
-        ctx.drawImage(canvas, Math.round(view.toScreenX(cc * CHUNK)), Math.round(view.toScreenY(cr * CHUNK)), chunkPx, chunkPx);
+        const sx0 = Math.round(view.toScreenX(cc * CHUNK));
+        const sy0 = Math.round(view.toScreenY(cr * CHUNK));
+        const sx1 = Math.round(view.toScreenX((cc + 1) * CHUNK));
+        const sy1 = Math.round(view.toScreenY((cr + 1) * CHUNK));
+        ctx.drawImage(canvas, sx0, sy0, sx1 - sx0, sy1 - sy0);
       }
     }
   }

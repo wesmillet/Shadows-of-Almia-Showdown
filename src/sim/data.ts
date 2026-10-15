@@ -35,6 +35,24 @@ export interface SpeciesDef {
   body: [number, number];
   /** Evolutions: the species it becomes on reaching `level` (several = one at random). */
   evolves?: Array<{ to: string; level: number }>;
+  /** Level-up moves, [level, move id] in level order (scripts/learnsets.py). Without one, `moves` is the fixed kit. */
+  learnset?: Array<[number, string]>;
+}
+
+/** The moves a Pokémon of this species knows at `level`: the last four it has reached. */
+export function movesAt(sp: SpeciesDef, level: number): string[] {
+  if (!sp.learnset?.length) return [...sp.moves];
+  const known: string[] = [];
+  for (const [lv, id] of sp.learnset) {
+    if (lv > level) break;
+    if (!known.includes(id) && MOVES.has(id)) known.push(id);
+  }
+  return known.slice(-4);
+}
+
+/** Moves this species learns on reaching a level above `from` and up to `to`. */
+export function movesLearnedBetween(sp: SpeciesDef, from: number, to: number): string[] {
+  return (sp.learnset ?? []).filter(([lv]) => lv > from && lv <= to).map(([, id]) => id);
 }
 
 export type MoveShape = 'single' | 'line' | 'cone' | 'ring' | 'self';
@@ -44,7 +62,12 @@ export type StatusKind = 'sleep' | 'burn' | 'paralysis';
 /** One Guardian Signs effect in a move's fx list (see data/moves.json `_fx`). */
 export interface FxPart {
   id: string;
-  anchor: 'target' | 'attacker' | 'projectile';
+  /**
+   * target: at each Pokémon hit (or the aimed point); attacker: on the user; projectile: flies
+   * user -> target, the target parts after it play on arrival; sky: falls onto each target from
+   * high above (rocks, icicles), the target parts after it play on landing.
+   */
+  anchor: 'target' | 'attacker' | 'projectile' | 'sky';
   mode?: 'beam' | 'stream' | 'status';
   fps?: number;
   scale?: number;
@@ -59,6 +82,16 @@ export interface FxPart {
   lift?: number;
   /** Beams and streams: how long the strip stays up, looping its frames (a crackling bolt). */
   seconds?: number;
+  /** Seconds to wait before this part starts (sequencing a wind-up, a strike, an aftershock). */
+  delay?: number;
+  /** Drawn flat on the ground under the Pokémon (rings, puddles, cracks) instead of over them. */
+  ground?: boolean;
+  /** Projectiles: tiles per second (default 11). */
+  speed?: number;
+  /** Projectiles: height of a lobbed arc in tiles (rocks, sludge). */
+  arc?: number;
+  /** Sky drops: how high above the target the fall starts, in tiles (default 6). */
+  height?: number;
 }
 
 export interface MoveDef {
@@ -74,10 +107,12 @@ export interface MoveDef {
   anim: 'Attack' | 'Shoot' | 'Charge';
   size?: number;
   status?: { kind: StatusKind; chance: number };
-  stages?: { self?: { atk?: number; def?: number }; target?: { atk?: number; def?: number }; chance: number };
+  stages?: { self?: { atk?: number; def?: number; spe?: number }; target?: { atk?: number; def?: number; spe?: number }; chance: number };
   strip?: string;
   /** Effect sheets played when the move resolves; absent = procedural family. */
   fx?: FxPart[];
+  /** Screen shake on impact, 0..1 (heavy moves only). */
+  shake?: number;
 }
 
 export const MOVES = new Map<string, MoveDef>();

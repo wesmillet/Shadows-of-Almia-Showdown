@@ -80,8 +80,22 @@
     "pickupRadius": 0.8,
     "playerReach": 1.4
   },
+  "duel": {
+    "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed. A rival picks its next Pokémon after aiPickSeconds; zoom is the camera zoom while the player battles.",
+    "startRange": 6,
+    "standGap": 7,
+    "sendOut": 1.6,
+    "arenaRadius": 8,
+    "monSpeed": 4.2,
+    "introSeconds": 1.3,
+    "aiPickSeconds": 1.2,
+    "endSeconds": 1.4,
+    "cooldownSeconds": 12,
+    "zoom": 1.6666667
+  },
   "catch": {
     "aimMaxTiles": 8,
+    "throwRange": 7,
     "aimSeconds": 1.2,
     "wobbleSeconds": 0.55,
     "statusBonus": {

@@ -3,6 +3,7 @@ import type { AnimPlayer, PokemonSprites } from '../sprites/pokemonSprite';
 import type { SpeciesDef, StatBlock } from './data';
 import type { Behavior } from './party';
 import type { BallKind, LootTier } from './items';
+import type { DecorItem } from '../ground/types';
 
 export type Status = 'sleep' | 'burn' | 'paralysis' | null;
 
@@ -73,6 +74,10 @@ export interface Mon {
   evolving: { to: string; t: number; swapped: boolean } | null;
   /** A land's boss: stays near its lair and only fights what comes close. */
   landBoss?: boolean;
+  /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
+  stowed?: boolean;
+  /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */
+  duelId?: number;
 }
 
 export interface TrainerStats {
@@ -118,8 +123,14 @@ export interface Trainer {
   roamTimer: number;
   /** Poké Dollars (data/shops.json). */
   money: number;
+  /** A vendor's market stand: drawn in front of the stand with the stand's counter redrawn over its legs. */
+  counter?: DecorItem | null;
   /** The castle challenger: not one of the battle royale's rivals. */
   challenger?: boolean;
+  /** The one-on-one battle this trainer is in, if any. */
+  duelId?: number;
+  /** Match time before which this trainer cannot be drawn into another one-on-one battle. */
+  duelReadyAt?: number;
 }
 
 export interface InventorySlot {
@@ -144,7 +155,7 @@ export interface GroundItem {
 
 /** The lead: the first member that is standing and with the trainer (not roaming, not in a ball). */
 export function lead(t: Trainer): Mon | null {
-  return t.party.find((m) => !m.fainted && !m.captured && m.behavior !== 'roam' && m.behavior !== 'roam-aggressive') ?? null;
+  return t.party.find((m) => !m.fainted && !m.captured && !m.stowed && m.behavior !== 'roam' && m.behavior !== 'roam-aggressive') ?? null;
 }
 
 export function activeParty(t: Trainer): Mon[] {

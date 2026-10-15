@@ -1,6 +1,6 @@
 /** Floating damage numbers and short labels, drawn on the HUD canvas in screen space. */
 import type { View } from '../render/view';
-import { text } from '../ui/screens';
+import { text, uiFont } from '../ui/screens';
 
 interface Floater {
   x: number;
@@ -38,7 +38,7 @@ export class Floaters {
       hud.save();
       hud.globalAlpha = p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1;
       // text() draws on the scene ctx; swap in the hud ctx by writing directly
-      hud.font = `800 ${Math.round(f.size * view.baseScale * pop)}px "Segoe UI", Inter, system-ui, sans-serif`;
+      hud.font = uiFont(f.size * view.baseScale * pop);
       hud.textAlign = 'center';
       hud.lineWidth = 4 * view.baseScale;
       hud.strokeStyle = 'rgba(0,0,0,0.7)';

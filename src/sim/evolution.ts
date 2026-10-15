@@ -53,7 +53,8 @@ export function formAtLevel(dex: string, level: number, rng: Rng, wild = false):
 export function applyEvolution(m: Mon, to: SpeciesDef, sprites: PokemonSprites): void {
   const from = m.species;
   const share = m.maxHp > 0 ? m.hp / m.maxHp : 1;
-  m.moves = m.moves.map((id, i) => (id === from.moves[i] ? (to.moves[i] ?? id) : id));
+  // Species with level-up learnsets keep the moves they know; fixed kits swap slot for slot.
+  if (!to.learnset?.length) m.moves = m.moves.map((id, i) => (id === from.moves[i] ? (to.moves[i] ?? id) : id));
   m.dex = to.dex;
   m.species = to;
   if (m.name === from.name) m.name = to.name;

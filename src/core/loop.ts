@@ -13,6 +13,8 @@ export interface LoopClient {
 }
 
 export class GameLoop {
+  /** Slow motion for inspecting effects (1 = real time); set from the console as showdown.loop.timeScale. */
+  timeScale = 1;
   private accumulator = 0;
   private last = 0;
   private running = false;
@@ -34,6 +36,7 @@ export class GameLoop {
     let frameDt = (now - this.last) / 1000;
     this.last = now;
     if (frameDt > 0.25) frameDt = 0.25; // tab was hidden: don't spiral
+    frameDt *= this.timeScale;
     this.accumulator += frameDt;
     let steps = 0;
     while (this.accumulator >= STEP && steps < MAX_STEPS_PER_FRAME) {

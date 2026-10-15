@@ -8,6 +8,7 @@ import type { Rng } from '../core/rng';
 import { CONFIG, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import type { InventorySlot, Mon, Trainer } from './entities';
+import type { Duel } from './match';
 
 export interface Area {
   shape: MoveDef['shape'];
@@ -43,7 +44,11 @@ export type BattleEvent =
   | { type: 'ball-hit'; mon: Mon; x: number; y: number }
   | { type: 'ball-absorb'; mon: Mon; x: number; y: number }
   | { type: 'ball-click'; mon: Mon; x: number; y: number }
-  | { type: 'ball-burst'; mon: Mon; x: number; y: number };
+  | { type: 'ball-burst'; mon: Mon; x: number; y: number }
+  | { type: 'learned'; mon: Mon; moveId: string; forgot: string | null }
+  | { type: 'duel-start'; duel: Duel }
+  | { type: 'duel-send'; duel: Duel; mon: Mon; trainer: Trainer }
+  | { type: 'duel-end'; duel: Duel; winner: Trainer };
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 
@@ -120,7 +125,17 @@ export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
   const eff = effectiveness(m.type, target.types);
   let score = m.power * eff * (attacker.types.includes(m.type) ? 1.5 : 1);
   if (m.status && !target.status && eff > 0) score += 45 * m.status.chance;
-  if (m.stages?.self && attacker.stages.atk < 2) score += 25;
+  // Stat moves: worth a turn while the stat has room to move, never spammed past +2 / -2.
+  const self = m.stages?.self;
+  if (self) {
+    const room = (Object.entries(self) as Array<['atk' | 'def' | 'spe', number]>).some(([k, d]) => d > 0 && attacker.stages[k] < 2);
+    if (room) score += m.power > 0 ? 10 : 28;
+  }
+  const tgt = m.stages?.target;
+  if (tgt && m.power <= 0) {
+    const room = (Object.entries(tgt) as Array<['atk' | 'def' | 'spe', number]>).some(([k]) => target.stages[k] > -2);
+    score += room ? 22 : 0;
+  }
   if (m.shape === 'self' && !m.stages) score = 0;
   return score;
 }
@@ -136,7 +151,7 @@ export class BattleSystem {
 
   /** Can `m` act and be hit right now? */
   static active(m: Mon): boolean {
-    return !m.fainted && !m.captured;
+    return !m.fainted && !m.captured && !m.stowed;
   }
 
   /** Nearest hostile to `m` within `range` tiles; with `coneDeg` only those inside the facing cone. */
@@ -290,6 +305,8 @@ export class BattleSystem {
   }
 
   isEnemy(a: Mon, b: Mon): boolean {
+    // A one-on-one battle is sealed off: its two Pokémon fight only each other.
+    if (a.duelId || b.duelId) return a.duelId === b.duelId && a.owner !== b.owner;
     if (a.owner && b.owner) return a.owner !== b.owner;
     if (!a.owner && !b.owner) return a.boss !== b.boss;
     return true;

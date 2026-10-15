@@ -11,7 +11,7 @@ import { move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
-import { darken, hit, lighten, rgba } from './screens';
+import { darken, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
@@ -40,7 +40,7 @@ export interface HudState {
   /** Name of the ball F will throw, if one is armed. */
   armedBall: string | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
-  teach: { moveName: string; moves: string[]; mon: string } | null;
+  teach: { moveName: string; moves: string[]; mon: string; title?: string } | null;
   /** Poké Dollars. */
   money: number;
   /** What E would do here (shop, challenge), or a hint. */
@@ -57,7 +57,7 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   const x = Math.round(sx - w / 2);
   const y = Math.round(top - 7 * px - 4 * px);
   ui.bar(ctx, x, y, w, px, frac);
-  ctx.font = `700 ${Math.round(10 * baseScale)}px "Segoe UI", Inter, system-ui, sans-serif`;
+  ctx.font = uiFont(10 * baseScale);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.lineWidth = 3;
@@ -112,7 +112,8 @@ export class Hud {
   }
 
   private font(size: number, weight = '600'): string {
-    return `${weight} ${Math.round(size * this.view.baseScale)}px "Segoe UI", Inter, system-ui, sans-serif`;
+    void weight;
+    return uiFont(size * this.view.baseScale);
   }
 
   private label(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color = '#f4f1ff', align: CanvasTextAlign = 'left', weight = '600'): void {
@@ -191,7 +192,7 @@ export class Hud {
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.label(ctx, `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
+      this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800');
       this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600');
       st.teach.moves.forEach((mv, i) => {
         this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700');
@@ -526,6 +527,21 @@ export class Hud {
       if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
       this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
     });
+    // Slots not learned yet: faint and empty until a level-up fills them.
+    for (let i = m.moves.length; i < 4; i++) {
+      const [ox, oy] = offsets[i] as [number, number];
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx + ox, cy + oy, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(30,26,44,0.6)';
+      ctx.fill();
+      ctx.setLineDash([4 * s, 4 * s]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 1.5 * s;
+      ctx.stroke();
+      ctx.restore();
+      this.label(ctx, '—', cx + ox, cy + oy + 5 * s, 14, 'rgba(255,255,255,0.35)', 'center', '600');
+    }
   }
 
   private drawItems(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {

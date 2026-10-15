@@ -41,6 +41,9 @@ export interface MapNpc {
   y: number;
   town: string;
   stand?: number;
+  /** The vendor's stand base point (tiles), to find its picture in the map's objects. */
+  standX?: number;
+  standY?: number;
 }
 
 interface ShopsData {

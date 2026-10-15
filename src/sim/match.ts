@@ -11,7 +11,7 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, SPAWNS, hitPad, move, species, statsAtLevel } from './data';
+import { CONFIG, MOVES, SPAWNS, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, lead } from './entities';
@@ -43,6 +43,39 @@ export type MatchOutcome = null | 'win' | 'loss';
 
 let nextId = 1;
 
+/** One side of a one-on-one trainer battle. */
+export interface DuelSide {
+  trainer: Trainer;
+  /** The Pokémon out on the field, or null between Pokémon. */
+  mon: Mon | null;
+  /** Where the trainer stands for the battle. */
+  spotX: number;
+  spotY: number;
+  /** Match time the next Pokémon comes out (a rival's automatic pick). */
+  nextAt: number;
+  /** The player has to choose the next Pokémon. */
+  awaitingPick: boolean;
+  /** Which way the opponent is (unit vector). */
+  fx: number;
+  fy: number;
+}
+
+/**
+ * A one-on-one trainer battle: both parties go back into their balls, each
+ * trainer sends out one Pokémon, and they fight until one side has nobody left.
+ */
+export interface Duel {
+  id: number;
+  a: DuelSide;
+  b: DuelSide;
+  cx: number;
+  cy: number;
+  state: 'intro' | 'fight' | 'over';
+  /** Seconds in the current state. */
+  t: number;
+  winner: Trainer | null;
+}
+
 export class Match {
   readonly ground: GroundRenderer;
   readonly rng: Rng;
@@ -62,6 +95,10 @@ export class Match {
   npcs: Trainer[] = [];
   routes = new Map<number, { points: Array<{ x: number; y: number }>; index: number; wait: number }>();
   throws: Throw[] = [];
+  /** Moves the player's Pokémon want to learn with four moves already known (answered with 1-4 or Esc). */
+  pendingLearn: Array<{ mon: Mon; moveId: string }> = [];
+  /** One-on-one trainer battles in progress (and just finished ones for endSeconds). */
+  duels: Duel[] = [];
   /** Crystal Shard clearings: circles the darkness leaves alone while `t` > 0. */
   lightZones: Array<{ x: number; y: number; r: number; t: number }> = [];
   darkrai: Mon | null = null;
@@ -133,6 +170,10 @@ export class Match {
         this.npcs.push(this.makeTrainer('Healer', 'healer', false, n.x, n.y - 0.6));
       } else if (n.role === 'vendor') {
         const npc = this.makeTrainer('Vendor', ['vendor_a', 'vendor_b', 'vendor_c'][v++ % 3] as string, false, n.x, n.y);
+        npc.dir = 0;
+        if (n.standX !== undefined && n.standY !== undefined) {
+          npc.counter = this.ground.decor.find((d) => Math.abs(d.x - (n.standX as number)) < 0.1 && Math.abs(d.y - (n.standY as number)) < 0.1) ?? null;
+        }
         this.npcs.push(npc);
         const st = stallStock(n.town, n.stand ?? 0);
         this.shops.push({ npc, town: n.town, name: `${n.town} ${st.name}`, stock: st.stock });
@@ -148,11 +189,12 @@ export class Match {
   nearService(reach = 1.8): { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } | null {
     const p = this.player;
     let best: { d: number; s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } } | null = null;
-    const consider = (x: number, y: number, s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' }) => {
+    const consider = (x: number, y: number, s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' }, extra = 0) => {
       const d = Math.hypot(x - p.x, y - p.y);
-      if (d <= reach && (!best || d < best.d)) best = { d, s };
+      if (d <= reach + extra && (!best || d < best.d)) best = { d, s };
     };
-    for (const sh of this.shops) consider(sh.npc.x, sh.npc.y, { kind: 'shop', shop: sh });
+    // Vendors stand behind their counters, so the stall answers from a little further away.
+    for (const sh of this.shops) consider(sh.npc.x, sh.npc.y, { kind: 'shop', shop: sh }, sh.npc.counter ? 0.8 : 0);
     if (this.challenge?.state === 'idle') consider(this.challenge.npc.x, this.challenge.npc.y, { kind: 'challenge' });
     for (const o of this.outposts) consider(o.x, o.y, { kind: 'healer' });
     return best ? (best as { s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } }).s : null;
@@ -188,6 +230,9 @@ export class Match {
     this.npcs = this.npcs.filter((n) => n !== c.npc);
     c.foe = foe;
     c.state = 'battle';
+    // A one-on-one bout across the battlefield: the champion at the north end, the player at the south end.
+    const midX = (c.arena.x0 + c.arena.x1) / 2;
+    this.startDuel(this.player, foe, { x: midX, y: c.arena.y1 - 1 }, { x: midX, y: c.arena.y0 + 1 });
     return `${SHOPS.challenger.name}: "Show me what you've got!" (Lv ${lvl})`;
   }
 
@@ -305,12 +350,58 @@ export class Match {
     if (!entry || !def || def.kind !== 'tm' || !def.move) return '';
     if (!m) return 'No Pokémon to teach';
     if (!m.types.includes(def.tmType ?? '')) return `${m.name} cannot learn ${move(def.move).name} (${def.tmType} type)`;
+    if (m.moves.includes(def.move)) return `${m.name} already knows ${move(def.move).name}`;
+    if (m.moves.length < 4) {
+      m.moves.push(def.move);
+      m.cooldowns.push(0);
+      this.takeItem(t, slot, 'held');
+      return `${m.name} learned ${move(def.move).name}!`;
+    }
     if (replace < 0 || replace > 3) return '';
     const old = m.moves[replace];
     m.moves[replace] = def.move;
     m.cooldowns[replace] = 0;
     this.takeItem(t, slot, 'held');
     return `${m.name} forgot ${old ? move(old).name : '?'} and learned ${move(def.move).name}!`;
+  }
+
+  /**
+   * New moves on levelling up. A free slot takes the move at once; with four moves the player
+   * is asked which to forget, and everyone else drops their weakest move for a stronger one.
+   */
+  learnOnLevelUp(m: Mon, fromLevel: number): void {
+    for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
+      if (m.moves.includes(id) || !MOVES.has(id)) continue;
+      if (m.moves.length < 4) {
+        m.moves.push(id);
+        m.cooldowns.push(0);
+        this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: null });
+      } else if (m.owner?.isPlayer) {
+        if (!this.pendingLearn.some((p) => p.mon === m && p.moveId === id)) this.pendingLearn.push({ mon: m, moveId: id });
+      } else {
+        let weakest = 0;
+        m.moves.forEach((mid, i) => {
+          if (move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
+        });
+        if (move(id).power > move(m.moves[weakest] as string).power) {
+          m.moves[weakest] = id;
+          m.cooldowns[weakest] = 0;
+        }
+      }
+    }
+  }
+
+  /** Answers the first pending move: replace slot `slot` (0-3), or -1 to keep the current moves. */
+  answerLearn(slot: number): string {
+    const p = this.pendingLearn.shift();
+    if (!p) return '';
+    const name = move(p.moveId).name;
+    if (slot < 0 || slot >= p.mon.moves.length) return `${p.mon.name} did not learn ${name}`;
+    const old = move(p.mon.moves[slot] as string).name;
+    p.mon.moves[slot] = p.moveId;
+    p.mon.cooldowns[slot] = 0;
+    this.battle.events.push({ type: 'learned', mon: p.mon, moveId: p.moveId, forgot: old });
+    return `${p.mon.name} forgot ${old} and learned ${name}!`;
   }
 
   /** Uses a non-ball item from a bag slot. Returns a message for the HUD. */
@@ -788,9 +879,10 @@ export class Match {
     const sp = species(dex);
     const stats = statsAtLevel(sp.stats, level);
     const sprites = this.sprites.get(dex);
+    const moves = movesAt(sp, level);
     return {
       id: nextId++, dex, species: sp, name: sp.name, level, hp: stats.hp, maxHp: stats.hp, stats,
-      stages: { atk: 0, def: 0, spe: 0 }, types: [...sp.types], moves: [...sp.moves], cooldowns: sp.moves.map(() => 0),
+      stages: { atk: 0, def: 0, spe: 0 }, types: [...sp.types], moves, cooldowns: moves.map(() => 0),
       x, y, px: x, py: y, dir: 0, anim: new AnimPlayer(sprites), sprites, owner, wild: owner === null, boss: false,
       fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y,
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
@@ -923,7 +1015,7 @@ export class Match {
 
   /** Every active Pokémon on the field. */
   *mons(): Generator<Mon> {
-    for (const t of this.allTrainers) if (t.alive) for (const m of t.party) if (!m.fainted) yield m;
+    for (const t of this.allTrainers) if (t.alive) for (const m of t.party) if (!m.fainted && !m.stowed) yield m;
     for (const w of this.wilds) if (!w.fainted) yield w;
     if (this.darkrai && !this.darkrai.fainted) yield this.darkrai;
   }
@@ -987,6 +1079,7 @@ export class Match {
   /** Makes party member `index` the lead (fainted members cannot lead). */
   swapLead(index: number): boolean {
     const p = this.player;
+    if (p.duelId) return false;
     const m = p.party[index];
     if (!m || m.fainted || isRoaming(m) || m.captured) return false;
     p.party.splice(index, 1);
@@ -1015,7 +1108,7 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
-    for (const t of this.trainers) if (t.alive) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
+    for (const t of this.trainers) if (t.alive && !t.duelId) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();
     for (const t of this.allTrainers) {
@@ -1024,8 +1117,9 @@ export class Match {
         if (m.busy > 0) m.busy -= dt;
         m.sinceHit += dt;
       }
-      stepParty(t, lead(t), dt, pw);
+      if (!t.duelId) stepParty(t, lead(t), dt, pw);
     }
+    this.stepDuels(dt);
     for (const w of this.wilds) {
       w.sinceHit += dt;
       this.stepWild(w, dt);
@@ -1057,7 +1151,7 @@ export class Match {
       for (const m of t.party) {
         const e = m.evolving;
         if (!e) {
-          if (m.fainted || m.captured || m.visual.scale < 1) continue;
+          if (m.fainted || m.captured || m.stowed || m.visual.scale < 1) continue;
           const to = pickEvolution(m.species, m.level, this.rng);
           if (!to) continue;
           m.evolving = { to, t: 0, swapped: false };
@@ -1081,6 +1175,11 @@ export class Match {
     const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
     const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1);
     let moved = 0;
+    // In a one-on-one battle the trainer stands back; the movement keys steer the Pokémon instead.
+    if (p.duelId) {
+      p.stats.timeSurvived = this.time;
+      return;
+    }
     if (this.moveX !== 0 || this.moveY !== 0) {
       // Walking up or down at a ladder lines the player up with it, so the one-tile gap is easy to take.
       if (this.ground.onLadder && Math.abs(this.moveY) >= Math.abs(this.moveX)) {
@@ -1122,7 +1221,7 @@ export class Match {
     for (const o of this.allTrainers) {
       if (o === t || !o.alive) continue;
       push(o.x, o.y);
-      for (const m of o.party) if (!m.fainted && !m.captured) push(m.x, m.y);
+      for (const m of o.party) if (!m.fainted && !m.captured && !m.stowed) push(m.x, m.y);
     }
     if (this.darkrai && !this.darkrai.fainted) push(this.darkrai.x, this.darkrai.y);
   }
@@ -1233,6 +1332,7 @@ export class Match {
         this.battle.events.push({ type: 'money', trainer: owner, amount: cash, x: ev.mon.x, y: ev.mon.y });
         for (const r of shareKnockoutXp(ev.by, ev.mon, owner.party, CONFIG.party.xpShareRange)) {
           this.battle.events.push({ type: 'xp', mon: r.mon, xp: r.xp, levels: r.levels });
+          if (r.levels > 0) this.learnOnLevelUp(r.mon, r.mon.level - r.levels);
         }
       }
       if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) this.dropLoot(ev.mon.x, ev.mon.y);
@@ -1420,6 +1520,306 @@ export class Match {
       const slot = bd < 2.3 && (d.cooldowns[0] ?? 0) <= 0 ? 0 : (d.cooldowns[1] ?? 0) <= 0 ? 1 : this.battle.chooseMove(d, target);
       if (slot >= 0) this.battle.castAt(d, slot, this.mons(), 10);
     }
+  }
+
+  /** The battle the player is in (or just finished), if any. */
+  get playerDuel(): Duel | null {
+    return this.duels.find((d) => d.a.trainer === this.player || d.b.trainer === this.player) ?? null;
+  }
+
+  /** Has a Pokémon able to come out. */
+  private canBattle(t: Trainer): boolean {
+    return t.party.some((m) => !m.fainted && !m.captured);
+  }
+
+  /** Two trainers who see each other within startRange start a one-on-one battle. */
+  private findDuels(): void {
+    const c = CONFIG.duel;
+    const free = this.allTrainers.filter((t) => t.alive && !t.duelId && !t.challenger && this.time >= (t.duelReadyAt ?? 0) && this.canBattle(t));
+    for (let i = 0; i < free.length; i++) {
+      const a = free[i] as Trainer;
+      if (a.duelId) continue;
+      for (let j = i + 1; j < free.length; j++) {
+        const b = free[j] as Trainer;
+        if (b.duelId || a.duelId) continue;
+        if (Math.hypot(a.x - b.x, a.y - b.y) > c.startRange) continue;
+        if (!this.nav.clearLine(a.x, a.y, b.x, b.y)) continue;
+        this.startDuel(a, b);
+      }
+    }
+  }
+
+  /** Both parties go back into their balls; the trainers step apart and each sends out one Pokémon. */
+  startDuel(a: Trainer, b: Trainer, spotA?: { x: number; y: number }, spotB?: { x: number; y: number }): Duel {
+    const c = CONFIG.duel;
+    const id = nextId++;
+    let cx = (a.x + b.x) / 2;
+    let cy = (a.y + b.y) / 2;
+    if (spotA && spotB) {
+      cx = (spotA.x + spotB.x) / 2;
+      cy = (spotA.y + spotB.y) / 2;
+    }
+    let ux = (spotB ?? b).x - (spotA ?? a).x;
+    let uy = (spotB ?? b).y - (spotA ?? a).y;
+    const n = Math.hypot(ux, uy) || 1;
+    ux /= n;
+    uy /= n;
+    const spot = (t: Trainer, sign: number, given?: { x: number; y: number }) => {
+      if (given) return given;
+      const x = cx + sign * ux * (c.standGap / 2);
+      const y = cy + sign * uy * (c.standGap / 2);
+      return canStand(this.ground, x, y, CONFIG.player.radius) && this.nav.clearLine(t.x, t.y, x, y) ? { x, y } : { x: t.x, y: t.y };
+    };
+    const sa = spot(a, -1, spotA);
+    const sb = spot(b, 1, spotB);
+    const side = (t: Trainer, s: { x: number; y: number }, fx: number, fy: number): DuelSide => ({
+      trainer: t, mon: null, spotX: s.x, spotY: s.y, nextAt: this.time + c.introSeconds * 0.6, awaitingPick: false, fx, fy,
+    });
+    const duel: Duel = { id, a: side(a, sa, ux, uy), b: side(b, sb, -ux, -uy), cx, cy, state: 'intro', t: 0, winner: null };
+    for (const t of [a, b]) {
+      t.duelId = id;
+      t.aiTarget = null;
+      t.healing = 0;
+      for (const m of t.party) {
+        if (m.fainted || m.captured) continue;
+        m.stowed = true;
+        m.casting = null;
+        m.target = null;
+        m.recall = false;
+        m.moving = false;
+        if (isRoaming(m)) m.behavior = 'guard';
+      }
+    }
+    this.duels.push(duel);
+    this.battle.events.push({ type: 'duel-start', duel });
+    if (a.isPlayer || b.isPlayer) {
+      const foe = a.isPlayer ? b : a;
+      this.battle.events.push({ type: 'notice', text: `${foe.name} wants to battle!`, seconds: 2.2 });
+    }
+    return duel;
+  }
+
+  /** Sends out party member `index` (or the first able one) for a side of a battle. */
+  private sendOut(duel: Duel, side: DuelSide, index = -1): boolean {
+    const t = side.trainer;
+    const i = index >= 0 ? index : t.party.findIndex((m) => !m.fainted && !m.captured);
+    const m = t.party[i];
+    if (!m || m.fainted || m.captured) return false;
+    t.party.splice(i, 1);
+    t.party.unshift(m);
+    const c = CONFIG.duel;
+    let x = side.spotX + side.fx * c.sendOut;
+    let y = side.spotY + side.fy * c.sendOut;
+    if (!canStand(this.ground, x, y, 0.22)) {
+      x = side.spotX;
+      y = side.spotY;
+    }
+    m.stowed = false;
+    m.duelId = duel.id;
+    m.behavior = 'aggressive';
+    m.x = m.px = x;
+    m.y = m.py = y;
+    m.dir = dirFromVector(side.fx, side.fy, m.dir);
+    m.anim.dir = m.dir;
+    m.anim.play('Idle', { restart: true });
+    m.casting = null;
+    m.busy = 0.6;
+    m.visual.scale = 0.15;
+    m.visual.flash = 1;
+    side.mon = m;
+    side.awaitingPick = false;
+    side.nextAt = Infinity;
+    this.battle.events.push({ type: 'duel-send', duel, mon: m, trainer: t });
+    return true;
+  }
+
+  /** The player chooses who goes out next after a knockout. */
+  duelPick(index: number): string {
+    const duel = this.playerDuel;
+    if (!duel || duel.state === 'over') return '';
+    const side = duel.a.trainer === this.player ? duel.a : duel.b;
+    if (!side.awaitingPick) return '';
+    const m = this.player.party[index];
+    if (!m || m.fainted || m.captured) return m ? `${m.name} can't battle` : '';
+    this.sendOut(duel, side, index);
+    return `Go, ${m.name}!`;
+  }
+
+  private stepDuels(dt: number): void {
+    this.findDuels();
+    for (let i = this.duels.length - 1; i >= 0; i--) {
+      const d = this.duels[i] as Duel;
+      d.t += dt;
+      if (d.state === 'over') {
+        if (d.t >= CONFIG.duel.endSeconds) this.duels.splice(i, 1);
+        continue;
+      }
+      this.stepDuel(d, dt);
+    }
+  }
+
+  private stepDuel(d: Duel, dt: number): void {
+    const c = CONFIG.duel;
+    const sides = [d.a, d.b];
+    for (const s of sides) {
+      const t = s.trainer;
+      // A side whose trainer left the field (the champion withdrawing) loses.
+      if (!t.alive) return this.endDuel(d, (s === d.a ? d.b : d.a).trainer);
+      // Trainers walk to their spots and stand facing each other.
+      const dx = s.spotX - t.x;
+      const dy = s.spotY - t.y;
+      const dist = Math.hypot(dx, dy);
+      let moved = 0;
+      if (dist > 0.05) {
+        const step = Math.min(dist, CONFIG.trainers.speed * dt);
+        moved = tryMove(this.ground, t, (dx / dist) * step, (dy / dist) * step, CONFIG.player.radius);
+        t.dir = dirFromVector(dx, dy, t.dir);
+        if (moved < step * 0.2) {
+          s.spotX = t.x;
+          s.spotY = t.y;
+        }
+      } else {
+        const o = s === d.a ? d.b : d.a;
+        t.dir = dirFromVector(o.trainer.x - t.x, o.trainer.y - t.y, t.dir);
+      }
+      this.afterTrainerMove(t, moved);
+      // Knocked out: the next Pokémon, or the end of the battle.
+      if (s.mon && s.mon.fainted) {
+        s.mon.duelId = undefined;
+        s.mon = null;
+        if (!this.canBattle(t)) return this.endDuel(d, (s === d.a ? d.b : d.a).trainer);
+        if (t.isPlayer) s.awaitingPick = true;
+        else s.nextAt = this.time + c.aiPickSeconds;
+      }
+      if (!s.mon && !s.awaitingPick && this.time >= s.nextAt) this.sendOut(d, s);
+      const m = s.mon;
+      if (m && m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
+      if (m && m.visual.flash > 0) m.visual.flash = Math.max(0, m.visual.flash - dt * 2.5);
+    }
+    if (d.state === 'intro' && d.a.mon && d.b.mon) {
+      d.state = 'fight';
+      d.t = 0;
+    }
+    for (const s of sides) {
+      const m = s.mon;
+      if (!m || m.fainted) continue;
+      const foe = (s === d.a ? d.b : d.a).mon;
+      if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
+      else this.stepDuelAiMon(m, foe, dt);
+      // The battle stays in its ring.
+      const r = Math.hypot(m.x - d.cx, m.y - d.cy);
+      if (r > c.arenaRadius) {
+        const k = c.arenaRadius / r;
+        const nx = d.cx + (m.x - d.cx) * k;
+        const ny = d.cy + (m.y - d.cy) * k;
+        if (canStand(this.ground, nx, ny, 0.22)) {
+          m.x = nx;
+          m.y = ny;
+        }
+      }
+    }
+  }
+
+  /** The player's Pokémon follows the movement keys; 1-4 cast as usual. */
+  private stepDuelPlayerMon(m: Mon, dt: number): void {
+    if (m.casting || m.status === 'sleep') {
+      if (m.moving) {
+        m.moving = false;
+        m.anim.play('Idle');
+      }
+      return;
+    }
+    const mx = this.moveX;
+    const my = this.moveY;
+    if (mx === 0 && my === 0) {
+      if (m.moving) {
+        m.moving = false;
+        m.anim.play('Idle');
+      }
+      return;
+    }
+    const speed = CONFIG.duel.monSpeed * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
+    m.dir = dirFromVector(mx, my, m.dir);
+    const walking = moved > 1e-4;
+    if (walking !== m.moving) {
+      m.moving = walking;
+      m.anim.play(walking ? 'Walk' : 'Idle');
+    }
+  }
+
+  /** A rival's Pokémon keeps to mid range, circles, and attacks on its own timer. */
+  private stepDuelAiMon(m: Mon, foe: Mon | null, dt: number): void {
+    if (m.casting || m.status === 'sleep') return;
+    if (!foe || foe.fainted || m.visual.scale < 1) {
+      if (m.moving) {
+        m.moving = false;
+        m.anim.play('Idle');
+      }
+      return;
+    }
+    const dx = foe.x - m.x;
+    const dy = foe.y - m.y;
+    const d = Math.hypot(dx, dy) || 1;
+    m.target = foe;
+    // Approach to about three tiles, back off when crowded, otherwise circle slowly.
+    let vx = 0;
+    let vy = 0;
+    if (d > 3.4) {
+      vx = dx / d;
+      vy = dy / d;
+    } else if (d < 1.6) {
+      vx = -dx / d;
+      vy = -dy / d;
+    } else {
+      const side = Math.sin(this.time * 0.7 + m.id) > 0 ? 1 : -1;
+      vx = (-dy / d) * side * 0.45;
+      vy = (dx / d) * side * 0.45;
+    }
+    const speed = CONFIG.duel.monSpeed * 0.8 * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const moved = vx || vy ? tryMove(this.ground, m, vx * speed * dt, vy * speed * dt, 0.22) : 0;
+    const walking = moved > 1e-4;
+    if (walking !== m.moving) {
+      m.moving = walking;
+      m.anim.play(walking ? 'Walk' : 'Idle');
+    }
+    m.dir = dirFromVector(dx, dy, m.dir);
+    if (m.busy <= 0) {
+      m.busy = this.rng.range(0.9, 1.8);
+      const slot = this.battle.chooseMove(m, foe);
+      if (slot >= 0) this.battle.castAt(m, slot, this.mons(), 6);
+    }
+  }
+
+  /** The battle is over: the winner's party comes back out round its trainer. */
+  private endDuel(d: Duel, winner: Trainer): void {
+    if (d.state === 'over') return;
+    d.state = 'over';
+    d.t = 0;
+    d.winner = winner;
+    for (const s of [d.a, d.b]) {
+      const t = s.trainer;
+      t.duelId = undefined;
+      t.duelReadyAt = this.time + CONFIG.duel.cooldownSeconds;
+      for (const m of t.party) {
+        m.duelId = undefined;
+        m.stowed = false;
+        m.visual.scale = 1;
+      }
+      if (t === winner) {
+        // Everyone comes back out round the trainer; the one who won stays where it stood.
+        const out = s.mon;
+        const keep = out ? { x: out.x, y: out.y } : null;
+        this.placeParty(t);
+        if (out && keep) {
+          out.x = out.px = keep.x;
+          out.y = out.py = keep.y;
+        }
+      }
+      s.mon = null;
+      s.awaitingPick = false;
+    }
+    this.battle.events.push({ type: 'duel-end', duel: d, winner });
   }
 
   eliminate(t: Trainer): void {

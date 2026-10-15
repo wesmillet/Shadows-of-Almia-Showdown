@@ -57,6 +57,14 @@ async function boot(): Promise<void> {
     text(view, status, view.width / 2, view.height / 2 + 24 * view.baseScale, 16, { align: 'center', color: '#b9b4cc', ctx });
   };
   drawLoading();
+  // The UI's pixel font (BoldPixels by YukiPixels, CC BY-SA 4.0); the system font stands in if it fails.
+  try {
+    const face = new FontFace('BoldPixels', `url(${import.meta.env.BASE_URL}assets/fonts/BoldPixels.ttf)`);
+    document.fonts.add(await face.load());
+  } catch (e) {
+    console.warn('[showdown] BoldPixels font failed to load', e);
+  }
+  drawLoading();
 
   const params = new URLSearchParams(location.search);
   const seed = params.get('seed') ? hashSeed(params.get('seed')!) : (Math.random() * 0xffffffff) >>> 0;
@@ -161,6 +169,7 @@ async function boot(): Promise<void> {
     },
   });
   loop.start();
+  debug.showdown.loop = loop;
   console.info(`[showdown] seed ${seed}; ground: ${ground.label}; sprites ${Math.round(t1 - t0)} ms, terrain ${Math.round(performance.now() - t1)} ms`);
 }
 

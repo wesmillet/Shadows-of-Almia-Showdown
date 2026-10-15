@@ -7,6 +7,7 @@ import type { Match } from '../sim/match';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import type { View } from './view';
+import type { GroundRenderer } from '../ground/types';
 
 interface Drawable {
   y: number;
@@ -142,14 +143,16 @@ function drawZzz(view: View, sx: number, top: number, t: number): void {
   ctx.restore();
 }
 
-export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alpha: number): void {
+export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alpha: number, ground?: GroundRenderer): void {
   const ctx = view.ctx;
   const p = trainerPos(t, alpha);
   const sx = Math.round(view.toScreenX(p.x));
   const sy = Math.round(view.toScreenY(p.y));
   const s = view.rangerScale;
   const sheet = rangers.get(t.role);
-  const f = sheet.frame(dir8To4(t.dir), t.walkPhase, t.moving);
+  // On a ladder trainers climb facing the cliff, up or down, with the back-view walk cycle.
+  const climbing = ground?.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
+  const f = sheet.frame(climbing ? 'up' : dir8To4(t.dir), t.walkPhase, t.moving);
   drawSheetFrame(ctx, f, sx, sy, s);
 }
 
@@ -228,7 +231,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
     if (!inView(p.x, p.y)) continue;
-    list.push({ y: p.y, draw: () => drawTrainer(view, t, opts.rangers, alpha) });
+    list.push({ y: p.y, draw: () => drawTrainer(view, t, opts.rangers, alpha, match.ground) });
   }
   if (opts.extra) list.push(...opts.extra);
   list.sort((a, b) => a.y - b.y);
@@ -245,7 +248,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
     if (!t.alive) continue;
     const p = trainerPos(t, alpha);
-    if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha);
+    if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha, match.ground);
   }
   ctx.restore();
 }

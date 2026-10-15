@@ -1,5 +1,5 @@
 {
-  "_comment": "Wild spawn tables per biome. count = wild Pok\u00e9mon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water.",
+  "_comment": "Wild spawn tables per biome. count = wild Pokémon per biome at match start; levels = [min, max] for that biome (stats scale from level); water spawns stand on shore tiles next to water.",
   "biomes": {
     "meadow": {
       "count": 30,
@@ -18,8 +18,8 @@
         }
       ],
       "levels": [
-        8,
-        12
+        10,
+        15
       ]
     },
     "forest": {
@@ -39,8 +39,8 @@
         }
       ],
       "levels": [
-        10,
-        15
+        13,
+        19
       ]
     },
     "shore": {
@@ -60,8 +60,8 @@
         }
       ],
       "levels": [
-        11,
-        16
+        12,
+        18
       ]
     },
     "water": {
@@ -81,8 +81,8 @@
         }
       ],
       "levels": [
-        9,
-        14
+        14,
+        20
       ]
     }
   },

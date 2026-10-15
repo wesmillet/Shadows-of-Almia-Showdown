@@ -86,6 +86,8 @@ export interface MapFile {
   reachable: string[];
   biome: string[];
   minimap: string[];
+  /** Ladders as [column, lip row]: the ladder covers the lip row and the three rows below it. */
+  ladders?: Array<[number, number]>;
   center: { x: number; y: number };
   outposts: Array<{ x: number; y: number }>;
   spawns: Array<{ x: number; y: number }>;
@@ -113,6 +115,7 @@ export class StaticGround implements GroundRenderer {
   private reach: Uint8Array;
   private biomes: Uint8Array;
   private mini: string[];
+  private ladderCells = new Set<number>();
   private chunks: Chunk[] = [];
   private chunkCols: number;
   private chunkRows: number;
@@ -144,6 +147,7 @@ export class StaticGround implements GroundRenderer {
       }
     }
     this.mini = map.minimap;
+    for (const [x, lip] of map.ladders ?? []) for (let y = lip; y <= lip + 3; y++) this.ladderCells.add(this.idx(x, y));
   }
 
   static async load(assets: Assets, name: string, onProgress?: (p: number) => void): Promise<StaticGround | null> {
@@ -349,6 +353,10 @@ export class StaticGround implements GroundRenderer {
 
   reachable(tx: number, ty: number): boolean {
     return this.inBounds(tx, ty) && this.reach[this.idx(tx, ty)] === 1;
+  }
+
+  onLadder(tx: number, ty: number): boolean {
+    return this.inBounds(tx, ty) && this.ladderCells.has(this.idx(tx, ty));
   }
 
   underCanopy(): boolean {

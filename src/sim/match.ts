@@ -683,7 +683,9 @@ export class Match {
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
         const row = this.rng.weighted(table.table, (r) => r.weight);
-        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12);
+        // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre.
+        const far = Math.min(1, Math.hypot(spot.x - this.centerX, spot.y - this.centerY) / Math.hypot(this.centerX, this.centerY));
+        const level = this.rng.int(table.levels[0] ?? 10, table.levels[1] ?? 12) + Math.round(CONFIG.wild.centerLevelBonus * (1 - far));
         const mon = this.makeMon(row.dex, level, null, spot.x, spot.y);
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
@@ -811,7 +813,8 @@ export class Match {
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     for (const m of this.mons()) {
       this.battle.stepMon(m, dt, () => this.mons());
-      m.anim.dir = m.dir;
+      // Pokémon on a ladder face the cliff while they climb.
+      m.anim.dir = this.ground.onLadder?.(Math.floor(m.x), Math.floor(m.y)) ? 4 : m.dir;
       m.anim.update(dt);
     }
     for (const gone of this.battle.stepFainting(dt)) {
@@ -824,9 +827,22 @@ export class Match {
 
   private stepPlayer(dt: number): void {
     const p = this.player;
-    const speed = CONFIG.player.speedTilesPerSec;
+    const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
+    const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1);
     let moved = 0;
     if (this.moveX !== 0 || this.moveY !== 0) {
+      // Walking up or down at a ladder lines the player up with it, so the one-tile gap is easy to take.
+      if (this.ground.onLadder && Math.abs(this.moveY) >= Math.abs(this.moveX)) {
+        const ahead = Math.floor(p.y + Math.sign(this.moveY) * 0.8);
+        for (const dx of [0, -1, 1]) {
+          const tx = Math.floor(p.x) + dx;
+          if (this.ground.onLadder(tx, ahead) || this.ground.onLadder(tx, Math.floor(p.y))) {
+            const off = tx + 0.5 - p.x;
+            if (Math.abs(off) > 0.02) tryMove(this.ground, p, Math.sign(off) * Math.min(Math.abs(off), speed * dt), 0, CONFIG.player.radius);
+            break;
+          }
+        }
+      }
       moved = tryMove(this.ground, p, this.moveX * speed * dt, this.moveY * speed * dt, CONFIG.player.radius);
       p.dir = dirFromVector(this.moveX, this.moveY, p.dir);
     }
@@ -1059,7 +1075,10 @@ export class Match {
   }
 
   private spawnDarkrai(): void {
-    const d = this.makeMon('0491', CONFIG.battle.bossLevel, null, this.centerX, this.centerY - 0.6);
+    // Darkrai stays a threat however far the survivors have levelled: five above the strongest.
+    let top = 0;
+    for (const t of this.allTrainers) if (t.alive) for (const m of t.party) if (!m.fainted) top = Math.max(top, m.level);
+    const d = this.makeMon('0491', Math.min(100, Math.max(CONFIG.battle.bossLevel, top + 5)), null, this.centerX, this.centerY - 0.6);
     d.boss = true;
     d.wild = false;
     d.maxHp = d.hp = d.stats.hp * CONFIG.battle.bossHpMultiplier;

@@ -52,6 +52,8 @@ export interface GroundRenderer {
   inWater(tx: number, ty: number): boolean;
   /** Reachable from the map centre on foot (spawn points use this). */
   reachable(tx: number, ty: number): boolean;
+  /** On a ladder (characters climb it facing the cliff). */
+  onLadder?(tx: number, ty: number): boolean;
   /** Under the forest canopy (characters there are drawn faded). */
   underCanopy(x: number, y: number): boolean;
   minimapColor(tx: number, ty: number): string;

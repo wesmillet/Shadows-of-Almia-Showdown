@@ -115,6 +115,7 @@ def export(d, b, out, name='almia', seed=7):
         'layers': layers, 'prefabs': prefabs, 'objects': objects, 'spriteDefs': sdefs, 'sprites': sprites,
         'walkable': grid_rows(walk), 'reachable': grid_rows(reach), 'biome': grid_rows(biome),
         'minimap': [''.join(r) for r in mini],
+        'ladders': [[int(x), int(lip)] for (x, lip) in b.ladders],
         'center': {'x': CENTER[0], 'y': CENTER[1]},
         'outposts': [{'x': x, 'y': y} for (x, y) in b.outposts],
         'spawns': [{'x': x, 'y': y} for (x, y) in b.spawns],

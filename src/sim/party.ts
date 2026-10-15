@@ -290,8 +290,11 @@ export function xpToNext(level: number): number {
   return CONFIG.party.xpBase + level * CONFIG.party.xpPerLevel;
 }
 
-export function xpForKnockout(target: Mon): number {
-  return CONFIG.party.xpKoBase + target.level * CONFIG.party.xpKoPerLevel;
+/** XP for knocking out `target`; beating something above your level pays up to double. */
+export function xpForKnockout(target: Mon, dealerLevel = target.level): number {
+  const base = CONFIG.party.xpKoBase + target.level * CONFIG.party.xpKoPerLevel;
+  const gap = Math.max(0, target.level - dealerLevel);
+  return Math.round(base * Math.min(2, 1 + 0.1 * gap));
 }
 
 /** Adds XP, levelling up as needed. Returns the number of levels gained. */
@@ -318,7 +321,7 @@ export function gainXp(m: Mon, amount: number): number {
  */
 export function shareKnockoutXp(dealer: Mon, target: Mon, party: Mon[], shareRange: number): Array<{ mon: Mon; xp: number; levels: number }> {
   const out: Array<{ mon: Mon; xp: number; levels: number }> = [];
-  const total = xpForKnockout(target);
+  const total = xpForKnockout(target, dealer.level);
   if (!dealer.fainted) out.push({ mon: dealer, xp: total, levels: gainXp(dealer, total) });
   if (isRoaming(dealer)) return out;
   for (const m of party) {

@@ -61,7 +61,8 @@ export class MoveGallery extends MatchScreen {
     const p = match.player;
     p.x = p.px = this.spot.x - 12;
     p.y = p.py = this.spot.y;
-    for (const m of p.party) m.stowed = true;
+    // Only the caster stands with the trainer (the field rule would bring a starter out too).
+    p.party.length = 0;
     this.dummy = match.makeMon(DUMMY, 30, null, this.spot.x + HALF, this.spot.y);
     this.dummy.dir = 6;
     match.wilds.push(this.dummy);

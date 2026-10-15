@@ -300,9 +300,11 @@ export function xpToNext(level: number): number {
 
 /** XP for knocking out `target`; beating something above your level pays up to double. */
 export function xpForKnockout(target: Mon, dealerLevel = target.level): number {
-  const base = CONFIG.party.xpKoBase + target.level * CONFIG.party.xpKoPerLevel;
+  const p = CONFIG.party as typeof CONFIG.party & { xpEliteMultiplier?: number; xpBossMultiplier?: number };
+  const base = p.xpKoBase + target.level * p.xpKoPerLevel;
   const gap = Math.max(0, target.level - dealerLevel);
-  return Math.round(base * Math.min(2, 1 + 0.1 * gap));
+  const bonus = target.landBoss ? p.xpBossMultiplier ?? 1 : target.elite ? p.xpEliteMultiplier ?? 1 : 1;
+  return Math.round(base * Math.min(2, 1 + 0.1 * gap) * bonus);
 }
 
 /** Adds XP, levelling up as needed. Returns the number of levels gained. */
@@ -324,16 +326,24 @@ export function gainXp(m: Mon, amount: number): number {
 
 /**
  * XP from a knockout: the dealer gets the full amount; unless it roams,
- * every other non-roaming party member within `shareRange` tiles of the
- * knockout gets half. Fainted Pokémon get nothing.
+ * every other party member out on the field within `shareRange` tiles of the
+ * knockout gets half, and those waiting in their balls get benchShare.
+ * Fainted Pokémon get nothing.
  */
 export function shareKnockoutXp(dealer: Mon, target: Mon, party: Mon[], shareRange: number): Array<{ mon: Mon; xp: number; levels: number }> {
   const out: Array<{ mon: Mon; xp: number; levels: number }> = [];
   const total = xpForKnockout(target, dealer.level);
   if (!dealer.fainted) out.push({ mon: dealer, xp: total, levels: gainXp(dealer, total) });
   if (isRoaming(dealer)) return out;
+  const bench = (CONFIG.party as typeof CONFIG.party & { benchShare?: number }).benchShare ?? 0;
   for (const m of party) {
     if (m === dealer || m.fainted || isRoaming(m)) continue;
+    // Waiting in a ball: a small share. Out on the field nearby: half.
+    if (m.stowed) {
+      const part = Math.floor(total * bench);
+      if (part > 0) out.push({ mon: m, xp: part, levels: gainXp(m, part) });
+      continue;
+    }
     if (Math.hypot(m.x - target.x, m.y - target.y) > shareRange) continue;
     const half = Math.floor(total / 2);
     out.push({ mon: m, xp: half, levels: gainXp(m, half) });

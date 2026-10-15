@@ -74,6 +74,8 @@ export interface Mon {
   evolving: { to: string; t: number; swapped: boolean } | null;
   /** A land's boss: stays near its lair and only fights what comes close. */
   landBoss?: boolean;
+  /** A tougher wild: higher level (often evolved), more XP. */
+  elite?: boolean;
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
   /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */

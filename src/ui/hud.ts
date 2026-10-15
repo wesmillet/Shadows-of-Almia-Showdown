@@ -15,7 +15,7 @@ import { darken, fitSize, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number };
 
 interface Rect {
   x: number;
@@ -52,7 +52,7 @@ export interface HudState {
 }
 
 /** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
-export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number): void {
+export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number, color = '#fff'): void {
   const w = 20 * px;
   const x = Math.round(sx - w / 2);
   const y = Math.round(top - 7 * px - 4 * px);
@@ -64,7 +64,7 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   ctx.strokeStyle = 'rgba(0,0,0,0.7)';
   const label = `${name}  Lv ${level}`;
   ctx.strokeText(label, sx, y - 3 * baseScale);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = color;
   ctx.fillText(label, sx, y - 3 * baseScale);
 }
 
@@ -78,6 +78,8 @@ export class Hud {
   private moveRects: Rect[] = [];
   private itemRects: Rect[] = [];
   private tabRects: Rect[] = [];
+  /** The X on a hovered bag slot that throws its item away. */
+  private discardRects: Array<Rect & { index: number }> = [];
   private minimap: HTMLCanvasElement | null = null;
 
   constructor(private readonly view: View, private readonly icons: ItemIcons, private readonly ui: PixelUi) {}
@@ -88,6 +90,7 @@ export class Hud {
   }
 
   hitTest(x: number, y: number): HudHit | null {
+    for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
     for (let i = 0; i < this.behaviorRects.length; i++) {
       const r = this.behaviorRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'behavior', index: i };
@@ -163,7 +166,7 @@ export class Hud {
       ctx.font = this.font(18, '700');
       const w = ctx.measureText(st.notice).width + 40 * s;
       this.popupBox(ctx, v.width / 2 - w / 2, 86 * s, w, 40 * s);
-      this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#4a2d1a', 'center', '700');
+      this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#f4f1ff', 'center', '700');
       ctx.restore();
     }
     if (st.popup) {
@@ -180,13 +183,13 @@ export class Hud {
       // The ball it came in, then what was inside.
       this.icons.draw(ctx, `${st.popup.ball}-ball`, x + 22 * s, y + h / 2, 36 * s);
       if (first) this.icons.draw(ctx, first.id, x + 58 * s, y + h / 2, 32 * s, def?.tmType);
-      this.label(ctx, title, x + 86 * s, y + 24 * s, 15, '#4a2d1a', 'left', '800');
+      this.label(ctx, title, x + 86 * s, y + 24 * s, 15, '#f4f1ff', 'left', '800');
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
-      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#6b4a30', 'left', '600', w - 100 * s);
+      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#cfc6ea', 'left', '600', w - 100 * s);
     }
     if (st.teach) {
       const w = 340 * s;
@@ -194,10 +197,10 @@ export class Hud {
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800', w - 28 * s);
-      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600', w - 28 * s);
+      this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#f4f1ff', 'center', '800', w - 28 * s);
+      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
       st.teach.moves.forEach((mv, i) => {
-        this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#2a1a10', 'left', '700', w - 60 * s);
+        this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#f4f1ff', 'left', '700', w - 60 * s);
       });
     }
     if (st.shop) {
@@ -206,11 +209,11 @@ export class Hud {
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#4a2d1a', 'center', '800', w - 28 * s);
-      this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#6b4a30', 'center', '600', w - 28 * s);
+      this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#f4f1ff', 'center', '800', w - 28 * s);
+      this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
       st.shop.entries.forEach((e, i) => {
         const yy = y + 70 * s + i * 20 * s;
-        const col = e.affordable ? '#2a1a10' : '#9a8a7a';
+        const col = e.affordable ? '#f4f1ff' : '#6f6888';
         this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700', w - 130 * s);
         this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
       });
@@ -385,7 +388,7 @@ export class Hud {
       const ps = 46 * s;
       const px = x + 8 * s;
       const py = y0 + 8 * s;
-      this.ui.slot(ctx, px - 3 * s, py - 3 * s, ps + 6 * s, Math.max(1, Math.round(this.px / 2)));
+      this.ui.slot(ctx, px - 3 * s, py - 3 * s, ps + 6 * s, Math.max(1, Math.round(this.px / 3)));
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(px, py, ps, ps, 4);
@@ -401,6 +404,8 @@ export class Hud {
         ctx.fillRect(px, py, ps, ps);
       }
       ctx.restore();
+      // Waiting in its ball (only two are out at a time): a small ball on the portrait.
+      if (m.stowed && !m.fainted) this.icons.draw(ctx, 'poke-ball', px + 8 * s, py + ps - 8 * s, 16 * s);
       // name + level: the level keeps its size, the name shrinks into what is left.
       const lvText = `Lv ${m.level}`;
       ctx.font = this.font(11, '600');
@@ -592,6 +597,7 @@ export class Hud {
     const y0 = v.height - 62 * s - 16 * s - slot - 20 * s;
     this.itemRects = [];
     this.tabRects = [];
+    this.discardRects = [];
     let hovered: { def: (typeof ITEMS)[string]; x: number } | null = null;
     this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12, 'rgba(12,12,22,0.25)');
     // Tabs above the slots.
@@ -600,11 +606,11 @@ export class Hud {
       const tx = x0 - 8 * s + i * (tabW + 4 * s);
       const ty = y0 - 8 * s - 18 * s;
       const active = (i === 1) === st.gearTab;
-      if (!this.ui.tab(ctx, tx, ty - 3 * s, tabW, 20 * s, Math.max(1, Math.round(this.px / 2)), active)) {
+      if (!this.ui.tab(ctx, tx, ty - 3 * s, tabW, 20 * s, Math.max(1, Math.round(this.px / 3)), active)) {
         ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
         ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
       }
-      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#4a2d1a' : '#e8eef6', 'center', '800', tabW - 10 * s);
+      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#1a1030' : '#e8eef6', 'center', '800', tabW - 10 * s);
       this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
     });
     this.label(ctx, 'Tab', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
@@ -614,7 +620,7 @@ export class Hud {
       const hover = hit(st.mouseX, st.mouseY, x, y0, slot, slot);
       const selected = st.selectedItem === i;
       // Parchment slots in wood frames (Kenney pixel kit); rivets mark the armed item.
-      const kit = this.ui.slot(ctx, x, y0, slot, Math.max(1, Math.round(this.px / 2)), selected);
+      const kit = this.ui.slot(ctx, x, y0, slot, Math.max(1, Math.round(this.px / 3)), selected);
       if (!kit) {
         ctx.beginPath();
         ctx.roundRect(x, y0, slot, slot, 8);
@@ -625,7 +631,7 @@ export class Hud {
         ctx.fillStyle = 'rgba(255,255,255,0.18)';
         ctx.fillRect(x + 4 * s, y0 + 4 * s, slot - 8 * s, slot - 8 * s);
       }
-      this.label(ctx, String(i + 1), x + 6 * s, y0 + 13 * s, 9, kit ? '#8a5a2a' : '#b9b4cc', 'left', '600');
+      this.label(ctx, String(i + 1), x + 6 * s, y0 + 13 * s, 9, kit ? '#9f97bb' : '#b9b4cc', 'left', '600');
       if (id) {
         const def = ITEMS[id];
         if (def) {
@@ -646,7 +652,25 @@ export class Hud {
             ctx.fill();
             this.label(ctx, t, bx + bw / 2, by + bh - 3 * s, 9, '#ffffff', 'center', '800');
           }
-          if (hover) hovered = { def, x: x + slot / 2 };
+          if (hover) {
+            hovered = { def, x: x + slot / 2 };
+            // A small X in the top-right corner throws the item away.
+            const xs = 14 * s;
+            const xx = x + slot - xs + 3 * s;
+            const xy = y0 - 3 * s;
+            const over = hit(st.mouseX, st.mouseY, xx, xy, xs, xs);
+            ctx.fillStyle = over ? '#ff5a6e' : 'rgba(150,40,60,0.95)';
+            ctx.fillRect(Math.round(xx), Math.round(xy), Math.round(xs), Math.round(xs));
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(1.5, 2 * s);
+            ctx.beginPath();
+            ctx.moveTo(xx + 4 * s, xy + 4 * s);
+            ctx.lineTo(xx + xs - 4 * s, xy + xs - 4 * s);
+            ctx.moveTo(xx + xs - 4 * s, xy + 4 * s);
+            ctx.lineTo(xx + 4 * s, xy + xs - 4 * s);
+            ctx.stroke();
+            this.discardRects.push({ x: xx, y: xy, w: xs, h: xs, index: i });
+          }
         }
       }
       this.itemRects.push({ x, y: y0, w: slot, h: slot });

@@ -21,7 +21,7 @@ import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution } from './evolution';
-import { isRoaming, shareKnockoutXp, stepParty, type PartyWorld } from './party';
+import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
@@ -588,6 +588,15 @@ export class Match {
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
+          // The lead that wore it down learns from the catch too.
+          const leadMon = lead(th.thrower);
+          const share = (CONFIG.party as typeof CONFIG.party & { catchXpShare?: number }).catchXpShare ?? 0;
+          if (leadMon && leadMon !== w && share > 0) {
+            const xp = Math.round(xpForKnockout(w, leadMon.level) * share);
+            const levels = gainXp(leadMon, xp);
+            this.battle.events.push({ type: 'xp', mon: leadMon, xp, levels });
+            if (levels > 0) this.learnOnLevelUp(leadMon, leadMon.level - levels);
+          }
         } else {
           w.captured = false;
           w.anim.play('Idle', { restart: true });
@@ -1039,9 +1048,14 @@ export class Match {
         // Round every starting point the land stays at its base levels, so a fresh team can train there.
         const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
         const calm = Math.min(1, Math.max(0, (nearStart - 20) / 25));
-        const level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm);
+        let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm);
+        // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
+        const w = CONFIG.wild as typeof CONFIG.wild & { eliteChance?: number; eliteLevels?: number[] };
+        const elite = nearStart > 22 && this.rng.chance(w.eliteChance ?? 0);
+        if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
         const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
+        if (elite) mon.elite = true;
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
       }
@@ -1233,7 +1247,12 @@ export class Match {
         if (m.busy > 0) m.busy -= dt;
         m.sinceHit += dt;
       }
-      if (!t.duelId) stepParty(t, lead(t), dt, pw);
+      if (!t.duelId) {
+        this.fieldParty(t);
+        // Freshly sent out: grow from the ball's flash to full size.
+        for (const m of t.party) if (!m.stowed && !m.captured && !m.fainted && m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
+        stepParty(t, lead(t), dt, pw);
+      }
     }
     this.stepDuels(dt);
     for (const w of this.wilds) {
@@ -1936,6 +1955,39 @@ export class Match {
       s.awaitingPick = false;
     }
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
+  }
+
+  /**
+   * At most fieldLimit Pokémon out per trainer: the first ones in party order that can fight
+   * (roamers count). The rest wait in their balls; one comes out, popping up beside the trainer,
+   * when an outside one faints or the order changes.
+   */
+  fieldParty(t: Trainer): void {
+    const limit = (CONFIG.party as typeof CONFIG.party & { fieldLimit?: number }).fieldLimit ?? 99;
+    let out = 0;
+    for (const m of t.party) {
+      if (m.fainted || m.captured) continue;
+      if (out < limit) {
+        out++;
+        if (m.stowed) {
+          m.stowed = false;
+          const a = Math.random() * Math.PI * 2;
+          const x = t.x + Math.cos(a) * 0.9;
+          const y = t.y + Math.sin(a) * 0.9;
+          const ok = canStand(this.ground, x, y, 0.22);
+          m.x = m.px = ok ? x : t.x;
+          m.y = m.py = ok ? y : t.y;
+          m.casting = null;
+          m.visual.scale = 0.15;
+          m.visual.flash = 1;
+        }
+      } else if (!m.stowed) {
+        m.stowed = true;
+        m.casting = null;
+        m.target = null;
+        m.moving = false;
+      }
+    }
   }
 
   eliminate(t: Trainer): void {

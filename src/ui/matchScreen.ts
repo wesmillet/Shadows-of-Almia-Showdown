@@ -177,6 +177,7 @@ export class MatchScreen implements Screen {
           this.say(`${m.name} is ${Math.hypot(m.x - this.match.player.x, m.y - this.match.player.y).toFixed(0)} tiles away (see minimap)`, 1.5);
         } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
+      else if (h?.kind === 'discard') this.discardSlot(h.index);
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     if (input.pressed('Tab')) this.gearTab = !this.gearTab;
@@ -425,6 +426,17 @@ export class MatchScreen implements Screen {
   }
 
   /** Number keys and clicks on the bag: balls arm themselves, anything else is used at once; the gear tab equips or teaches. */
+  /** The X on a bag slot: the item (the whole stack) is thrown away. */
+  private discardSlot(index: number): void {
+    const p = this.match.player;
+    const list = this.gearTab ? p.held : p.items;
+    const e = list[index];
+    if (!e) return;
+    list[index] = null;
+    if (!this.gearTab && this.selectedItem === index) this.selectedItem = -1;
+    this.say(`Threw away ${ITEMS[e.id]?.name ?? e.id}${e.count > 1 ? ` ×${e.count}` : ''}`, 1.2);
+  }
+
   protected onItemSlot(index: number): void {
     const p = this.match.player;
     if (this.gearTab) {
@@ -1289,7 +1301,7 @@ export class MatchScreen implements Screen {
       // Bar just over the drawn body (sprites are drawn at their canonical size).
       const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
-      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.landBoss ? `${m.name} ♛` : m.name, m.level, m.hp / m.maxHp, v.baseScale);
+      drawInfoBar(this.ui, v.hud, px, sx, top, m.boss ? `${m.name} ★` : m.landBoss ? `${m.name} ♛` : m.elite ? `Elite ${m.name}` : m.name, m.level, m.hp / m.maxHp, v.baseScale, m.elite ? '#ffd36b' : '#fff');
     }
   }
 

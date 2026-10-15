@@ -27,10 +27,10 @@ const SMALL = ['0025', '0387', '0133', '0393', '0390', '0447'];
 const ZOOM = 2;
 /** Where the scene plays, as fractions of the screen: below the logo, either side of the buttons. */
 const BAND = { y0: 0.48, y1: 0.94 };
-const SIDES = { left: [0.04, 0.36], right: [0.64, 0.96] } as const;
+const SIDES = { left: [0.04, 0.4], right: [0.6, 0.96] } as const;
 type Side = keyof typeof SIDES;
 const FX = {
-  smoke: 'fx_009', voidRing: 'fx_114', voidHit: 'fx_215', sleep: 'fx_015', swirl: 'fx_241', blast: 'fx_188', burst: 'fx_186',
+voidRing: 'fx_114', voidHit: 'fx_215', sleep: 'fx_015', swirl: 'fx_241', blast: 'fx_188', burst: 'fx_186',
   pulseBall: 'fx_187', pulseHit: 'fx_177', moon: 'fx_205', moonHit: 'fx_188', psychic: 'fx_214', aurora: 'fx_108', auroraHit: 'fx_204',
   gleam: 'fx_203', gleamRing: 'fx_028', sparkle: 'fx_041',
 };
@@ -212,13 +212,13 @@ export class TitleScreen implements Screen {
   private buttonRect(): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 120 * s, y: v.height * 0.64, w: 240 * s, h: 56 * s };
+    return { x: v.width / 2 - 95 * s, y: v.height * 0.64, w: 190 * s, h: 50 * s };
   }
 
   private demoRect(): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 120 * s, y: v.height * 0.64 + 68 * s, w: 240 * s, h: 44 * s };
+    return { x: v.width / 2 - 95 * s, y: v.height * 0.64 + 62 * s, w: 190 * s, h: 40 * s };
   }
 
   private galleryRect(): { x: number; y: number; w: number; h: number } {
@@ -381,7 +381,7 @@ export class TitleScreen implements Screen {
         dk.y = dk.ty = spot.y;
         this.dState = 'rise';
         this.dTimer = 1.2;
-        this.play(FX.smoke, { x: dk.x, y: dk.y, lift: 0.2, scale: 1.3, fps: 9, light: 0 }, true);
+        this.play(FX.voidHit, { x: dk.x, y: dk.y, lift: 0, scale: 1.2, fps: 10, light: 0.8 }, true);
         break;
       }
       case 'rise':
@@ -461,7 +461,6 @@ export class TitleScreen implements Screen {
             this.flash = 0.8;
             this.flashColor = '40,0,70';
             this.play(FX.blast, { x: mid.x, y: mid.y, lift: 0.5, scale: 2.4, fps: 14, light: 2, tint: '#9a5cff' });
-            this.play(FX.smoke, { x: mid.x, y: mid.y, lift: 0.2, scale: 1.8, fps: 8, light: 0 }, true);
             for (const w of this.sleepers()) {
               if (Math.hypot(w.x - mid.x, w.y - mid.y) > 3.5) continue;
               this.play(FX.burst, { x: w.x, y: w.y, lift: 0.4, scale: 1.4, fps: 14, light: 1 });
@@ -506,7 +505,7 @@ export class TitleScreen implements Screen {
     const dk = this.darkrai;
     this.dState = 'sink';
     this.dTimer = 1.2;
-    this.play(FX.smoke, { x: dk.x, y: dk.y, lift: 0.2, scale: 1.5, fps: 9, light: 0 }, true);
+    this.play(FX.voidHit, { x: dk.x, y: dk.y, lift: 0, scale: 1.3, fps: 10, light: 0.8 }, true);
   }
 
   /** Darkrai's hand is on the side it faces. */

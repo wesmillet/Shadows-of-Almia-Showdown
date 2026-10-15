@@ -123,11 +123,11 @@ export function button(view: View, label: string, x: number, y: number, w: numbe
     ctx.save();
     if (accent === DISABLED) ctx.globalAlpha = 0.55;
     const lift = hover && accent !== DISABLED ? -2 * view.baseScale : 0;
-    skin.strip(ctx, ribbon ? 'ribbon' : 'plate', x, y + lift, w, h, false);
+    skin.strip(ctx, ribbon ? 'ribbon' : 'plate', x, y + lift, w, h, hover && accent !== DISABLED, Math.max(1, Math.round(view.baseScale)));
     ctx.restore();
     text(view, label, x + w / 2, y + h / 2 + 1 + lift, h * 0.36 / view.baseScale, {
       maxWidth: w - 28 * view.baseScale,
-      align: 'center', baseline: 'middle', color: ribbon ? '#fff7e8' : accent === DISABLED ? '#5c5670' : '#2a2438', shadow: ribbon,
+      align: 'center', baseline: 'middle', color: ribbon ? '#1a1030' : accent === DISABLED ? '#8a83a6' : '#f4f1ff', shadow: !ribbon,
     });
     return;
   }

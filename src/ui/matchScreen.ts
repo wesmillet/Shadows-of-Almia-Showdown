@@ -1716,6 +1716,7 @@ export class MatchScreen implements Screen {
         mon: pl.mon.name,
         title: `${pl.mon.name} wants to learn ${move(pl.moveId).name}`,
       }))(this.match.pendingLearn[0]) : null,
+      storm: this.match.player.party.map((m) => (m.stowed || m.fainted ? 0 : this.stormLevel(m))),
       snag: this.match.snagOffer ? {
         from: this.match.snagOffer.from.name,
         names: this.match.snagOffer.from.party.filter((m) => !m.captured).map((m) => `${m.shiny ? '★ ' : ''}${m.name}  Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`),
@@ -1985,20 +1986,61 @@ export class MatchScreen implements Screen {
   }
 
   /** HP bar, name and level over every wild or enemy Pokémon within 6 tiles of the player or hit in the last 4 s. */
+  /** 0..1 how close a Pokémon in the darkness is to falling asleep (1 once it has). */
+  private stormLevel(m: Mon): number {
+    if (!m.inDark) return 0;
+    if (m.status === 'sleep' && m.statusTimer > 1e8) return 1;
+    return Math.min(1, m.drowsy / this.match.drowsySeconds(m));
+  }
+
+  /** The storm meter: a purple bar with a crescent moon, pulsing once the Pokémon is asleep. */
+  private drawStormMeter(v: View, cx: number, y: number, w: number, px: number, frac: number, asleep: boolean): void {
+    const h = v.hud;
+    const bh = Math.max(3, Math.round(px * 1.4));
+    const x = Math.round(cx - w / 2);
+    h.save();
+    h.fillStyle = 'rgba(14,6,26,0.85)';
+    h.fillRect(x - px, y - px, w + 2 * px, bh + 2 * px);
+    h.fillStyle = 'rgba(70,40,110,0.9)';
+    h.fillRect(x, y, w, bh);
+    const pulse = asleep ? 0.65 + 0.35 * Math.sin(performance.now() / 160) : 1;
+    h.fillStyle = `rgba(190,120,255,${pulse})`;
+    h.fillRect(x, y, Math.round(w * frac), bh);
+    h.fillStyle = 'rgba(255,255,255,0.35)';
+    h.fillRect(x, y, Math.round(w * frac), Math.max(1, Math.round(bh / 3)));
+    // crescent moon at the left end
+    const r = bh * 0.95;
+    const mx = x - px - r - 2;
+    const my = y + bh / 2;
+    h.fillStyle = '#d9b8ff';
+    h.beginPath();
+    h.arc(mx, my, r, 0, Math.PI * 2);
+    h.fill();
+    h.globalCompositeOperation = 'destination-out';
+    h.beginPath();
+    h.arc(mx + r * 0.55, my - r * 0.3, r * 0.85, 0, Math.PI * 2);
+    h.fill();
+    h.restore();
+  }
+
   private drawInfoBars(v: View, alpha: number): void {
     const p = this.match.player;
     const px = Math.max(2, Math.round(v.baseScale * 3));
     for (const m of this.match.mons()) {
       if (m.captured || m.visual.alpha < 0.5) continue;
       if (m.owner === p) {
-        // Your own Pokémon on the field: a slim bar (no label) once they have taken damage.
-        if (m.stowed || m.fainted || m.hp >= m.maxHp) continue;
+        // Your own Pokémon on the field: a slim bar (no label) once they have taken damage, and in
+        // the darkness a purple storm meter filling toward sleep.
+        if (m.stowed || m.fainted) continue;
+        const storm = this.stormLevel(m);
+        if (m.hp >= m.maxHp && storm <= 0) continue;
         const x = m.px + (m.x - m.px) * alpha;
         const y = m.py + (m.y - m.py) * alpha;
         const sx = Math.round(v.toScreenX(x));
         const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
         const w = 16 * px;
-        this.ui.bar(v.hud, Math.round(sx - w / 2), Math.round(top - 9 * px), w, px, m.hp / m.maxHp);
+        if (m.hp < m.maxHp) this.ui.bar(v.hud, Math.round(sx - w / 2), Math.round(top - 9 * px), w, px, m.hp / m.maxHp);
+        if (storm > 0) this.drawStormMeter(v, sx, Math.round(top - (m.hp < m.maxHp ? 13 : 9) * px), w, px, storm, m.status === 'sleep');
         continue;
       }
       const near = Math.hypot(m.x - p.x, m.y - p.y) <= 6 * R();

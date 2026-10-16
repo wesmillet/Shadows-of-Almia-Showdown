@@ -16,6 +16,13 @@ import { darken, fitSize, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
+/** A hex colour a little lighter (hover). */
+function lightenHex(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v: number) => Math.min(255, Math.round(v + (255 - v) * 0.25));
+  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+}
+
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
@@ -54,6 +61,8 @@ export interface HudState {
   prompt: string | null;
   /** An open stall: its lines with prices. */
   shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }>; sellPrice: (id: string) => number } | null;
+  /** Party members' storm meters (0..1 toward sleep in the darkness), by party slot. */
+  storm?: number[];
   /** A won battle with a Snag Machine in the bag: the beaten trainer and their Pokémon to choose from. */
   snag?: { from: string; names: string[] } | null;
   /** The open storage chest: its slots (shared by every town's chest) and the town it stands in. */
@@ -229,24 +238,75 @@ export class Hud {
     ctx.fillText(s, x, y);
   }
 
-  /** Panels are the tileset's dark 9-slice box; `fill` tints it (lead card, hover). */
-  private panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, _r = 14, fill = ''): void {
-    const s = this.px;
-    const X = Math.round(x / s) * s;
-    const Y = Math.round(y / s) * s;
-    const W = Math.max(3 * s * 2, Math.round(w / s) * s);
-    const H = Math.max(3 * s * 2, Math.round(h / s) * s);
-    this.ui.box(ctx, X, Y, W, H, s, 'dt');
-    if (fill) {
-      ctx.fillStyle = fill;
-      ctx.fillRect(X + s, Y + s, W - 2 * s, H - 2 * s);
-    }
+  /**
+   * Panels: dark blue glass with a soft top light, a thin cool rim and a drop shadow (one look for
+   * every HUD panel). `fill` adds a tint over the glass (lead card, hover, fainted).
+   */
+  private panel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r = 12, fill = ''): void {
+    this.glass(ctx, x, y, w, h, Math.min(r, 12) * this.view.baseScale, { tint: fill || undefined });
   }
 
-  /** Light 9-slice box for popups and notices. */
+  /** Popups and notices: the same glass, a little lighter, with a brighter rim. */
   popupBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-    const s = this.px;
-    this.ui.box(ctx, Math.round(x / s) * s, Math.round(y / s) * s, Math.round(w / s) * s, Math.round(h / s) * s, s, 'lt');
+    this.glass(ctx, x, y, w, h, 12 * this.view.baseScale, { top: 'rgba(42,52,88,0.96)', bottom: 'rgba(22,28,52,0.96)', rim: 'rgba(170,215,255,0.55)' });
+  }
+
+  /** A rounded glass panel. */
+  glass(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number,
+    o: { top?: string; bottom?: string; rim?: string; rimWidth?: number; tint?: string; glow?: string } = {}): void {
+    const s = this.view.baseScale;
+    ctx.save();
+    ctx.shadowColor = o.glow ?? 'rgba(0,0,0,0.45)';
+    ctx.shadowBlur = (o.glow ? 14 : 10) * s;
+    ctx.shadowOffsetY = o.glow ? 0 : 3 * s;
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, o.top ?? 'rgba(30,38,66,0.9)');
+    g.addColorStop(1, o.bottom ?? 'rgba(14,18,34,0.9)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.clip();
+    if (o.tint) {
+      ctx.fillStyle = o.tint;
+      ctx.fillRect(x, y, w, h);
+    }
+    // the light catching the top edge
+    const sh = ctx.createLinearGradient(0, y, 0, y + Math.min(h, 22 * s));
+    sh.addColorStop(0, 'rgba(255,255,255,0.10)');
+    sh.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(x, y, w, Math.min(h, 22 * s));
+    ctx.restore();
+    ctx.strokeStyle = o.rim ?? 'rgba(150,190,255,0.28)';
+    ctx.lineWidth = (o.rimWidth ?? 1.5) * s;
+    ctx.beginPath();
+    ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
+    ctx.stroke();
+  }
+
+  /** A rounded bar: dark track, coloured fill with a light stripe along its top. */
+  private pillBar(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frac: number, color: string | CanvasGradient): void {
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,6,14,0.75)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, h / 2);
+    ctx.fill();
+    const fw = Math.max(0, Math.min(w, w * frac));
+    if (fw > 0) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, Math.max(h, fw), h, h / 2);
+      ctx.clip();
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, fw, h);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillRect(x, y + 1, fw, Math.max(1, h * 0.3));
+    }
+    ctx.restore();
   }
 
   draw(match: Match, st: HudState): void {
@@ -706,68 +766,94 @@ export class Hud {
       const x = x0 + i * (cardW + gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, cardW, cardH);
       const isLead = m === first;
-      this.panel(ctx, x, y0, cardW, cardH, 12, m.fainted ? 'rgba(60,20,30,0.45)' : isLead ? 'rgba(90,60,170,0.45)' : hover ? 'rgba(255,255,255,0.08)' : '');
-      if (isLead) {
-        ctx.strokeStyle = '#d7c6ff';
-        ctx.lineWidth = this.px;
-        ctx.strokeRect(x + this.px / 2, y0 + this.px / 2, cardW - this.px, cardH - this.px);
-      }
-      // portrait
-      const ps = 46 * s;
-      const px = x + 8 * s;
-      const py = y0 + 8 * s;
-      this.ui.slot(ctx, px - 3 * s, py - 3 * s, ps + 6 * s, Math.max(1, Math.round(this.px / 3)));
+      // The card: glass, a stripe of the Pokémon's type colour down the left, the lead's rim lit.
+      const tc = typeColor(m.species.types[0] ?? 'normal');
+      this.glass(ctx, x, y0, cardW, cardH, 10 * s, {
+        tint: m.fainted ? 'rgba(90,20,36,0.35)' : hover ? 'rgba(255,255,255,0.05)' : undefined,
+        rim: isLead ? rgba(tc, 0.95) : hover ? 'rgba(190,220,255,0.5)' : 'rgba(150,190,255,0.25)',
+        rimWidth: isLead ? 2.2 : 1.5,
+        glow: isLead ? rgba(tc, 0.55) : undefined,
+      });
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(px, py, ps, ps, 4);
+      ctx.roundRect(x, y0, cardW, cardH, 10 * s);
+      ctx.clip();
+      ctx.fillStyle = m.fainted ? 'rgba(120,110,130,0.8)' : tc;
+      ctx.fillRect(x, y0, 4 * s, cardH);
+      ctx.restore();
+      // portrait, on a soft glow of its type colour
+      const ps = 46 * s;
+      const px = x + 10 * s;
+      const py = y0 + (cardH - ps) / 2 - 4 * s;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(px - 2 * s, py - 2 * s, ps + 4 * s, ps + 4 * s, 8 * s);
+      const pg = ctx.createRadialGradient(px + ps / 2, py + ps * 0.45, 2 * s, px + ps / 2, py + ps / 2, ps * 0.75);
+      pg.addColorStop(0, rgba(tc, m.fainted ? 0.15 : 0.55));
+      pg.addColorStop(1, 'rgba(10,12,24,0.9)');
+      ctx.fillStyle = pg;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1.2 * s;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.roundRect(px, py, ps, ps, 6 * s);
       ctx.clip();
       const f = m.sprites.portraitSource();
       ctx.imageSmoothingEnabled = false;
       const scale = Math.max(1, Math.floor(ps / Math.max(f.w, f.h)));
       const dw = f.w * scale;
       const dh = f.h * scale;
+      if (m.fainted) ctx.filter = 'grayscale(1) brightness(0.6)';
       ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, px + (ps - dw) / 2, py + (ps - dh) / 2, dw, dh);
-      if (m.fainted) {
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(px, py, ps, ps);
-      }
+      ctx.filter = 'none';
       ctx.restore();
       // Waiting in its ball (only two are out at a time): a small ball on the portrait.
       if (m.stowed && !m.fainted) this.icons.draw(ctx, 'poke-ball', px + 8 * s, py + ps - 8 * s, 16 * s);
-      // name + level: the level keeps its size, the name shrinks into what is left.
+      // name + a level pill: the level keeps its size, the name shrinks into what is left.
       const lvText = `Lv ${m.level}`;
-      ctx.font = this.font(11, '600');
-      const lvW = ctx.measureText(lvText).width;
+      ctx.font = this.font(10, '700');
+      const lvW = ctx.measureText(lvText).width + 10 * s;
       const nameX = px + ps + 10 * s;
-      this.label(ctx, lvText, x + cardW - 10 * s, y0 + 22 * s, 11, '#cdbfff', 'right', '600');
-      this.label(ctx, m.shiny ? `${m.name} ★` : m.name, nameX, y0 + 22 * s, 13, m.fainted ? '#9b8fa8' : m.shiny ? '#9ff3ff' : '#ffffff', 'left', '700', x + cardW - 10 * s - lvW - 6 * s - nameX);
-      // HP bar
-      const bx = px + ps + 10 * s;
-      const by = y0 + 30 * s;
-      const bw = cardW - ps - 28 * s;
+      const lvX = x + cardW - 8 * s - lvW;
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.roundRect(lvX, y0 + 9 * s, lvW, 16 * s, 8 * s);
+      ctx.fill();
+      this.label(ctx, lvText, lvX + lvW / 2, y0 + 21 * s, 10, '#d8e6ff', 'center', '700');
+      this.label(ctx, m.shiny ? `${m.name} ★` : m.name, nameX, y0 + 22 * s, 13, m.fainted ? '#8f8a9e' : m.shiny ? '#9ff3ff' : '#ffffff', 'left', '700', lvX - 6 * s - nameX);
+      // HP: a rounded bar green to amber to red, the numbers under it
+      const bx = nameX;
+      const by = y0 + 31 * s;
+      const bw = x + cardW - 10 * s - bx;
       const frac = clamp(m.hp / m.maxHp, 0, 1);
-      this.ui.bar(ctx, Math.round(bx), Math.round(by), Math.round(bw / this.px) * this.px, this.px, frac);
+      const hpCol = frac > 0.5 ? '#5ee08f' : frac > 0.2 ? '#ffcf4a' : '#ff5f6d';
+      this.pillBar(ctx, bx, by, bw, 7 * s, frac, hpCol);
       const chipW = 54 * s;
       const chipX = x + cardW - chipW - 8 * s;
-      this.label(ctx, `${m.hp}/${m.maxHp}`, bx, by + 7 * this.px + 12 * s, 11, '#e8e4f8', 'left', '500', chipX - bx - 4 * s);
-      // XP bar
+      this.label(ctx, m.fainted ? 'Fainted' : `${m.hp}/${m.maxHp}`, bx, by + 21 * s, 10.5, m.fainted ? '#ff8fa3' : '#e8eefc', 'left', '600', chipX - bx - 4 * s);
+      // XP: a hairline under the HP bar
       const xf = clamp(m.xp / xpToNext(m.level), 0, 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.fillRect(bx, by + 7 * this.px + 16 * s, bw, this.px);
-      ctx.fillStyle = '#7fb3ff';
-      ctx.fillRect(bx, by + 7 * this.px + 16 * s, Math.round(bw * xf / this.px) * this.px, this.px);
+      this.pillBar(ctx, bx, by + 9 * s, bw, 2.5 * s, xf, '#7fb3ff');
+      // In the darkness: the storm meter, purple, filling toward sleep.
+      if (st.storm?.[i]) {
+        const sf = st.storm[i] as number;
+        this.pillBar(ctx, x + 8 * s, y0 + cardH - 7 * s, cardW - 16 * s, 3.5 * s, sf, sf >= 1 ? '#c58bff' : '#a66bff');
+      }
       // behaviour chip
       const roaming = isRoaming(m);
-      const chipY = y0 + cardH - 18 * s;
-      const chipHover = hit(st.mouseX, st.mouseY, chipX, chipY, chipW, 14 * s);
-      ctx.fillStyle = roaming ? (chipHover ? 'rgba(255,170,90,0.9)' : 'rgba(230,140,60,0.8)')
-        : m.behavior === 'catch' ? (chipHover ? 'rgba(245,100,100,0.95)' : 'rgba(205,55,65,0.85)')
-        : chipHover ? 'rgba(170,150,255,0.9)' : 'rgba(110,90,200,0.75)';
+      const chipY = y0 + cardH - 22 * s;
+      const chipHover = hit(st.mouseX, st.mouseY, chipX, chipY, chipW, 15 * s);
+      const chipCol = roaming ? '#e88a3c' : ({ aggressive: '#e2574c', guard: '#3f86f0', catch: '#d93a4a', passive: '#7d879e', hold: '#7d879e' } as Record<string, string>)[m.behavior] ?? '#6c5ad8';
+      ctx.fillStyle = chipHover ? lightenHex(chipCol) : chipCol;
       ctx.beginPath();
-      ctx.roundRect(chipX, chipY, chipW, 14 * s, 7);
+      ctx.roundRect(chipX, chipY, chipW, 15 * s, 7.5 * s);
       ctx.fill();
-      this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + 10.5 * s, 8.5, '#ffffff', 'center', '800', chipW - 6 * s);
-      this.behaviorRects.push({ x: chipX, y: chipY, w: chipW, h: 14 * s });
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1 * s;
+      ctx.stroke();
+      this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + 11 * s, 8.5, '#ffffff', 'center', '800', chipW - 6 * s);
+      this.behaviorRects.push({ x: chipX, y: chipY, w: chipW, h: 15 * s });
       if (roaming) {
         const dist = Math.hypot(m.x - p.x, m.y - p.y);
         // map pin + distance
@@ -1019,39 +1105,61 @@ export class Hud {
     this.tabRects = [];
     this.discardRects = [];
     let hovered: { def: (typeof ITEMS)[string]; x: number } | null = null;
-    this.panel(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12, 'rgba(12,12,22,0.25)');
-    // Tabs above the slots.
-    const tabW = 64 * s;
+    this.glass(ctx, x0 - 8 * s, y0 - 8 * s, w + 16 * s, slot + 16 * s, 12 * s);
+    // Tabs above the slots: pills, the open one lit.
+    const tabW = 72 * s;
     ['Bag', 'Held & TMs'].forEach((name, i) => {
-      const tx = x0 - 8 * s + i * (tabW + 4 * s);
-      const ty = y0 - 8 * s - 18 * s;
+      const tx = x0 - 8 * s + i * (tabW + 6 * s);
+      const ty = y0 - 8 * s - 22 * s;
       const active = (i === 1) === st.gearTab;
-      if (!this.ui.tab(ctx, tx, ty - 3 * s, tabW, 20 * s, Math.max(1, Math.round(this.px / 3)), active)) {
-        ctx.fillStyle = active ? 'rgba(120,90,220,0.9)' : 'rgba(30,24,50,0.8)';
-        ctx.fillRect(Math.round(tx), Math.round(ty), tabW, 16 * s);
-      }
-      this.label(ctx, name, tx + tabW / 2, ty + 11 * s, 9, active ? '#1a1030' : '#e8eef6', 'center', '800', tabW - 10 * s);
-      this.tabRects.push({ x: tx, y: ty, w: tabW, h: 16 * s });
+      const over = hit(st.mouseX, st.mouseY, tx, ty, tabW, 18 * s);
+      ctx.save();
+      ctx.fillStyle = active ? '#6fd0ff' : over ? 'rgba(60,74,120,0.95)' : 'rgba(22,28,52,0.9)';
+      ctx.shadowColor = active ? 'rgba(111,208,255,0.6)' : 'transparent';
+      ctx.shadowBlur = active ? 8 * s : 0;
+      ctx.beginPath();
+      ctx.roundRect(tx, ty, tabW, 18 * s, 9 * s);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = active ? 'rgba(255,255,255,0.6)' : 'rgba(150,190,255,0.3)';
+      ctx.lineWidth = 1.2 * s;
+      ctx.beginPath();
+      ctx.roundRect(tx, ty, tabW, 18 * s, 9 * s);
+      ctx.stroke();
+      this.label(ctx, name, tx + tabW / 2, ty + 13 * s, 9, active ? '#0c1a2e' : '#dfe8ff', 'center', '800', tabW - 10 * s);
+      this.tabRects.push({ x: tx, y: ty, w: tabW, h: 18 * s });
     });
-    this.label(ctx, 'G', x0 + w + 8 * s - 4 * s, y0 - 8 * s - 6 * s, 8, '#9f97bb', 'right', '600');
+    this.label(ctx, 'G', x0 - 8 * s + 2 * (tabW + 6 * s) + 4 * s, y0 - 8 * s - 9 * s, 9, '#8f9bb8', 'left', '700');
     items.forEach((entry, i) => {
       const id = entry?.id ?? null;
       const x = x0 + i * (slot + gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, slot, slot);
       const selected = st.selectedItem === i;
-      // Parchment slots in wood frames (Kenney pixel kit); rivets mark the armed item.
-      const kit = this.ui.slot(ctx, x, y0, slot, Math.max(1, Math.round(this.px / 3)), selected);
-      if (!kit) {
-        ctx.beginPath();
-        ctx.roundRect(x, y0, slot, slot, 8);
-        ctx.fillStyle = selected ? 'rgba(120,90,220,0.6)' : 'rgba(255,255,255,0.06)';
-        ctx.fill();
+      // A rounded well per slot; the armed one has a gold rim and glow.
+      ctx.save();
+      if (selected) {
+        ctx.shadowColor = 'rgba(255,207,74,0.7)';
+        ctx.shadowBlur = 10 * s;
       }
-      if (hover) {
-        ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.fillRect(x + 4 * s, y0 + 4 * s, slot - 8 * s, slot - 8 * s);
-      }
-      this.label(ctx, String(i + 1), x + 6 * s, y0 + 13 * s, 9, kit ? '#9f97bb' : '#b9b4cc', 'left', '600');
+      const sg = ctx.createLinearGradient(0, y0, 0, y0 + slot);
+      sg.addColorStop(0, hover ? 'rgba(70,86,130,0.85)' : 'rgba(8,11,22,0.75)');
+      sg.addColorStop(1, hover ? 'rgba(40,52,88,0.85)' : 'rgba(20,26,46,0.75)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.roundRect(x, y0, slot, slot, 9 * s);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = selected ? '#ffcf4a' : hover ? 'rgba(200,225,255,0.6)' : 'rgba(150,190,255,0.22)';
+      ctx.lineWidth = (selected ? 2.2 : 1.2) * s;
+      ctx.beginPath();
+      ctx.roundRect(x + 0.5, y0 + 0.5, slot - 1, slot - 1, 9 * s);
+      ctx.stroke();
+      // the slot's key, as a tiny keycap
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.roundRect(x + 3 * s, y0 + 3 * s, 11 * s, 11 * s, 3 * s);
+      ctx.fill();
+      this.label(ctx, String(i + 1), x + 8.5 * s, y0 + 12 * s, 8, selected ? '#ffcf4a' : '#aebbd8', 'center', '800');
       if (id) {
         const def = ITEMS[id];
         if (def) {
@@ -1066,10 +1174,13 @@ export class Hud {
             const bh = 13 * s;
             const bx = x + slot - bw - 2 * s;
             const by = y0 + slot - bh - 2 * s;
-            ctx.fillStyle = 'rgba(30,18,10,0.85)';
+            ctx.fillStyle = 'rgba(6,10,22,0.9)';
             ctx.beginPath();
-            ctx.roundRect(bx, by, bw, bh, 4 * s);
+            ctx.roundRect(bx, by, bw, bh, bh / 2);
             ctx.fill();
+            ctx.strokeStyle = 'rgba(150,190,255,0.35)';
+            ctx.lineWidth = 1 * s;
+            ctx.stroke();
             this.label(ctx, t, bx + bw / 2, by + bh - 3 * s, 9, '#ffffff', 'center', '800');
           }
           if (hover) {

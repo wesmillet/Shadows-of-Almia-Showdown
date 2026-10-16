@@ -1231,6 +1231,17 @@ export class Match {
     return out;
   }
 
+  /**
+   * Seconds in the darkness before a Pokémon falls asleep. A trainer carrying the Storm Mask
+   * (bought from the Wandering Merchant) keeps their Pokémon awake stormMaskMultiplier times longer.
+   */
+  drowsySeconds(m: Mon): number {
+    const base = CONFIG.darkness.drowsySeconds;
+    const owner = m.owner;
+    const masked = !!owner && [...owner.items, ...owner.held].some((e) => e?.id === 'storm-mask');
+    return masked ? base * ((CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 1) : base;
+  }
+
   /** The species each land's wild Pokémon were drawn from this match (for checks and tests). */
   spawnRotation: Record<string, string[]> = {};
 
@@ -2469,7 +2480,7 @@ export class Match {
         m.outsideDark = 0;
         if (m.status === null) {
           m.drowsy += dt;
-          if (m.drowsy >= c.drowsySeconds) {
+          if (m.drowsy >= this.drowsySeconds(m)) {
             m.drowsy = 0;
             this.battle.applyStatus(m, 'sleep');
             m.statusTimer = 1e9; // only the light wakes a darkness sleeper

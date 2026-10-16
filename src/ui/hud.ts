@@ -1093,8 +1093,8 @@ export class Hud {
     // The Storm Mask at work: a tab over the bag's right end while anyone in the party is in the darkness.
     const masked = p.items.some((e) => e?.id === 'storm-mask') || p.held.some((e) => e?.id === 'storm-mask');
     if (masked && p.party.some((m) => m.inDark && !m.fainted && !m.stowed)) {
-      const x = (CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 4;
-      const text = `Storm Mask: your team stays awake ${x}x longer`;
+      const secs = (CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120;
+      const text = `Storm Mask: your team lasts ${secs % 60 ? `${secs}s` : `${secs / 60} min`} in the storm`;
       ctx.font = this.font(9, '700');
       const mw = Math.round(ctx.measureText(text).width + 6 * k2 + 12 * s);
       const my = tabY - tabH - 4 * s;

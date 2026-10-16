@@ -97,6 +97,11 @@ export type Service = { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { k
 /** Chest spots per island (the ground is shared by every match played on it). */
 const CHEST_SPOTS = new WeakMap<object, StorageChest[]>();
 
+/** "2 min" or "90s" for the Storm Mask's messages. */
+function maskTime(secs: number): string {
+  return secs % 60 ? `${secs}s` : `${secs / 60} min`;
+}
+
 export class Match {
   readonly ground: GroundRenderer;
   readonly rng: Rng;
@@ -678,8 +683,8 @@ export class Match {
       case 'rod':
         return t.isPlayer ? startFishing(this, def.id) : '';
       case 'charm': {
-        const x = (CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 1;
-        return `The ${def.name} works from your bag: your Pokémon stay awake ${x}x longer in the storm`;
+        const secs = (CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120;
+        return `The ${def.name} works from your bag: your Pokémon last ${maskTime(secs)} in the storm before falling asleep`;
       }
       case 'shard': {
         if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
@@ -1268,13 +1273,13 @@ export class Match {
 
   /**
    * Seconds in the darkness before a Pokémon falls asleep. A trainer carrying the Storm Mask
-   * (bought from the Wandering Merchant) keeps their Pokémon awake stormMaskMultiplier times longer.
+   * (bought from the Wandering Merchant) keeps their Pokémon awake stormMaskSeconds (2 minutes) in the darkness.
    */
   drowsySeconds(m: Mon): number {
     const base = CONFIG.darkness.drowsySeconds;
     const owner = m.owner;
     const masked = !!owner && (owner.items.some((e) => e?.id === 'storm-mask') || owner.held.some((e) => e?.id === 'storm-mask'));
-    return masked ? base * ((CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 1) : base;
+    return masked ? ((CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120) : base;
   }
 
   /** The species each land's wild Pokémon were drawn from this match (for checks and tests). */

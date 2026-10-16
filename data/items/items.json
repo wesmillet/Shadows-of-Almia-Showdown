@@ -115,7 +115,7 @@
       "name": "Storm Mask",
       "short": "Mask",
       "kind": "charm",
-      "desc": "Works from the bag: your Pokémon take 4x longer to fall asleep in the storm"
+      "desc": "Works from the bag: your Pokémon last 2 minutes in the storm before falling asleep"
     },
     {
       "id": "capture-styler",

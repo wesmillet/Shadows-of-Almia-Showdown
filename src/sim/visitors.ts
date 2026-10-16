@@ -346,7 +346,7 @@ export class Visitors {
       }
     }
     const top = Math.max(1, ...p.party.map((x) => x.level));
-    const L = m.makeMon(LUGIA, Math.min(100, Math.max(30, top + 8)), null, from.x, from.y);
+    const L = m.makeMon(LUGIA, Math.min(100, Math.max(70, top + 15)), null, from.x, from.y);
     this.makeLegend(L);
     // Hidden under the water until it bursts out (and nobody's enemy until it lands).
     L.visual.alpha = 0;

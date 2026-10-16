@@ -1123,7 +1123,8 @@ export class Match {
         const elite = !alpha && nearStart > 22 && this.rng.chance(w.eliteChance ?? 0);
         if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
         if (alpha) {
-          level = w.alphaLevel + this.rng.int(-2, 2);
+          // A cut above the wilds around it: alphaLevelBonus over the local level, at most alphaLevelMax.
+          level = Math.min(w.alphaLevelMax, level + w.alphaLevelBonus + this.rng.int(-2, 2));
           // An Alpha is a line's last form: prefer a row that actually evolves.
           for (let k = 0; k < 8 && finalForm(row.dex, this.rng) === row.dex; k++) row = this.rng.weighted(t.table, (r) => r.weight);
         }
@@ -1474,6 +1475,8 @@ export class Match {
    * steps behind. Null in trainer mode.
    */
   controlled: Mon | null = null;
+  /** Set when the steered Pokémon faints: control passes to the next one out (until this time). */
+  private handoffUntil = 0;
 
   /** Takes control of a party Pokémon out on the field (Pokémon mode). */
   takeControl(m: Mon): boolean {
@@ -1484,6 +1487,21 @@ export class Match {
     m.steered = true;
     m.target = null;
     return true;
+  }
+
+  /** Recalls a Pokémon and sends it straight back out beside its trainer (ball flash and grow). */
+  private regroup(t: Trainer, m: Mon): void {
+    const a = this.rng.next() * Math.PI * 2;
+    const x = t.x + Math.cos(a) * 0.9;
+    const y = t.y + Math.sin(a) * 0.9;
+    const ok = canStand(this.ground, x, y, 0.22);
+    m.x = m.px = ok ? x : t.x;
+    m.y = m.py = ok ? y : t.y;
+    m.target = null;
+    m.moving = false;
+    m.anim.play('Idle', { restart: true });
+    m.visual.scale = 0.15;
+    m.visual.flash = 1;
   }
 
   /** Back to the trainer (trainer mode). */
@@ -1590,7 +1608,7 @@ export class Match {
     this.stepDodges(dt);
     this.stepLock();
     this.stepAutoLead(dt);
-    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
+    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil === undefined) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();
     for (const t of this.allTrainers) {
@@ -1605,6 +1623,8 @@ export class Match {
         // (The white send-out flash fades with it; left alone it kept the Pokémon tinted red.)
         for (const m of t.party) {
           if (m.stowed || m.captured || m.fainted) continue;
+          // One of the player's Pokémon left far behind (off screen) pops back out beside them.
+          if (t.isPlayer && !m.steered && !isRoaming(m) && !m.casting && !m.leap && Math.hypot(m.x - t.x, m.y - t.y) > 16) this.regroup(t, m);
           if (m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
           if (m.visual.flash > 0) m.visual.flash = Math.max(0, m.visual.flash - dt * 2.5);
         }
@@ -1667,6 +1687,10 @@ export class Match {
 
   private stepPlayer(dt: number): void {
     const p = this.player;
+    if (p.downUntil !== undefined) {
+      p.moving = false;
+      return;
+    }
     const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
     const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1);
     let moved = 0;
@@ -1677,7 +1701,20 @@ export class Match {
       return;
     }
     const c = this.controlled;
-    if (c && (c.fainted || c.stowed || c.captured || c.owner !== p || isRoaming(c))) this.releaseControl();
+    if (c && (c.fainted || c.stowed || c.captured || c.owner !== p || !p.party.includes(c) || isRoaming(c))) {
+      // A knocked-out Pokémon hands control to the next one out, beside the trainer.
+      if (c.fainted) this.handoffUntil = this.time + 1.5;
+      this.releaseControl();
+    }
+    if (!this.controlled && this.handoffUntil > this.time) {
+      const next = p.party
+        .filter((m) => !m.fainted && !m.captured && !m.stowed && !isRoaming(m) && m.visual.scale >= 1)
+        .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+      if (next && Math.hypot(next.x - p.x, next.y - p.y) < 10 && this.takeControl(next)) {
+        this.handoffUntil = 0;
+        this.battle.events.push({ type: 'notice', text: `Go, ${next.name}! You're steering it now (Esc for trainer mode)`, seconds: 2 });
+      }
+    }
     if (this.controlled) {
       // Pokémon mode: the keys steer the Pokémon; the trainer keeps a few steps behind it.
       const m = this.controlled;
@@ -1872,6 +1909,7 @@ export class Match {
         this.placeBall('cherish', [{ id: 'black-glasses', count: 1 }], ev.mon.x, ev.mon.y + 0.6, true);
         this.battle.events.push({ type: 'notice', text: 'Darkrai is down! It left a Cherish Ball behind', seconds: 3 });
       }
+      if (ev.type === 'faint' && ev.mon.owner) ev.mon.owner.lastKo = !ev.by ? 'other' : ev.by.wild && !ev.by.boss ? 'wild' : ev.by.owner ? 'trainer' : 'other';
       if (ev.type !== 'faint' || !ev.by || ev.by.boss) continue;
       const owner = ev.by.owner;
       if (owner) {
@@ -1920,8 +1958,15 @@ export class Match {
     const pl = this.player;
     if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
     for (const t of this.allTrainers) {
+      if (t.alive && t.downUntil !== undefined) {
+        if (this.time >= t.downUntil) this.respawn(t);
+        continue;
+      }
       // Out only when nothing is left standing; members out roaming still count.
-      if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) this.eliminate(t);
+      if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) {
+        if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.outcome) this.down(t);
+        else this.eliminate(t);
+      }
     }
     const c = this.challenge;
     if (c?.state === 'battle' && c.foe && !c.foe.alive) {
@@ -2493,6 +2538,59 @@ export class Match {
         m.moving = false;
       }
     }
+  }
+
+  /** Seconds a wild wipe-out keeps a trainer down at the current point of the match. */
+  respawnSeconds(): number {
+    const c = CONFIG.respawn;
+    return Math.round(Math.min(c.maxSeconds, c.baseSeconds + c.perMinute * (this.time / 60)));
+  }
+
+  /**
+   * Wiped out by wild Pokémon: the trainer drops everything they carry (one Premier Ball where
+   * they fell) and sits out a cooldown, then comes back at an outpost (see respawn).
+   */
+  down(t: Trainer): void {
+    const secs = this.respawnSeconds();
+    t.downUntil = this.time + secs;
+    const bag = [...t.items, ...t.held].filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }));
+    if (bag.length) this.placeBall('premier', bag, t.x + 0.8, t.y + 0.4);
+    t.items.fill(null);
+    t.held.fill(null);
+    t.aiTarget = null;
+    t.healing = 0;
+    t.moving = false;
+    if (t.isPlayer) {
+      if (this.controlled) this.releaseControl();
+      this.lockTarget = null;
+    }
+    this.battle.events.push({ type: 'downed', trainer: t, seconds: secs });
+  }
+
+  /** Back from a wild wipe-out: at the nearest outpost out of the dark, party fully healed. */
+  private respawn(t: Trainer): void {
+    t.downUntil = undefined;
+    t.lastKo = undefined;
+    const spots = this.outposts.map((o) => ({ x: o.x + 1.2, y: o.y + 1.2 })).filter((s) => !this.isDark(s.x, s.y) && canStand(this.ground, s.x, s.y, CONFIG.player.radius));
+    spots.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
+    const at = spots[0] ?? { x: t.x, y: t.y };
+    t.x = t.px = at.x;
+    t.y = t.py = at.y;
+    for (const m of t.party) {
+      if (m.captured) continue;
+      m.fainted = false;
+      m.hp = m.maxHp;
+      this.battle.cureStatus(m);
+      m.drowsy = 0;
+      m.casting = null;
+      m.target = null;
+      m.anim.play('Idle', { restart: true });
+      m.x = m.px = t.x;
+      m.y = m.py = t.y + 0.6;
+      m.stowed = true;
+    }
+    this.fieldParty(t);
+    this.battle.events.push({ type: 'respawned', trainer: t });
   }
 
   eliminate(t: Trainer): void {

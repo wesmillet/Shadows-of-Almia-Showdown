@@ -63,7 +63,9 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
   // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
   const s = view.spriteScale * vis.scale * monScale(m);
-  if (m.alpha && !m.fainted) drawAlphaAura(ctx, sx, sy, Math.max(0.7, bodyRadius(m.species) * 1.5) * view.pxPerTile * vis.scale, m.id);
+  // Alphas shed red embers: half rise behind the body, half in front (drawn after the sprite).
+  const embers = m.alpha && !m.fainted && vis.alpha > 0.5;
+  if (embers) drawEmbers(ctx, m, sx, sy, s, 0);
   // Sprites shrunk below one screen pixel per art pixel are filtered rather than decimated.
   ctx.imageSmoothingEnabled = s < 1;
   ctx.imageSmoothingQuality = 'high';
@@ -88,6 +90,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.restore();
   }
   ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
+  if (embers) drawEmbers(ctx, m, sx, sy, s, 1);
   if (m.shiny && !m.fainted) drawSparkle(ctx, m.id, dx, dy, f.w * s, f.h * s, view.baseScale);
   if (m.flash > 0 && !m.fainted) {
     // Two-frame white flash: draw the frame again through a white tint.
@@ -267,7 +270,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     drawSoftShadow(view, view.toScreenX(p.x) + gx * k, view.toScreenY(p.y) + gy * k, r, 0.28 * m.visual.alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive) continue;
+    if (!t.alive || t.downUntil !== undefined) continue;
     const p = trainerPos(t, alpha);
     // Wider than the stance and centred just above the soles, so the feet stand in the shade.
     if (inView(p.x, p.y)) drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y) - view.spriteScale, 0.5, 0.3);
@@ -287,7 +290,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     list.push({ y: p.y, draw: () => drawMon(view, m, alpha) });
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive) continue;
+    if (!t.alive || t.downUntil !== undefined) continue;
     const p = trainerPos(t, alpha);
     if (!inView(p.x, p.y)) continue;
     const c = t.counter;
@@ -312,7 +315,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawMon(view, m, alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive) continue;
+    if (!t.alive || t.downUntil !== undefined) continue;
     const p = trainerPos(t, alpha);
     if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha, match.ground);
   }
@@ -354,26 +357,48 @@ function drawSparkle(ctx: CanvasRenderingContext2D, id: number, x: number, y: nu
   ctx.restore();
 }
 
-/** An Alpha's ground aura: a red glow under its feet that breathes, with a thin ring pulsing outward. */
-function drawAlphaAura(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, id: number): void {
-  const t = performance.now() / 1000 + id * 0.41;
-  const breathe = 0.75 + 0.25 * Math.sin(t * 2.4);
+const EMBER_LIFE = 1.6;
+const EMBERS_PER_LAYER = 9;
+
+/**
+ * An Alpha's embers: art-pixel squares that leave the body, drift up and sway, cooling from
+ * yellow through orange and red to a dark ember as they fade. Stateless: each ember's spot and
+ * phase come from its index and the Pokémon's id. `layer` 0 draws the ones behind the body.
+ */
+function drawEmbers(ctx: CanvasRenderingContext2D, m: Mon, sx: number, sy: number, s: number, layer: 0 | 1): void {
+  const now = performance.now() / 1000;
+  const bw = m.species.body[0] * s;
+  const bh = m.species.body[1] * s;
+  const px = Math.max(2, Math.round(s));
   ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(1, 0.45);
-  const g = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.15);
-  g.addColorStop(0, `rgba(255,60,60,${0.42 * breathe})`);
-  g.addColorStop(0.6, `rgba(220,30,40,${0.22 * breathe})`);
-  g.addColorStop(1, 'rgba(200,20,30,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
-  ctx.fill();
-  const k = (t * 0.6) % 1;
-  ctx.strokeStyle = `rgba(255,80,80,${0.6 * (1 - k)})`;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * (0.6 + 0.7 * k), 0, Math.PI * 2);
-  ctx.stroke();
+  for (let i = 0; i < EMBERS_PER_LAYER; i++) {
+    const k = i * 2 + layer;
+    const h1 = hash01(m.id * 131 + k * 17);
+    const h2 = hash01(m.id * 71 + k * 29 + 5);
+    const h3 = hash01(m.id * 13 + k * 53 + 9);
+    const t = now + h1 * EMBER_LIFE;
+    const cycle = Math.floor(t / EMBER_LIFE);
+    const a = (t % EMBER_LIFE) / EMBER_LIFE;
+    // A fresh spot on the body each time round.
+    const rx = hash01(cycle * 977 + k * 31 + m.id) - 0.5;
+    const ry = 0.25 + 0.65 * hash01(cycle * 389 + k * 7 + m.id * 3);
+    const sway = Math.sin(t * 3 + k) * 2.2 * a * s;
+    const x = sx + rx * bw * 0.8 + sway;
+    const y = sy - bh * ry - (26 * a + h3 * 2) * s;
+    const col = a < 0.25 ? '255,228,120' : a < 0.55 ? '255,120,40' : a < 0.8 ? '220,40,40' : '120,20,30';
+    const alpha = Math.pow(1 - a, 0.6);
+    const size = (h2 < 0.25 && a < 0.5 ? 2 : 1) * px;
+    const gx = Math.round(x / px) * px;
+    const gy = Math.round(y / px) * px;
+    ctx.fillStyle = `rgba(255,60,30,${alpha * 0.2})`;
+    ctx.fillRect(gx - px, gy - px, size + px * 2, size + px * 2);
+    ctx.fillStyle = `rgba(${col},${alpha})`;
+    ctx.fillRect(gx, gy, size, size);
+  }
   ctx.restore();
+}
+
+function hash01(n: number): number {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
 }

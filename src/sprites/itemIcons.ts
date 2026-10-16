@@ -61,15 +61,53 @@ export class ItemIcons {
     const img = this.get(itemId, tmType);
     ctx.imageSmoothingEnabled = false;
     if (img) {
-      const scale = Math.max(1, Math.floor(fit / Math.max(img.naturalWidth, img.naturalHeight)));
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      ctx.drawImage(img, Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+      // Scale the visible art (transparent margins trimmed) by whole pixels to fill `fit`.
+      const b = opaqueBounds(img);
+      const scale = Math.max(1, Math.floor(fit / Math.max(b.w, b.h)));
+      const w = b.w * scale;
+      const h = b.h * scale;
+      ctx.drawImage(img, b.x, b.y, b.w, b.h, Math.round(x - w / 2), Math.round(y - h / 2), w, h);
     } else {
       const ph = this.assets.placeholder(itemId, 32, 32);
       ctx.drawImage(ph, Math.round(x - fit / 2), Math.round(y - fit / 2), fit, fit);
     }
   }
+}
+
+const boundsCache = new WeakMap<object, { x: number; y: number; w: number; h: number }>();
+
+/** The box round an icon's non-transparent pixels (the whole image until it has loaded). */
+function opaqueBounds(img: HTMLImageElement | HTMLCanvasElement): { x: number; y: number; w: number; h: number } {
+  const iw = img instanceof HTMLImageElement ? img.naturalWidth : img.width;
+  const ih = img instanceof HTMLImageElement ? img.naturalHeight : img.height;
+  const whole = { x: 0, y: 0, w: Math.max(1, iw), h: Math.max(1, ih) };
+  if (!iw || !ih) return whole;
+  const hit = boundsCache.get(img);
+  if (hit) return hit;
+  let box = whole;
+  try {
+    const c = document.createElement('canvas');
+    c.width = iw;
+    c.height = ih;
+    const g = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+    g.drawImage(img, 0, 0);
+    const px = g.getImageData(0, 0, iw, ih).data;
+    let x0 = iw, y0 = ih, x1 = -1, y1 = -1;
+    for (let y = 0; y < ih; y++) {
+      for (let x = 0; x < iw; x++) {
+        if ((px[(y * iw + x) * 4 + 3] as number) < 16) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    if (x1 >= x0) box = { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  } catch {
+    // Unreadable pixels: keep the whole image.
+  }
+  boundsCache.set(img, box);
+  return box;
 }
 
 /** Builds the open-ball frame from a closed sprite: lower half in place, top half offset upward, a white glow in the gap. */

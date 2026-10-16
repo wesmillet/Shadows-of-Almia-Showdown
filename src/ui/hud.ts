@@ -794,7 +794,7 @@ export class Hud {
         const def = ITEMS[id];
         if (def) {
           // The icon sits in the middle of the slot with room round it; balls (18 px art) and bag icons (32 px) both fit 24 px.
-          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2 + 1 * s, 26 * s, def.tmType);
+          this.icons.draw(ctx, def.id, x + slot / 2, y0 + slot / 2, 34 * s, def.tmType);
           const count = entry?.count ?? 1;
           if (count > 1) {
             // Quantity badge in the bottom-right corner: white on dark, always readable.

@@ -135,8 +135,8 @@ The shiny colours are stored as palette swaps in `data/shiny.json`
 and portrait from SpriteCollab), so no second copy of the sheets ships.
 Wild levels climb toward the Shadow Crystal: base levels at the coast, the
 30s to about 60 in the middle (mostly evolved). Within 55 tiles of the crystal
-about one wild in fourteen is an **Alpha** (the Alpha mark by its red name, a red glow and a breathing red aura on the ground, drawn half again as big):
-level 75, always the last form of its line, worth 2.5x XP. Knocking one out
+about one wild in fourteen is an **Alpha** (the Alpha mark by its red name, a red glow with embers drifting off it, drawn half again as big):
+about ten levels above the wilds around it (at most 65), always the last form of its line, worth 2.5x XP. Knocking one out
 or catching it always drops an Ultra Ball prize: a rare TM (40%), two Rare
 Candies (35%) or a rare-tier roll (25%), plus a 12% chance of an Extraction
 Voucher on top.
@@ -195,6 +195,14 @@ aura and cannot be caught. Three seconds back in the light
 wakes them. When the last safe circle closes, Darkrai appears at the
 crystal at level 100 and hunts the remaining trainers with Dark Void rings
 and Dark Pulse lines.
+
+**Respawning.** If wild Pokémon knock out your whole party you are not
+out: every item you carry drops where you fell (one Premier Ball) and you
+come back at the nearest outpost outside the darkness with your party fully
+healed. The wait grows as the match goes on: 8 s plus 4 s for each minute
+played, up to 90 s (`respawn` in `data/config.json`). Losing to another
+trainer, or to the darkness, still knocks you out, and nobody respawns once
+the final showdown has started. Rivals follow the same rule.
 
 **Extraction and the PC.** Pokémon can be kept between matches in your PC
 (`src/pc.ts`, stored in this browser's localStorage, so it stays on this

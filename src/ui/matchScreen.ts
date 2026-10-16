@@ -174,6 +174,11 @@ export class MatchScreen implements Screen {
 
   protected handleInput(input: Input): void {
     const v = this.ctx.view;
+    // Wiped out and waiting to respawn: nothing to do but wait.
+    if (this.match.player.downUntil !== undefined) {
+      input.takeClicks();
+      return;
+    }
     const duelSide = this.playerDuelSide();
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
     const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
@@ -918,6 +923,12 @@ export class MatchScreen implements Screen {
       case 'money':
         if (ev.trainer.isPlayer) this.floaters.add(ev.x, ev.y - 1.2, `+₽${ev.amount}`, '#ffe27a', 13);
         break;
+      case 'downed':
+        if (!ev.trainer.isPlayer) this.say(`${ev.trainer.name} was wiped out by wild Pokémon`, 2);
+        break;
+      case 'respawned':
+        if (ev.trainer.isPlayer) this.say('Back in the fight! Your party is healed, but your items are gone', 3);
+        break;
       case 'eliminated':
         this.say(ev.trainer.isPlayer ? 'Your whole party fainted…' : `${ev.trainer.name} was eliminated!`, 2.5);
         break;
@@ -1455,7 +1466,7 @@ export class MatchScreen implements Screen {
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.teach || this.match.pendingLearn.length) return null;
+    if (this.shopOpen || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
     const who = this.match.visitors.near();
     if (who === 'ace') return 'Space · Battle Ace Trainer Celeste (win a rare Pokémon)';
     if (who === 'hoopa') return 'Space · Talk to Hoopa';
@@ -1598,9 +1609,24 @@ export class MatchScreen implements Screen {
     } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
     this.drawDuelHud(v);
+    this.drawDowned(v);
     this.drawOverlay(v);
     v.camX -= ox;
     v.camY -= oy;
+  }
+
+  /** Wiped out by wild Pokémon: a dark screen with the respawn countdown. */
+  private drawDowned(v: View): void {
+    const p = this.match.player;
+    if (p.downUntil === undefined) return;
+    const h = v.hud;
+    const s = v.baseScale;
+    const left = Math.max(0, Math.ceil(p.downUntil - this.match.time));
+    h.fillStyle = 'rgba(8,4,18,0.62)';
+    h.fillRect(0, 0, v.width, v.height);
+    text(v, 'WIPED OUT', v.width / 2, v.height / 2 - 40 * s, 40, { align: 'center', weight: '900', color: '#ff8fa3' });
+    text(v, `Respawning in ${left}s`, v.width / 2, v.height / 2, 22, { align: 'center', weight: '800', color: '#ffffff' });
+    text(v, 'Wild Pokémon took your whole party. You come back at an outpost with them healed; your items stayed where you fell.', v.width / 2, v.height / 2 + 30 * s, 13, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 80 * s });
   }
 
   /** The battle banner (both trainers and their remaining Pokémon) and, after a knockout, the pick panel. */

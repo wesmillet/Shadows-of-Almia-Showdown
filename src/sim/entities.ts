@@ -134,6 +134,10 @@ export interface Trainer {
   /** Gear tab: held items and TMs. */
   held: Array<InventorySlot | null>;
   alive: boolean;
+  /** Wiped out by wild Pokémon: back in the match at this time (see Match.down). */
+  downUntil?: number;
+  /** What knocked out the trainer's latest Pokémon: a wild one, a trainer's, or anything else. */
+  lastKo?: 'wild' | 'trainer' | 'other';
   stats: TrainerStats;
   /** AI brain. */
   ai: TrainerAi;

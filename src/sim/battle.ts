@@ -42,6 +42,8 @@ export type BattleEvent =
   | { type: 'wake'; mon: Mon }
   | { type: 'text'; mon: Mon; text: string }
   | { type: 'notice'; text: string; seconds?: number }
+  | { type: 'downed'; trainer: Trainer; seconds: number }
+  | { type: 'respawned'; trainer: Trainer }
   | { type: 'caught'; mon: Mon; by: Trainer }
   | { type: 'broke-free'; mon: Mon }
   | { type: 'pickup'; trainer: Trainer; items: InventorySlot[]; ball: BallKind; healed: boolean }

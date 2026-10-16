@@ -43,6 +43,7 @@ export type BattleEvent =
   | { type: 'text'; mon: Mon; text: string }
   | { type: 'notice'; text: string; seconds?: number }
   | { type: 'downed'; trainer: Trainer; seconds: number }
+  | { type: 'mega-start'; mon: Mon }
   | { type: 'respawned'; trainer: Trainer }
   | { type: 'caught'; mon: Mon; by: Trainer }
   | { type: 'broke-free'; mon: Mon }

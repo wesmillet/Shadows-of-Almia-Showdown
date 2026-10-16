@@ -3,11 +3,12 @@
  * minimap with the darkness (top right), party strip with portraits and HP
  * (bottom), move wheel (bottom right) and the item bar (bottom centre).
  */
+import { canMega } from '../sim/mega';
 import { clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
-import { CONFIG, MOVE_SLOTS, move, typeColor } from '../sim/data';
+import { CONFIG, MOVE_SLOTS, SPECIES, move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
@@ -210,6 +211,7 @@ export class Hud {
       this.label(ctx, title, tx, y + 24 * s, 15, '#f4f1ff', 'left', '800');
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
+        : def?.effect === 'mega' ? `Mega Stone · give it to ${def.megaFor ? (SPECIES.get(def.megaFor)?.name ?? 'its Pokémon') : 'its Pokémon'}, then press M`
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
@@ -654,6 +656,27 @@ export class Hud {
       ctx.roundRect(Math.min(cx - mw / 2, v.width - mw - 8 * s), my, mw, 18 * s, 9 * s);
       ctx.fill();
       this.label(ctx, modeText, Math.min(cx, v.width - mw / 2 - 8 * s), my + 13 * s, 10, '#ffffff', 'center', '800');
+    }
+    // Mega Evolution ready: a glowing pill above the others.
+    if (canMega(match.player, m)) {
+      const megaText = 'MEGA EVOLVE · M';
+      ctx.font = this.font(10, '800');
+      const gw = ctx.measureText(megaText).width + 18 * s;
+      const gy = dy - (match.playerDuel ? 22 : 44) * s;
+      const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 220);
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,140,255,0.9)';
+      ctx.shadowBlur = 10 * s * pulse;
+      const g = ctx.createLinearGradient(cx - gw / 2, 0, cx + gw / 2, 0);
+      g.addColorStop(0, '#ff6fd8');
+      g.addColorStop(0.5, '#9b6bff');
+      g.addColorStop(1, '#4fc3ff');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.roundRect(Math.min(cx - gw / 2, v.width - gw - 8 * s), gy, gw, 18 * s, 9 * s);
+      ctx.fill();
+      ctx.restore();
+      this.label(ctx, megaText, Math.min(cx, v.width - gw / 2 - 8 * s), gy + 13 * s, 10, '#ffffff', 'center', '800');
     }
     m.moves.forEach((id, i) => {
       const def = move(id);

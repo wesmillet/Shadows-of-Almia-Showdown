@@ -21621,6 +21621,815 @@
         37,
         55
       ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "will-o-wisp",
+        "fire-spin",
+        "flamethrower",
+        "air-slash"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ember"
+        ],
+        [
+          9,
+          "gust"
+        ],
+        [
+          11,
+          "will-o-wisp"
+        ],
+        [
+          14,
+          "fire-spin"
+        ],
+        [
+          22,
+          "flamethrower"
+        ],
+        [
+          28,
+          "air-slash"
+        ],
+        [
+          44,
+          "fire-blast"
+        ]
+      ],
+      "dex": "0006-mega_x",
+      "name": "Mega Charizard X",
+      "types": [
+        "fire",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 78,
+        "atk": 130,
+        "def": 111,
+        "spa": 130,
+        "spd": 85,
+        "spe": 100
+      },
+      "heightM": 1.7,
+      "megaOf": "0006",
+      "stone": "charizardite-x",
+      "body": [
+        39,
+        28
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "dark-pulse",
+        "shadow-ball",
+        "sludge-bomb",
+        "thunderbolt"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "night-shade"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          14,
+          "hex"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "shadow-ball"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ]
+      ],
+      "dex": "0094-mega",
+      "name": "Mega Gengar",
+      "types": [
+        "ghost",
+        "poison"
+      ],
+      "stats": {
+        "hp": 60,
+        "atk": 65,
+        "def": 80,
+        "spa": 170,
+        "spd": 95,
+        "spe": 130
+      },
+      "heightM": 1.4,
+      "megaOf": "0094",
+      "stone": "gengarite",
+      "body": [
+        39,
+        28
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "iron-head",
+        "earthquake",
+        "crunch",
+        "stone-edge"
+      ],
+      "along": "length",
+      "coil": 0.42,
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          36,
+          "stone-edge"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
+      ],
+      "dex": "0208-mega",
+      "name": "Mega Steelix",
+      "types": [
+        "steel",
+        "ground"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 125,
+        "def": 230,
+        "spa": 55,
+        "spd": 95,
+        "spe": 30
+      },
+      "heightM": 10.5,
+      "megaOf": "0208",
+      "stone": "steelixite",
+      "body": [
+        54,
+        53
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "stone-edge",
+        "crunch",
+        "earthquake",
+        "dark-pulse"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "rock-throw"
+        ],
+        [
+          9,
+          "bite"
+        ],
+        [
+          11,
+          "harden"
+        ],
+        [
+          14,
+          "rock-tomb"
+        ],
+        [
+          18,
+          "feint-attack"
+        ],
+        [
+          22,
+          "rock-slide"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "night-slash"
+        ],
+        [
+          32,
+          "stone-edge"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "crunch"
+        ]
+      ],
+      "dex": "0248-mega",
+      "name": "Mega Tyranitar",
+      "types": [
+        "rock",
+        "dark"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 164,
+        "def": 150,
+        "spa": 95,
+        "spd": 120,
+        "spe": 71
+      },
+      "heightM": 2.5,
+      "megaOf": "0248",
+      "stone": "tyranitarite",
+      "body": [
+        29,
+        30
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "psybeam",
+        "dazzling-gleam",
+        "shadow-ball",
+        "hypnosis"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          12,
+          "hypnosis"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "disarming-voice"
+        ],
+        [
+          26,
+          "shadow-ball"
+        ],
+        [
+          28,
+          "draining-kiss"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "dazzling-gleam"
+        ]
+      ],
+      "dex": "0282-mega",
+      "name": "Mega Gardevoir",
+      "types": [
+        "psychic",
+        "fairy"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 85,
+        "def": 65,
+        "spa": 165,
+        "spd": 135,
+        "spe": 100
+      },
+      "heightM": 1.6,
+      "megaOf": "0282",
+      "stone": "gardevoirite",
+      "body": [
+        17,
+        26
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "bite",
+        "psycho-cut",
+        "crunch",
+        "quick-attack"
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "tackle"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          26,
+          "psycho-cut"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "crunch"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ],
+      "dex": "0359-mega",
+      "name": "Mega Absol",
+      "types": [
+        "dark"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 150,
+        "def": 60,
+        "spa": 115,
+        "spd": 60,
+        "spe": 115
+      },
+      "heightM": 1.2,
+      "megaOf": "0359",
+      "stone": "absolite",
+      "body": [
+        31,
+        32
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "crunch",
+        "bite",
+        "ice-beam",
+        "earthquake"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          16,
+          "bite"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          36,
+          "earthquake"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ],
+      "dex": "0362-mega",
+      "name": "Mega Glalie",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 120,
+        "def": 80,
+        "spa": 120,
+        "spd": 80,
+        "spe": 100
+      },
+      "heightM": 2.1,
+      "megaOf": "0362",
+      "stone": "glalitite",
+      "body": [
+        28,
+        32
+      ]
+    },
+    {
+      "tier": 4,
+      "moves": [
+        "dragon-pulse",
+        "psybeam",
+        "surf",
+        "thunderbolt"
+      ],
+      "along": "length",
+      "learnset": [
+        [
+          1,
+          "luster-purge"
+        ],
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "twister"
+        ],
+        [
+          9,
+          "confusion"
+        ],
+        [
+          11,
+          "dragon-dance"
+        ],
+        [
+          14,
+          "dragon-breath"
+        ],
+        [
+          18,
+          "psybeam"
+        ],
+        [
+          22,
+          "dragon-pulse"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          36,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "psychic"
+        ],
+        [
+          44,
+          "draco-meteor"
+        ]
+      ],
+      "dex": "0381-mega",
+      "name": "Mega Latios",
+      "types": [
+        "dragon",
+        "psychic"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 130,
+        "def": 100,
+        "spa": 160,
+        "spd": 120,
+        "spe": 110
+      },
+      "heightM": 2.3,
+      "megaOf": "0381",
+      "stone": "latiosite",
+      "body": [
+        73,
+        36
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "brick-break",
+        "quick-attack",
+        "dark-pulse",
+        "dragon-pulse"
+      ],
+      "learnset": [
+        [
+          1,
+          "scratch"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "force-palm"
+        ],
+        [
+          7,
+          "quick-attack"
+        ],
+        [
+          9,
+          "metal-claw"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          22,
+          "aura-sphere"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          28,
+          "flash-cannon"
+        ],
+        [
+          36,
+          "brick-break"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
+      ],
+      "dex": "0448-mega",
+      "name": "Mega Lucario",
+      "types": [
+        "fighting",
+        "steel"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 145,
+        "def": 88,
+        "spa": 140,
+        "spd": 70,
+        "spe": 112
+      },
+      "heightM": 1.3,
+      "megaOf": "0448",
+      "stone": "lucarionite",
+      "body": [
+        27,
+        28
+      ]
+    },
+    {
+      "tier": 0,
+      "moves": [
+        "psycho-cut",
+        "brick-break",
+        "x-scissor",
+        "aerial-ace"
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "karate-chop"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psycho-cut"
+        ],
+        [
+          16,
+          "aerial-ace"
+        ],
+        [
+          18,
+          "low-kick"
+        ],
+        [
+          22,
+          "zen-headbutt"
+        ],
+        [
+          26,
+          "x-scissor"
+        ],
+        [
+          28,
+          "double-kick"
+        ],
+        [
+          38,
+          "brick-break"
+        ]
+      ],
+      "dex": "0475-mega",
+      "name": "Mega Gallade",
+      "types": [
+        "psychic",
+        "fighting"
+      ],
+      "stats": {
+        "hp": 68,
+        "atk": 165,
+        "def": 95,
+        "spa": 65,
+        "spd": 115,
+        "spe": 110
+      },
+      "heightM": 1.6,
+      "megaOf": "0475",
+      "stone": "galladite",
+      "body": [
+        21,
+        30
+      ]
     }
   ]
 }

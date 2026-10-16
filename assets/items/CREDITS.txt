@@ -8,3 +8,9 @@ Non-commercial fan project use only.
 tm-<type>.png         the TM disc in that type's colour
 balls/                every ball and the Crystal Shard vial: see balls/README.md
 ice-stone.png         the Water Stone recoloured icy (Gen 4 has no Ice Stone)
+
+Mega Stone icons (charizardite-x, gengarite, steelixite, tyranitarite,
+gardevoirite, absolite, glalitite, latiosite, lucarionite, galladite):
+30x30 bag icons from the PokeAPI sprites repository
+(https://github.com/PokeAPI/sprites, sprites/items/). Pokémon item art by
+Game Freak / The Pokémon Company / Nintendo; non-commercial fan use only.

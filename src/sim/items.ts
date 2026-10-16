@@ -6,7 +6,7 @@ import type { Rng } from '../core/rng';
 import type { InventorySlot } from './entities';
 import { MOVES } from './data';
 
-export type HeldEffect = 'regen' | 'sash' | 'choice-band' | 'life-orb' | 'type-boost' | 'exp-share' | 'lucky-egg';
+export type HeldEffect = 'regen' | 'sash' | 'choice-band' | 'life-orb' | 'type-boost' | 'exp-share' | 'lucky-egg' | 'mega';
 
 /** Ball rules beyond a flat modifier (see ballModifier in catching.ts). */
 export type BallSpecial = 'master' | 'net' | 'dive' | 'nest' | 'repeat' | 'timer' | 'dusk' | 'heal' | 'quick';
@@ -36,6 +36,8 @@ export interface ItemDef {
   tmType?: string;
   rare?: boolean;
   stack?: number;
+  /** Mega Stones: the base dex that Mega Evolves holding it. */
+  megaFor?: string;
   /** Crystal shard: clear radius in tiles and how long it lasts. */
   radius?: number;
   seconds?: number;
@@ -83,8 +85,16 @@ export function rollTier(rng: Rng): LootTier {
 }
 
 /** Rolls the contents of an item ball of a tier: one stack. */
-export function rollLoot(rng: Rng, tier: LootTier): InventorySlot {
+export function rollLoot(rng: Rng, tier: LootTier, party: string[] = []): InventorySlot {
   const entry = rng.weighted(LOOT[tier].entries, (e) => e.weight);
+  if (entry.id === 'mega-stone') {
+    // A Mega Stone: usually one for a Pokémon the finder has, when they have one that can use it.
+    const stones = ITEM_LIST.filter((i) => i.effect === 'mega');
+    const mine = stones.filter((i) => i.megaFor && party.includes(i.megaFor));
+    const pool = mine.length && rng.chance(0.6) ? mine : stones;
+    if (pool.length) return { id: rng.pick(pool).id, count: 1 };
+    return { id: 'rare-candy', count: 1 };
+  }
   if (entry.id === 'tm' || entry.id === 'rare-tm') {
     const pool = TM_LIST.filter((t) => !!t.rare === (entry.id === 'rare-tm'));
     return { id: rng.pick(pool.length ? pool : TM_LIST).id, count: 1 };

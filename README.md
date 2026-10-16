@@ -181,6 +181,7 @@ impact on the body, at most one aftershock.
 | Space with nothing in reach | dodge: your lead dashes the way you move (or face); hits in the first 0.3 s miss; 3 s cooldown (the pill above the move wheel) |
 | hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |
 | F (Tab or click a wild to switch target) | the ball locks onto the nearest catchable wild within 9 tiles (one fighting your team counts as closer), marked by turning brackets (green in range, red out of range). Tab steps through the wilds in range; clicking a wild locks onto it. A picked target holds until it faints, is caught or leaves range. F throws the armed ball at it; throws reach 7 tiles |
+| M | Mega Evolve the Pokémon you steer (or your lead) when it holds its own Mega Stone; once a match |
 | click a portrait | swap the lead; click a behaviour chip to cycle Attack (go after anything in range) / Guard (fight what comes near) / Follow (stay out of fights) |
 | hover a party card | a red X in its corner releases that Pokémon (click again on "Release?" to confirm): it walks off into the wild, calm for a while, and could be caught again. Not during a battle, and never your last one |
 | hover a bag slot | the item's name; the count sits in the slot's corner; the red X throws the item away |
@@ -195,6 +196,18 @@ aura and cannot be caught. Three seconds back in the light
 wakes them. When the last safe circle closes, Darkrai appears at the
 crystal at level 100 and hunts the remaining trainers with Dark Void rings
 and Dark Pulse lines.
+
+**Mega Evolution.** Ten Pokémon can Mega Evolve: Charizard (X), Gengar,
+Steelix, Tyranitar, Gardevoir, Absol, Glalie, Latios, Lucario and Gallade
+(the Megas with full SpriteCollab sprite sets). Give one its own Mega Stone
+(Held & TMs tab) and a glowing **MEGA EVOLVE · M** pill appears: press M and
+it becomes its Mega form for the rest of the match, with the Mega's types
+and base stats at its level. Each trainer can Mega Evolve once a match, and
+rivals do it as soon as a stone holder is fighting. Mega Stones come from
+Ultra Ball loot (usually a stone for a Pokémon you have), and an Alpha of
+one of these lines always drops its stone. A Mega sent to the PC is stored
+as its regular form. Data: `scripts/megas.py` adds the Mega species and
+stones; the rules are in `src/sim/mega.ts`.
 
 **Respawning.** If wild Pokémon knock out your whole party you are not
 out: every item you carry drops where you fell (one Premier Ball) and you

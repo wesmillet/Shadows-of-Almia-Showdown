@@ -393,6 +393,96 @@
       "tier": 3,
       "stack": 1,
       "desc": "Sends one Pokémon from your party to your PC for keeps (it leaves the match)"
+    },
+    {
+      "id": "charizardite-x",
+      "name": "Charizardite X",
+      "short": "Charizar",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0006",
+      "desc": "Held by Charizard: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "gengarite",
+      "name": "Gengarite",
+      "short": "Gengarit",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0094",
+      "desc": "Held by Gengar: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "steelixite",
+      "name": "Steelixite",
+      "short": "Steelixi",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0208",
+      "desc": "Held by Steelix: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "tyranitarite",
+      "name": "Tyranitarite",
+      "short": "Tyranita",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0248",
+      "desc": "Held by Tyranitar: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "gardevoirite",
+      "name": "Gardevoirite",
+      "short": "Gardevoi",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0282",
+      "desc": "Held by Gardevoir: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "absolite",
+      "name": "Absolite",
+      "short": "Absolite",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0359",
+      "desc": "Held by Absol: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "glalitite",
+      "name": "Glalitite",
+      "short": "Glalitit",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0362",
+      "desc": "Held by Glalie: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "latiosite",
+      "name": "Latiosite",
+      "short": "Latiosit",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0381",
+      "desc": "Held by Latios: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "lucarionite",
+      "name": "Lucarionite",
+      "short": "Lucarion",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0448",
+      "desc": "Held by Lucario: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "galladite",
+      "name": "Galladite",
+      "short": "Galladit",
+      "kind": "hold",
+      "effect": "mega",
+      "megaFor": "0475",
+      "desc": "Held by Gallade: press M to Mega Evolve it (once a match)"
     }
   ]
 }

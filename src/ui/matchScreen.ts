@@ -293,6 +293,11 @@ export class MatchScreen implements Screen {
     // Q and E: moves 1 and 2 again, next to WASD.
     if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
     if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
+    // M: Mega Evolve the Pokémon you are steering (or your lead) when it holds its Mega Stone.
+    if (input.pressed('KeyM')) {
+      const msg = this.match.megaEvolve(this.match.player);
+      if (msg) this.say(msg, 1.6);
+    }
     // Throwing: point at a wild Pokémon and press F.
     if (input.pressed('KeyF')) this.throwAtTarget();
     void v;
@@ -916,7 +921,19 @@ export class MatchScreen implements Screen {
         if (ev.mon.owner?.isPlayer) this.say(`What? ${ev.mon.name} is evolving!`, 1.6);
         this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2, fps: 12 });
         break;
+      case 'mega-start':
+        if (ev.mon.owner?.isPlayer) this.say(`${ev.mon.name}'s ${ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'} is reacting!`, 1.6);
+        else if (ev.mon.owner) this.say(`${ev.mon.owner.name}'s ${ev.mon.name} is Mega Evolving!`, 2);
+        this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2.6, fps: 12 });
+        this.shake = Math.max(this.shake, 0.6);
+        break;
       case 'evolved':
+        if (ev.mon.mega && ev.mon.megaFrom?.name === ev.from) {
+          if (ev.mon.owner?.isPlayer) this.say(`${ev.from} Mega Evolved into ${ev.mon.name}!`, 3);
+          this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 4, fps: 18 });
+          this.shake = Math.max(this.shake, 1);
+          break;
+        }
         if (ev.mon.owner?.isPlayer) this.say(`${ev.from} evolved into ${ev.mon.name}!`, 2.6);
         this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 3, fps: 18 });
         break;

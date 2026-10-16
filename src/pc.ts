@@ -46,8 +46,9 @@ export function loadPc(): PcEntry[] {
 export function extractToPc(m: Mon, via: PcEntry['via'], seed?: number): boolean {
   const entry: PcEntry = {
     uid: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
-    dex: m.dex,
-    name: m.name,
+    // A Mega goes home as the form it Mega Evolved from.
+    dex: m.megaFrom?.dex ?? m.dex,
+    name: m.megaFrom?.name ?? m.name,
     level: m.level,
     shiny: !!m.shiny || undefined,
     alpha: !!m.alpha || undefined,

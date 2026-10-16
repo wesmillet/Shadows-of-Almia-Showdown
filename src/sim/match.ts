@@ -22,6 +22,7 @@ import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
+import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -312,7 +313,7 @@ export class Match {
    * rare TM, two Rare Candies or a rare-tier roll, plus a small chance at an
    * Extraction Voucher on top. It lands as a rare-tier ball with known contents.
    */
-  alphaReward(x: number, y: number, by: Trainer | null): void {
+  alphaReward(x: number, y: number, by: Trainer | null, alpha: Mon | null = null): void {
     const contents: InventorySlot[] = [];
     const r = this.rng.next();
     const rareTms = TM_LIST.filter((t) => t.rare);
@@ -321,6 +322,9 @@ export class Match {
     else contents.push(rollLoot(this.rng, 'rare'));
     const voucher = this.rng.chance(0.12);
     if (voucher) contents.push({ id: 'extraction-voucher', count: 1 });
+    // An Alpha of a line that can Mega Evolve also carries its Mega Stone.
+    const stone = alpha ? stoneFor(alpha.dex) : null;
+    if (stone) contents.push({ id: stone, count: 1 });
     this.placeBall(ballOfTier('rare'), contents, x, y);
     if (by?.isPlayer) {
       const names = contents.map((c) => `${ITEMS[c.id]?.name ?? c.id}${c.count > 1 ? ` x${c.count}` : ''}`).join(' + ');
@@ -360,6 +364,24 @@ export class Match {
   }
 
   /** Equips a held item from the gear tab on the lead; the previous item returns to the tab. */
+  /**
+   * Mega Evolution (src/sim/mega.ts): the Pokémon holding its own Mega Stone glows and becomes
+   * its Mega form for the rest of the match. Once a match per trainer.
+   */
+  megaEvolve(t: Trainer, m: Mon | null = t.isPlayer ? this.actingMon : lead(t)): string {
+    if (t.megaUsed) return 'You already Mega Evolved this match';
+    if (!m) return 'No Pokémon out';
+    const form = megaFormOf(m.dex);
+    if (!form) return `${m.name} can't Mega Evolve`;
+    if (m.heldItem !== form.stone) return `${m.name} needs to hold its ${ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'}`;
+    if (!canMega(t, m)) return `${m.name} can't Mega Evolve right now`;
+    t.megaUsed = true;
+    m.evolving = { to: form.dex, t: 0, swapped: false, mega: true };
+    m.busy = Math.max(m.busy, 1.2);
+    this.battle.events.push({ type: 'mega-start', mon: m });
+    return '';
+  }
+
   equip(t: Trainer, slot: number): string {
     const entry = t.held[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
@@ -369,6 +391,9 @@ export class Match {
     const previous = m.heldItem;
     m.heldItem = def.id;
     this.takeItem(t, slot, 'held');
+    // Holding its Mega Stone: start loading the Mega's sprites now so the change is instant.
+    const form = def.effect === 'mega' ? megaFormOf(m.dex) : null;
+    if (form && form.stone === def.id) this.sprites.get(form.dex, !!m.shiny);
     if (previous) this.giveItem(t, previous);
     return `${m.name} holds the ${def.name}`;
   }
@@ -643,7 +668,7 @@ export class Match {
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
-          if (w.alpha) this.alphaReward(th.thrower.x, th.thrower.y, th.thrower);
+          if (w.alpha) this.alphaReward(th.thrower.x, th.thrower.y, th.thrower, w);
           // The lead that wore it down learns from the catch too.
           const leadMon = lead(th.thrower);
           const share = (CONFIG.party as typeof CONFIG.party & { catchXpShare?: number }).catchXpShare ?? 0;
@@ -696,7 +721,7 @@ export class Match {
   private openBall(t: Trainer, i: number): boolean {
     const it = this.items[i] as GroundItem | undefined;
     if (!it) return false;
-    if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common')];
+    if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common', t.party.map((m) => baseDex(m.megaFrom?.dex ?? m.dex)))];
     const got: InventorySlot[] = [];
     it.contents = it.contents.filter((c) => {
       if (!this.giveItem(t, c.id, c.count)) return true;
@@ -1630,6 +1655,11 @@ export class Match {
         }
         stepParty(t, lead(t), dt, pw);
       }
+      // Rivals Mega Evolve as soon as a Pokémon holding its stone is in a fight.
+      if (!t.isPlayer && !t.megaUsed) {
+        const fighter = t.party.find((m) => m.target && canMega(t, m));
+        if (fighter) this.megaEvolve(t, fighter);
+      }
     }
     this.stepDuels(dt);
     for (const w of this.wilds) {
@@ -1666,7 +1696,7 @@ export class Match {
       for (const m of t.party) {
         const e = m.evolving;
         if (!e) {
-          if (m.fainted || m.captured || m.stowed || m.visual.scale < 1) continue;
+          if (m.fainted || m.captured || m.stowed || m.mega || m.visual.scale < 1) continue;
           const to = pickEvolution(m.species, m.level, this.rng);
           if (!to) continue;
           m.evolving = { to, t: 0, swapped: false };
@@ -1675,9 +1705,19 @@ export class Match {
         }
         e.t += dt;
         if (!e.swapped && e.t >= EVOLVE_SWAP) {
+          // The new form's sprites must be in before the swap (or it would vanish while they load).
+          const spr = this.sprites.get(e.to, !!m.shiny);
+          if (!spr.loaded && e.t < EVOLVE_SWAP + 4) {
+            e.t = EVOLVE_SWAP - 0.2;
+            continue;
+          }
           e.swapped = true;
           const from = m.name;
-          applyEvolution(m, species(e.to), this.sprites.get(e.to, !!m.shiny));
+          if (e.mega) {
+            m.mega = true;
+            m.megaFrom = { dex: m.dex, name: m.name };
+          }
+          applyEvolution(m, species(e.to), spr);
           this.battle.events.push({ type: 'evolved', mon: m, from });
         }
         if (e.t >= EVOLVE_SECONDS) m.evolving = null;
@@ -1921,7 +1961,7 @@ export class Match {
           if (r.levels > 0) this.learnOnLevelUp(r.mon, r.mon.level - r.levels);
         }
       }
-      if (ev.mon.wild && ev.mon.alpha) this.alphaReward(ev.mon.x, ev.mon.y, owner ?? null);
+      if (ev.mon.wild && ev.mon.alpha) this.alphaReward(ev.mon.x, ev.mon.y, owner ?? null, ev.mon);
       else if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) this.dropLoot(ev.mon.x, ev.mon.y);
     }
   }

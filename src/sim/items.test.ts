@@ -5,7 +5,7 @@ import { MOVES, SPECIES } from './data';
 
 describe('items and loot', () => {
   it('defines every loot entry, fifteen balls and at least ten TMs with real moves', () => {
-    for (const tier of Object.values(LOOT)) for (const e of tier.entries) if (e.id !== 'tm' && e.id !== 'rare-tm') expect(ITEMS[e.id], e.id).toBeDefined();
+    for (const tier of Object.values(LOOT)) for (const e of tier.entries) if (e.id !== 'tm' && e.id !== 'rare-tm' && e.id !== 'mega-stone') expect(ITEMS[e.id], e.id).toBeDefined();
     expect(BALL_LIST.map((b) => b.id).sort()).toEqual(['dusk-ball', 'great-ball', 'master-ball', 'net-ball', 'poke-ball', 'quick-ball', 'ultra-ball']);
     for (const b of BALL_LIST) expect(b.id.endsWith('-ball'), b.id).toBe(true);
     expect(ITEMS['master-ball']?.special).toBe('master');
@@ -15,6 +15,29 @@ describe('items and loot', () => {
     expect(ITEMS['choice-band']?.kind).toBe('hold');
     expect(ITEMS['hyper-potion']?.amount).toBe(120);
     expect(ITEMS['crystal-shard']?.kind).toBe('shard');
+  });
+
+  it('gives every Mega form a held Mega Stone for its base form, and rolls stones from rare loot', () => {
+    const megas = [...SPECIES.values()].filter((s) => s.megaOf);
+    expect(megas.length).toBeGreaterThanOrEqual(10);
+    for (const m of megas) {
+      expect(SPECIES.has(m.megaOf ?? ''), m.dex).toBe(true);
+      const stone = ITEMS[m.stone ?? ''];
+      expect(stone?.kind, m.dex).toBe('hold');
+      expect(stone?.megaFor).toBe(m.megaOf);
+    }
+    const rng = new Rng(5);
+    let found = 0;
+    let mine = 0;
+    for (let i = 0; i < 3000; i++) {
+      const r = rollLoot(rng, 'rare', ['0448']);
+      if (ITEMS[r.id]?.effect === 'mega') {
+        found++;
+        if (r.id === 'lucarionite') mine++;
+      }
+    }
+    expect(found).toBeGreaterThan(50);
+    expect(mine / found).toBeGreaterThan(0.5);
   });
 
   it('rolls tiers by weight and stacks from the tier; rare TMs only from Ultra Balls', () => {

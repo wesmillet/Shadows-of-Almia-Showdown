@@ -89,7 +89,7 @@ export interface Mon {
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */
   visual: { scale: number; alpha: number; flash: number };
   /** Evolving in the field: the species it becomes, seconds in, and whether the swap happened. */
-  evolving: { to: string; t: number; swapped: boolean } | null;
+  evolving: { to: string; t: number; swapped: boolean; mega?: boolean } | null;
   /** A land's boss: stays near its lair and only fights what comes close. */
   landBoss?: boolean;
   /** A tougher wild: higher level (often evolved), more XP. */
@@ -100,6 +100,9 @@ export interface Mon {
   shiny?: boolean;
   /** Steered by the player (Pokémon mode): the party logic leaves it alone. */
   steered?: boolean;
+  /** Mega Evolved this match; `megaFrom` is the form it came from (what the PC stores). */
+  mega?: boolean;
+  megaFrom?: { dex: string; name: string };
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
   /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */
@@ -163,6 +166,8 @@ export interface Trainer {
   duelId?: number;
   /** Match time before which this trainer cannot be drawn into another one-on-one battle. */
   duelReadyAt?: number;
+  /** Mega Evolution is once a match per trainer. */
+  megaUsed?: boolean;
 }
 
 export interface InventorySlot {

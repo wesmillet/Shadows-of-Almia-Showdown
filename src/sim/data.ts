@@ -38,6 +38,9 @@ export interface SpeciesDef {
   evolves?: Array<{ to: string; level: number; item?: string }>;
   /** Level-up moves, [level, move id] in level order (scripts/learnsets.py). Without one, `moves` is the fixed kit. */
   learnset?: Array<[number, string]>;
+  /** Mega forms: the base form's dex and the Mega Stone it holds (scripts/megas.py, src/sim/mega.ts). */
+  megaOf?: string;
+  stone?: string;
 }
 
 /** The moves a Pokémon of this species knows at `level`: the last four it has reached. */

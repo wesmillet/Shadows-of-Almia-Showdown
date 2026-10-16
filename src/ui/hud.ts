@@ -7,13 +7,16 @@ import { clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
-import { MOVE_SLOTS, move, typeColor } from '../sim/data';
+import { CONFIG, MOVE_SLOTS, move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
 import { darken, fitSize, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
+
+/** ?debug in the address shows the map and lighting stamp in the corner. */
+const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
 export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number };
 
@@ -259,23 +262,54 @@ export class Hud {
       ctx.fill();
       this.label(ctx, st.armedBall ? `${st.armedBall}: release to throw` : 'release to throw', v.width / 2, y - 6 * s, 12, '#ffe9a8', 'center');
     }
-    const note = match.ground.label;
-    this.label(ctx, `${note} · lighting: ${st.lightingMode}`, v.width - 16 * s, v.height - 8 * s, 10, 'rgba(255,220,250,0.75)', 'right', '500');
+    // The map and lighting stamp, only with ?debug in the address.
+    if (DEBUG_STAMP) this.label(ctx, `${match.ground.label} · lighting: ${st.lightingMode}`, v.width - 16 * s, v.height - 8 * s, 10, 'rgba(255,220,250,0.75)', 'right', '500');
   }
 
+  /**
+   * Top left: trainers left, the match clock and phase, and the storm: five pips for the
+   * darkness pulses (lit as they pass) over a bar that fills toward the next one. Money sits
+   * in the same panel, bottom right.
+   */
   private drawCounter(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger && !t.visitor).length;
-    this.panel(ctx, 16 * s, 16 * s, 236 * s, 74 * s, 14, 'rgba(12,12,22,0.35)');
-    this.label(ctx, String(remaining), 34 * s, 66 * s, 44, '#ffffff', 'left', '800');
-    this.label(ctx, 'TRAINERS LEFT', 92 * s, 44 * s, 13, '#cdbfff', 'left', '800', 148 * s);
+    const x = 16 * s;
+    const y = 16 * s;
+    const w = 268 * s;
+    const h = 104 * s;
+    this.panel(ctx, x, y, w, h, 14, 'rgba(12,12,22,0.45)');
+    this.label(ctx, String(remaining), x + 18 * s, y + 52 * s, 44, '#ffffff', 'left', '800');
+    this.label(ctx, remaining === 1 ? 'TRAINER LEFT' : 'TRAINERS LEFT', x + 76 * s, y + 28 * s, 13, '#cdbfff', 'left', '800', w - 90 * s);
     const t = Math.floor(match.time);
     const mm = String(Math.floor(t / 60)).padStart(2, '0');
     const ss = String(t % 60).padStart(2, '0');
-    this.label(ctx, `${mm}:${ss}  ·  ${st.darkPhaseLabel}`, 92 * s, 66 * s, 13, '#e8e4f8', 'left', '500', 148 * s);
-    if (st.nextPulseIn >= 0) this.label(ctx, `pulse in ${Math.ceil(st.nextPulseIn)}s`, 92 * s, 82 * s, 11, '#b9b4cc', 'left', '500', 148 * s);
-    // Poké Dollars under the counter
-    this.panel(ctx, 16 * s, 96 * s, 120 * s, 26 * s, 12, 'rgba(12,12,22,0.35)');
-    this.label(ctx, `₽ ${st.money.toLocaleString()}`, 30 * s, 114 * s, 14, '#ffe27a', 'left', '800', 96 * s);
+    this.label(ctx, `${mm}:${ss}  ·  ${st.darkPhaseLabel}`, x + 76 * s, y + 48 * s, 12, '#e8e4f8', 'left', '600', w - 90 * s);
+    // The storm: pips for the pulses, a bar to the next one.
+    const d = match.darkness;
+    const pulses = CONFIG.darkness.radiiTiles.length;
+    const px0 = x + 16 * s;
+    const py = y + 68 * s;
+    for (let i = 0; i < pulses; i++) {
+      const lit = i < d.phase;
+      ctx.fillStyle = lit ? '#b36bff' : 'rgba(205,191,255,0.25)';
+      ctx.beginPath();
+      ctx.arc(px0 + i * 14 * s + 5 * s, py, 4.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const bx = px0 + pulses * 14 * s + 6 * s;
+    const bw = x + w - 16 * s - bx;
+    const frac = st.nextPulseIn >= 0 ? 1 - Math.min(1, st.nextPulseIn / CONFIG.darkness.pulseSeconds) : 1;
+    ctx.fillStyle = 'rgba(205,191,255,0.18)';
+    ctx.beginPath();
+    ctx.roundRect(bx, py - 4 * s, bw, 8 * s, 4 * s);
+    ctx.fill();
+    ctx.fillStyle = st.nextPulseIn >= 0 && st.nextPulseIn < 15 ? '#ff6b9a' : '#8a5cff';
+    ctx.beginPath();
+    ctx.roundRect(bx, py - 4 * s, Math.max(4 * s, bw * frac), 8 * s, 4 * s);
+    ctx.fill();
+    const pulseText = st.nextPulseIn >= 0 ? `darkness pulse in ${Math.ceil(st.nextPulseIn)}s` : 'the darkness has closed in';
+    this.label(ctx, pulseText, px0, y + 92 * s, 10.5, st.nextPulseIn >= 0 && st.nextPulseIn < 15 ? '#ff9ab8' : '#b9b4cc', 'left', '600', w - 110 * s);
+    this.label(ctx, `₽ ${st.money.toLocaleString()}`, x + w - 16 * s, y + 92 * s, 13, '#ffe27a', 'right', '800', 90 * s);
   }
 
   private buildMinimap(match: Match): HTMLCanvasElement {

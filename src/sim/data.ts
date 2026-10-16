@@ -176,8 +176,9 @@ export function shownHeight(heightM: number): number {
 }
 
 /** A Pokémon's draw scale: its species' size, and Alphas bigger still. */
-export function monScale(m: { species: SpeciesDef; alpha?: boolean }): number {
-  return drawScale(m.species) * (m.alpha ? CONFIG.wild.alphaScale : 1);
+export function monScale(m: { species: SpeciesDef; alpha?: boolean; boss?: boolean }): number {
+  // Alphas are drawn alphaScale times bigger; Darkrai, the final boss, towers over everything.
+  return drawScale(m.species) * (m.alpha ? CONFIG.wild.alphaScale : 1) * (m.boss ? 1.8 : 1);
 }
 
 export function drawScale(s: SpeciesDef): number {

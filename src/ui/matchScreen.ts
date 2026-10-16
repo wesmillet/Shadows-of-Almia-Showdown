@@ -121,6 +121,7 @@ export class MatchScreen implements Screen {
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
+    void assets.loadImage('ui/shadow_crystal.png').then((img) => (this.crystalImg = img));
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -355,6 +356,8 @@ export class MatchScreen implements Screen {
   private alphaBadge: HTMLImageElement | null = null;
   /** Darkrai's portal: three 36x50 frames (closed slit, half open, open). */
   private portalSheet: HTMLImageElement | null = null;
+  /** The Shadow Crystal's art. */
+  private crystalImg: HTMLImageElement | null = null;
 
   /** Set by the click that switched modes, until the button comes up. */
   private holdBlocked = false;
@@ -1429,59 +1432,29 @@ export class MatchScreen implements Screen {
   }
 
   /** The Shadow Crystal at the map centre: a faceted procedural gem on a dark pedestal. */
+  /**
+   * The Shadow Crystal: the Fan-tasy tileset's large violet Magic Crystal (assets/ui/shadow_crystal.png),
+   * floating over its rings with a slow bob and a purple glow; dim and cracked-looking once Darkrai is out.
+   */
   private drawCrystal(v: View): void {
     const ctx = v.ctx;
     const cx = v.toScreenX(this.match.centerX);
     const cy = v.toScreenY(this.match.centerY);
-    const ppt = v.pxPerTile;
     const t = this.match.time;
     const finale = this.match.darkness.finale;
-    drawSoftShadow(v, cx, cy, 0.7, 0.4);
+    drawSoftShadow(v, cx, cy, 0.8, 0.4);
+    const img = this.crystalImg;
+    if (!img) return;
+    const k = v.spriteScale * 0.85;
+    const w = img.width * k;
+    const h = img.height * k;
+    const bob = Math.round(Math.sin(t * 1.5) * 3 * v.baseScale);
     ctx.save();
-    // pedestal
-    ctx.fillStyle = '#2a2140';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 0.55 * ppt, 0.25 * ppt, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(190,140,255,0.5)';
-    ctx.lineWidth = 2 * v.baseScale;
-    ctx.stroke();
-    const bob = Math.sin(t * 1.5) * 0.04 * ppt;
-    const h = (finale ? 0.7 : 1.2) * ppt;
-    const w = 0.42 * ppt;
-    const top = cy - 0.2 * ppt - h - bob;
-    const mid = cy - 0.2 * ppt - h * 0.35 - bob;
-    const bottom = cy - 0.15 * ppt - bob;
-    const facets: Array<[number[], string]> = [
-      [[cx, top, cx - w * 0.5, mid, cx, bottom], finale ? '#4a2a66' : '#8d5cff'],
-      [[cx, top, cx + w * 0.5, mid, cx, bottom], finale ? '#2f1b44' : '#5a2fd1'],
-      [[cx - w * 0.5, mid, cx - w * 0.2, mid + h * 0.1, cx, bottom], finale ? '#3a2255' : '#6b3fe0'],
-      [[cx + w * 0.5, mid, cx + w * 0.2, mid + h * 0.1, cx, bottom], finale ? '#241535' : '#4320a8'],
-    ];
-    for (const [pts, color] of facets) {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(pts[0] as number, pts[1] as number);
-      ctx.lineTo(pts[2] as number, pts[3] as number);
-      ctx.lineTo(pts[4] as number, pts[5] as number);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.strokeStyle = `rgba(230,200,255,${0.5 + 0.3 * Math.sin(t * 3)})`;
-    ctx.lineWidth = 1.5 * v.baseScale;
-    ctx.beginPath();
-    ctx.moveTo(cx, top);
-    ctx.lineTo(cx, bottom);
-    ctx.stroke();
-    if (finale) {
-      // cracks
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.beginPath();
-      ctx.moveTo(cx - w * 0.2, mid);
-      ctx.lineTo(cx + w * 0.1, mid + h * 0.2);
-      ctx.lineTo(cx - w * 0.05, bottom - h * 0.1);
-      ctx.stroke();
-    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.shadowColor = finale ? 'rgba(90,40,140,0.6)' : `rgba(170,110,255,${0.65 + 0.25 * Math.sin(t * 2.2)})`;
+    ctx.shadowBlur = 22 * v.baseScale;
+    if (finale) ctx.filter = 'brightness(0.55) saturate(0.6)';
+    ctx.drawImage(img, Math.round(cx - w / 2), Math.round(cy - h + 4 * k) - bob, w, h);
     ctx.restore();
   }
 

@@ -46,6 +46,7 @@ ITEMS = {
     'fire-stone': 'fire_stone', 'water-stone': 'water_stone', 'thunder-stone': 'thunderstone', 'leaf-stone': 'leaf_stone',
     'moon-stone': 'moon_stone', 'sun-stone': 'sun_stone', 'shiny-stone': 'shiny_stone', 'dusk-stone': 'dusk_stone',
     'dawn-stone': 'dawn_stone',
+    'old-rod': 'old_rod', 'good-rod': 'good_rod', 'super-rod': 'super_rod',
 }
 TM_TYPES = ['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying',
             'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel']
@@ -60,6 +61,13 @@ Non-commercial fan project use only.
 tm-<type>.png         the TM disc in that type's colour
 balls/                every ball and the Crystal Shard vial: see balls/README.md
 ice-stone.png         the Water Stone recoloured icy (Gen 4 has no Ice Stone)
+
+Mega Stone icons (charizardite-x, gengarite, steelixite, tyranitarite,
+gardevoirite, absolite, glalitite, latiosite, lucarionite, galladite):
+30x30 bag icons from the PokeAPI sprites repository
+(https://github.com/PokeAPI/sprites, sprites/items/), added by hand.
+Pokemon item art by Game Freak / The Pokemon Company / Nintendo;
+non-commercial fan use only.
 """
 
 

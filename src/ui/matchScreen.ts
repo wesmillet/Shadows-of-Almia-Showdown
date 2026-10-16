@@ -3,7 +3,7 @@
  * VFX, numbers and hit-stop, draws the world through the lighting
  * pass and the HUD on top.
  */
-import { isDev } from '../dev';
+import { isDev, rareChest } from '../dev';
 import type { Input } from '../core/input';
 import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
@@ -122,7 +122,8 @@ export class MatchScreen implements Screen {
     // The minimap shows the island's painted picture once it has loaded (flat colours until then).
     const mapName = match.ground.mapName;
     if (mapName) void assets.loadImage(`maps/${mapName}_minimap.png`).then((img) => (this.hud.mapPicture = img));
-    if (isDev()) this.say('Tester mode: Hoopa is on the island and your storage chests are stocked (?dev=0 turns it off)', 4);
+    if (isDev()) this.say('Tester mode: Hoopa is on the island (?dev=0 turns it off)', 4);
+    if (rareChest()) this.say('Every rare item is waiting in the storage chests in each town', 5);
     this.fx = new FxLibrary(assets);
     const ids = new Set<string>(Object.values(EXTRA_FX));
     for (const m of MOVES.values()) for (const part of m.fx ?? []) ids.add(part.id);

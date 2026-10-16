@@ -17,7 +17,7 @@ import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
 import { canStand, moveAround, tryMove } from './movement';
-import { DEV_CHEST, isDev } from '../dev';
+import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
@@ -255,17 +255,13 @@ export class Match {
   /** A trainer's chest store (created empty on first use). */
   storageOf(t: Trainer): Array<InventorySlot | null> {
     if (t.storage) return t.storage;
-    // The player's chest is kept between games in this browser (src/chest.ts); a tester's first
-    // chest starts stocked with the rare things (src/dev.ts).
-    const dev = isDev();
-    const saved = t.isPlayer ? loadChest(dev) : null;
-    const stock = t.isPlayer && !saved && dev ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
-    const kept = (saved ?? []).filter((e) => ITEMS[e.id]);
-    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6, kept.length)).fill(null);
-    stock.forEach(([id, count], i) => (box[i] = { id, count }));
+    // The player's chest is kept between games in this browser (src/chest.ts).
+    const kept = (t.isPlayer ? loadChest() ?? [] : []).filter((e) => ITEMS[e.id]);
+    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, kept.length)).fill(null);
     kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
-    // Tester mode: every rare thing is always there, topped back up at the start of each match.
-    if (t.isPlayer && dev && saved) {
+    // The rare-item chest (src/dev.ts): every rare thing is there, topped back up at the start of
+    // each match, beside whatever the player stored themselves.
+    if (t.isPlayer && rareChest()) {
       for (const [id, count] of DEV_CHEST) {
         if (!ITEMS[id]) continue;
         const have = box.find((e) => e?.id === id);
@@ -280,7 +276,7 @@ export class Match {
       while (box.filter((e) => !e).length < 6) box.push(null);
     }
     t.storage = box;
-    if (t.isPlayer) saveChest(box, isDev());
+    if (t.isPlayer) saveChest(box);
     return box;
   }
 
@@ -298,7 +294,7 @@ export class Match {
       box[free] = { id: entry.id, count: entry.count };
     }
     list[slot] = null;
-    if (t.isPlayer) saveChest(box, isDev());
+    if (t.isPlayer) saveChest(box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -310,7 +306,7 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
-    if (t.isPlayer) saveChest(box, isDev());
+    if (t.isPlayer) saveChest(box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -1511,32 +1507,36 @@ export class Match {
     return out;
   }
 
-  /** One boss per land, at the reachable spot nearest the middle of that land. */
+  /**
+   * One boss per land, somewhere new every match: a random open spot inside that land (a few tiles
+   * clear of its edges, so it is not on a border or a shoreline) and well apart from the other bosses.
+   */
   private spawnBosses(byBiome: Record<Biome, Array<{ x: number; y: number }>>): void {
     const bosses = (SPAWNS as unknown as { bosses?: Array<{ biome: Biome; dex: string; level: number }> }).bosses ?? [];
+    const placed: Array<{ x: number; y: number }> = [];
     for (const b of bosses) {
       const spots = byBiome[b.biome];
       if (!spots?.length) continue;
-      let cx = 0;
-      let cy = 0;
-      for (const p of spots) {
-        cx += p.x;
-        cy += p.y;
+      const inLand = new Set(spots.map((p) => `${Math.floor(p.x)},${Math.floor(p.y)}`));
+      const inside = (p: { x: number; y: number }, r: number) => {
+        const tx = Math.floor(p.x);
+        const ty = Math.floor(p.y);
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!inLand.has(`${tx + dx},${ty + dy}`)) return false;
+        return true;
+      };
+      const apart = (p: { x: number; y: number }) => placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= 12);
+      // The deepest ring that still leaves room to choose from, then any spot in the land.
+      let pool: Array<{ x: number; y: number }> = [];
+      for (const r of [3, 2, 1, 0]) {
+        pool = spots.filter((p) => inside(p, r) && apart(p));
+        if (pool.length >= 8) break;
       }
-      cx /= spots.length;
-      cy /= spots.length;
-      let best = spots[0] as { x: number; y: number };
-      let bd = Infinity;
-      for (const p of spots) {
-        const d = Math.hypot(p.x - cx, p.y - cy);
-        if (d < bd) {
-          bd = d;
-          best = p;
-        }
-      }
+      if (!pool.length) pool = spots;
+      const best = this.rng.pick(pool);
+      placed.push(best);
       const mon = this.makeMon(b.dex, b.level, null, best.x, best.y);
       mon.landBoss = true;
-      mon.dir = 0 as Dir8;
+      mon.dir = this.rng.int(0, 7) as Dir8;
       this.wilds.push(mon);
     }
   }

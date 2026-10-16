@@ -1,8 +1,7 @@
 /**
  * Tester mode, for the game's owner while it is being built: open the site once with ?dev=1 and
- * it stays on in that browser (?dev=0 turns it off). Hoopa visits every match and the storage
- * chests start stocked with the Snag Machine, the Super Rod, every Mega Stone, Extraction
- * Vouchers and the rare items, so new features can be tried without hunting for them.
+ * it stays on in that browser (?dev=0 turns it off). Hoopa visits every match and the Storm Mask is
+ * always in the shop. (The rare-item chest is separate and on for everyone: rareChest below.)
  */
 const KEY = 'almia.dev';
 
@@ -23,7 +22,30 @@ export function isDev(): boolean {
   return cached;
 }
 
-/** What a tester's storage chest holds (every rare thing), topped back up at the start of each match: [item id, count]. */
+const RARE_KEY = 'almia.rareChest';
+let rareCached: boolean | null = null;
+
+/**
+ * The rare-item chest: while the game is being built, the player's storage chest is topped up with
+ * every rare item (DEV_CHEST below) at the start of every match, normal games and demo alike. It is
+ * on by default; open the site once with ?rare=0 to turn it off in that browser (?rare=1 back on).
+ */
+export function rareChest(): boolean {
+  if (rareCached !== null) return rareCached;
+  try {
+    if (typeof location !== 'undefined') {
+      const q = new URLSearchParams(location.search).get('rare');
+      if (q === '0') localStorage.setItem(RARE_KEY, '0');
+      if (q === '1') localStorage.removeItem(RARE_KEY);
+    }
+    rareCached = typeof localStorage === 'undefined' || localStorage.getItem(RARE_KEY) !== '0';
+  } catch {
+    rareCached = true;
+  }
+  return rareCached;
+}
+
+/** What the rare-item chest holds (every rare thing), topped back up at the start of each match: [item id, count]. */
 export const DEV_CHEST: Array<[string, number]> = [
   ['capture-styler', 5], ['super-rod', 1], ['storm-mask', 1], ['extraction-voucher', 5], ['master-ball', 3],
   ['charizardite-x', 1], ['gengarite', 1], ['steelixite', 1], ['tyranitarite', 1], ['gardevoirite', 1],

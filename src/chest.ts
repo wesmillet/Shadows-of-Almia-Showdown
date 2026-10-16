@@ -7,14 +7,11 @@
 import type { InventorySlot } from './sim/entities';
 
 const KEY = 'almia.chest.v1';
-/** Tester mode (src/dev.ts) keeps its own chest, so its free stock never reaches the real one. */
-const DEV_KEY = 'almia.chest.dev.v1';
 
-export function loadChest(dev = false): InventorySlot[] | null {
+export function loadChest(): InventorySlot[] | null {
   try {
     if (typeof localStorage === 'undefined') return null;
-    // A tester's first dev chest carries over what was in the shared one before the two were split.
-    const raw = localStorage.getItem(dev ? DEV_KEY : KEY) ?? (dev ? localStorage.getItem(KEY) : null);
+    const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const list = JSON.parse(raw) as unknown;
     if (!Array.isArray(list)) return null;
@@ -24,10 +21,10 @@ export function loadChest(dev = false): InventorySlot[] | null {
   }
 }
 
-export function saveChest(box: Array<InventorySlot | null>, dev = false): void {
+export function saveChest(box: Array<InventorySlot | null>): void {
   try {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(dev ? DEV_KEY : KEY, JSON.stringify(box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }))));
+    localStorage.setItem(KEY, JSON.stringify(box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }))));
   } catch {
     // no saving here: the chest still works for this match
   }

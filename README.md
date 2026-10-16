@@ -223,6 +223,15 @@ one of these lines always drops its stone. A Mega sent to the PC is stored
 as its regular form. Data: `scripts/megas.py` adds the Mega species and
 stones; the rules are in `src/sim/mega.ts`.
 
+**Money and loot.** You start with ₽500 and earn ₽20 + ₽3 per level for each
+wild Pokémon your team knocks out (three times that for a trainer's), plus
+the Champion's ₽3000 and whatever you sell (any shop buys at half price).
+Item balls: about a quarter of all balls hold a Poké Ball, 7% a Great Ball;
+Mega Stones turn up in about 3% of balls, Snag Machines in under 2%, and
+Extraction Vouchers in about 1% (they also come from Alpha prizes, Celeste
+with a full party, and the merchant at ₽6000), so roughly one match in two
+or three gives you one.
+
 **Fishing.** Carry a rod (Old Rod and Good Rod at the Poké Ball stalls, the
 Super Rod from the Wandering Merchant; all three also turn up in item balls),
 stand at the water's edge and press **Space** (or use the rod from the bag).

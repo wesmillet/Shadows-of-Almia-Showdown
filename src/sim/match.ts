@@ -2365,6 +2365,24 @@ export class Match {
     if (this.controlled) this.releaseControl();
     const cy = (arena.y0 + arena.y1) / 2;
     const spots = [{ x: arena.x0 + 1, y: cy }, { x: arena.x1 - 1, y: cy }];
+    // The crystal lifts a rival team that fell far behind to a few levels under the strongest
+    // finalist's, so the last battle is worth fighting.
+    const best = Math.max(...[a, b].flatMap((t) => t.party.filter((m) => !m.captured).map((m) => m.level)));
+    for (const t of [a, b]) {
+      if (t.isPlayer) continue;
+      for (const m of t.party) {
+        if (m.captured || m.level >= best - 3) continue;
+        const before = m.level;
+        while (m.level < best - 3) gainXp(m, xpToNext(m.level) - m.xp);
+        this.learnOnLevelUp(m, before);
+        // Evolve straight away (no animation): it walks into the arena in its new form.
+        for (let k = 0; k < 3; k++) {
+          const to = pickEvolution(m.species, m.level, this.rng);
+          if (!to) break;
+          applyEvolution(m, species(to), this.sprites.get(to, !!m.shiny));
+        }
+      }
+    }
     for (const [i, t] of [a, b].entries()) {
       const s = spots[i] as { x: number; y: number };
       t.x = t.px = s.x;

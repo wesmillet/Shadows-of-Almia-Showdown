@@ -209,7 +209,9 @@ paved battlefield on the plain, ringed by ruined pillars, purple banners and
 crystal clusters. When only two trainers are left, both are called there:
 after a five-second warning (and once any battle between them is over) they
 are brought to either end, their teams are fully restored, and they battle
-one-on-one. The winner takes the match.
+one-on-one. A rival team that fell far behind is lifted (and evolved) to three
+levels under the strongest finalist, so the last battle is a real one. The
+winner takes the match.
 
 **Roads** wind across the island instead of running in straight lines: each
 leg bends gently between its waypoints and the corners are rounded, while

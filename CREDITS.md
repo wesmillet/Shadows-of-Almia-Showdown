@@ -22,3 +22,9 @@ fountain are cut from the pack's own sample maps.
 The Shadow Crystal is its large violet Magic Crystal prop (`assets/ui/shadow_crystal.png`).
 
 The earlier maps (`assets/maps/almia.json`) use Sunnyside World by Daniel Diggle.
+
+## Aim reticle
+
+`assets/ui/reticle.png` and `reticle_hot.png` are Kenney's crosshair from the
+Starter Kit FPS (https://github.com/KenneyNL/Starter-Kit-FPS, sprites are
+CC0), scaled down to 28 px and recoloured for the pixel art.

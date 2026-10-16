@@ -123,6 +123,8 @@ export class MatchScreen implements Screen {
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
     void assets.loadImage('ui/shadow_crystal.png').then((img) => (this.crystalImg = img));
+    void assets.loadImage('ui/reticle.png').then((img) => (this.reticle = img));
+    void assets.loadImage('ui/reticle_hot.png').then((img) => (this.reticleHot = img));
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -386,6 +388,9 @@ export class MatchScreen implements Screen {
   private portalSheet: HTMLImageElement | null = null;
   /** The Shadow Crystal's art. */
   private crystalImg: HTMLImageElement | null = null;
+  /** The Pokémon-mode aim reticle (and its red version over an enemy). */
+  private reticle: HTMLImageElement | null = null;
+  private reticleHot: HTMLImageElement | null = null;
 
   /** Set by the click that switched modes, until the button comes up. */
   private holdBlocked = false;
@@ -647,7 +652,13 @@ export class MatchScreen implements Screen {
       ctx.lineTo(ax, ay);
       ctx.stroke();
       ctx.setLineDash([]);
-      drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
+      const img = foe ? this.reticleHot : this.reticle;
+      if (img) {
+        // Kenney's CC0 crosshair (Starter Kit FPS), pixelated to 28 px: assets/ui/reticle*.png.
+        const k = Math.max(1, Math.round(v.baseScale * 2));
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, Math.round(ax - (img.width * k) / 2), Math.round(ay - (img.height * k) / 2), img.width * k, img.height * k);
+      } else drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
     }
     ctx.restore();
   }

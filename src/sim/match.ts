@@ -1480,7 +1480,8 @@ export class Match {
 
   /** Auto-battle for the player's lead: the best ready move at the nearest enemy in reach. */
   private stepAutoLead(dt: number): void {
-    if (!this.auto) return;
+    // Battles are the player's to fight: auto-battle only runs out on the field.
+    if (!this.auto || this.playerDuel) return;
     const m = this.actingMon;
     // A Pokémon set to Passive never picks fights, auto-battle or not (you can still fire its moves yourself).
     if (!m || m.casting || incapable(m) || m.behavior === 'passive') return;

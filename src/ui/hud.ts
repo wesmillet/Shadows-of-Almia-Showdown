@@ -626,11 +626,11 @@ export class Hud {
     ctx.fill();
     ctx.restore();
     // Auto-battle state above the wheel.
-    const autoText = match.auto ? 'AUTO ON · R' : 'AUTO OFF · R';
+    const autoText = match.playerDuel ? 'AUTO OFF IN BATTLES' : match.auto ? 'AUTO ON · R' : 'AUTO OFF · R';
     ctx.font = this.font(10, '800');
     const aw = ctx.measureText(autoText).width + 16 * s;
     const ay = cy - r - 34 * s;
-    ctx.fillStyle = match.auto ? 'rgba(70,160,110,0.9)' : 'rgba(60,50,90,0.85)';
+    ctx.fillStyle = match.auto && !match.playerDuel ? 'rgba(70,160,110,0.9)' : 'rgba(60,50,90,0.85)';
     ctx.beginPath();
     ctx.roundRect(cx - aw / 2, ay, aw, 18 * s, 9 * s);
     ctx.fill();

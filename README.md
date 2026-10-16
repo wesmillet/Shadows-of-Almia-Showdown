@@ -90,8 +90,9 @@ works the same way (and a loss there is friendly).
   Rayquaza) comes through as a boss with triple HP. Legendaries never faint: worn down to their last HP
   they join whoever's Pokémon did it, so a rival can steal yours. Once per match;
 - **Lugia** sleeps in **Tide Lake** (the new lake between the plain and the autumn wood): while you are at
-  the lakeside it may leap out (its Hop animation, a splash) and land on the shore as a legendary. Once per
-  match.
+  the lakeside the water may churn (spreading rings), then Lugia bursts out of the lake (Guardian Signs'
+  own Lugia sheet, fx_135, in a column of spray), leaps ashore beside you and fights as a legendary. Once
+  per match.
 
 The map also has more ways down from high ground: every plateau now has a flight of stairs in each long
 south face (about every 22 tiles), on top of the ones where roads climb.

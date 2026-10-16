@@ -30,6 +30,9 @@ import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vf
 import { drawSoftShadow } from '../render/world';
 import { panel, rgba, text, uiFont, type GameContext, type Screen } from './screens';
 
+/** Effects that sim events ask for by id (scene-fx), loaded with the rest. */
+const SCENE_FX = ['fx_135', 'fx_225', 'fx_226', 'fx_229', 'fx_081', 'fx_070', 'fx_067', 'fx_190', 'fx_215', 'fx_009', 'fx_017', 'fx_172', 'fx_201', 'fx_204'];
+
 /** Effects used outside moves: the capture sequence, Bad Dreams and status icons. */
 export const EXTRA_FX = {
   /** Poké Ball flash when the ball opens on impact. */
@@ -108,6 +111,8 @@ export class MatchScreen implements Screen {
     this.fx = new FxLibrary(assets);
     const ids = new Set<string>(Object.values(EXTRA_FX));
     for (const m of MOVES.values()) for (const part of m.fx ?? []) ids.add(part.id);
+    // Scene effects the events use (Lugia's burst, the lake's rings, landings, portals).
+    for (const id of SCENE_FX) ids.add(id);
     this.fx.preload(ids);
     this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard']);
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
@@ -758,8 +763,9 @@ export class MatchScreen implements Screen {
       case 'scene-fx':
         if (ev.ground) {
           const sh = this.fx.sheet(ev.id);
-          if (sh) this.groundVfx.add(new FxAnim(sh, { x: ev.x, y: ev.y, lift: 0, scale: ev.scale, fps: 14, tint: ev.tint }));
-        } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: 0.6, scale: ev.scale, fps: 14, tint: ev.tint });
+          if (sh) this.groundVfx.add(new FxAnim(sh, { x: ev.x, y: ev.y, lift: 0, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint }));
+        } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: ev.lift ?? 0.6, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint });
+        if (ev.shake) this.shake = Math.max(this.shake, ev.shake);
         break;
       case 'yield':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.8, `${ev.mon.name} stops fighting`, '#ffd36b', 16);

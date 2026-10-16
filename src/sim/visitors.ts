@@ -55,6 +55,8 @@ export class Visitors {
   hoopaUsed = false;
   portal: Portal | null = null;
   lugiaDone = false;
+  /** Lugia's entrance in progress: the lake churns, Lugia bursts out (Guardian Signs' Lugia sheet), then leaps ashore. */
+  lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number } | null = null;
   private lugiaCheck = 15;
 
   constructor(private readonly m: Match) {
@@ -293,6 +295,7 @@ export class Visitors {
         m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: w.x, y: w.y, scale: 2.4, ground: true });
       }
     }
+    this.stepLugiaIntro(dt);
     if (this.lugiaDone || !lake || !SPECIES.has(LUGIA)) return;
     this.lugiaCheck -= dt;
     if (this.lugiaCheck > 0) return;
@@ -302,7 +305,22 @@ export class Visitors {
     if (!nearLake || p.duelId || !m.rng.chance(0.3)) return;
     this.lugiaDone = true;
     // Out of the water between the lake's middle and the player, onto the shore beside them.
-    const from = { x: lake.x + (p.x - lake.x) * 0.25, y: lake.y + (p.y - lake.y) * 0.25 };
+    // Out of the water a few tiles off the shore nearest the player, so the burst is in view.
+    let from = { x: lake.x + (p.x - lake.x) * 0.25, y: lake.y + (p.y - lake.y) * 0.25 };
+    {
+      const dx = lake.x - p.x;
+      const dy = lake.y - p.y;
+      const d = Math.hypot(dx, dy) || 1;
+      for (let k = 1; k < d; k += 0.5) {
+        const x = p.x + (dx / d) * k;
+        const y = p.y + (dy / d) * k;
+        if (!m.ground.walkable(Math.floor(x), Math.floor(y))) {
+          const kk = Math.min(d, k + 2.5);
+          from = { x: p.x + (dx / d) * kk, y: p.y + (dy / d) * kk };
+          break;
+        }
+      }
+    }
     let to = { x: p.x + 2.5, y: p.y };
     for (let i = 0; i < 24; i++) {
       const a = Math.atan2(lake.y - p.y, lake.x - p.x) + ((i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI) / 12;
@@ -316,13 +334,46 @@ export class Visitors {
     const top = Math.max(1, ...p.party.map((x) => x.level));
     const L = m.makeMon(LUGIA, Math.min(100, Math.max(30, top + 8)), null, from.x, from.y);
     this.makeLegend(L);
-    L.leap = { t: 0, dur: 1.4, h: 4, fx: from.x, fy: from.y, tx: to.x, ty: to.y };
-    L.busy = 2;
-    L.anim.play('Hop', { restart: true, loop: false });
+    // Hidden under the water until it bursts out (and nobody's enemy until it lands).
+    L.visual.alpha = 0;
+    L.calm = 1e9;
+    L.busy = 5;
+    L.leap = { t: 0, dur: 99, h: 0, fx: from.x, fy: from.y, tx: from.x, ty: from.y };
     m.wilds.push(L);
-    m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3, ground: false });
-    m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.4, ground: true });
-    m.battle.events.push({ type: 'notice', text: 'The lake erupts: Lugia leaps out!', seconds: 3 });
+    this.lugiaIntro = { t: 0, L, from, to, stage: 0 };
+    m.battle.events.push({ type: 'notice', text: 'Tide Lake churns...', seconds: 2 });
+  }
+
+  /** The entrance, beat by beat: ripples, the burst out of the water, the leap ashore. */
+  private stepLugiaIntro(dt: number): void {
+    const s = this.lugiaIntro;
+    if (!s) return;
+    const m = this.m;
+    s.t += dt;
+    const { from, to, L } = s;
+    if (s.stage === 0) {
+      // Rings spreading on the water.
+      for (const [i, r] of [1.6, 2.6, 3.6].entries()) m.battle.events.push({ type: 'scene-fx', id: ['fx_225', 'fx_226', 'fx_229'][i] as string, x: from.x, y: from.y, scale: r, ground: true, fps: 9 });
+      s.stage = 1;
+    } else if (s.stage === 1 && s.t >= 1.1) {
+      // Lugia bursts out of the lake (Guardian Signs' own Lugia sheet), in a column of spray.
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7 });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3.2 });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.6, ground: true });
+      m.battle.events.push({ type: 'notice', text: 'Lugia bursts out of the lake!', seconds: 3 });
+      s.stage = 2;
+    } else if (s.stage === 2 && s.t >= 2.0) {
+      // Then it leaps ashore beside the player and turns to fight.
+      L.visual.alpha = 1;
+      L.leap = { t: 0, dur: 1.2, h: 3.5, fx: from.x, fy: from.y, tx: to.x, ty: to.y };
+      L.anim.play('Hop', { restart: true, loop: false });
+      L.busy = 1.6;
+      s.stage = 3;
+    } else if (s.stage === 3 && !L.leap) {
+      L.calm = 0;
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
+      this.lugiaIntro = null;
+    }
   }
 
   // ---------------------------------------------------------------- outcomes

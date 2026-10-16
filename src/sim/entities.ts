@@ -94,6 +94,8 @@ export interface Mon {
   landBoss?: boolean;
   /** A tougher wild: higher level (often evolved), more XP. */
   elite?: boolean;
+  /** An Alpha: a huge, fully evolved level-75 wild near the Shadow Crystal. */
+  alpha?: boolean;
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
   /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */

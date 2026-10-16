@@ -118,14 +118,18 @@ two in party order that can still fight. The others wait in their balls (a
 small ball on their portrait) and one comes out when an outside Pokémon
 faints or you swap the order by clicking a portrait.
 
-**Levels and damage.** XP to the next level is 25 + 3L + 0.12L², and a
-knockout pays 25 + 10 per level of the fallen Pokémon (up to double against
+**Levels and damage.** XP to the next level is 25 + 3L + 0.08L², and a
+knockout pays 30 + 14 per level of the fallen Pokémon (up to double against
 higher levels): an even fight is over a level early on and about two thirds
 of a level by level 40, so a team that keeps fighting reaches level 50 or so
 by the last circle. The partner out beside the dealer takes half, Pokémon in
 their balls 40%, and a catch gives the lead three quarters of a
 knockout. About one wild Pokémon in eight is an **Elite** (gold name): 5-9
 levels higher, often already evolved, worth 1.6x XP; land bosses pay 3x.
+Wild levels climb toward the Shadow Crystal: base levels at the coast, the
+30s to about 60 in the middle (mostly evolved). Within 55 tiles of the crystal
+about one wild in fourteen is an **Alpha** (red name and glow, drawn bigger):
+level 75, always the last form of its line, worth 2.5x XP.
 Every hit is scaled by `battle.damageScale` (0.55), so fights last several
 exchanges.
 

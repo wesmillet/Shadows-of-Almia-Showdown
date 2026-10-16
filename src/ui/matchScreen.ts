@@ -10,7 +10,7 @@ import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, drawScale, monScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
 import type { DuelSide, Match } from '../sim/match';
@@ -1568,14 +1568,14 @@ export class MatchScreen implements Screen {
       const sx = Math.round(v.toScreenX(x));
       const f = m.anim.current();
       // Bar just over the drawn body (sprites are drawn at their canonical size).
-      const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
+      const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * monScale(m) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
       if (m.npc === 'hoopa') {
         drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
         continue;
       }
-      const label = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.elite ? `Elite ${m.name}` : m.name;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.elite ? '#ffd36b' : '#fff');
+      const label = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.elite ? '#ffd36b' : '#fff');
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

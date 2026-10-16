@@ -43,10 +43,22 @@ export function formAtLevel(dex: string, level: number, rng: Rng, wild = false):
     const next = sp ? pickEvolution(sp, level, rng) : null;
     if (!next || !sp) break;
     if (wild) {
+      // Just past the evolution level a wild one is often still unevolved; well past it, almost never.
       const at = Math.min(...(sp.evolves ?? []).filter((e) => !e.item).map((e) => e.level));
-      if (!rng.chance(Math.min(0.5, 0.1 + 0.04 * (level - at)))) break;
+      if (!rng.chance(Math.min(0.92, 0.2 + 0.06 * (level - at)))) break;
     }
     cur = next;
+  }
+  return cur;
+}
+
+/** The last form of a line (stone evolutions included), for Alphas. */
+export function finalForm(dex: string, rng: Rng): string {
+  let cur = dex;
+  for (let guard = 0; guard < 4; guard++) {
+    const options = (SPECIES.get(cur)?.evolves ?? []).filter((e) => SPECIES.has(e.to));
+    if (!options.length) break;
+    cur = (options[rng.int(0, options.length - 1)] as { to: string }).to;
   }
   return cur;
 }

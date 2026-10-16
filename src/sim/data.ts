@@ -166,6 +166,11 @@ export function shownHeight(heightM: number): number {
   return heightM >= smallFloorM ? heightM : smallBaseM + (heightM / smallFloorM) * (smallFloorM - smallBaseM);
 }
 
+/** A Pokémon's draw scale: its species' size, and Alphas bigger still. */
+export function monScale(m: { species: SpeciesDef; alpha?: boolean }): number {
+  return drawScale(m.species) * (m.alpha ? CONFIG.wild.alphaScale : 1);
+}
+
 export function drawScale(s: SpeciesDef): number {
   const hit = scaleCache.get(s.dex);
   if (hit !== undefined) return hit;

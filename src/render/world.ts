@@ -4,7 +4,7 @@
  */
 import { lerp, dir8To4 } from '../core/math';
 import type { Match } from '../sim/match';
-import { bodyRadius, drawScale } from '../sim/data';
+import { bodyRadius, drawScale, monScale } from '../sim/data';
 import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
@@ -62,7 +62,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const vis = m.visual;
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
   // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
-  const s = view.spriteScale * vis.scale * drawScale(m.species);
+  const s = view.spriteScale * vis.scale * monScale(m);
   // Sprites shrunk below one screen pixel per art pixel are filtered rather than decimated.
   ctx.imageSmoothingEnabled = s < 1;
   ctx.imageSmoothingQuality = 'high';
@@ -77,10 +77,11 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const dx = sx - (f.w * s) / 2;
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet; a leap lifts it on an arc.
   const leapLift = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) * view.pxPerTile : 0;
-  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * drawScale(m.species) * 0.15 - leapLift;
-  if (m.aura) {
+  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * 0.15 - leapLift;
+  if (m.aura || m.alpha) {
+    // A purple glow for Pokémon under the darkness, a red one for Alphas.
     ctx.save();
-    ctx.shadowColor = 'rgba(150,60,255,0.95)';
+    ctx.shadowColor = m.alpha && !m.aura ? 'rgba(255,60,70,0.9)' : 'rgba(150,60,255,0.95)';
     ctx.shadowBlur = 14 * view.baseScale;
     ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
     ctx.restore();
@@ -260,7 +261,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     const r = Math.max(0.1, Math.min(2.6, bodyRadius(m.species) * 0.8)) * Math.min(1, m.visual.scale);
     // One shadow per Pokémon, under the frame's ground point (the sprite sheet's own shadow is not drawn too).
     const [gx, gy] = m.anim.ground();
-    const k = view.spriteScale * m.visual.scale * drawScale(m.species);
+    const k = view.spriteScale * m.visual.scale * monScale(m);
     drawSoftShadow(view, view.toScreenX(p.x) + gx * k, view.toScreenY(p.y) + gy * k, r, 0.28 * m.visual.alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {

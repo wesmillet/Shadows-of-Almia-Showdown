@@ -300,10 +300,10 @@ export function xpToNext(level: number): number {
 
 /** XP for knocking out `target`; beating something above your level pays up to double. */
 export function xpForKnockout(target: Mon, dealerLevel = target.level): number {
-  const p = CONFIG.party as typeof CONFIG.party & { xpEliteMultiplier?: number; xpBossMultiplier?: number };
+  const p = CONFIG.party;
   const base = p.xpKoBase + target.level * p.xpKoPerLevel;
   const gap = Math.max(0, target.level - dealerLevel);
-  const bonus = target.landBoss ? p.xpBossMultiplier ?? 1 : target.elite ? p.xpEliteMultiplier ?? 1 : 1;
+  const bonus = target.landBoss ? p.xpBossMultiplier : target.alpha ? p.xpAlphaMultiplier : target.elite ? p.xpEliteMultiplier : 1;
   return Math.round(base * Math.min(2, 1 + 0.1 * gap) * bonus);
 }
 

@@ -21,7 +21,7 @@ import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
-import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
+import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -1067,21 +1067,34 @@ export class Match {
         const land = table.use && nearest ? nearest[Math.floor(spot.y) * g.cols + Math.floor(spot.x)] : biome;
         const t = land ? tables[land as Biome] : undefined;
         if (!t?.table?.length) continue;
-        const row = this.rng.weighted(t.table, (r) => r.weight);
+        let row = this.rng.weighted(t.table, (r) => r.weight);
         const lv = row.levels ?? t.levels ?? [3, 6];
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
         // easing to none at the coast, so the outer lands stay gentle for fresh teams.
         // Round every starting point the land stays at its base levels, so a fresh team can train there.
         const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
         const calm = Math.min(1, Math.max(0, (nearStart - 20) / 25));
-        let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm);
+        // Round the crystal the bonus is spread a little, so the middle holds levels from the 30s to about 60.
+        const w = CONFIG.wild;
+        const spread = this.rng.range(w.centerLevelSpread[0] ?? 0.75, w.centerLevelSpread[1] ?? 1.1);
+        let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm * spread);
+        // Close to the crystal, now and then an Alpha: huge, fully evolved, level 75.
+        const toCenter = Math.hypot(spot.x - this.centerX, spot.y - this.centerY);
+        const alpha = nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
         // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
-        const w = CONFIG.wild as typeof CONFIG.wild & { eliteChance?: number; eliteLevels?: number[] };
-        const elite = nearStart > 22 && this.rng.chance(w.eliteChance ?? 0);
+        const elite = !alpha && nearStart > 22 && this.rng.chance(w.eliteChance ?? 0);
         if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
-        // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...).
-        const mon = this.makeMon(formAtLevel(row.dex, level, this.rng, true), level, null, spot.x, spot.y);
+        if (alpha) {
+          level = w.alphaLevel + this.rng.int(-2, 2);
+          // An Alpha is a line's last form: prefer a row that actually evolves.
+          for (let k = 0; k < 8 && finalForm(row.dex, this.rng) === row.dex; k++) row = this.rng.weighted(t.table, (r) => r.weight);
+        }
+        level = Math.min(100, level);
+        // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
+        const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
+        const mon = this.makeMon(dex, level, null, spot.x, spot.y);
         if (elite) mon.elite = true;
+        if (alpha) mon.alpha = true;
         mon.dir = this.rng.int(0, 7) as Dir8;
         this.wilds.push(mon);
       }
@@ -1614,7 +1627,7 @@ export class Match {
   /** Loops of the Capture Styler a wild Pokémon needs before it calms down. */
   stylerLoopsNeeded(m: Mon): number {
     const c = CONFIG.styler;
-    return Math.min(c.maxLoops, c.baseLoops + Math.floor(m.level / c.perLevel) + (m.elite ? c.eliteLoops : 0) + (m.landBoss ? c.bossLoops : 0));
+    return Math.min(c.maxLoops, c.baseLoops + Math.floor(m.level / c.perLevel) + (m.elite ? c.eliteLoops : 0) + (m.landBoss || m.alpha ? c.bossLoops : 0));
   }
 
   /** One loop of the styler line closed round `m`. */

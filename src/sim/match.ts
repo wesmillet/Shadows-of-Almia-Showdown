@@ -210,6 +210,35 @@ export class Match {
   }
 
   /** Buys entry `i` of a shop for the player. Returns what happened. */
+  /**
+   * What a shop pays for one of an item: half the lowest price any shop in this match asks for it,
+   * or half a typical price for its kind when no shop sells it (TMs, Mega Stones, vouchers...).
+   */
+  sellPrice(id: string): number {
+    let buy = Infinity;
+    for (const s of this.shops) for (const e of s.stock) if (e.id === id) buy = Math.min(buy, e.price);
+    if (!Number.isFinite(buy)) {
+      const def = ITEMS[id];
+      const byKind: Record<string, number> = {
+        ball: 300, heal: 300, revive: 1200, cure: 300, boost: 350, hold: 2000, tm: def?.rare ? 3000 : 1500, styler: 3000,
+        shard: 1500, candy: 1200, stone: 1800, voucher: 6000, rod: 1500,
+      };
+      buy = def?.effect === 'mega' ? 4000 : byKind[def?.kind ?? ''] ?? 200;
+    }
+    return Math.max(10, Math.floor(buy / 2));
+  }
+
+  /** Sells one of the item in a bag slot (`tab` 'items' or 'held') at any shop: half its price. */
+  sell(t: Trainer, tab: 'items' | 'held', slot: number): string {
+    const entry = t[tab][slot];
+    if (!entry) return '';
+    const name = ITEMS[entry.id]?.name ?? entry.id;
+    const price = this.sellPrice(entry.id);
+    this.takeItem(t, slot, tab);
+    t.money += price;
+    return `Sold ${name} for ₽${price.toLocaleString()}`;
+  }
+
   buy(shop: Shop, i: number): string {
     const e = shop.stock[i];
     if (!e) return '';

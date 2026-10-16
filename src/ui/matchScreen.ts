@@ -312,7 +312,7 @@ export class MatchScreen implements Screen {
     void v;
   }
 
-  /** The shop: 1-9 buys that line, E or Escape closes it. */
+  /** The shop: 1-9 buys that line; a click on a bag slot (or Shift+1-6) sells one of it; E or Escape closes. */
   private handleShopInput(input: Input): void {
     const shop = this.shopOpen;
     if (!shop) return;
@@ -320,11 +320,22 @@ export class MatchScreen implements Screen {
       this.shopOpen = null;
       return;
     }
+    if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
+    const tab = this.gearTab ? 'held' : 'items';
+    for (const c of input.takeClicks()) {
+      const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind === 'item') this.say(this.match.sell(this.match.player, tab, h.index), 1.6);
+      else if (h?.kind === 'tab') this.gearTab = h.index === 1;
+    }
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
     for (let i = 0; i < 9; i++) {
       if (!input.pressed(`Digit${i + 1}`)) continue;
-      const msg = this.match.buy(shop, i);
+      const msg = shift ? this.match.sell(this.match.player, tab, i) : this.match.buy(shop, i);
       if (msg) this.say(msg, 1.6);
     }
+    // Messages keep counting down while the shop is open.
+    for (const n of this.notices) n.t -= 1 / 60;
+    this.notices = this.notices.filter((n) => n.t > 0);
   }
 
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
@@ -1622,6 +1633,7 @@ export class MatchScreen implements Screen {
       shop: this.shopOpen ? {
         name: this.shopOpen.name,
         entries: this.shopOpen.stock.map((e) => ({ name: ITEMS[e.id]?.name ?? e.id, price: e.price, affordable: this.match.player.money >= e.price })),
+        sellPrice: (id: string) => this.match.sellPrice(id),
       } : null,
       lightingMode: this.lighting.mode,
     };

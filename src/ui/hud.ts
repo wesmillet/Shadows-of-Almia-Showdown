@@ -53,7 +53,7 @@ export interface HudState {
   /** What E would do here (shop, challenge), or a hint. */
   prompt: string | null;
   /** An open stall: its lines with prices. */
-  shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }> } | null;
+  shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }>; sellPrice: (id: string) => number } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
 }
@@ -251,14 +251,15 @@ export class Hud {
     }
     if (st.shop) {
       const w = 360 * s;
-      const h = (74 + st.shop.entries.length * 20) * s;
+      const h = (92 + st.shop.entries.length * 20) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.label(ctx, st.shop.name, x + w / 2, y + 28 * s, 15, '#f4f1ff', 'center', '800', w - 28 * s);
       this.label(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
+      this.label(ctx, 'Sell: click a bag slot or Shift+1-6 (half price)', x + w / 2, y + 62 * s, 10, '#9ff3c8', 'center', '600', w - 28 * s);
       st.shop.entries.forEach((e, i) => {
-        const yy = y + 70 * s + i * 20 * s;
+        const yy = y + 88 * s + i * 20 * s;
         const col = e.affordable ? '#f4f1ff' : '#6f6888';
         this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700', w - 130 * s);
         this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
@@ -870,7 +871,7 @@ export class Hud {
     // The hovered item's name above the bag.
     if (hovered) {
       const h = hovered as { def: (typeof ITEMS)[string]; x: number };
-      const name = h.def.kind === 'tm' ? h.def.name : h.def.name;
+      const name = st.shop ? `${h.def.name} · sells for ₽${st.shop.sellPrice(h.def.id).toLocaleString()}` : h.def.name;
       ctx.font = this.font(11, '700');
       const tw = ctx.measureText(name).width + 18 * s;
       const tx = Math.max(8 * s, h.x - tw / 2);

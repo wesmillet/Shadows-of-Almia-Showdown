@@ -29,13 +29,13 @@ moonlight and fights Darkrai until one of them is driven off.
 
 Title → **Roll Starter** → three reels each roll a rarity, then a Pokémon of
 that rarity. Pick one of the three (click its card, or press 1-3); that is
-your starter (no rerolls).
+your starter. For now a **Reroll (R)** button deals a fresh three.
 
 | Rarity | Chance | Pokémon |
 | --- | --- | --- |
 | Common | 50% | Pikachu, Meowth, Magikarp, Psyduck, Geodude, Shinx, Starly, Bidoof |
-| Uncommon | 27% | Elekid, Magby, Smoochum, Tyrogue, Munchlax, Riolu, Eevee |
-| Rare | 13% | every region's starter trio, Kanto to Paldea (27) |
+| Uncommon | 27% | Elekid, Magby, Smoochum, Tyrogue, Munchlax, Eevee |
+| Rare | 13% | every region's starter trio, Kanto to Paldea (27), and Riolu |
 | Epic | 7% | the pseudo-legendary lines: Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy, Jangmo-o, Dreepy, Frigibax |
 | Mythic | 3% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Marshadow, Meltan |
 
@@ -135,7 +135,7 @@ The shiny colours are stored as palette swaps in `data/shiny.json`
 and portrait from SpriteCollab), so no second copy of the sheets ships.
 Wild levels climb toward the Shadow Crystal: base levels at the coast, the
 30s to about 60 in the middle (mostly evolved). Within 55 tiles of the crystal
-about one wild in fourteen is an **Alpha** (red name and glow, drawn bigger):
+about one wild in fourteen is an **Alpha** (the Alpha mark by its red name, a red glow and a breathing red aura on the ground, drawn half again as big):
 level 75, always the last form of its line, worth 2.5x XP.
 Every hit is scaled by `battle.damageScale` (0.55), so fights last several
 exchanges.

@@ -63,6 +63,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
   // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
   const s = view.spriteScale * vis.scale * monScale(m);
+  if (m.alpha && !m.fainted) drawAlphaAura(ctx, sx, sy, Math.max(0.7, bodyRadius(m.species) * 1.5) * view.pxPerTile * vis.scale, m.id);
   // Sprites shrunk below one screen pixel per art pixel are filtered rather than decimated.
   ctx.imageSmoothingEnabled = s < 1;
   ctx.imageSmoothingQuality = 'high';
@@ -350,5 +351,29 @@ function drawSparkle(ctx: CanvasRenderingContext2D, id: number, x: number, y: nu
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+/** An Alpha's ground aura: a red glow under its feet that breathes, with a thin ring pulsing outward. */
+function drawAlphaAura(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, id: number): void {
+  const t = performance.now() / 1000 + id * 0.41;
+  const breathe = 0.75 + 0.25 * Math.sin(t * 2.4);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1, 0.45);
+  const g = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.15);
+  g.addColorStop(0, `rgba(255,60,60,${0.42 * breathe})`);
+  g.addColorStop(0.6, `rgba(220,30,40,${0.22 * breathe})`);
+  g.addColorStop(1, 'rgba(200,20,30,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+  ctx.fill();
+  const k = (t * 0.6) % 1;
+  ctx.strokeStyle = `rgba(255,80,80,${0.6 * (1 - k)})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * (0.6 + 0.7 * k), 0, Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 }

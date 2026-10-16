@@ -175,7 +175,7 @@ async function boot(): Promise<void> {
 
   const showRoll = (): void => {
     // A fresh roll every time, even on a fixed ?seed island.
-    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex])));
+    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll));
   };
 
   const showTitle = async (regenerate: boolean): Promise<void> => {

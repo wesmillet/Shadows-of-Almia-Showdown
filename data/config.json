@@ -64,7 +64,7 @@
     "alphaChance": 0.07,
     "alphaRadius": 55,
     "alphaLevel": 75,
-    "alphaScale": 1.35,
+    "alphaScale": 1.5,
     "centerLevelSpread": [0.72, 1.08],
     "bossAggroRange": 4,
     "bossWanderRadius": 2

@@ -119,6 +119,7 @@ export class MatchScreen implements Screen {
     this.fx.preload(ids);
     this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard']);
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
+    void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -339,6 +340,9 @@ export class MatchScreen implements Screen {
   }
 
   /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
+  /** The Alpha mark (assets/ui/alpha.png), shown by an Alpha's name. */
+  private alphaBadge: HTMLImageElement | null = null;
+
   /** Set by the click that switched modes, until the button comes up. */
   private holdBlocked = false;
 
@@ -1686,7 +1690,7 @@ export class MatchScreen implements Screen {
       }
       const base = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
       const label = m.shiny ? `Shiny ${base}` : base;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff');
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff', m.alpha ? this.alphaBadge : null);
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

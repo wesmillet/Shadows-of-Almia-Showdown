@@ -57,7 +57,7 @@ export interface HudState {
 }
 
 /** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
-export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number, color = '#fff'): void {
+export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number, color = '#fff', badge: CanvasImageSource | null = null): void {
   const w = 20 * px;
   const x = Math.round(sx - w / 2);
   const y = Math.round(top - 7 * px - 4 * px);
@@ -71,6 +71,13 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   ctx.strokeText(label, sx, y - 3 * baseScale);
   ctx.fillStyle = color;
   ctx.fillText(label, sx, y - 3 * baseScale);
+  // A badge (the Alpha mark) to the left of the name.
+  if (badge) {
+    const bh = 16 * baseScale;
+    const bw = bh * (57 / 64);
+    const tw = ctx.measureText(label).width;
+    ctx.drawImage(badge, sx - tw / 2 - bw - 4 * baseScale, y - 3 * baseScale - bh + 3 * baseScale, bw, bh);
+  }
 }
 
 /** The button that casts each move slot (1-2 and Q/E work too). */

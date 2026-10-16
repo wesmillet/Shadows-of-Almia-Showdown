@@ -62,6 +62,8 @@ export class RollScreen implements Screen {
     private readonly sprites: SpriteRegistry,
     seed: number,
     private readonly onConfirm: (dex: string) => void,
+    /** Rolls a fresh set of three (the Reroll button or R); for testing while the PC starters are planned. */
+    private readonly onReroll: (() => void) | null = null,
   ) {
     const rng = new Rng(seed);
     const taken = new Set<string>();
@@ -121,7 +123,10 @@ export class RollScreen implements Screen {
       } else r.since += dt;
     }
     for (const r of this.reels) for (const c of r.cards) c.anim?.update(dt);
+    if (this.onReroll && input.pressed('KeyR')) return this.onReroll();
     for (const c of input.takeClicks()) {
+      const rr = this.rerollRect();
+      if (this.onReroll && hit(c.x, c.y, rr.x, rr.y, rr.w, rr.h)) return this.onReroll();
       for (let i = 0; i < CHOICES; i++) {
         const b = this.pickRect(i);
         const k = this.card(i);
@@ -129,6 +134,13 @@ export class RollScreen implements Screen {
       }
     }
     for (let i = 0; i < CHOICES; i++) if (input.pressed(`Digit${i + 1}`)) this.confirm(i);
+  }
+
+  /** The Reroll button, top right. */
+  private rerollRect(): { x: number; y: number; w: number; h: number } {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    return { x: v.width - 190 * s, y: 30 * s, w: 170 * s, h: 44 * s };
   }
 
   private confirm(i: number): void {
@@ -196,6 +208,10 @@ export class RollScreen implements Screen {
       ox += (widths[i] ?? 0) + gap;
     });
     text(v, 'Click a card or press 1-3', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#9f97bb' });
+    if (this.onReroll) {
+      const rr = this.rerollRect();
+      button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#4f7ad6');
+    }
   }
 
   /** On landing: a frame and a burst of light in the tier colour, bigger for rarer tiers. */

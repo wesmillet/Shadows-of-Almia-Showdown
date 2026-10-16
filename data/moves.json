@@ -4497,39 +4497,33 @@
       "signature": true,
       "fx": [
         {
-          "id": "fx_216",
+          "id": "fx_109",
           "anchor": "attacker",
           "mode": "beam",
-          "scale": 1.8,
+          "scale": 1.7,
           "seconds": 1.1,
           "fps": 12,
-          "tint": "#e6f4ff"
+          "tint": "#e4f2ff"
         },
         {
           "id": "fx_200",
           "anchor": "target",
-          "scale": 2.6,
-          "fps": 10,
-          "delay": 0.2
-        },
-        {
-          "id": "fx_017",
-          "anchor": "target",
-          "scale": 3.4,
-          "fps": 11,
-          "tint": "#cfe9ff",
-          "delay": 0.35
+          "scale": 1.8,
+          "fps": 12,
+          "tint": "#ffffff",
+          "delay": 0.1
         },
         {
           "id": "fx_067",
           "anchor": "target",
-          "scale": 3,
+          "scale": 1.8,
           "ground": true,
-          "fps": 10,
-          "delay": 0.35
+          "fps": 12,
+          "tint": "#d8ecff",
+          "delay": 0.2
         }
       ],
-      "shake": 0.7,
+      "shake": 0.4,
       "cast": 0.6
     },
     {
@@ -4861,21 +4855,21 @@
           "anchor": "attacker",
           "scale": 4.2,
           "ground": true,
-          "fps": 14,
+          "fps": 10,
           "tint": "#5a1f8f"
         },
         {
           "id": "fx_200",
           "anchor": "attacker",
           "scale": 3.2,
-          "fps": 14,
+          "fps": 10,
           "tint": "#3a1458"
         },
         {
           "id": "fx_200",
           "anchor": "target",
           "scale": 1.6,
-          "fps": 14,
+          "fps": 10,
           "tint": "#8a3dff",
           "delay": 0.1
         }

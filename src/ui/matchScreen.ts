@@ -1296,6 +1296,9 @@ export class MatchScreen implements Screen {
     return Math.max(0.75, Math.min(1.5, Math.sqrt(bodyRadius(m.species) / 0.45)));
   }
 
+  /** The beam each channelling Pokémon is pouring out, per effect part (spawnFx reuses it pulse to pulse). */
+  private channelBeams = new Map<string, FxBeam>();
+
   private addVfx(v: MoveVisual, part: FxPart): void {
     const layer = part.ground ? this.groundVfx : this.vfx;
     layer.add(part.delay ? new Delayed(part.delay, v) : v);
@@ -1334,6 +1337,11 @@ export class MatchScreen implements Screen {
       if (onBody) scale = Math.min(scale, ((part.ground ? 3.2 : 2.3) * k * 48) / Math.max(sheet.fw, sheet.fh));
       this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift, scale, fps: part.fps ?? 15, tint: part.tint }), part);
     };
+    // A channelled beam pulses every quarter second: its impacts play on every other pulse, so their
+    // flashes and lights don't pile up into a white-out while the beam keeps pouring.
+    const ch = attacker.channel;
+    const pulse = ch ? Math.round((CONFIG.battle.channel.seconds - ch.left) / CONFIG.battle.channel.tick) : 0;
+    const skipImpacts = !!ch && pulse % 2 === 1;
     let carrier: FxPart | null = null;
     const impacts: FxPart[] = [];
     for (const part of parts) {
@@ -1345,12 +1353,24 @@ export class MatchScreen implements Screen {
         const sheet = this.fx.sheet(part.id);
         if (!sheet) continue;
         if (part.mode === 'beam' || part.mode === 'stream') {
-          this.addVfx(new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? fromLift, scale: part.scale ?? 2, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing }), part);
+          // A channelled beam keeps one beam per part, swung to each pulse's line (stacking a new one
+          // every pulse piled their glows into a white-out).
+          const key = `${attacker.id}:${part.id}`;
+          const live = ch ? this.channelBeams.get(key) : undefined;
+          if (live && live.alive) live.refresh(from, focus, CONFIG.battle.channel.tick * 2.5);
+          else {
+            const beam = new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? fromLift, scale: part.scale ?? 2, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing });
+            if (ch) {
+              if (this.channelBeams.size > 64) for (const [k2, b2] of this.channelBeams) if (!b2.alive) this.channelBeams.delete(k2);
+              this.channelBeams.set(key, beam);
+            }
+            this.addVfx(beam, part);
+          }
         } else playAt(part, { x: attacker.x, y: attacker.y, mon: attacker }, false);
         continue;
       }
       if (carrier) impacts.push(part);
-      else for (const t of targets) playAt(part, t, true);
+      else if (!skipImpacts) for (const t of targets) playAt(part, t, true);
     }
     if (!carrier) return;
     const sheet = this.fx.sheet(carrier.id);

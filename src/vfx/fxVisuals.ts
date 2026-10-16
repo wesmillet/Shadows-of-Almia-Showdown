@@ -241,9 +241,9 @@ export interface FxBeamOptions {
 /** The strip laid from attacker to target: tiled (beam) or stretched (stream) along its long axis. */
 export class FxBeam implements MoveVisual {
   private t = 0;
-  private readonly life: number;
-  private readonly ang: number;
-  private readonly len: number;
+  private life: number;
+  private ang: number;
+  private len: number;
   private readonly facing: FxFacing;
   private readonly source: CanvasImageSource;
   private readonly lift: number;
@@ -266,6 +266,25 @@ export class FxBeam implements MoveVisual {
   update(dt: number): boolean {
     this.t += dt;
     return this.t < this.life;
+  }
+
+  /** True while it is still showing (a channelled beam reuses it rather than stacking another). */
+  get alive(): boolean {
+    return this.t < this.life;
+  }
+
+  /**
+   * A channelled beam's next pulse: the same beam swings to the new line and keeps going for
+   * `seconds` more, so one beam follows the sweep instead of a new one stacking on every pulse.
+   */
+  refresh(from: { x: number; y: number }, to: { x: number; y: number }, seconds: number): void {
+    this.o.from = from;
+    this.o.to = to;
+    this.ang = Math.atan2(to.y - from.y, to.x - from.x);
+    this.len = Math.hypot(to.x - from.x, to.y - from.y);
+    this.y = Math.max(from.y, to.y) + 0.02;
+    // Hold it at full strength: the fade starts at 70% of its life.
+    this.life = Math.max(this.life, this.t + seconds);
   }
 
   private alpha(): number {

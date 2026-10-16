@@ -97,7 +97,7 @@ def snow(d, seed=3):
     S = wang.WangSet('Tileset_Snow', seed=seed)
     m = (d.biome == SNOW) & d.land & ~d.beach
     bare = noise(seed + 50, 5) > 0.75          # winter grass shows through here and there
-    m &= ~bare
+    m &= ~(bare & (d.level <= 1))              # (not on the mountain's ridge and summit: deep snow up there)
     m = ndimage.binary_opening(m, structure=np.ones((3, 3)))
     return S.paint(m.astype(np.int32)), m
 

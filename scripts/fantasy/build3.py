@@ -16,12 +16,16 @@ import paint3, cliffs, castle, stamps, content3, towns3, collide, export3, wang,
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NAME = 'almia3'
 CLIFF_SETS = {
-    D.SNOW: ('Tileset_RockSlope_2_Ice', 'RockSlopes_2_Ice_Rules'),
+    D.SNOW: ('Tileset_RockSlope_2_Brown_Snow', 'RockSlopes_2_Brown_Snow_Rules'),
     D.DESERT: ('Tileset_RockSlope_2_Gray_Sand', 'RockSlopes_2_Gray_Sand_Rules'),
     D.AUTUMN: ('Tileset_RockSlope_2_Brown', 'RockSlopes_2_Brown_Rules'),
     D.FOREST: ('Tileset_RockSlope_2_Gray', 'RockSlopes_2_Gray_Rules'),
     D.MEADOW: ('Tileset_RockSlope_2_Gray', 'RockSlopes_2_Gray_Rules'),
 }
+
+
+# rows of rock under a south-facing edge, per land (the pack's rules draw 2- and 3-row faces)
+SOUTH_ROWS: dict = {}
 
 
 def log(*a):
@@ -33,7 +37,7 @@ def build_cliffs(d):
     layers, blocked, stairs = [], np.zeros(d.land.shape, bool), np.zeros(d.land.shape, bool)
     H = d.land.shape[0]
     sets = {}
-    for lv in (1, 2):
+    for lv in (1, 2, 3):
         up_all = d.level >= lv
         lbl, n = ndimage.label(up_all)
         out = np.full(d.land.shape, None, dtype=object)
@@ -43,7 +47,8 @@ def build_cliffs(d):
             ts, rules = CLIFF_SETS.get(b, CLIFF_SETS[D.MEADOW])
             if rules not in sets: sets[rules] = cliffs.CliffSet(ts, rules)
             C = sets[rules]
-            g, body = cliffs.markers(comp)
+            # The snow mountain's faces are a row taller: big rock walls, tier on tier.
+            g, body = cliffs.markers(comp, south_rows=SOUTH_ROWS.get(b, 2))
             # stairs wherever a road runs through the south face (three columns, the road's width)
             road = d.paths > 0
             # only through south faces (the body cells under the plateau's bottom edge)
@@ -263,18 +268,30 @@ def main():
     px, py, prx, pry = D.PLAIN
     open_mask = clearing | (d.biome == D.CASTLE) | (D.ellipse(px, py, prx - 10, pry - 8) < 1)
     open_mask |= D.ellipse(D.CASTLE_CENTER[0], D.CASTLE_CENTER[1], 40, 30) < 1   # the castle's clearing
+    n_summit = decor3.summit(placer)
     n_trees = content3.woods(d, placer, open_mask)
-    n_bush = content3.scatter(d, placer, content3.BUSHES, 0.02, seed=12)
+    n_bush = content3.scatter(d, placer, content3.BUSHES, 0.014, seed=12)
     n_rock = content3.scatter(d, placer, content3.ROCKS, 0.006, seed=13, clear=1)
-    log(f'  trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
+    # boulders and ice up the mountain, where the trees give out
+    n_rock += content3.scatter(d, placer, content3.ROCKS, 0.012, seed=14, clear=2, where=d.level >= 2)
+    log(f'  summit {n_summit}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
     objects += placer.objects
     tg, tall = paint3.tall_grass(d, placer.free & ~occupied & ~(d.biome == D.CASTLE))
     stack.insert([n for n, _ in stack].index('Road') + 1, ('Tall grass', tg))
 
     log('collisions')
     ras = collide.Raster(Wd, H)
+    # Small things you walk past rather than round: bushes, verge plants, signs and small rocks
+    # are scenery (no collision), so walkways never get plugged by a shrub or a pebble.
+    see_through = set()
+    for pool in list(content3.BUSHES.values()):
+        see_through |= {(k[0], k[1]) for k in pool}
+    see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props', r'Plant_.*|Crate_Small_Flowers|TreeLog|TreeStump_.*|Sign_.*')}
+    see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props_Snow', r'Sign_.*')}
+    for pool in content3.ROCKS.values():
+        see_through |= {(k[0], k[1]) for k in pool if max(content3.size(k)) <= 32}
     for o in objects:
-        if 'key' in o: ras.picture(o['key'], o['x'], o['y'])
+        if 'key' in o and (o['key'][0], o['key'][1]) not in see_through: ras.picture(o['key'], o['x'], o['y'])
     blocked = ras.blocked() | blocked_stamps
     for (fx, fy) in fountains:
         blocked[fy + 1:fy + 6, fx:fx + 6] = True

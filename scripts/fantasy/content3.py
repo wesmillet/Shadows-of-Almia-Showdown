@@ -104,6 +104,8 @@ def woods(d, placer, open_mask, seed=11):
         if not trees: continue
         forest_here = dens[y, x] > {FOREST: -0.2, AUTUMN: 0.1, SNOW: 0.4, MEADOW: 0.9, CASTLE: 1.4, DESERT: 1.0}[b]
         p = 0.22 if forest_here else 0.012
+        # Up the snow mountain the trees thin out: few on the ridge, almost none on the summit.
+        if b == SNOW: p *= {2: 0.35, 3: 0.08}.get(int(d.level[y, x]), 1.0)
         if rng.random() > p: continue
         pool = trees
         if b == AUTUMN and rng.random() < 0.12: pool = CHERRY
@@ -112,9 +114,9 @@ def woods(d, placer, open_mask, seed=11):
     return n
 
 
-def scatter(d, placer, table, rate, seed, clear=1, shadow=False):
+def scatter(d, placer, table, rate, seed, clear=1, shadow=False, where=None):
     rng = random.Random(seed)
-    order = list(zip(*np.nonzero(placer.free)))
+    order = list(zip(*np.nonzero(placer.free if where is None else placer.free & where)))
     rng.shuffle(order)
     n = 0
     for (y, x) in order:

@@ -155,7 +155,7 @@
     "aiPickSeconds": 1.2,
     "endSeconds": 1.4,
     "cooldownSeconds": 12,
-    "zoom": 1.3
+    "zoom": 1.15
   },
   "catch": {
     "aimMaxTiles": 8,

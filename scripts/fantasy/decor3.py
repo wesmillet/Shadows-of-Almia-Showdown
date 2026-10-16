@@ -35,6 +35,7 @@ def sign_for(dx, dy):
 def roads(d, placer, seed=21):
     rng = random.Random(seed)
     lamp = _one('Objects_Props', r'LampPost(_\d+)?') or _one('Objects_Props_Castle', r'LampPost(_\d+)?')
+    snow_lamp = _one('Objects_Props_Snow', r'LampPost_1_Snow')
     flowers = (catalogue('Objects_Props', r'Plant_RoseBush(_\d+)?') + catalogue('Objects_Props', r'Plant_Sunflower')
                + catalogue('Objects_Props', r'Plant_SaffronFlower') + catalogue('Objects_Props', r'Crate_Small_Flowers'))
     forest_bits = (catalogue('Objects_Props', r'Plant_Mushroom(_\w+)?') + catalogue('Objects_Props', r'TreeLog')
@@ -43,7 +44,7 @@ def roads(d, placer, seed=21):
     for idx, (kind, pts) in enumerate(D.ROADS):
         if kind != '1':
             continue
-        line = D.road_path(pts, 500 + idx, (70, 74) not in pts)
+        line = D.road_path(pts, 500 + idx, not D.climbs(pts))
         # a signpost a few tiles along from the road's first waypoint, on the right-hand verge
         if len(line) > 20:
             (x0, y0), (x1, y1) = line[10], line[16]
@@ -66,9 +67,11 @@ def roads(d, placer, seed=21):
             n = math.hypot(hx, hy) or 1
             lx = int(round(x - hy / n * 2.4 * side))
             ly = int(round(y + hx / n * 2.4 * side))
-            if lamp and 0 <= ly < d.biome.shape[0] and 0 <= lx < d.biome.shape[1] and d.biome[ly, lx] in (D.MEADOW, D.CASTLE, D.AUTUMN, D.FOREST):
-                if placer.put(lamp, lx, ly, clear=0, shadow=False):
-                    n_lamp += 1
+            inb = 0 <= ly < d.biome.shape[0] and 0 <= lx < d.biome.shape[1]
+            here = d.biome[ly, lx] if inb else None
+            key = lamp if here in (D.MEADOW, D.CASTLE, D.AUTUMN, D.FOREST) else snow_lamp if here == D.SNOW else None
+            if key and placer.put(key, lx, ly, clear=0, shadow=False):
+                n_lamp += 1
             side = -side
         for j in range(0, len(line), 5):
             if rng.random() > 0.22:
@@ -139,4 +142,19 @@ def arena(placer):
         if 0 <= y < placer.free.shape[0]:
             placer.free[y, x] = True
             if crystals and placer.put(rng.choice(crystals), x, y, clear=0, shadow=False): n += 1
+    return n
+
+
+def summit(placer):
+    """The top of the snow mountain, where the trail ends: blue banners either side of the path,
+    rune-carved ice rocks round the lookout."""
+    sx, sy = D.SUMMIT
+    banner = _one('Objects_Props_Snow', r'Banner_Stick_1_Blue_Snow')
+    runes = catalogue('Objects_Rocks_Snow', r'Rock_Ice_Rune_\d+')
+    rng = random.Random(24)
+    n = 0
+    for (dx, dy, key) in [(-3, -2, banner), (3, -2, banner), (-3, 3, banner), (3, 3, banner)]:
+        if key and placer.put(key, sx + dx, sy + dy, clear=0, shadow=False): n += 1
+    for (dx, dy) in [(-7, -1), (7, -1), (-6, 4), (6, 4), (0, -6)]:
+        if runes and placer.put(rng.choice(runes), sx + dx, sy + dy, clear=0, shadow=False): n += 1
     return n

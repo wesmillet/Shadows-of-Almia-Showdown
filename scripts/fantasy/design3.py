@@ -2,7 +2,9 @@
 
 An island in the sea. The Shadow Crystal stands on a terrace in an open plain
 at the centre; four lands surround it:
-  north-west  snowfields rising to a two-step mountain
+  north-west  snowfields rising to a three-tier mountain: a foothill plateau
+              (Frostmere stands on it), a ridge, and a summit, with a trail
+              of stairs climbing from the town to the top
   north-east  the autumn wood (red and gold), a ridge along the coast
   south-west  the desert, with mesas and an oasis
   south-east  the green forest, its lake, and the castle in a clearing
@@ -16,7 +18,7 @@ Grids (h, w):
   land    bool   island (beach included)
   beach   bool   sand rim along the coast
   biome   int    BIOME codes below
-  level   int    0 lowland, 1 plateau, 2 summit
+  level   int    0 lowland, 1 plateau, 2 ridge, 3 summit
   water   bool   lakes and rivers (on land)
 """
 import numpy as np
@@ -93,11 +95,15 @@ class Design:
         # ---------------------------------------------------------------- levels
         level = np.zeros((H, W), np.int32)
         inland = land & (dist_sea > 9)
-        # snow mountain: a plateau over the far north-west, a summit on it
+        # snow mountain: a foothill plateau over the far north-west (the town's), a ridge on it and
+        # a summit on the ridge, each tier set well back from the edge of the one below
         r_snow = ellipse(70, 58, 62, 44) + 0.12 * noise(seed + 6, 8)
         level[(r_snow < 1) & inland & (biome == SNOW)] = 1
-        r_peak = ellipse(42, 64, 12, 10) + 0.15 * noise(seed + 7, 6)
-        level[(r_peak < 1) & (level == 1)] = 2
+        town = ellipse(TOWNS['Frostmere'][0], TOWNS['Frostmere'][1], 27, 17) < 1
+        r_ridge = ellipse(54, 68, 30, 24) + 0.13 * noise(seed + 7, 6)
+        level[(r_ridge < 1) & (level == 1) & ~town] = 2
+        r_peak = ellipse(50, 64, 15, 11) + 0.12 * noise(seed + 16, 5)
+        level[(r_peak < 1) & (level == 2)] = 3
         # desert mesas
         for (mx, my, rx, ry, s) in [(48, 150, 18, 12, 8), (140, 198, 10, 6, 9)]:
             r = ellipse(mx, my, rx, ry) + 0.15 * noise(seed + s, 5)
@@ -113,22 +119,26 @@ class Design:
         level[ellipse(px, py, prx + 6, pry + 6) < 1] = 0
         level[136:204, 156:238] = 0
         roads = np.zeros((H, W), np.int32)
-        paint_roads(self, [r for r in ROADS if (70, 74) not in r[1]], out=roads)
+        paint_roads(self, [r for r in ROADS if not climbs(r[1])], out=roads)
         flat = ndimage.binary_dilation(roads > 0, iterations=5)
         level[flat] = 0
         level = self._clean_levels(level)
         # a straight face where each road climbs a plateau (stairs need one): find where the
         # road's column meets the plateau coming from the south and square the edge off there
+        # (every step up the road meets, on a climbing road: the mountain trail meets three)
         self.stair_rows = {}
         for (sx, y_from) in STAIR_SITES:
-            sy = None
-            for y in range(y_from, 0, -1):
-                if level[y - 1, sx] >= 1 and level[y, sx] == 0: sy = y; break
-            if sy is None: continue
-            for x in range(sx - 7, sx + 8):
-                level[sy:sy + 10, x] = np.minimum(level[sy:sy + 10, x], 0)
-                level[sy - 5:sy, x] = np.maximum(level[sy - 5:sy, x], 1)
-            self.stair_rows[sx] = sy
+            y = y_from
+            while y > 1:
+                if level[y - 1, sx] > level[y, sx]:
+                    lo, hi = int(level[y, sx]), int(level[y - 1, sx])
+                    for x in range(sx - 7, sx + 8):
+                        level[y:y + 8, x] = np.minimum(level[y:y + 8, x], lo)
+                        level[y - 5:y, x] = np.maximum(level[y - 5:y, x], hi)
+                    self.stair_rows.setdefault(sx, []).append(y)
+                    y -= 6
+                    continue
+                y -= 1
         self.level = level
         # ---------------------------------------------------------------- water
         water = np.zeros((H, W), bool)
@@ -150,12 +160,12 @@ class Design:
     def _clean_levels(self, level):
         """Plateaus are compact: no slivers, no holes, each level inside the one below."""
         out = np.zeros_like(level)
-        for lv in (1, 2):
+        for lv in (1, 2, 3):
             m = level >= lv
             m = ndimage.binary_opening(m, structure=np.ones((5, 5)))
             m = ndimage.binary_closing(m, structure=np.ones((5, 5)))
             m = ndimage.binary_fill_holes(m)
-            if lv == 2: m &= ndimage.binary_erosion(out >= 1, iterations=6)
+            if lv >= 2: m &= ndimage.binary_erosion(out >= lv - 1, iterations=4)
             lbl, n = ndimage.label(m)
             for i in range(1, n + 1):
                 if (lbl == i).sum() < 120: m[lbl == i] = False
@@ -178,7 +188,7 @@ def preview(d, path):
 
 # towns: (name, centre x, centre y, biome)
 TOWNS = {
-    'Frostmere': (70, 74, SNOW),
+    'Frostmere': (104, 72, SNOW),
     'Emberwood': (246, 82, AUTUMN),
     'Sunreach': (112, 176, DESERT),
     'Greenhollow': (262, 128, FOREST),
@@ -187,8 +197,10 @@ TOWNS = {
 GATES = {'N': (186, 151, True), 'S': (199, 188, True)}
 GATE_W = 5
 
-# (x, y): a road climbing north from row y meets a south-facing plateau edge in column x
-STAIR_SITES = [(84, 112)]
+# (x, y): a road climbing north from row y meets south-facing plateau edges in column x
+STAIR_SITES = [(104, 112), (56, 97)]
+# the mountain trail's top: the summit lookout
+SUMMIT = (56, 64)
 
 ROADS = [
     # Roads follow the land rather than a grid: diagonal legs between waypoints, then a gentle
@@ -198,7 +210,10 @@ ROADS = [
     # north-south through the crystal, from the north coast to the south of the plain
     ('1', [(160, 30), (165, 58), (160, 86), (160, 112), (157, 140), (160, 160)]),
     # climbing the plateau to the snow town (CLIMB: straight, no flattening round this one)
-    ('1', [(84, 112), (84, 74), (70, 74)]),
+    ('1', [(84, 112), (104, 112), (104, 72)]),
+    # the mountain trail: off Frostmere's road just south of the town, west along the foothills, then
+    # straight up the ridge's and the summit's south faces (a flight of stairs at each)
+    ('1', [(104, 97), (56, 97), (56, 64)]),
     # north-east to the autumn town
     ('1', [(194, 114), (196, 99), (205, 85), (226, 79), (246, 82)]),   # round the west and north of Tide Lake
     # south-west to the desert town
@@ -208,6 +223,11 @@ ROADS = [
     ('1', [(158, 134), (172, 137), (186, 140)]),
     ('2', [(186, 146), (186, 158)]), ('2', [(199, 182), (199, 196)]),
 ]
+
+
+def climbs(pts):
+    """A road that climbs plateaus (straight, its stairs squared off, no flattening round it)."""
+    return TOWNS['Frostmere'][:2] in pts or SUMMIT in pts
 
 
 def road_path(pts, seed, wind=True):
@@ -252,7 +272,7 @@ def paint_roads(d, roads=ROADS, w=3, out=None):
     H_, W_ = target.shape
     for idx, (kind, pts) in enumerate(roads):
         k = int(kind)
-        wind = k == 1 and (70, 74) not in pts
+        wind = k == 1 and not climbs(pts)
         line = road_path(pts, 500 + idx, wind)
         rng = np.random.default_rng(900 + idx)
         ph = rng.uniform(0, 2 * np.pi)

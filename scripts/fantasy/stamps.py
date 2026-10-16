@@ -19,6 +19,33 @@ STAMPS = {
 }
 
 
+# Stamps cut from a busy sample: keep only the structure itself (the tower's rectangle also
+# catches the rims of the walkways beside it and a lamp above, which stuck up like fence posts).
+ISOLATE = {'tower_cone'}
+
+
+def isolate(img):
+    """Per row, keeps only the run of solid pixels through the picture's centre column, so
+    neighbouring bits of the sample that share the rectangle are dropped."""
+    out = img.copy()
+    h, w = img.shape[:2]
+    cx = w // 2
+    solid = img[:, :, 3] > 40
+    for y in range(h):
+        row = solid[y]
+        if not row[cx]:
+            out[y, :, 3] = 0
+            continue
+        x0 = cx
+        while x0 > 0 and row[x0 - 1]: x0 -= 1
+        x1 = cx
+        while x1 < w - 1 and row[x1 + 1]: x1 += 1
+        # a pixel or two of soft edge either side stays
+        out[y, :max(0, x0 - 1), 3] = 0
+        out[y, min(w, x1 + 2):, 3] = 0
+    return out
+
+
 @functools.lru_cache(maxsize=None)
 def stamp(name):
     sample, x0, y0, x1, y1, foot, floors = STAMPS[name]
@@ -37,6 +64,8 @@ def stamp(name):
                 if a is None: continue
                 tiled.blit(img, tiled.apply_flips(a, g), (x - x0) * 16, (y - y0) * 16, op)
     img = img.clip(0, 255).astype(np.uint8)
+    if name in ISOLATE:
+        img = isolate(img)
     al = img[:, :, 3] > 40
     tiles = al.reshape(y1 - y0, 16, x1 - x0, 16).mean(axis=(1, 3)) > 0.3
     block = np.zeros_like(tiles)

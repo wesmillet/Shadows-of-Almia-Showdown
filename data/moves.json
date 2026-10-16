@@ -16,9 +16,18 @@
         {
           "id": "fx_001",
           "anchor": "target",
-          "scale": 2.4
+          "scale": 2.8,
+          "fps": 16
+        },
+        {
+          "id": "fx_067",
+          "anchor": "target",
+          "scale": 0.9,
+          "ground": true,
+          "fps": 16
         }
-      ]
+      ],
+      "shake": 0.1
     },
     {
       "id": "scratch",
@@ -35,8 +44,15 @@
         {
           "id": "fx_116",
           "anchor": "target",
-          "scale": 2,
-          "fps": 32
+          "scale": 2.4,
+          "fps": 24
+        },
+        {
+          "id": "fx_001",
+          "anchor": "target",
+          "scale": 1.6,
+          "fps": 18,
+          "delay": 0.05
         }
       ]
     },
@@ -55,16 +71,25 @@
         {
           "id": "fx_131",
           "anchor": "projectile",
-          "scale": 2,
+          "scale": 2.2,
           "speed": 24,
           "facing": "right"
         },
         {
           "id": "fx_001",
           "anchor": "target",
-          "scale": 2.2
+          "scale": 2.6,
+          "fps": 16
+        },
+        {
+          "id": "fx_067",
+          "anchor": "target",
+          "scale": 0.8,
+          "ground": true,
+          "fps": 16
         }
-      ]
+      ],
+      "shake": 0.1
     },
     {
       "id": "bite",

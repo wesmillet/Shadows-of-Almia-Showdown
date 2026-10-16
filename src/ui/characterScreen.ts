@@ -27,8 +27,12 @@ export class CharacterScreen implements Screen {
     for (const c of this.list) rangers.preview(c);
   }
 
-  /** "Ranger 3" for the Union sheets, "Local 7" for the townsfolk. */
+  /** Named originals, then "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
+  static readonly NAMES: Record<string, string> = { orig_00: 'Wren' };
+
   static label(character: string): string {
+    const named = CharacterScreen.NAMES[character];
+    if (named) return named;
     const [kind, n] = character.split('_');
     return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
   }

@@ -193,7 +193,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, () => void showTitle(false))), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))));
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false))), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))));
     debug.showdown.screen = title;
     game.setScreen(title);
   };

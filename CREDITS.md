@@ -29,3 +29,12 @@ The earlier maps (`assets/maps/almia.json`) use Sunnyside World by Daniel Diggle
 `assets/ui/reticle.png` and `reticle_hot.png` are Kenney's crosshair from the
 Starter Kit FPS (https://github.com/KenneyNL/Starter-Kit-FPS, sprites are
 CC0), scaled down to 28 px and recoloured for the pixel art.
+
+## PC box icons
+
+`assets/pc-icons/` holds the Pokémon box icons the PC screen shows, trimmed by
+`scripts/pc-icons.py`: the Black/White (Gen 5) icons for #1-649 and the Gen 7 icons for
+#650-809 from PokeAPI/sprites (https://github.com/PokeAPI/sprites), and the Gen 8 box icons
+for #810-898 from msikma/pokesprite (https://github.com/msikma/pokesprite). Pokémon and its
+sprites are © Nintendo, Creatures Inc. and GAME FREAK inc.; used here for a non-commercial fan
+game. Newer Pokémon with no box icon show their portrait.

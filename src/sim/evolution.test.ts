@@ -43,8 +43,13 @@ describe('evolution data', () => {
       expect(drawScale(s), s.name).toBeGreaterThan(0.1);
     }
     // Sizes follow the Pokédex: Gyarados towers over Magikarp, Pikachu stands well under a trainer.
-    expect(drawScale(species('0130')) * species('0130').body[1]).toBeGreaterThan(3 * drawScale(species('0129')) * species('0129').body[1]);
+    // (Small ones are lifted to at least ~0.9 m drawn, so the ratio is a little under the Pokédex's.)
+    expect(drawScale(species('0130')) * species('0130').body[1]).toBeGreaterThan(2.5 * drawScale(species('0129')) * species('0129').body[1]);
     expect(drawScale(species('0025')) * species('0025').body[1]).toBeLessThan(24);
+    // Nothing too small: every body is drawn at least 18 sprite pixels tall (a trainer is 32).
+    for (const s of SPECIES.values()) expect(drawScale(s) * s.body[1], s.name).toBeGreaterThanOrEqual(17.9);
+    // Giants are capped: Wailord is huge but fits on screen.
+    expect(drawScale(species('0321')) * species('0321').body[1]).toBeLessThanOrEqual(121);
     // Small Pokémon are lifted on a ramp but keep their order: Pikachu (0.4 m) still draws smaller than Riolu (0.7 m).
     expect(drawScale(species('0025')) * species('0025').body[1]).toBeLessThan(drawScale(species('0447')) * species('0447').body[1] + 2);
   });

@@ -197,10 +197,12 @@
     "dayToColdSeconds": 780
   },
   "sizes": {
-    "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall. Pokémon under smallFloorM are drawn on a ramp from smallBaseM (at 0 m) up to smallFloorM, so small ones stay readable and still smaller than bigger ones.",
+    "_comment": "Pokémon are drawn to their Pokédex height against the trainers: a trainer sprite's body (trainerPx art pixels) stands trainerHeightM tall. Pokémon under smallFloorM are drawn on a ramp from smallBaseM (at 0 m) up to smallFloorM, so small ones stay readable and still smaller than bigger ones; no body is drawn under minDrawnM tall (long, coiled ones included). Giants are capped at maxShownM (Wailord). Species whose Pokedex figure is a length say along: length, and serpents drawn coiled scale it by coil.",
     "trainerHeightM": 1.6,
     "trainerPx": 32,
-    "smallFloorM": 1.2,
-    "smallBaseM": 0.7
+    "smallFloorM": 1.3,
+    "smallBaseM": 0.85,
+    "minDrawnM": 0.9,
+    "maxShownM": 6
   }
 }

@@ -11927,7 +11927,7 @@
         "crunch",
         "earthquake"
       ],
-      "heightM": 1.8,
+      "heightM": 2.1,
       "body": [
         31,
         34
@@ -15746,7 +15746,9 @@
       "body": [
         24,
         27
-      ]
+      ],
+      "along": "length",
+      "coil": 0.6
     },
     {
       "dex": "0498",
@@ -20207,7 +20209,8 @@
       "body": [
         41,
         36
-      ]
+      ],
+      "along": "length"
     },
     {
       "dex": "0151",
@@ -20904,7 +20907,7 @@
         "air-slash",
         "dragon-pulse"
       ],
-      "heightM": 3.0,
+      "heightM": 5.2,
       "learnset": [
         [
           1,
@@ -20990,7 +20993,7 @@
         "earthquake",
         "psychic"
       ],
-      "heightM": 2.8,
+      "heightM": 3.8,
       "learnset": [
         [
           1,
@@ -23789,7 +23792,9 @@
           44,
           "hydro-pump"
         ]
-      ]
+      ],
+      "along": "length",
+      "coil": 0.45
     },
     {
       "dex": "0456",

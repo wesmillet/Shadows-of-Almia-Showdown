@@ -186,7 +186,12 @@ export function drawScale(s: SpeciesDef): number {
   if (hit !== undefined) return hit;
   const [w, h] = s.body ?? [24, 24];
   const px = s.bodyPx ?? (s.along === 'length' ? Math.max(w, h) : h);
-  const k = (PX_PER_M * shownHeight(s.heightM) * (s.coil ?? 1)) / Math.max(1, px);
+  const sizes = CONFIG.sizes as typeof CONFIG.sizes & { minDrawnM?: number; maxShownM?: number };
+  const shown = Math.min(sizes.maxShownM ?? 99, shownHeight(s.heightM) * (s.coil ?? 1));
+  let k = (PX_PER_M * shown) / Math.max(1, px);
+  // Nothing drawn shorter than minDrawnM (a long Dratini or a Wurmple measured nose to tail).
+  const minPx = PX_PER_M * (sizes.minDrawnM ?? 0);
+  if (h * k < minPx) k = minPx / Math.max(1, h);
   scaleCache.set(s.dex, k);
   return k;
 }

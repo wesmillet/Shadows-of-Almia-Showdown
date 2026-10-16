@@ -54,7 +54,11 @@ forest. The castle stands in a clearing in the south-east forest: a square
 walled hold, open through gates in its north and south walls (a round tower
 either side of each), with a keep on the north wall and a courtyard battlefield where the Castle
 Champion takes on challengers. Pokémon are drawn at their Pokédex size next
-to the trainers and evolve at their canonical levels.
+to the trainers (1.6 m) and evolve at their canonical levels. Small ones are
+lifted on a ramp so nothing draws under about 0.9 m (Pikachu and Eevee stay
+smaller than Riolu), long and coiled ones (Gyarados, Steelix, Milotic,
+Serperior, Dragonair) are measured along their length, and giants stop at
+6 m (Wailord). See `sizes` in `data/config.json`.
 
 Wild Pokémon by land (common, uncommon, rare, boss ♛). The outer lands
 start at levels 2-7 for training; levels climb steadily toward the crystal,

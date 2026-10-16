@@ -123,6 +123,8 @@ export interface MoveDef {
   strip?: string;
   /** Effect sheets played when the move resolves; absent = procedural family. */
   fx?: FxPart[];
+  /** The attacker leaps and lands on the target over the cast (Body Slam, Heavy Slam). */
+  leap?: boolean;
   /** Screen shake on impact, 0..1 (heavy moves only). */
   shake?: number;
 }

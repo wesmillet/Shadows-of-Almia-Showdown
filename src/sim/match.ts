@@ -1301,9 +1301,26 @@ export class Match {
     if (incapable(m)) return 'asleep';
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
-    const f = DIR_VECTORS[p.dir] as { x: number; y: number };
-    const snap = this.aimSnap();
-    const a = snap ? { x: snap.x, y: snap.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    let a: { x: number; y: number };
+    const duel = this.playerDuel;
+    if (duel) {
+      // Steering your Pokémon in a battle: it attacks the way it faces. If the opponent is
+      // roughly ahead (within 40 degrees), the move goes at it.
+      const f = DIR_VECTORS[m.dir] as { x: number; y: number };
+      const foe = (duel.a.trainer === p ? duel.b : duel.a).mon;
+      a = { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+      if (foe && BattleSystem.active(foe)) {
+        const dx = foe.x - m.x;
+        const dy = foe.y - m.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const fn = Math.hypot(f.x, f.y) || 1;
+        if ((dx * f.x + dy * f.y) / (d * fn) > Math.cos((40 * Math.PI) / 180)) a = { x: foe.x, y: foe.y };
+      }
+    } else {
+      const f = DIR_VECTORS[p.dir] as { x: number; y: number };
+      const snap = this.aimSnap();
+      a = snap ? { x: snap.x, y: snap.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    }
     m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
     return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
@@ -1386,7 +1403,25 @@ export class Match {
     return true;
   }
 
-  /** Makes party member `index` the lead (fainted members cannot lead). */
+  /**
+   * A slam in progress (Body Slam, Heavy Slam): the attacker travels along the ground toward its
+   * landing spot while the renderer lifts it on the arc; walls stop the travel, not the jump.
+   */
+  private stepSlam(m: Mon, dt: number): void {
+    const l = m.leap;
+    if (!l?.slam) return;
+    l.t += dt;
+    const k = Math.min(1, l.t / l.dur);
+    const e = k * k * (3 - 2 * k);
+    const x = l.fx + (l.tx - l.fx) * e;
+    const y = l.fy + (l.ty - l.fy) * e;
+    if (canStand(this.ground, x, y, 0.22)) {
+      m.x = x;
+      m.y = y;
+    }
+    if (k >= 1 || m.fainted || incapable(m)) m.leap = null;
+  }
+
   /**
    * Lets a party Pokémon go. It steps out where the player stands and wanders off as a calm wild
    * Pokémon (it could be caught again). Not mid-battle, and never the last one.
@@ -1416,6 +1451,7 @@ export class Match {
     return m.fainted ? `${m.name} was released` : `Bye, ${m.name}! It heads off into the wild`;
   }
 
+  /** Makes party member `index` the lead (fainted members cannot lead). */
   swapLead(index: number): boolean {
     const p = this.player;
     if (p.duelId) return false;
@@ -1484,6 +1520,7 @@ export class Match {
     this.stepDarkness(dt);
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     for (const m of this.mons()) {
+      this.stepSlam(m, dt);
       this.battle.stepMon(m, dt, () => this.mons());
       // Pokémon on a ladder face the cliff while they climb.
       m.anim.dir = this.ground.onLadder?.(Math.floor(m.x), Math.floor(m.y)) ? 4 : m.dir;

@@ -394,10 +394,13 @@ export class Hud {
   private drawParty(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
     const p = match.player;
-    const cardW = 176 * s;
+    // Cards shrink to fit a full party of six between the left edge and the move buttons.
+    const gap = 8 * s;
+    const n = Math.max(1, p.party.length);
+    const room = v.width - 16 * s - 300 * s;
+    const cardW = Math.min(176 * s, (room - gap * (n - 1)) / n);
     const cardH = 74 * s;
     this.behaviorRects = [];
-    const gap = 8 * s;
     const x0 = 16 * s;
     const y0 = v.height - cardH - 16 * s;
     this.portraitRects = [];

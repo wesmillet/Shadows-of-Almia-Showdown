@@ -8,7 +8,7 @@
   "player": {
     "speedTilesPerSec": 5.5,
     "radius": 0.3,
-    "partyCap": 4,
+    "partyCap": 6,
     "level": 5
   },
   "party": {

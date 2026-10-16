@@ -165,14 +165,18 @@ export class MatchScreen implements Screen {
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
     const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
     if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
-    // The ball locks onto the nearest wild; pointing at another wild (or Tab) switches the lock.
-    if (!overHud) {
-      const w = this.wildNear(input.mouseX, input.mouseY);
-      if (w && w !== this.match.lockTarget) this.match.pickLock(w);
-    }
+    // The ball locks onto the nearest wild; clicking another wild (or Tab) switches the lock.
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind !== 'release') this.hud.releaseArmed = -1;
+      if (!h && !this.match.playerDuel) {
+        // A click on a wild Pokémon makes it the ball's target (the click still casts move 1 at it).
+        const w = this.wildNear(c.x, c.y);
+        if (w && w !== this.match.lockTarget) {
+          this.match.pickLock(w);
+          if (this.match.lockTarget === w) this.say(`Ball target: ${w.name}`, 0.8);
+        }
+      }
       if (duelSide?.awaitingPick) {
         if (h?.kind === 'portrait') this.pickNext(h.index);
         continue;
@@ -497,7 +501,8 @@ export class MatchScreen implements Screen {
 
   /** The aim: a dotted line from the lead toward the cursor and a small reticle where a single-target move would land. */
   private drawAim(v: View): void {
-    if (!this.showHud || this.playerDuelSide()?.awaitingPick) return;
+    // In a battle the steered Pokémon attacks the way it faces: no cursor reticle.
+    if (!this.showHud || this.match.playerDuel) return;
     const m = lead(this.match.player);
     if (!m || m.fainted) return;
     const snap = this.match.aimSnap();

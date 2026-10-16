@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
+import { CONFIG, bodyRadius, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
@@ -259,7 +259,17 @@ export class BattleSystem {
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId };
     attacker.dir = dirFromVector(area.fx, area.fy, attacker.dir);
     attacker.anim.dir = attacker.dir;
-    attacker.anim.play(m.anim, { restart: true, loop: false });
+    if (m.leap && !attacker.leap) {
+      // A slam: up in an arc over the cast and down onto the target, landing just short of it.
+      const dx = targetX - attacker.x;
+      const dy = targetY - attacker.y;
+      const d = Math.hypot(dx, dy);
+      // Land in front of the target, not on it: big Pokémon stop further out.
+      const back = Math.min(d, 0.45 + bodyRadius(attacker.species) * 1.1);
+      const k = d > 0.01 ? (d - back) / d : 0;
+      attacker.leap = { t: 0, dur: attacker.casting.t, h: 1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
+      attacker.anim.play(attacker.anim.sprites.def('Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
+    } else attacker.anim.play(m.anim, { restart: true, loop: false });
     this.events.push({ type: 'cast', attacker: attacker, move: m, area });
     return true;
   }

@@ -48,6 +48,9 @@ PECK = {'0396', '0397', '0398', '0393', '0394', '0395'}
 OVERRIDES = {
     # Darkrai: the finale boss casts its kit by slot (Dark Void first, Dark Pulse second).
     '0491': None,
+    # Munchlax and Snorlax: the slams (they leap and land on the target).
+    '0446': [[1, 'tackle'], [1, 'growl'], [14, 'headbutt'], [22, 'slash'], [32, 'body-slam'], [40, 'heavy-slam']],
+    '0143': [[1, 'tackle'], [1, 'growl'], [14, 'headbutt'], [22, 'slash'], [32, 'body-slam'], [40, 'heavy-slam']],
 }
 
 

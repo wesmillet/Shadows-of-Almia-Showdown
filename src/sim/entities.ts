@@ -83,7 +83,7 @@ export interface Mon {
   /** A Pokémon that is part of the scenery (Hoopa): nobody fights or catches it. */
   npc?: 'hoopa';
   /** A leap in progress (Lugia out of the lake): seconds in, total seconds, peak height in tiles, start and end points. */
-  leap?: { t: number; dur: number; h: number; fx: number; fy: number; tx: number; ty: number } | null;
+  leap?: { t: number; dur: number; h: number; fx: number; fy: number; tx: number; ty: number; slam?: boolean } | null;
   /** Seconds until this Pokémon can dodge again. */
   dodgeCd?: number;
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */

@@ -28,7 +28,7 @@ export class CharacterScreen implements Screen {
   }
 
   /** Named originals, then "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
-  static readonly NAMES: Record<string, string> = { orig_00: 'Wren' };
+  static readonly NAMES: Record<string, string> = { orig_00: 'Wren', orig_01: 'Kit' };
 
   static label(character: string): string {
     const named = CharacterScreen.NAMES[character];

@@ -309,6 +309,11 @@ export class MatchScreen implements Screen {
       const msg = this.match.megaEvolve(this.match.player);
       if (msg) this.say(msg, 1.6);
     }
+    // V: ride (or fly on) a mount from the party, or get off.
+    if (input.pressed('KeyV')) {
+      const msg = this.match.toggleRide();
+      if (msg) this.say(msg, 1.8);
+    }
     // Throwing: point at a wild Pokémon and press F.
     if (input.pressed('KeyF')) this.throwAtTarget();
     void v;

@@ -343,6 +343,9 @@ license, sheets). The current artists per folder, resolved through
 - <@!237286997645983744>: Cringe,DeepBreath,Eat,EventSleep,Faint,Float,Head,HitGround,Laying,LeapForth,LookUp,LostBalance,Nod,Pain,Pose,Pull,Sink,Sit,Trip,Tumble,TumbleBack,Wake
 - <@!237286997645983744>: EventSleep,Wake,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 
+### 0243 Raikou
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Shock,Swing,Double,Rotate,Hop,QuickStrike
+
 ### 0245 Suicune
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack,RearUp,Swing,Double,Rotate,Hop
 
@@ -1172,6 +1175,14 @@ license, sheets). The current artists per folder, resolved through
 - <@!608107243329814529>: "
 - <@!229131140903075840>: Shoot
 
+### 1007 Koraidon
+- <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Sound,Rumble,RearUp,Swing,Double,Rotate,Hop
+- <@!544245909639397378>: Idle,Walk,Hurt,Attack,Shoot,RearUp,Swing,Double,Hop
+
+### 1008 Miraidon
+- <@!276369635304275968>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,SpAttack,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!276369635304275968>: Shoot,Pain,Float,Cringe,Faint
+
 ## Portraits
 
 ### 0001 Bulbasaur
@@ -1623,6 +1634,10 @@ license, sheets). The current artists per folder, resolved through
 ### 0240 Magby
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+
+### 0243 Raikou
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!224476380790915072>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
 ### 0245 Suicune
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -2655,12 +2670,16 @@ license, sheets). The current artists per folder, resolved through
 - <@!350050109741858829>: Normal
 - <@!350050109741858829>: Normal,Happy,Sigh,Stunned,Teary-Eyed,Worried
 
+### 1007 Koraidon
+- <@!276369635304275968> (earlier version): Normal
+- <@!356635814668664832>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 1008 Miraidon
+- <@!356635814668664832>: Normal
+- <@!350050109741858829>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
+- <@!350050109741858829>: Sad,Worried
+
 ## Trainer and NPC sheets
 
 Pokémon Ranger 2: Shadows of Almia overworld NPCs ripped by Lemon for The
 Spriters Resource; see `assets/rangers/README.md` and the root `CREDITS.md`.
-
-## Darkrai's portal
-
-`assets/fx/darkrai_portal.png` (three frames: closed, half open, open) was
-supplied by the project owner.

@@ -86,8 +86,8 @@ works the same way (and a loss there is friendly).
   few levels above your best. Win and she gives you a shiny (Lucario, Garchomp, Dragonite, Tyranitar or
   Gyarados) or a powerful Pokémon (Metagross, Salamence, Goodra, Dragapult...) at your level. Lose and she
   patches your team up; try again a minute later;
-- **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios or
-  Rayquaza) comes through with triple HP and challenges you to a **legend bout**, fought like a trainer
+- **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios,
+  Rayquaza or Raikou) comes through with triple HP and challenges you to a **legend bout**, fought like a trainer
   battle (see below). Hoopa only turns up in about one
   match in seven (`visitors.hoopaChance`; add `?hoopa=1` to the address to force it). Once per match;
 - **Lugia** sleeps in **Tide Lake** (the lake between the plain and the autumn wood). Only a Super Rod
@@ -185,6 +185,7 @@ impact on the body, at most one aftershock.
 | hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |
 | F (Tab or click a wild to switch target) | the ball locks onto the nearest catchable wild within 9 tiles (one fighting your team counts as closer), marked by turning brackets (green in range, red out of range). Tab steps through the wilds in range; clicking any wild on screen locks onto it, however far. A picked target holds until it faints, is caught or gets about a screen away (24 tiles); the brackets turn green once it is within a throw. F throws the armed ball at it; throws reach 7 tiles |
 | M | Mega Evolve the Pokémon you steer (or your lead) when it holds its own Mega Stone; once a match |
+| V | ride or fly on a mount in your party (Raikou, Koraidon, Miraidon ride; Latios, Staraptor fly); V again to get off |
 | click a portrait | swap the lead; click a behaviour chip to cycle Attack (go after anything in range) / Guard (fight what comes near) / Passive (never starts a fight, even with auto-battle on; it dodges attacks and stays close) |
 | hover a party card | a red X in its corner releases that Pokémon (click again on "Release?" to confirm): it walks off into the wild, calm for a while, and could be caught again. Not during a battle, and never your last one |
 | hover a bag slot | the item's name; the count sits in the slot's corner; the red X throws the item away |
@@ -237,6 +238,16 @@ Lumineon, Whiscash, Qwilfish, Corsola, Tentacruel and Seadra; rare ones
 Gyarados, Lapras, Dratini, Feebas, Relicanth, Kingdra, Milotic and Wailord.
 Better rods hook higher levels (and the water near the crystal more still); a
 hooked Pokémon bursts out of the water, leaps ashore and fights you.
+
+**Riding and flying.** Press **V** with a mount in your party to ride it or
+fly on it, and V again to get off. Raikou, Koraidon and Miraidon (its Low
+Power ride form) carry you at 1.7x walking speed; Latios and Staraptor fly
+you at 2.1x, over water, high enough that trainers can't start a battle with
+you. The mount sits out of fights while it carries you; you can't land on
+water, fish or steer a Pokémon while mounted, and a battle sets you down.
+Raikou can come through Hoopa's portal and Celeste can give Koraidon or
+Miraidon. Seat height, rear offset and a ridden size per mount live in
+`riding` in `data/config.json`.
 
 **Legend bouts.** Hoopa's portal legends and Lugia fight you one-on-one in
 the battle ring, like a trainer: your team goes back in its balls and you send

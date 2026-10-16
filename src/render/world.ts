@@ -2,9 +2,9 @@
  * Draws one frame of the match: ground, soft shadows, then every sprite and
  * decor item sorted by its ground point so things overlap correctly.
  */
-import { lerp, dir8To4 } from '../core/math';
+import { DIR_VECTORS, lerp, dir8To4 } from '../core/math';
 import type { Match } from '../sim/match';
-import { bodyRadius, drawScale, monScale } from '../sim/data';
+import { CONFIG, bodyRadius, drawScale, monScale } from '../sim/data';
 import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
@@ -54,7 +54,7 @@ export function drawSoftShadow(view: View, sx: number, sy: number, radiusTiles: 
   ctx.restore();
 }
 
-export function drawMon(view: View, m: Mon, alpha: number): void {
+export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 1): void {
   const ctx = view.ctx;
   const p = monPos(m, alpha);
   const sx = Math.round(view.toScreenX(p.x));
@@ -62,7 +62,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const vis = m.visual;
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
   // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
-  const s = view.spriteScale * vis.scale * monScale(m);
+  const s = view.spriteScale * vis.scale * monScale(m) * scaleMul;
   // Alphas shed red embers: half rise behind the body, half in front (drawn after the sprite).
   const embers = m.alpha && !m.fainted && vis.alpha > 0.5;
   if (embers) drawEmbers(ctx, m, sx, sy, s, 0);
@@ -80,7 +80,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
   const dx = sx - (f.w * s) / 2;
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet; a leap lifts it on an arc.
   const leapLift = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) * view.pxPerTile : 0;
-  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * 0.15 - leapLift;
+  const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * scaleMul * 0.15 - leapLift - lift * view.pxPerTile;
   if (m.aura || m.alpha) {
     // A purple glow for Pokémon under the darkness, a red one for Alphas.
     ctx.save();
@@ -184,7 +184,46 @@ export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alph
   // On a ladder trainers climb facing the cliff, up or down, with the back-view walk cycle.
   const climbing = ground?.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
   const f = sheet.frame(climbing ? 'up' : dir8To4(t.dir), t.walkPhase, t.moving);
+  if (t.mount) return drawRider(view, t, f, sx, sy, s, alpha);
   drawSheetFrame(ctx, f, sx, sy, s);
+}
+
+/**
+ * A trainer on a mount: the mount's own walk (or flight) animation, then the trainer from the hips
+ * up, sat at the mount's seat point (data/config.json riding). Flyers ride flyLift tiles up with a
+ * gentle bob over a shadow on the ground.
+ */
+function drawRider(view: View, t: Trainer, f: { image: CanvasImageSource; sx: number; sy: number; w: number; h: number; footY: number; flip: boolean }, sx: number, sy: number, s: number, alpha: number): void {
+  const ctx = view.ctx;
+  const mt = t.mount as { mon: Mon; fly: boolean };
+  const mon = mt.mon;
+  const rules = (CONFIG.riding.mounts as Record<string, { seat: number; back: number; scale?: number }>)[mon.dex.replace(/-shiny$/, '')] ?? { seat: 0.55, back: 0.1 };
+  const mul = rules.scale ?? 1;
+  const ms = view.spriteScale * monScale(mon) * mul;
+  const lift = mt.fly ? CONFIG.riding.flyLift + Math.sin(performance.now() / 380) * 0.08 : 0;
+  // Shadow on the ground under the mount (wider than a trainer's).
+  drawSoftShadow(view, sx, sy, Math.max(0.45, bodyRadius(mon.species) * (mt.fly ? 1.1 : 1.3)), mt.fly ? 0.22 : 0.3);
+  drawMon(view, mon, alpha, lift, mul);
+  // The seat: up the body, and back toward the tail when seen side on.
+  const [bw, bh] = mon.species.body;
+  const dirv = DIR_VECTORS[t.dir] as { x: number; y: number };
+  const seatX = sx - Math.sign(dirv.x) * rules.back * bw * ms;
+  const seatY = sy - lift * view.pxPerTile - rules.seat * bh * ms;
+  // Hips at the seat: draw the top 62% of the trainer frame.
+  const crop = Math.round(f.footY * 0.62);
+  const top = f.footY - Math.round(f.footY * 0.97);
+  const dw = f.w * s;
+  const dh = (crop - top) * s;
+  const dx = Math.round(seatX - dw / 2);
+  const dy = Math.round(seatY - dh);
+  ctx.imageSmoothingEnabled = false;
+  if (f.flip) {
+    ctx.save();
+    ctx.translate(dx + dw, dy);
+    ctx.scale(-1, 1);
+    ctx.drawImage(f.image, f.sx, f.sy + top, f.w, crop - top, 0, 0, dw, dh);
+    ctx.restore();
+  } else ctx.drawImage(f.image, f.sx, f.sy + top, f.w, crop - top, dx, dy, dw, dh);
 }
 
 /** Draws an overworld frame with its feet at (sx, sy), mirrored when the manifest says so. */

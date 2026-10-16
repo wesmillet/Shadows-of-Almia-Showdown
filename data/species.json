@@ -24213,6 +24213,223 @@
           "hydro-pump"
         ]
       ]
+    },
+    {
+      "dex": "0243",
+      "name": "Raikou",
+      "types": [
+        "electric"
+      ],
+      "stats": {
+        "hp": 90,
+        "atk": 85,
+        "def": 75,
+        "spa": 115,
+        "spd": 100,
+        "spe": 115
+      },
+      "tier": 0,
+      "moves": [
+        "discharge",
+        "thunderbolt",
+        "hyper-voice",
+        "thunder"
+      ],
+      "heightM": 1.9,
+      "body": [
+        23,
+        35
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "charge-beam"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "discharge"
+        ],
+        [
+          32,
+          "thunderbolt"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "thunder"
+        ]
+      ]
+    },
+    {
+      "dex": "1007",
+      "name": "Koraidon",
+      "types": [
+        "fighting",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 135,
+        "def": 115,
+        "spa": 85,
+        "spd": 100,
+        "spe": 135
+      },
+      "tier": 0,
+      "moves": [
+        "double-kick",
+        "dragon-claw",
+        "brick-break",
+        "close-combat"
+      ],
+      "heightM": 2.5,
+      "body": [
+        37,
+        44
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "karate-chop"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          14,
+          "low-kick"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "double-kick"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          32,
+          "brick-break"
+        ],
+        [
+          44,
+          "close-combat"
+        ]
+      ]
+    },
+    {
+      "dex": "1008",
+      "name": "Miraidon",
+      "types": [
+        "electric",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 85,
+        "def": 100,
+        "spa": 135,
+        "spd": 115,
+        "spe": 135
+      },
+      "tier": 0,
+      "moves": [
+        "discharge",
+        "dragon-pulse",
+        "thunderbolt",
+        "thunder"
+      ],
+      "heightM": 2.2,
+      "body": [
+        19,
+        39
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "thunder-shock"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          11,
+          "thunder-wave"
+        ],
+        [
+          14,
+          "charge-beam"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "discharge"
+        ],
+        [
+          28,
+          "dragon-pulse"
+        ],
+        [
+          32,
+          "thunderbolt"
+        ],
+        [
+          44,
+          "thunder"
+        ]
+      ]
     }
   ]
 }

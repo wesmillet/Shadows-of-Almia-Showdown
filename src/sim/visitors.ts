@@ -28,9 +28,9 @@ const STONES = ['fire-stone', 'water-stone', 'thunder-stone', 'leaf-stone', 'ice
 /** Celeste's team and her prizes. */
 const ACE_TEAM = ['0445', '0448', '0130'];
 const SHINY_PRIZES = ['0448-shiny', '0445-shiny', '0149-shiny', '0248-shiny', '0130-shiny'];
-const POWER_PRIZES = ['0376', '0373', '0706', '0887', '0149', '0248'];
+const POWER_PRIZES = ['0376', '0373', '0706', '0887', '0149', '0248', '1007', '1008'];
 /** What can come through Hoopa's portal. */
-const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny'];
+const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243'];
 const LUGIA = '0249';
 
 type Walker = { npc: Trainer; goal: { x: number; y: number } | null; wait: number };

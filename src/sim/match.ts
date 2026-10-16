@@ -1547,12 +1547,75 @@ export class Match {
   /** Takes control of a party Pokémon out on the field (Pokémon mode). */
   takeControl(m: Mon): boolean {
     const p = this.player;
-    if (p.duelId || m.owner !== p || m.stowed || m.fainted || m.captured || isRoaming(m)) return false;
+    if (p.duelId || p.mount || m.owner !== p || m.stowed || m.fainted || m.captured || isRoaming(m)) return false;
     if (this.controlled) this.controlled.steered = false;
     this.controlled = m;
     m.steered = true;
     m.target = null;
     return true;
+  }
+
+  /** The mount rules for a species (data/config.json riding.mounts), if it can be ridden or flown. */
+  static mountOf(dex: string): { kind: 'ride' | 'fly'; seat: number; back: number } | null {
+    const mounts = CONFIG.riding.mounts as Record<string, { kind: string; seat: number; back: number }>;
+    const m = mounts[baseDex(dex)];
+    return m ? { kind: m.kind === 'fly' ? 'fly' : 'ride', seat: m.seat, back: m.back } : null;
+  }
+
+  /** The nearest point a trainer can stand on, searching outward from (x, y). */
+  private nearestStand(x: number, y: number): { x: number; y: number } {
+    for (let r = 0.5; r < 20; r += 0.5) {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+        const nx = x + Math.cos(a) * r;
+        const ny = y + Math.sin(a) * r;
+        if (canStand(this.ground, nx, ny, CONFIG.player.radius)) return { x: nx, y: ny };
+      }
+    }
+    return { x: this.centerX, y: this.centerY + 3 };
+  }
+
+  /** The ground as a flyer sees it: water counts as open (cliffs, trees and buildings still block). */
+  private flyGround(): GroundRenderer {
+    const g = this.ground;
+    const proxy = Object.create(g) as GroundRenderer;
+    proxy.walkable = (tx: number, ty: number) => g.walkable(tx, ty) || g.biomeAt(tx, ty) === 'water';
+    return proxy;
+  }
+
+  /**
+   * V: ride (or fly on) the first party Pokémon that can carry the trainer, or get off. Riding is
+   * faster; flying is faster still, crosses water and stays out of trainer battles. The mount sits
+   * out of the fight while carrying the trainer.
+   */
+  toggleRide(): string {
+    const p = this.player;
+    if (p.mount) return this.dismount(p);
+    if (p.duelId) return "You can't ride during a battle";
+    if (p.downUntil !== undefined) return '';
+    const mon = p.party.find((m) => !m.fainted && !m.captured && !m.evolving && Match.mountOf(m.dex));
+    if (!mon) return 'No Pokémon in your party can carry you (Raikou, Koraidon, Miraidon ride; Latios, Staraptor fly)';
+    if (this.controlled) this.releaseControl();
+    this.fishing = null;
+    const fly = Match.mountOf(mon.dex)?.kind === 'fly';
+    p.mount = { mon, fly };
+    mon.stowed = true;
+    mon.casting = null;
+    mon.target = null;
+    mon.x = mon.px = p.x;
+    mon.y = mon.py = p.y;
+    mon.visual = { scale: 1, alpha: 1, flash: 0 };
+    return fly ? `You take off on ${mon.name}! It can fly over water (V to land)` : `You ride ${mon.name}! (V to get off)`;
+  }
+
+  /** Off the mount, where the trainer can stand (not over water). */
+  dismount(t: Trainer, force = false): string {
+    const mt = t.mount;
+    if (!mt) return '';
+    if (!force && !canStand(this.ground, t.x, t.y, CONFIG.player.radius)) return "You can't land here";
+    t.mount = null;
+    mt.mon.stowed = true;
+    this.fieldParty(t);
+    return `${mt.mon.name} sets you down`;
   }
 
   /** Recalls a Pokémon and sends it straight back out beside its trainer (ball flash and grow). */
@@ -1774,8 +1837,19 @@ export class Match {
       p.moving = false;
       return;
     }
+    // A mount that can no longer carry the trainer (fainted, released, caught by a rival) drops them.
+    const mt = p.mount;
+    if (mt && (mt.mon.fainted || mt.mon.captured || mt.mon.owner !== p || !p.party.includes(mt.mon))) {
+      p.mount = null;
+      if (!canStand(this.ground, p.x, p.y, CONFIG.player.radius)) {
+        const spot = this.nearestStand(p.x, p.y);
+        p.x = p.px = spot.x;
+        p.y = p.py = spot.y;
+      }
+    }
     const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
-    const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1);
+    const ride = p.mount ? (p.mount.fly ? CONFIG.riding.flySpeed : CONFIG.riding.rideSpeed) : 1;
+    const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1) * ride;
     let moved = 0;
     // In a one-on-one battle the trainer stands back; the movement keys steer the Pokémon instead.
     if (p.duelId) {
@@ -1826,8 +1900,24 @@ export class Match {
           }
         }
       }
-      moved = tryMove(this.ground, p, this.moveX * speed * dt, this.moveY * speed * dt, CONFIG.player.radius);
+      moved = tryMove(p.mount?.fly ? this.flyGround() : this.ground, p, this.moveX * speed * dt, this.moveY * speed * dt, CONFIG.player.radius);
       p.dir = dirFromVector(this.moveX, this.moveY, p.dir);
+    }
+    if (p.mount) {
+      // The mount walks (or flies) under the trainer.
+      const mon = p.mount.mon;
+      mon.px = p.px;
+      mon.py = p.py;
+      mon.x = p.x;
+      mon.y = p.y;
+      mon.dir = p.dir;
+      mon.anim.dir = p.dir;
+      const walking = moved > 1e-4 || p.mount.fly;
+      if (walking !== mon.moving) {
+        mon.moving = walking;
+        mon.anim.play(walking ? 'Walk' : 'Idle');
+      }
+      mon.anim.update(dt);
     }
     this.separate(p);
     this.afterTrainerMove(p, moved);
@@ -2272,7 +2362,7 @@ export class Match {
   /** Two trainers who see each other within startRange start a one-on-one battle. */
   private findDuels(): void {
     const c = CONFIG.duel;
-    const free = this.allTrainers.filter((t) => t.alive && !t.duelId && !t.challenger && !t.visitor && this.time >= (t.duelReadyAt ?? 0) && this.canBattle(t));
+    const free = this.allTrainers.filter((t) => t.alive && !t.duelId && !t.challenger && !t.visitor && !t.mount?.fly && this.time >= (t.duelReadyAt ?? 0) && this.canBattle(t));
     for (let i = 0; i < free.length; i++) {
       const a = free[i] as Trainer;
       if (a.duelId) continue;
@@ -2314,6 +2404,7 @@ export class Match {
     });
     const duel: Duel = { id, a: side(a, sa, ux, uy), b: side(b, sb, -ux, -uy), cx, cy, state: 'intro', t: 0, winner: null };
     for (const t of [a, b]) {
+      if (t.mount) this.dismount(t, true);
       t.duelId = id;
       t.aiTarget = null;
       t.healing = 0;
@@ -2346,6 +2437,7 @@ export class Match {
   startLegendBout(L: Mon): boolean {
     const p = this.player;
     if (p.duelId || !p.alive || p.downUntil !== undefined || !this.canBattle(p) || this.finalStarted) return false;
+    if (p.mount && !canStand(this.ground, p.x, p.y, CONFIG.player.radius)) return false;
     const host = this.makeTrainer(L.name, 'legend', false, L.x, L.y);
     host.visitor = true;
     host.hidden = true;
@@ -2782,6 +2874,11 @@ export class Match {
     let out = 0;
     for (const m of t.party) {
       if (m.fainted || m.captured) continue;
+      // The mount stays out of the fight while it carries its trainer.
+      if (t.mount?.mon === m) {
+        m.stowed = true;
+        continue;
+      }
       if (out < limit) {
         out++;
         if (m.stowed) {
@@ -2817,6 +2914,14 @@ export class Match {
    */
   down(t: Trainer): void {
     const secs = this.respawnSeconds();
+    if (t.mount) {
+      t.mount = null;
+      if (!canStand(this.ground, t.x, t.y, CONFIG.player.radius)) {
+        const spot = this.nearestStand(t.x, t.y);
+        t.x = t.px = spot.x;
+        t.y = t.py = spot.y;
+      }
+    }
     t.downUntil = this.time + secs;
     const bag = [...t.items, ...t.held].filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }));
     if (bag.length) this.placeBall('premier', bag, t.x + 0.8, t.y + 0.4);

@@ -159,6 +159,19 @@
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address to force it).",
     "hoopaChance": 0.15
   },
+  "riding": {
+    "_comment": "V rides (kind ride) or flies on (kind fly) the first mount in the party. seat: where the rider sits, as a fraction of the mount's body height above the ground; back: how far toward the tail the rider sits in side views (fraction of body width); scale: draw the mount bigger while ridden (a bird big enough to carry a trainer). Flying lifts the mount flyLift tiles, crosses water and keeps out of trainer battles.",
+    "rideSpeed": 1.7,
+    "flySpeed": 2.1,
+    "flyLift": 1.2,
+    "mounts": {
+      "0243": { "kind": "ride", "seat": 0.5, "back": 0.12 },
+      "1007": { "kind": "ride", "seat": 0.42, "back": 0.15 },
+      "1008": { "kind": "ride", "seat": 0.34, "back": 0.06 },
+      "0381": { "kind": "fly", "seat": 0.42, "back": 0.05 },
+      "0398": { "kind": "fly", "seat": 0.5, "back": 0.2, "scale": 1.8 }
+    }
+  },
   "respawn": {
     "_comment": "A trainer whose last Pokémon falls to a wild Pokémon comes back after baseSeconds + perMinute for each minute played (up to maxSeconds), at an outpost, with the party healed and every item lost (dropped where they fell). No respawns once the final showdown starts.",
     "baseSeconds": 8,

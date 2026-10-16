@@ -170,6 +170,8 @@ export interface Trainer {
   duelReadyAt?: number;
   /** Mega Evolution is once a match per trainer. */
   megaUsed?: boolean;
+  /** Riding or flying on a party Pokémon (Match.toggleRide); it is out of the fight meanwhile. */
+  mount?: { mon: Mon; fly: boolean } | null;
   /** Not drawn (the stand-in "trainer" that holds a legendary in a legend bout). */
   hidden?: boolean;
   /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */

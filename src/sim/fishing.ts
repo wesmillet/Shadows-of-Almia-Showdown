@@ -87,7 +87,7 @@ export function castSpot(m: Match, t: Trainer): { bx: number; by: number; fx: nu
 /** Can the player start fishing right now? (A rod, water in reach, nothing else going on.) */
 export function canFish(m: Match): boolean {
   const p = m.player;
-  if (m.fishing || p.duelId || p.downUntil !== undefined || m.controlled) return false;
+  if (m.fishing || p.duelId || p.downUntil !== undefined || m.controlled || p.mount) return false;
   return !!bestRod(p) && !!castSpot(m, p);
 }
 
@@ -97,6 +97,7 @@ export function startFishing(m: Match, rod: string | null = null): string {
   if (m.fishing) return '';
   if (p.duelId) return "You can't fish during a battle";
   if (m.controlled) return 'Go back to your trainer (Esc) to fish';
+  if (p.mount) return 'Get off your mount (V) to fish';
   const r = rod ?? bestRod(p);
   if (!r) return 'You need a fishing rod';
   const spot = castSpot(m, p);

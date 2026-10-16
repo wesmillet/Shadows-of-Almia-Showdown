@@ -2097,6 +2097,8 @@ export class MatchScreen implements Screen {
       // Bar just over the drawn body (sprites are drawn at their canonical size).
       const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * monScale(m) * v.spriteScale) * 0.95);
       if (sx < -50 || sx > v.width + 50 || top < -40 || top > v.height + 40) continue;
+      // Not over the HUD's panels (the banner, minimap, party, bag and moves).
+      if (this.hud.covers(sx - 70 * v.baseScale, top - 34 * v.baseScale, 140 * v.baseScale, 34 * v.baseScale)) continue;
       if (m.npc === 'hoopa') {
         drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
         continue;

@@ -118,6 +118,13 @@ export class Hud {
   /** The party slot whose release X was clicked once (it turns into a confirm). */
   releaseArmed = -1;
   private minimap: HTMLCanvasElement | null = null;
+  /** The HUD's panels this frame (banner, minimap, party, bag, moves): labels over Pokémon keep out of them. */
+  occupied: Rect[] = [];
+
+  /** Does a box overlap any HUD panel drawn this frame? */
+  covers(x: number, y: number, w: number, h: number): boolean {
+    return this.occupied.some((r) => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
+  }
 
   constructor(private readonly view: View, private readonly icons: ItemIcons, private readonly ui: PixelUi) {}
 
@@ -351,6 +358,7 @@ export class Hud {
     const ctx = v.hud;
     const s = v.baseScale;
     ctx.clearRect(0, 0, v.width, v.height);
+    this.occupied = [];
     this.drawCounter(ctx, match, st, s);
     this.drawMinimap(ctx, match, st, s);
     this.drawParty(ctx, match, st, s);
@@ -497,6 +505,7 @@ export class Hud {
     const w = Math.round(9 * k + 6 * s + nw + 12 * s + lw + 9 * k + 6 * s);
     const h = 20 * k;
     if (!this.ui.flat(ctx, 'banner', x, y, w, h, k)) this.panel(ctx, x, y, w, h, 14, 'rgba(12,12,22,0.45)');
+    this.occupied.push({ x, y, w, h });
     // The banner's front panel runs from 4 to 20 art pixels down; the text sits in its middle.
     const mid = y + 12 * k;
     const nx = x + 9 * k + 6 * s;
@@ -585,6 +594,7 @@ export class Hud {
       this.minimapBaked = { canvas: this.bakeMinimap(match, mw, mh), w: mw, h: mh, pic: !!this.mapPicture };
     }
     if (!this.ui.flat(ctx, 'cream', fx, fy, fw, fh, u)) this.panel(ctx, fx, fy, fw, fh, 12, 'rgba(12,12,22,0.55)');
+    this.occupied.push({ x: fx, y: fy, w: fw, h: fh });
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, mw, mh);
@@ -796,6 +806,7 @@ export class Hud {
     this.releaseRects = [];
     this.heldRects = [];
     const first = lead(p);
+    if (n) this.occupied.push({ x: x0, y: bottom - n * ps - (n - 1) * gap, w: cardW + 60 * s, h: n * ps + (n - 1) * gap });
     p.party.forEach((m, i) => {
       const x = x0;
       const y0 = Math.round(bottom - (n - i) * ps - (n - 1 - i) * gap);
@@ -973,6 +984,7 @@ export class Hud {
     const right = v.width - 16 * s;
     const top = v.height - 16 * s - bh;
     const bx = (i: number) => Math.round(right - (2 - i) * bw - (1 - i) * gap);
+    this.occupied.push({ x: bx(0), y: top - 110 * s, w: right - bx(0), h: bh + 110 * s });
     // The strips above, stacked upward from the buttons, right-aligned.
     let cy = top - 8 * s;
     const chip = (text: string, color: string, glow?: string) => {
@@ -1058,6 +1070,7 @@ export class Hud {
     this.itemRects = [];
     this.tabRects = [];
     this.discardRects = [];
+    this.occupied.push({ x: x0, y: y0 - 60 * s, w, h: sh + 60 * s });
     let hovered: { def: (typeof ITEMS)[string]; x: number } | null = null;
     // Tabs over the bag's left end.
     const tabH = Math.round(6 * k2 + 12 * s);

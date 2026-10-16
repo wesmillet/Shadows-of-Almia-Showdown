@@ -25,7 +25,7 @@ describe('moves data', () => {
       expect(['single', 'line', 'cone', 'ring', 'self']).toContain(m.shape);
       expect(['burst', 'projectile', 'beam', 'ring', 'cloud']).toContain(m.vfx);
       expect(m.cooldown).toBeGreaterThanOrEqual(1.5);
-      expect(m.cooldown).toBeLessThanOrEqual(8);
+      expect(m.cooldown).toBeLessThanOrEqual(m.signature ? 12 : 8);
       families.add(m.vfx);
     }
     expect(families.size).toBe(5);

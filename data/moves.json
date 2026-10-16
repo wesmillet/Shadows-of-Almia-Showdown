@@ -2607,21 +2607,21 @@
       },
       "fx": [
         {
-          "id": "fx_054",
+          "id": "fx_254",
           "anchor": "target",
-          "scale": 1.4,
+          "scale": 1.1,
           "fps": 16,
-          "lift": 2.4
+          "lift": 2.9
         },
         {
           "id": "fx_090",
           "anchor": "target",
           "scale": 2,
           "fps": 14,
-          "delay": 0.2
+          "delay": 0.25
         }
       ],
-      "shake": 0.5
+      "shake": 0.55
     },
     {
       "id": "stun-spore",
@@ -4442,6 +4442,364 @@
           "tint": "#ff9ec8"
         }
       ]
+    },
+    {
+      "id": "aeroblast",
+      "name": "Aeroblast",
+      "type": "flying",
+      "category": "special",
+      "power": 100,
+      "shape": "line",
+      "cooldown": 6,
+      "vfx": "beam",
+      "anim": "Shoot",
+      "size": 1.0,
+      "signature": true,
+      "fx": [
+        {
+          "id": "fx_216",
+          "anchor": "attacker",
+          "mode": "beam",
+          "scale": 1.8,
+          "seconds": 1.1,
+          "fps": 12,
+          "tint": "#e6f4ff"
+        },
+        {
+          "id": "fx_200",
+          "anchor": "target",
+          "scale": 2.6,
+          "fps": 10,
+          "delay": 0.2
+        },
+        {
+          "id": "fx_017",
+          "anchor": "target",
+          "scale": 3.4,
+          "fps": 11,
+          "tint": "#cfe9ff",
+          "delay": 0.35
+        },
+        {
+          "id": "fx_067",
+          "anchor": "target",
+          "scale": 3,
+          "ground": true,
+          "fps": 10,
+          "delay": 0.35
+        }
+      ],
+      "shake": 0.7,
+      "cast": 0.6
+    },
+    {
+      "id": "sacred-fire",
+      "name": "Sacred Fire",
+      "type": "fire",
+      "category": "physical",
+      "power": 100,
+      "shape": "single",
+      "cooldown": 6,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "status": {
+        "kind": "burn",
+        "chance": 0.5
+      },
+      "fx": [
+        {
+          "id": "fx_175",
+          "anchor": "target",
+          "scale": 2.6,
+          "ground": true,
+          "fps": 9
+        },
+        {
+          "id": "fx_255",
+          "anchor": "target",
+          "scale": 2.2,
+          "fps": 10,
+          "lift": 2.4,
+          "delay": 0.1
+        },
+        {
+          "id": "fx_191",
+          "anchor": "target",
+          "scale": 2.2,
+          "fps": 8,
+          "delay": 0.5
+        }
+      ],
+      "shake": 0.7,
+      "cast": 0.55
+    },
+    {
+      "id": "dragon-ascent",
+      "name": "Dragon Ascent",
+      "type": "flying",
+      "category": "physical",
+      "power": 120,
+      "shape": "single",
+      "cooldown": 8,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "stages": {
+        "self": {
+          "def": -1
+        },
+        "chance": 1
+      },
+      "fx": [
+        {
+          "id": "fx_210",
+          "anchor": "sky",
+          "scale": 2.2,
+          "speed": 13,
+          "facing": "none",
+          "height": 11
+        },
+        {
+          "id": "fx_223",
+          "anchor": "target",
+          "scale": 3.2,
+          "fps": 12
+        },
+        {
+          "id": "fx_067",
+          "anchor": "target",
+          "scale": 3.4,
+          "ground": true,
+          "fps": 10
+        },
+        {
+          "id": "fx_246",
+          "anchor": "target",
+          "scale": 2.6,
+          "ground": true,
+          "fps": 6,
+          "delay": 0.1
+        }
+      ],
+      "shake": 1.0,
+      "cast": 0.7
+    },
+    {
+      "id": "luster-purge",
+      "name": "Luster Purge",
+      "type": "psychic",
+      "category": "special",
+      "power": 95,
+      "shape": "single",
+      "cooldown": 6,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "stages": {
+        "target": {
+          "def": -1
+        },
+        "chance": 0.5
+      },
+      "fx": [
+        {
+          "id": "fx_093",
+          "anchor": "target",
+          "scale": 2,
+          "fps": 8,
+          "lift": 3.4,
+          "tint": "#ffd2f4"
+        },
+        {
+          "id": "fx_197",
+          "anchor": "target",
+          "scale": 2.2,
+          "fps": 10,
+          "delay": 0.35
+        },
+        {
+          "id": "fx_190",
+          "anchor": "target",
+          "scale": 2.2,
+          "ground": true,
+          "fps": 10,
+          "tint": "#ff9ae6"
+        }
+      ],
+      "shake": 0.55,
+      "cast": 0.55
+    },
+    {
+      "id": "doom-desire",
+      "name": "Doom Desire",
+      "type": "steel",
+      "category": "special",
+      "power": 140,
+      "shape": "single",
+      "cooldown": 10,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "fx": [
+        {
+          "id": "fx_239",
+          "anchor": "sky",
+          "scale": 2.2,
+          "speed": 9,
+          "facing": "none",
+          "height": 12
+        },
+        {
+          "id": "fx_223",
+          "anchor": "target",
+          "scale": 3,
+          "fps": 12,
+          "tint": "#fff1a0"
+        },
+        {
+          "id": "fx_175",
+          "anchor": "target",
+          "scale": 3,
+          "ground": true,
+          "fps": 9,
+          "tint": "#fff1a0"
+        },
+        {
+          "id": "fx_239",
+          "anchor": "target",
+          "scale": 2.4,
+          "fps": 8,
+          "delay": 0.2
+        }
+      ],
+      "shake": 0.9,
+      "cast": 0.8
+    },
+    {
+      "id": "hyperspace-hole",
+      "name": "Hyperspace Hole",
+      "type": "psychic",
+      "category": "special",
+      "power": 80,
+      "shape": "single",
+      "cooldown": 5,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "fx": [
+        {
+          "id": "fx_190",
+          "anchor": "target",
+          "scale": 2.8,
+          "ground": true,
+          "fps": 9,
+          "tint": "#d08cff"
+        },
+        {
+          "id": "fx_196",
+          "anchor": "target",
+          "scale": 2.8,
+          "fps": 10,
+          "delay": 0.25
+        },
+        {
+          "id": "fx_197",
+          "anchor": "target",
+          "scale": 2,
+          "fps": 10,
+          "delay": 0.45
+        }
+      ],
+      "shake": 0.6,
+      "cast": 0.55
+    },
+    {
+      "id": "spectral-thief",
+      "name": "Spectral Thief",
+      "type": "ghost",
+      "category": "physical",
+      "power": 90,
+      "shape": "single",
+      "cooldown": 5.5,
+      "vfx": "burst",
+      "anim": "Attack",
+      "size": 1.0,
+      "signature": true,
+      "fx": [
+        {
+          "id": "fx_242",
+          "anchor": "target",
+          "scale": 3.2,
+          "fps": 10
+        },
+        {
+          "id": "fx_206",
+          "anchor": "target",
+          "scale": 2.6,
+          "fps": 9,
+          "delay": 0.15
+        },
+        {
+          "id": "fx_187",
+          "anchor": "target",
+          "scale": 2.6,
+          "fps": 11,
+          "delay": 0.35
+        }
+      ],
+      "shake": 0.55,
+      "cast": 0.45
+    },
+    {
+      "id": "v-create",
+      "name": "V-create",
+      "type": "fire",
+      "category": "physical",
+      "power": 180,
+      "shape": "single",
+      "cooldown": 12,
+      "vfx": "burst",
+      "anim": "Charge",
+      "size": 1.0,
+      "signature": true,
+      "stages": {
+        "self": {
+          "def": -1,
+          "spe": -1
+        },
+        "chance": 1
+      },
+      "fx": [
+        {
+          "id": "fx_175",
+          "anchor": "target",
+          "scale": 3,
+          "ground": true,
+          "fps": 9
+        },
+        {
+          "id": "fx_255",
+          "anchor": "target",
+          "scale": 2.4,
+          "fps": 11,
+          "lift": 2.6
+        },
+        {
+          "id": "fx_223",
+          "anchor": "target",
+          "scale": 3.2,
+          "fps": 12,
+          "delay": 0.25
+        }
+      ],
+      "shake": 1.0,
+      "cast": 0.7
     }
   ],
   "_fx": "fx: Guardian Signs effects (assets/fx/guardian_signs/<id>.png) played when the move resolves. anchor: attacker (on the user; mode beam tiles the strip from user to target, stream stretches it), projectile (flies user -> target; the target parts after it play on arrival; arc lobs it), sky (falls onto each target from `height` tiles up), target (on each Pokemon hit, at the middle of its body, scaled gently with its size). mode status loops above the head. ground: drawn flat under the Pokemon (rings, puddles, cracks). delay: seconds before the part starts. fps default 15, scale default 2 (pixels per source pixel at the normal zoom), tint optional. shake: screen shake on heavy hits (0..1). One idea per move: a wind-up or carrier, one impact, at most one aftershock."

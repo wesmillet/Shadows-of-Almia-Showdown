@@ -2009,6 +2009,10 @@
       "learnset": [
         [
           1,
+          "dragon-ascent"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -2092,6 +2096,10 @@
       "learnset": [
         [
           1,
+          "luster-purge"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -2169,6 +2177,10 @@
         22
       ],
       "learnset": [
+        [
+          1,
+          "doom-desire"
+        ],
         [
           1,
           "tackle"
@@ -20366,6 +20378,10 @@
       "learnset": [
         [
           1,
+          "doom-desire"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -20586,6 +20602,10 @@
       "learnset": [
         [
           1,
+          "v-create"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -20737,6 +20757,10 @@
       "learnset": [
         [
           1,
+          "spectral-thief"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -20884,6 +20908,10 @@
       "learnset": [
         [
           1,
+          "aeroblast"
+        ],
+        [
+          1,
           "tackle"
         ],
         [
@@ -20964,6 +20992,10 @@
       ],
       "heightM": 2.8,
       "learnset": [
+        [
+          1,
+          "sacred-fire"
+        ],
         [
           1,
           "tackle"
@@ -21050,6 +21082,10 @@
       ],
       "heightM": 0.5,
       "learnset": [
+        [
+          1,
+          "hyperspace-hole"
+        ],
         [
           1,
           "tackle"

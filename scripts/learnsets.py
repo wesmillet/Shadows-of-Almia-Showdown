@@ -83,6 +83,11 @@ def build(sp, moves):
     return [[lv, mid] for lv, mid in out]
 
 
+# Legendary and mythical signature moves, known from level 1 (and always kept: data.ts movesAt).
+SIGNATURE = {'0249': 'aeroblast', '0250': 'sacred-fire', '0384': 'dragon-ascent', '0381': 'luster-purge', '0385': 'doom-desire',
+             '0720': 'hyperspace-hole', '0802': 'spectral-thief', '0494': 'v-create'}
+
+
 def main():
     S = json.load(open(SPECIES))
     moves = {m['id']: m for m in json.load(open(MOVES))['moves']}
@@ -93,6 +98,9 @@ def main():
             sp.pop('learnset', None)
             continue
         sp['learnset'] = OVERRIDES.get(key) or build(sp, moves)
+        sig = SIGNATURE.get(key.split('-')[0])
+        if sig and sig in moves and all(m != sig for _, m in sp['learnset']):
+            sp['learnset'] = [[1, sig]] + sp['learnset']
         n += 1
     json.dump(S, open(SPECIES, 'w'), indent=2, ensure_ascii=False)
     open(SPECIES, 'a').write('\n')

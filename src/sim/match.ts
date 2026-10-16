@@ -388,10 +388,13 @@ export class Match {
         this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: null });
         continue;
       }
-      let weakest = 0;
+      // Never drops a signature move.
+      let weakest = -1;
       m.moves.forEach((mid, i) => {
-        if (move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
+        if (move(mid).signature) return;
+        if (weakest < 0 || move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
       });
+      if (weakest < 0) continue;
       const old = m.moves[weakest] as string;
       if (move(id).power > move(old).power) {
         m.moves[weakest] = id;

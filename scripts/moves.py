@@ -28,6 +28,20 @@ PINK, PSY, POISON, BUG, STEEL, DRAGON, LEAF, ICE, DARK, FIREO, ELEC = (
 
 # id: ([parts], shake)
 RECIPES = {
+    # ---------------------------------------------------------------- Legendary signature moves
+    # (the biggest Guardian Signs sheets: the lightning geyser, the fire eruption, the meteor,
+    #  the purple pillar, the red blast)
+    'aeroblast': ([A('fx_216', mode='beam', scale=1.8, seconds=1.1, fps=12, tint='#e6f4ff'), T('fx_200', scale=2.6, fps=10, delay=0.2),
+                   T('fx_017', scale=3.4, fps=11, tint='#cfe9ff', delay=0.35), T('fx_067', scale=3, ground=True, fps=10, delay=0.35)], 0.7),
+    'sacred-fire': ([T('fx_175', scale=2.6, ground=True, fps=9), T('fx_255', scale=2.2, fps=10, lift=2.4, delay=0.1), T('fx_191', scale=2.2, fps=8, delay=0.5)], 0.7),
+    'dragon-ascent': ([SKY('fx_210', scale=2.2, speed=13, facing='none', height=11), T('fx_223', scale=3.2, fps=12), T('fx_067', scale=3.4, ground=True, fps=10),
+                       T('fx_246', scale=2.6, ground=True, fps=6, delay=0.1)], 1.0),
+    'luster-purge': ([T('fx_093', scale=2, fps=8, lift=3.4, tint='#ffd2f4'), T('fx_197', scale=2.2, fps=10, delay=0.35), T('fx_190', scale=2.2, ground=True, fps=10, tint='#ff9ae6')], 0.55),
+    'doom-desire': ([SKY('fx_239', scale=2.2, speed=9, facing='none', height=12), T('fx_223', scale=3, fps=12, tint='#fff1a0'), T('fx_175', scale=3, ground=True, fps=9, tint='#fff1a0'),
+                     T('fx_239', scale=2.4, fps=8, delay=0.2)], 0.9),
+    'hyperspace-hole': ([T('fx_190', scale=2.8, ground=True, fps=9, tint='#d08cff'), T('fx_196', scale=2.8, fps=10, delay=0.25), T('fx_197', scale=2, fps=10, delay=0.45)], 0.6),
+    'spectral-thief': ([T('fx_242', scale=3.2, fps=10), T('fx_206', scale=2.6, fps=9, delay=0.15), T('fx_187', scale=2.6, fps=11, delay=0.35)], 0.55),
+    'v-create': ([T('fx_175', scale=3, ground=True, fps=9), T('fx_255', scale=2.4, fps=11, lift=2.6), T('fx_223', scale=3.2, fps=12, delay=0.25)], 1.0),
     # ---------------------------------------------------------------- Normal
     'tackle': ([T('fx_001', scale=2.4)], 0),
     'scratch': ([T('fx_116', scale=2, fps=32)], 0),
@@ -94,7 +108,7 @@ RECIPES = {
     'thunder-fang': ([T('fx_118', scale=1.9, fps=24, tint=ELEC), T('fx_157', scale=1.8, fps=24, delay=0.1)], 0),
     'thunder-punch': ([T('fx_148', scale=2, fps=14, tint=ELEC), T('fx_090', scale=1.4, fps=16, delay=0.08)], 0.15),
     'charge-beam': ([A('fx_098', mode='beam', scale=1.2, seconds=0.4, fps=18), T('fx_157', scale=1.8, fps=24)], 0),
-    'thunder': ([T('fx_054', scale=1.4, fps=16, lift=2.4), T('fx_090', scale=2, fps=14, delay=0.2)], 0.5),
+    'thunder': ([T('fx_254', scale=1.1, fps=16, lift=2.9), T('fx_090', scale=2, fps=14, delay=0.25)], 0.55),
     # ---------------------------------------------------------------- Grass
     'razor-leaf': ([PR('fx_153', scale=3, speed=12, facing='none', fps=16), T('fx_199', scale=1.6, fps=14)], 0),
     'energy-ball': ([PR('fx_173', scale=0.9, speed=8, facing='none', fps=10), T('fx_014', scale=1.4, tint=LEAF, fps=22)], 0),
@@ -313,6 +327,15 @@ NEW = {
     'moonblast': ('Moonblast', 'fairy', 'special', 95, S, 5, 'Charge', {'stages': {'target': {'atk': -1}, 'chance': 0.3}}),
     'play-rough': ('Play Rough', 'fairy', 'physical', 90, S, 4.5, 'Attack', {'stages': {'target': {'atk': -1}, 'chance': 0.1}}),
     'charm': ('Charm', 'fairy', 'status', 0, S, 6, 'Charge', {'stages': {'target': {'atk': -2}, 'chance': 1}}),
+    # legendary signature moves: big, slow, and always known by their owners (data.ts movesAt)
+    'aeroblast': ('Aeroblast', 'flying', 'special', 100, L, 6, 'Shoot', {'signature': True, 'cast': 0.6}),
+    'sacred-fire': ('Sacred Fire', 'fire', 'physical', 100, S, 6, 'Charge', {'signature': True, 'cast': 0.55, 'status': {'kind': 'burn', 'chance': 0.5}}),
+    'dragon-ascent': ('Dragon Ascent', 'flying', 'physical', 120, S, 8, 'Charge', {'signature': True, 'cast': 0.7, 'stages': {'self': {'def': -1}, 'chance': 1}}),
+    'luster-purge': ('Luster Purge', 'psychic', 'special', 95, S, 6, 'Charge', {'signature': True, 'cast': 0.55, 'stages': {'target': {'def': -1}, 'chance': 0.5}}),
+    'doom-desire': ('Doom Desire', 'steel', 'special', 140, S, 10, 'Charge', {'signature': True, 'cast': 0.8}),
+    'hyperspace-hole': ('Hyperspace Hole', 'psychic', 'special', 80, S, 5, 'Charge', {'signature': True, 'cast': 0.55}),
+    'spectral-thief': ('Spectral Thief', 'ghost', 'physical', 90, S, 5.5, 'Attack', {'signature': True, 'cast': 0.45}),
+    'v-create': ('V-create', 'fire', 'physical', 180, S, 12, 'Charge', {'signature': True, 'cast': 0.7, 'stages': {'self': {'def': -1, 'spe': -1}, 'chance': 1}}),
 }
 VFX = {S: 'burst', L: 'beam', C: 'cloud', RG: 'ring', SF: 'ring'}
 

@@ -57,7 +57,9 @@ export function movesAt(sp: SpeciesDef, level: number): string[] {
       if (!known.includes(id) && MOVES.has(id)) known.push(id);
     }
   }
-  const pick = known.filter((id) => (MOVES.get(id)?.power ?? 0) > 0).slice(-MOVE_SLOTS);
+  // A signature move (Aeroblast, Sacred Fire...) is always kept; the newest attacks fill the rest.
+  const sig = known.filter((id) => MOVES.get(id)?.signature).slice(0, MOVE_SLOTS);
+  const pick = [...sig, ...known.filter((id) => !sig.includes(id) && (MOVES.get(id)?.power ?? 0) > 0).slice(-(MOVE_SLOTS - sig.length) || known.length)].slice(0, MOVE_SLOTS);
   for (let i = known.length - 1; i >= 0 && pick.length < MOVE_SLOTS; i--) if (!pick.includes(known[i] as string)) pick.push(known[i] as string);
   return known.filter((id) => pick.includes(id));
 }
@@ -125,6 +127,8 @@ export interface MoveDef {
   fx?: FxPart[];
   /** The attacker leaps and lands on the target over the cast (Body Slam, Heavy Slam). */
   leap?: boolean;
+  /** A legendary's signature move: always among the moves its owner knows. */
+  signature?: boolean;
   /** Screen shake on impact, 0..1 (heavy moves only). */
   shake?: number;
 }

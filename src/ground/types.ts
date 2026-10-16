@@ -44,6 +44,8 @@ export interface GroundRenderer {
   readonly tileSize: number;
   /** Shown in the HUD footer. */
   readonly label: string;
+  /** The map file's name, when the ground comes from one (its painted minimap is maps/<name>_minimap.png). */
+  readonly mapName?: string;
   readonly decor: DecorItem[];
   /** Points of interest the generator laid trails between. */
   readonly outposts: Array<{ x: number; y: number }>;

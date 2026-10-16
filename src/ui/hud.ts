@@ -4,7 +4,7 @@
  * (bottom), move wheel (bottom right) and the item bar (bottom centre).
  */
 import { canMega } from '../sim/mega';
-import { clamp } from '../core/math';
+import { DIR_VECTORS, clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
@@ -422,109 +422,232 @@ export class Hud {
     return c;
   }
 
+  /** The island's painted picture (maps/<name>_minimap.png), set by the match screen once loaded. */
+  mapPicture: CanvasImageSource | null = null;
+  /** The minimap background baked at its on-screen size: picture, coast glow and vignette. */
+  private minimapBaked: { canvas: HTMLCanvasElement; w: number; h: number; pic: boolean } | null = null;
+
+  private bakeMinimap(match: Match, w: number, h: number): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w));
+    c.height = Math.max(1, Math.round(h));
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    if (this.mapPicture) g.drawImage(this.mapPicture, 0, 0, c.width, c.height);
+    else {
+      if (!this.minimap) this.minimap = this.buildMinimap(match);
+      g.drawImage(this.minimap, 0, 0, c.width, c.height);
+    }
+    // A touch more colour and a soft vignette, like an old explorer's chart.
+    g.globalCompositeOperation = 'soft-light';
+    g.fillStyle = 'rgba(255,236,200,0.35)';
+    g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+    const vg = g.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * 0.35, c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.72);
+    vg.addColorStop(0, 'rgba(10,20,50,0)');
+    vg.addColorStop(1, 'rgba(10,20,50,0.45)');
+    g.fillStyle = vg;
+    g.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+
   private drawMinimap(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
-    if (!this.minimap) this.minimap = this.buildMinimap(match);
     // The island keeps its shape: one scale for both axes, so every marker lands where it is.
     const g = match.ground;
-    const size = 184 * s;
+    const size = 208 * s;
     const k = size / Math.max(g.cols, g.rows);
-    const mw = g.cols * k;
-    const mh = g.rows * k;
-    const x = v.width - mw - 16 * s;
-    const y = 16 * s;
-    this.panel(ctx, x - 6 * s, y - 6 * s, mw + 12 * s, mh + 12 * s, 12, 'rgba(12,12,22,0.2)');
+    const mw = Math.round(g.cols * k);
+    const mh = Math.round(g.rows * k);
+    // The frame snaps to whole UI pixels; the chart is centred inside it so the border is even.
+    const u = this.px;
+    const fw = Math.round((mw + 12 * s) / u) * u;
+    const fh = Math.round((mh + 12 * s) / u) * u;
+    const fx = Math.round((v.width - fw - 12 * s) / u) * u;
+    const fy = Math.round((12 * s) / u) * u;
+    const x = Math.round(fx + (fw - mw) / 2);
+    const y = Math.round(fy + (fh - mh) / 2);
+    const now = performance.now() / 1000;
+    if (!this.minimapBaked || this.minimapBaked.w !== mw || this.minimapBaked.h !== mh || this.minimapBaked.pic !== !!this.mapPicture) {
+      this.minimapBaked = { canvas: this.bakeMinimap(match, mw, mh), w: mw, h: mh, pic: !!this.mapPicture };
+    }
+    this.panel(ctx, fx, fy, fw, fh, 12, 'rgba(12,12,22,0.55)');
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(x, y, mw, mh, 8);
+    ctx.roundRect(x, y, mw, mh, 6 * s);
     ctx.clip();
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.minimap, x, y, mw, mh);
-    // darkness
+    ctx.drawImage(this.minimapBaked.canvas, x, y, mw, mh);
+    const X = (wx: number) => x + wx * k;
+    const Y = (wy: number) => y + wy * k;
+    const cx = X(match.centerX);
+    const cy = Y(match.centerY);
+    // The darkness: violet night outside the safe circle, a soft edge, and a glowing rim.
     if (Number.isFinite(st.darkRadius)) {
-      const cx = x + match.centerX * k;
-      const cy = y + match.centerY * k;
       const r = st.darkRadius * k;
-      const grad = ctx.createRadialGradient(cx, cy, Math.max(0, r - 2 * s), cx, cy, r + 6 * s);
-      grad.addColorStop(0, 'rgba(20,4,36,0)');
-      grad.addColorStop(1, 'rgba(20,4,36,0.86)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, y, mw, mh);
-      ctx.strokeStyle = 'rgba(190,120,255,0.8)';
-      ctx.lineWidth = 1.5;
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.rect(x, y, mw, mh);
+      ctx.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2, true);
+      ctx.fillStyle = 'rgba(22,6,40,0.72)';
+      ctx.fill('evenodd');
+      const edge = ctx.createRadialGradient(cx, cy, Math.max(0, r - 7 * s), cx, cy, r);
+      edge.addColorStop(0, 'rgba(60,20,100,0)');
+      edge.addColorStop(1, 'rgba(60,20,100,0.35)');
+      ctx.fillStyle = edge;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowColor = 'rgba(200,140,255,0.9)';
+      ctx.shadowBlur = 6 * s;
+      ctx.strokeStyle = `rgba(214,170,255,${0.75 + 0.2 * Math.sin(now * 2.4)})`;
+      ctx.lineWidth = 1.6 * s;
+      ctx.setLineDash([5 * s, 3 * s]);
+      ctx.lineDashOffset = -now * 6 * s;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
     }
-    // crystal
-    ctx.fillStyle = '#c38bff';
-    ctx.beginPath();
-    ctx.moveTo(x + match.centerX * k, y + match.centerY * k - 5 * s);
-    ctx.lineTo(x + match.centerX * k + 3.5 * s, y + match.centerY * k);
-    ctx.lineTo(x + match.centerX * k, y + match.centerY * k + 5 * s);
-    ctx.lineTo(x + match.centerX * k - 3.5 * s, y + match.centerY * k);
-    ctx.fill();
+    // The Shadow Crystal: a little glowing gem.
+    {
+      const hgt = 7 * s;
+      const wid = 4.5 * s;
+      ctx.save();
+      ctx.shadowColor = 'rgba(190,120,255,0.95)';
+      ctx.shadowBlur = (6 + 3 * Math.sin(now * 2)) * s;
+      const gr = ctx.createLinearGradient(cx - wid, cy - hgt, cx + wid, cy + hgt);
+      gr.addColorStop(0, '#f2dcff');
+      gr.addColorStop(0.5, '#b072ff');
+      gr.addColorStop(1, '#5a2aa8');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - hgt);
+      ctx.lineTo(cx + wid, cy - hgt * 0.15);
+      ctx.lineTo(cx, cy + hgt);
+      ctx.lineTo(cx - wid, cy - hgt * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(40,10,70,0.9)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+    // Healers: a white badge with a green cross.
     for (const o of match.outposts) {
-      ctx.fillStyle = '#5ef0a8';
-      ctx.fillRect(x + o.x * k - 2 * s, y + o.y * k - 2 * s, 4 * s, 4 * s);
+      const ox = X(o.x);
+      const oy = Y(o.y);
+      const r = 4 * s;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.arc(ox, oy + 1 * s, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ox, oy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2fbf86';
+      ctx.fillRect(ox - 0.9 * s, oy - 2.6 * s, 1.8 * s, 5.2 * s);
+      ctx.fillRect(ox - 2.6 * s, oy - 0.9 * s, 5.2 * s, 1.8 * s);
     }
+    /** A round marker with a dark rim and a light highlight. */
+    const pin = (wx: number, wy: number, color: string, r = 3) => {
+      const px = X(wx);
+      const py = Y(wy);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.arc(px, py + 1 * s, (r + 1.2) * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(20,14,30,0.95)';
+      ctx.beginPath();
+      ctx.arc(px, py, (r + 1) * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, r * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(px - r * 0.35 * s, py - r * 0.35 * s, r * 0.4 * s, 0, Math.PI * 2);
+      ctx.fill();
+    };
     // Roaming party members and the ping.
     for (const m of match.player.party) {
       if (m.fainted || !isRoaming(m)) continue;
-      ctx.fillStyle = '#ffd36b';
-      ctx.beginPath();
-      ctx.arc(x + m.x * k, y + m.y * k, 2.5 * s, 0, Math.PI * 2);
-      ctx.fill();
+      pin(m.x, m.y, '#ffd36b', 2.6);
     }
     if (this.ping && this.ping.t > 0) {
       const pm = this.ping.mon;
-      const r = (4 + ((this.ping.t * 3) % 1) * 10) * s;
-      ctx.strokeStyle = `rgba(255,220,120,${0.9 - ((this.ping.t * 3) % 1) * 0.8})`;
+      const ph = (this.ping.t * 3) % 1;
+      ctx.strokeStyle = `rgba(255,220,120,${0.9 - ph * 0.8})`;
       ctx.lineWidth = 2 * s;
       ctx.beginPath();
-      ctx.arc(x + pm.x * k, y + pm.y * k, r, 0, Math.PI * 2);
+      ctx.arc(X(pm.x), Y(pm.y), (4 + ph * 10) * s, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // Visitors: the merchant (gold), Celeste (pink), Hoopa (violet), and any legendary loose (white ring).
-    const dot = (wx: number, wy: number, color: string, r = 2.5) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x + wx * k, y + wy * k, r * s, 0, Math.PI * 2);
-      ctx.fill();
-    };
+    // Visitors: the merchant (gold), Celeste (pink), Hoopa (violet), and any legendary loose (gold ring).
     for (const n of match.npcs) {
-      if (n.role === 'merchant') dot(n.x, n.y, '#ffe27a');
-      else if (n.role === 'ace') dot(n.x, n.y, '#ff9ad5');
+      if (n.role === 'merchant') pin(n.x, n.y, '#ffe27a', 2.6);
+      else if (n.role === 'ace') pin(n.x, n.y, '#ff9ad5', 2.6);
     }
     for (const w of match.wilds) {
-      if (w.npc === 'hoopa') dot(w.x, w.y, '#c78bff', 3);
+      if (w.npc === 'hoopa') pin(w.x, w.y, '#c78bff', 3);
       else if (w.legend) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,210,80,0.9)';
+        ctx.shadowBlur = 6 * s;
         ctx.strokeStyle = '#ffcf4a';
         ctx.lineWidth = 2 * s;
         ctx.beginPath();
-        ctx.arc(x + w.x * k, y + w.y * k, 4 * s, 0, Math.PI * 2);
+        ctx.arc(X(w.x), Y(w.y), (4 + Math.sin(now * 4)) * s, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
       }
     }
     for (const t of match.trainers) {
       if (!t.alive || t.visitor) continue;
-      ctx.fillStyle = '#ff5c5c';
-      ctx.beginPath();
-      ctx.arc(x + t.x * k, y + t.y * k, 3 * s, 0, Math.PI * 2);
-      ctx.fill();
+      pin(t.x, t.y, '#ff5c5c', 3);
     }
-    if (match.darkrai && !match.darkrai.fainted) {
+    if (match.darkrai && !match.darkrai.fainted) pin(match.darkrai.x, match.darkrai.y, '#2a1838', 3.4);
+    // You: a white arrow the way you face, with a soft pulse round it.
+    {
+      const p = match.player;
+      const px = X(p.x);
+      const py = Y(p.y);
+      const ph = (now * 0.8) % 1;
+      ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - ph)})`;
+      ctx.lineWidth = 1.5 * s;
+      ctx.beginPath();
+      ctx.arc(px, py, (4 + ph * 9) * s, 0, Math.PI * 2);
+      ctx.stroke();
+      const f = DIR_VECTORS[p.dir] ?? { x: 0, y: 1 };
+      const a = Math.atan2(f.y, f.x);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(6 * s, 0);
+      ctx.lineTo(-4 * s, 4.2 * s);
+      ctx.lineTo(-1.8 * s, 0);
+      ctx.lineTo(-4 * s, -4.2 * s);
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 3 * s;
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x + match.darkrai.x * k, y + match.darkrai.y * k, 3 * s, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#1a1424';
+      ctx.lineWidth = 1.2 * s;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.restore();
     }
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
+    // Inner shadow round the edge, so the chart sits inside its frame.
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 3 * s;
     ctx.beginPath();
-    ctx.arc(x + match.player.x * k, y + match.player.y * k, 3.5 * s, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.roundRect(x, y, mw, mh, 6 * s);
     ctx.stroke();
     ctx.restore();
   }

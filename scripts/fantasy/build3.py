@@ -367,6 +367,9 @@ def preview(base, data):
     im = Image.fromarray(img.clip(0, 255).astype(np.uint8))
     im.resize((cols * 4, rows * 4), Image.LANCZOS).convert('RGB').save(base + '_preview.png')
     log('preview', base + '_preview.png')
+    # The in-game minimap's picture (2 px a tile; the HUD draws it smaller, smoothed).
+    im.resize((cols * 2, rows * 2), Image.LANCZOS).convert('RGB').save(base + '_minimap.png', optimize=True)
+    log('minimap', base + '_minimap.png')
 
 
 if __name__ == '__main__':

@@ -118,6 +118,9 @@ export class MatchScreen implements Screen {
     this.lighting = new Lighting(ctx.view);
     this.icons = new ItemIcons(assets);
     this.hud = new Hud(ctx.view, this.icons, ui);
+    // The minimap shows the island's painted picture once it has loaded (flat colours until then).
+    const mapName = match.ground.mapName;
+    if (mapName) void assets.loadImage(`maps/${mapName}_minimap.png`).then((img) => (this.hud.mapPicture = img));
     this.fx = new FxLibrary(assets);
     const ids = new Set<string>(Object.values(EXTRA_FX));
     for (const m of MOVES.values()) for (const part of m.fx ?? []) ids.add(part.id);

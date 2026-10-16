@@ -86,6 +86,7 @@ interface Chunk {
 export class FanGround implements GroundRenderer {
   readonly tileSize = 16;
   readonly label: string;
+  readonly mapName: string;
   readonly decor: DecorItem[] = [];
   readonly outposts: Array<{ x: number; y: number }>;
   readonly spawns: Array<{ x: number; y: number }>;
@@ -107,6 +108,7 @@ export class FanGround implements GroundRenderer {
   private constructor(readonly map: FanMapFile, private readonly atlas: CanvasImageSource, private readonly sheets: CanvasImageSource[]) {
     this.cols = map.cols;
     this.rows = map.rows;
+    this.mapName = map.name;
     this.label = `${map.name} · ${map.cols}x${map.rows} · ${map.credits ?? 'The Fan-tasy Tileset'} at 3x`;
     this.outposts = map.outposts.map((p) => ({ ...p }));
     this.spawns = map.spawns.map((p) => ({ ...p }));

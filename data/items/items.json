@@ -1,5 +1,5 @@
 {
-  "_comment": "Items. kind: ball (tier = base catch modifier, special = rule in catching.ts ballModifier), heal, revive, cure, boost, hold, styler (the Snag Machine), shard, candy (a level for the lead), stone (evolves the lead when its species has that stone evolution). Icons: assets/items/<id>.png, balls assets/items/balls/<kind>_ball.png, the shard assets/items/balls/vial.png.",
+  "_comment": "Items. kind: ball (tier = base catch modifier, special = rule in catching.ts ballModifier), heal, revive, cure, boost, hold, styler (the Snag Machine), charm (works just by being in the bag: the Storm Mask), shard, candy (a level for the lead), stone (evolves the lead when its species has that stone evolution). Icons: assets/items/<id>.png, balls assets/items/balls/<kind>_ball.png, the shard assets/items/balls/vial.png.",
   "items": [
     {
       "id": "poke-ball",
@@ -109,6 +109,13 @@
       "short": "Sash",
       "kind": "hold",
       "effect": "sash"
+    },
+    {
+      "id": "storm-mask",
+      "name": "Storm Mask",
+      "short": "Mask",
+      "kind": "charm",
+      "desc": "Works from the bag: your Pokémon take 4x longer to fall asleep in the storm"
     },
     {
       "id": "capture-styler",

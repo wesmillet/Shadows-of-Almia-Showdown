@@ -25,7 +25,7 @@ export function isDev(): boolean {
 
 /** What a tester's storage chest starts with: [item id, count]. */
 export const DEV_CHEST: Array<[string, number]> = [
-  ['capture-styler', 5], ['super-rod', 1], ['extraction-voucher', 5], ['master-ball', 3],
+  ['capture-styler', 5], ['super-rod', 1], ['storm-mask', 1], ['extraction-voucher', 5], ['master-ball', 3],
   ['charizardite-x', 1], ['gengarite', 1], ['steelixite', 1], ['tyranitarite', 1], ['gardevoirite', 1],
   ['absolite', 1], ['glalitite', 1], ['latiosite', 1], ['lucarionite', 1], ['galladite', 1],
   ['ultra-ball', 10], ['quick-ball', 5], ['net-ball', 5], ['dusk-ball', 5], ['rare-candy', 10], ['max-revive', 5],

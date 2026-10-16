@@ -7,7 +7,8 @@
  *     portal: a legendary comes through as a boss, and when it is worn down to
  *     its last HP it joins whoever beat it;
  *   - Lugia, asleep under Tide Lake: a Super Rod cast into the lake can hook it (a small
- *     chance, src/sim/fishing.ts); it bursts out and lands on the shore as a legendary.
+ *     chance, src/sim/fishing.ts); it bursts out and lands on the shore as a legendary. Once the
+ *     darkness swallows the lake it is Shadow Lugia instead (level 100, snagged, never caught).
  * Each happens once per match (the merchant and Celeste stay all match).
  */
 import { isDev } from '../dev';
@@ -19,7 +20,7 @@ import type { Match } from './match';
 import { canStand, tryMove } from './movement';
 import type { Shop } from './town';
 
-/** The merchant's stock: rare things the town stalls do not carry (at most nine lines). */
+/** The merchant's stock: rare things the town stalls do not carry (at most ten lines with the Storm Mask). */
 const MERCHANT_STOCK: Array<[string, number]> = [
   ['rare-candy', 900], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
   ['leftovers', 2200], ['life-orb', 2600], ['crystal-shard', 1500], ['max-revive', 2500],
@@ -33,6 +34,8 @@ const POWER_PRIZES = ['0376', '0373', '0706', '0887', '0149', '0248', '1007', '1
 /** What can come through Hoopa's portal. */
 const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243'];
 const LUGIA = '0249';
+/** Shadow Lugia: SpriteCollab's own Shadow form of Lugia (sprite/0249/0001). */
+const SHADOW_LUGIA = '0249-shadow';
 
 type Walker = { npc: Trainer; goal: { x: number; y: number } | null; wait: number };
 
@@ -57,7 +60,7 @@ export class Visitors {
   portal: Portal | null = null;
   lugiaDone = false;
   /** Lugia's entrance in progress: the lake churns, Lugia bursts out (Guardian Signs' Lugia sheet), then leaps ashore. */
-  lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number } | null = null;
+  lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number; shadow?: boolean } | null = null;
 
   constructor(private readonly m: Match) {
     const rng = m.rng;
@@ -77,6 +80,9 @@ export class Visitors {
     const stock = MERCHANT_STOCK.map(([id, price]) => ({ id, price }));
     // One stone of the day.
     stock.push({ id: STONES[rng.int(0, STONES.length - 1)] as string, price: 1100 });
+    // Now and then (every match in tester mode) a Storm Mask: the one way to last in the storm.
+    const dk = CONFIG.darkness as { stormMaskChance?: number; stormMaskPrice?: number };
+    if (isDev() || rng.chance(dk.stormMaskChance ?? 0.05)) stock.unshift({ id: 'storm-mask', price: dk.stormMaskPrice ?? 20000 });
     m.npcs.push(merchant);
     m.shops.push({ npc: merchant, town: 'Wandering', name: 'Wandering Merchant', stock } as Shop);
     this.merchant = { npc: merchant, goal: null, wait: 0 };
@@ -332,8 +338,22 @@ export class Visitors {
     return !!lake && ((x - lake.x) / (lake.rx + 1)) ** 2 + ((y - lake.y) / (lake.ry + 1)) ** 2 < 1;
   }
 
+  /** True when a Super Rod cast to this point would draw Shadow Lugia: Tide Lake, swallowed by the darkness, Lugia still below. */
+  shadowLugiaWaits(x: number, y: number): boolean {
+    return this.lugiaAvailable() && SPECIES.has(SHADOW_LUGIA) && this.inTideLake(x, y) && this.m.isDark(x, y);
+  }
+
+  /**
+   * Shadow Lugia takes the bait (fishing.ts, a Super Rod in the darkened lake): the same entrance
+   * as Lugia (SpriteCollab's Shadow Lugia sprites) in a black aura, at config shadowLugia.level. See Match.stepLegendMon for how it
+   * fights and Match.snagShadow for the only way to take it.
+   */
+  summonShadowLugia(from: { x: number; y: number }): boolean {
+    return this.summonLugia(from, true);
+  }
+
   /** Lugia takes the bait: it bursts out of the water at `from` (the bobber) and leaps ashore by the player. */
-  summonLugia(from: { x: number; y: number }): boolean {
+  summonLugia(from: { x: number; y: number }, shadow = false): boolean {
     if (!this.lugiaAvailable()) return false;
     const m = this.m;
     const lake = m.ground.features?.lake as { x: number; y: number };
@@ -350,16 +370,25 @@ export class Visitors {
       }
     }
     const top = Math.max(1, ...p.party.map((x) => x.level));
-    const L = m.makeMon(LUGIA, Math.min(100, Math.max(70, top + 15)), null, from.x, from.y);
+    const sl = CONFIG.shadowLugia;
+    const L = m.makeMon(shadow ? SHADOW_LUGIA : LUGIA, shadow ? sl.level : Math.min(100, Math.max(70, top + 15)), null, from.x, from.y);
     this.makeLegend(L);
+    if (shadow) {
+      L.shadow = true;
+      L.maxHp = L.hp = Math.round(L.stats.hp * sl.hpMult);
+      L.shadowStormT = (sl.stormEvery[0] as number) * 0.6;
+      // Its kit: the beam it sweeps, a dark pulse, a shadow ball, and Psychic.
+      L.moves = ['aeroblast', 'dark-pulse', 'shadow-ball', 'psychic'];
+      L.cooldowns = L.moves.map(() => 0);
+    }
     // Hidden under the water until it bursts out (and nobody's enemy until it lands).
     L.visual.alpha = 0;
     L.calm = 1e9;
     L.busy = 5;
     L.leap = { t: 0, dur: 99, h: 0, fx: from.x, fy: from.y, tx: from.x, ty: from.y };
     m.wilds.push(L);
-    this.lugiaIntro = { t: 0, L, from, to, stage: 0 };
-    m.battle.events.push({ type: 'notice', text: 'Something huge took the bait... Tide Lake churns!', seconds: 2.5 });
+    this.lugiaIntro = { t: 0, L, from, to, stage: 0, shadow };
+    m.battle.events.push({ type: 'notice', text: shadow ? 'You hooked it... the black lake heaves!' : 'Something huge took the bait... Tide Lake churns!', seconds: 2.5 });
     return true;
   }
 
@@ -372,14 +401,16 @@ export class Visitors {
     const { from, to, L } = s;
     if (s.stage === 0) {
       // Rings spreading on the water.
-      for (const [i, r] of [1.6, 2.6, 3.6].entries()) m.battle.events.push({ type: 'scene-fx', id: ['fx_225', 'fx_226', 'fx_229'][i] as string, x: from.x, y: from.y, scale: r, ground: true, fps: 9 });
+      const ring = s.shadow ? '#8a3dff' : undefined;
+      for (const [i, r] of [1.6, 2.6, 3.6].entries()) m.battle.events.push({ type: 'scene-fx', id: ['fx_225', 'fx_226', 'fx_229'][i] as string, x: from.x, y: from.y, scale: r, ground: true, fps: 9, tint: ring });
       s.stage = 1;
     } else if (s.stage === 1 && s.t >= 1.1) {
       // Lugia bursts out of the lake (Guardian Signs' own Lugia sheet), in a column of spray.
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7 });
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3.2 });
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.6, ground: true });
-      m.battle.events.push({ type: 'notice', text: 'Lugia bursts out of the lake!', seconds: 3 });
+      const ink = s.shadow ? '#5a1f8f' : undefined;
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7, tint: ink });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3.2, tint: ink });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.6, ground: true, tint: ink });
+      m.battle.events.push({ type: 'notice', text: s.shadow ? 'SHADOW LUGIA rises from the storm-black lake!' : 'Lugia bursts out of the lake!', seconds: 3 });
       s.stage = 2;
     } else if (s.stage === 2 && s.t >= 2.0) {
       // Then it leaps ashore beside the player and turns to fight.
@@ -390,7 +421,15 @@ export class Visitors {
       s.stage = 3;
     } else if (s.stage === 3 && !L.leap) {
       L.calm = 0;
-      m.startLegendBout(L);
+      const bout = m.startLegendBout(L);
+      if (s.shadow) {
+        const snag = m.snagSlot(m.player) >= 0;
+        m.battle.events.push({
+          type: 'notice',
+          text: !bout ? 'Shadow Lugia prowls the shore...' : snag ? 'Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!' : 'Balls bounce off it, and you have no Snag Machine... survive if you can!',
+          seconds: 4,
+        });
+      }
       m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
       this.lugiaIntro = null;
     }

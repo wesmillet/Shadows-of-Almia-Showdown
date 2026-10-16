@@ -664,6 +664,10 @@ export class Match {
         return 'Pick a Pokémon to extract';
       case 'rod':
         return t.isPlayer ? startFishing(this, def.id) : '';
+      case 'charm': {
+        const x = (CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 1;
+        return `The ${def.name} works from your bag: your Pokémon stay awake ${x}x longer in the storm`;
+      }
       case 'shard': {
         if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
         this.lightZones.push({ x: t.x, y: t.y, r: def.radius ?? 5, t: def.seconds ?? 10 });
@@ -672,6 +676,7 @@ export class Match {
         return '';
       }
       case 'styler': {
+        if (t.isPlayer && this.shadowBoutFoe()) return this.snagShadow(slot);
         if (t.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card to make room`;
         let best: Mon | null = null;
         let bd = 3.5;
@@ -777,6 +782,14 @@ export class Match {
       const ev = stepThrow(th, dt);
       if (th.target) th.target.visual = targetVisual(th);
       if (ev === 'landed') {
+        const sh = this.shadowBoutFoe();
+        if (sh && th.thrower.isPlayer && Math.hypot(sh.x - th.x, sh.y - th.y) < 2) {
+          th.phase = 'done';
+          this.battle.events.push({ type: 'scene-fx', id: 'fx_187', x: sh.x, y: sh.y, scale: 1.4, fps: 16, tint: '#8a3dff' });
+          this.battle.events.push({ type: 'text', mon: sh, text: 'The ball bounced off!' });
+          this.battle.events.push({ type: 'notice', text: 'Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine', seconds: 2.6 });
+          continue;
+        }
         let best: Mon | null = null;
         let bd = 1.4;
         for (const w of this.wilds) {
@@ -2352,6 +2365,11 @@ export class Match {
     for (const ev of [...this.battle.events]) {
       if (ev.type === 'yield') {
         const host = ev.mon.owner?.legendBout ? ev.mon.owner : null;
+        if (host && ev.mon.shadow) {
+          // Shadow Lugia worn to nothing without a snag: it comes apart into the storm.
+          if (!ev.mon.captured) this.shadowVanishes(ev.mon, host);
+          continue;
+        }
         if (host) {
           // Won a legend bout: the legend joins the player and the battle ends.
           const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
@@ -2481,7 +2499,8 @@ export class Match {
     if (!Number.isFinite(d.radius)) return;
     const c = CONFIG.darkness;
     for (const m of this.mons()) {
-      if (m.boss) continue;
+      // Darkrai, and Shadow Lugia (even after it joins someone), are the storm's own.
+      if (m.boss || m.shadow) continue;
       const dark = this.isDark(m.x, m.y);
       m.inDark = dark;
       if (m.wild) m.aura = dark;
@@ -2727,6 +2746,69 @@ export class Match {
     return true;
   }
 
+  /** Shadow Lugia's foe in its bout (the player's Pokémon out), or null when it is not in one. */
+  shadowBoutFoe(): Mon | null {
+    const d = this.playerDuel;
+    if (!d) return null;
+    const side = d.a.trainer === this.player ? d.b : d.a;
+    return side.trainer.legendBout && side.mon?.shadow ? side.mon : null;
+  }
+
+  /**
+   * The Snag Machine in Shadow Lugia's bout: under config shadowLugia.snagBelow of its HP it is
+   * taken (the machine is spent) and joins the party in its dark form; above that, nothing happens.
+   */
+  snagShadow(slot: number): string {
+    const L = this.shadowBoutFoe();
+    const p = this.player;
+    if (!L) return '';
+    const below = CONFIG.shadowLugia.snagBelow;
+    if (L.hp / L.maxHp >= below) return `${L.name} is too strong to snag. Wear it under ${Math.round(below * 100)}% HP first`;
+    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
+    const d = this.playerDuel as Duel;
+    const host = L.owner as Trainer;
+    this.takeItem(p, slot);
+    host.party = host.party.filter((x) => x !== L);
+    (d.a.trainer === host ? d.a : d.b).mon = null;
+    L.duelId = undefined;
+    L.legend = false;
+    L.landBoss = false;
+    L.wild = false;
+    L.owner = p;
+    L.maxHp = L.stats.hp;
+    L.hp = Math.max(1, Math.round(L.maxHp * 0.5));
+    L.target = null;
+    L.casting = null;
+    L.channel = null;
+    L.status = null;
+    L.legendPhase = 0;
+    L.stages = { atk: 0, def: 0, spe: 0 };
+    L.behavior = 'guard';
+    L.anim.play('Idle', { restart: true });
+    p.party.push(L);
+    p.stats.catches++;
+    if (p.duelId) L.stowed = true;
+    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.6 });
+    this.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: L.x, y: L.y, scale: 2.6, lift: 1, fps: 10, tint: '#b04dff' });
+    this.battle.events.push({ type: 'caught', mon: L, by: p });
+    this.endDuel(d, p);
+    this.endLegendBout(host);
+    return `You snagged ${L.name}! It joins your team, still wrapped in darkness`;
+  }
+
+  /** Shadow Lugia worn down to nothing (no snag in time): it dissolves and the bout ends. */
+  private shadowVanishes(L: Mon, host: Trainer): void {
+    const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
+    L.captured = true;
+    L.channel = null;
+    L.casting = null;
+    if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
+    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5 });
+    this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm... you needed to snag it under 10% HP`, seconds: 4 });
+    if (d) this.endDuel(d, this.player);
+    this.endLegendBout(host);
+  }
+
   /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */
   private endLegendBout(host: Trainer): void {
     host.alive = false;
@@ -2743,7 +2825,13 @@ export class Match {
     const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
     if (phase > (m.legendPhase ?? 0)) {
       m.legendPhase = phase;
-      if (phase === 1) this.battle.events.push({ type: 'notice', text: `${m.name} is getting serious!`, seconds: 2 });
+      if (m.shadow) {
+        // Each phase Shadow Lugia shakes off its status and gets faster.
+        this.battle.cureStatus(m);
+        this.battle.changeStage(m, 'spe', 1);
+        this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: m.x, y: m.y, scale: 3.6, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.4 });
+      }
+      if (phase === 1) this.battle.events.push({ type: 'notice', text: m.shadow ? `${m.name}'s aura thickens: it shook off its status and moves faster!` : `${m.name} is getting serious!`, seconds: 2.2 });
       else {
         this.battle.changeStage(m, 'atk', 1);
         this.battle.changeStage(m, 'spe', 1);
@@ -2755,6 +2843,18 @@ export class Match {
     // It recovers faster the lower it gets.
     const haste = [0, 0.35, 0.8][phase] as number;
     for (let i = 0; i < m.cooldowns.length; i++) m.cooldowns[i] = Math.max(0, (m.cooldowns[i] ?? 0) - dt * haste);
+    if (m.shadow) {
+      const sl = CONFIG.shadowLugia;
+      if (!m.snagHinted && m.hp / m.maxHp < sl.snagBelow) {
+        m.snagHinted = true;
+        this.battle.events.push({ type: 'notice', text: this.snagSlot(this.player) >= 0 ? `${m.name} is weakened! Use the Snag Machine NOW!` : `${m.name} is weakened... but you have no Snag Machine`, seconds: 3 });
+      }
+      // Shadow Storm: a ring of dark gusts round it every few seconds (faster each phase).
+      m.shadowStormT = (m.shadowStormT ?? 0) - dt;
+      if (m.shadowStormT <= 0 && !m.casting && !m.channel && !incapable(m)) {
+        if (this.battle.castExtra(m, 'shadow-storm', m.x, m.y + 0.01)) m.shadowStormT = sl.stormEvery[phase] as number;
+      }
+    }
     if (m.casting || incapable(m)) return;
     if (foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
       if (this.rng.chance([0.55, 0.7, 0.85][phase] as number)) {
@@ -3126,6 +3226,7 @@ export class Match {
     if (winner.legendBout) {
       // Lost a legend bout: it is friendly. The legend leaves and the team is patched up.
       const p = this.player;
+      const shadow = winner.party.some((x) => x.shadow);
       for (const m of winner.party) m.captured = true;
       this.endLegendBout(winner);
       for (const m of p.party) {
@@ -3136,7 +3237,7 @@ export class Match {
         m.anim.play('Idle', { restart: true });
       }
       this.placeParty(p);
-      this.battle.events.push({ type: 'notice', text: `${winner.name} was too strong and vanished. Your Pokémon were patched up`, seconds: 3.5 });
+      this.battle.events.push({ type: 'notice', text: shadow ? `${winner.name} sinks back into the storm. It won't surface again this match` : `${winner.name} was too strong and vanished. Your Pokémon were patched up`, seconds: 3.5 });
     }
   }
 

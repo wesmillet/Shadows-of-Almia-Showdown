@@ -4841,6 +4841,46 @@
       ],
       "shake": 1.0,
       "cast": 0.7
+    },
+    {
+      "id": "shadow-storm",
+      "name": "Shadow Storm",
+      "type": "dark",
+      "category": "special",
+      "power": 75,
+      "shape": "ring",
+      "cooldown": 6,
+      "vfx": "ring",
+      "anim": "Charge",
+      "size": 1.6,
+      "cast": 0.9,
+      "signature": true,
+      "fx": [
+        {
+          "id": "fx_114",
+          "anchor": "attacker",
+          "scale": 4.2,
+          "ground": true,
+          "fps": 14,
+          "tint": "#5a1f8f"
+        },
+        {
+          "id": "fx_200",
+          "anchor": "attacker",
+          "scale": 3.2,
+          "fps": 14,
+          "tint": "#3a1458"
+        },
+        {
+          "id": "fx_200",
+          "anchor": "target",
+          "scale": 1.6,
+          "fps": 14,
+          "tint": "#8a3dff",
+          "delay": 0.1
+        }
+      ],
+      "shake": 0.5
     }
   ],
   "_fx": "fx: Guardian Signs effects (assets/fx/guardian_signs/<id>.png) played when the move resolves. anchor: attacker (on the user; mode beam tiles the strip from user to target, stream stretches it), projectile (flies user -> target; the target parts after it play on arrival; arc lobs it), sky (falls onto each target from `height` tiles up), target (on each Pokemon hit, at the middle of its body, scaled gently with its size). mode status loops above the head. ground: drawn flat under the Pokemon (rings, puddles, cracks). delay: seconds before the part starts. fps default 15, scale default 2 (pixels per source pixel at the normal zoom), tint optional. shake: screen shake on heavy hits (0..1). One idea per move: a wind-up or carrier, one impact, at most one aftershock."

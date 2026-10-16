@@ -20978,6 +20978,92 @@
       ]
     },
     {
+      "dex": "0249-shadow",
+      "name": "Shadow Lugia",
+      "types": [
+        "psychic",
+        "flying"
+      ],
+      "stats": {
+        "hp": 106,
+        "atk": 90,
+        "def": 130,
+        "spa": 90,
+        "spd": 154,
+        "spe": 110
+      },
+      "tier": 0,
+      "moves": [
+        "aeroblast",
+        "dark-pulse",
+        "shadow-ball",
+        "psychic"
+      ],
+      "heightM": 5.2,
+      "learnset": [
+        [
+          1,
+          "aeroblast"
+        ],
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "peck"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psycho-cut"
+        ],
+        [
+          18,
+          "wing-attack"
+        ],
+        [
+          22,
+          "zen-headbutt"
+        ],
+        [
+          26,
+          "air-slash"
+        ],
+        [
+          28,
+          "aerial-ace"
+        ],
+        [
+          36,
+          "psychic"
+        ],
+        [
+          36,
+          "hydro-pump"
+        ],
+        [
+          36,
+          "dragon-pulse"
+        ]
+      ],
+      "body": [
+        55,
+        54
+      ]
+    },
+    {
       "dex": "0250",
       "name": "Ho-Oh",
       "types": [

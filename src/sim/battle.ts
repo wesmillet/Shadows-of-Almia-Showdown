@@ -133,6 +133,7 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   if (crit) dmg *= 1.5;
   if (attacker.status === 'burn' && m.category === 'physical') dmg *= 0.5;
   if (attacker.boss) dmg *= CONFIG.battle.bossDamageScale;
+  if (attacker.shadow && attacker.owner?.legendBout) dmg *= CONFIG.shadowLugia.damageScale;
   dmg *= (CONFIG.battle as typeof CONFIG.battle & { damageScale?: number }).damageScale ?? 1;
   dmg *= rng.range(0.85, 1);
   return { damage: Math.max(1, Math.floor(dmg)), effectiveness: eff, crit };
@@ -270,6 +271,20 @@ export class BattleSystem {
     return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, null);
   }
 
+  /**
+   * Casts a move that is not in the caster's four slots (Shadow Lugia's Shadow Storm): the same
+   * telegraph, wind-up and resolve as a slotted move, with no cooldown of its own.
+   */
+  castExtra(attacker: Mon, id: string, targetX: number, targetY: number): boolean {
+    if (attacker.fainted || attacker.casting || attacker.channel || incapable(attacker)) return false;
+    const m = move(id);
+    const area = makeArea(m, attacker, targetX, targetY);
+    attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId: null };
+    attacker.anim.play(m.anim, { restart: true, loop: false });
+    this.events.push({ type: 'cast', attacker, move: m, area });
+    return true;
+  }
+
   /** Begins a cast if the move is ready and the mon can act. */
   tryCast(attacker: Mon, slot: number, targetX: number, targetY: number, targetId: number | null): boolean {
     const id = attacker.moves[slot];
@@ -373,7 +388,9 @@ export class BattleSystem {
           const dx = mon.casting.targetX - mon.x;
           const dy = mon.casting.targetY - mon.y;
           const d = Math.hypot(dx, dy) || 1;
-          mon.channel = { moveId: m.id, left: c.seconds, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
+          // Shadow Lugia's beam pours out longer and sweeps slower, toward its foe (Match.steerChannels).
+          const left = mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamSeconds : c.seconds;
+          mon.channel = { moveId: m.id, left, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
           this.events.push({ type: 'channel-start', mon, move: m });
           this.stepChannel(mon, 0, candidates);
           return;
@@ -448,7 +465,7 @@ export class BattleSystem {
       let want = Math.atan2(ay, ax) - cur;
       while (want > Math.PI) want -= Math.PI * 2;
       while (want < -Math.PI) want += Math.PI * 2;
-      const maxTurn = (c.turnDegPerSec * Math.PI / 180) * dt;
+      const maxTurn = (c.turnDegPerSec * Math.PI / 180) * dt * (mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamTurnScale : 1);
       const a = cur + Math.max(-maxTurn, Math.min(maxTurn, want));
       ch.dirX = Math.cos(a);
       ch.dirY = Math.sin(a);
@@ -461,6 +478,7 @@ export class BattleSystem {
     if (ch.next <= 0) {
       ch.next += c.tick;
       const base = move(ch.moveId);
+      // The power is shared over a standard beam's pulses (a longer beam simply deals more).
       const pulses = Math.max(1, Math.round(c.seconds / c.tick) + 1);
       // Each pulse carries its share of the power; status rolls a little each time; no stat changes.
       const pulse: MoveDef = {

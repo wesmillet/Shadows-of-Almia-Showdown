@@ -398,7 +398,7 @@ export class Hud {
       st.shop.entries.forEach((e, i) => {
         const yy = y + 88 * s + i * 20 * s;
         const col = e.affordable ? '#f4f1ff' : '#6f6888';
-        this.label(ctx, `${i + 1}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700', w - 130 * s);
+        this.label(ctx, `${(i + 1) % 10}  ${e.name}`, x + 30 * s, yy, 12, col, 'left', '700', w - 130 * s);
         this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
       });
     }

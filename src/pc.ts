@@ -20,6 +20,8 @@ export interface PcEntry {
   shiny?: boolean;
   alpha?: boolean;
   legend?: boolean;
+  /** Snagged as Shadow Lugia (dex 0249-shadow): tagged Shadow in the box. */
+  shadow?: boolean;
   moves: string[];
   heldItem?: string | null;
   /** How it got here. */
@@ -48,11 +50,12 @@ export function extractToPc(m: Mon, via: PcEntry['via'], seed?: number): boolean
     uid: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
     // A Mega goes home as the form it Mega Evolved from.
     dex: m.megaFrom?.dex ?? m.dex,
-    name: m.megaFrom?.name ?? m.name,
+    name: (m.megaFrom?.name ?? m.name).replace(/^Shadow /, ''),
     level: m.level,
     shiny: !!m.shiny || undefined,
     alpha: !!m.alpha || undefined,
     legend: !!m.legend || undefined,
+    shadow: !!m.shadow || undefined,
     moves: [...m.moves],
     heldItem: m.heldItem ?? null,
     via,

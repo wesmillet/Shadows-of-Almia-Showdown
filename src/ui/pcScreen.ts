@@ -155,6 +155,7 @@ export class PcScreen implements Screen {
       const hop = over ? Math.abs(Math.sin(this.t * 9)) * 4 * s : 0;
       this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 4 * s - hop, L.slot - 8 * s);
       if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s, 12, { align: 'center', weight: '900', color: '#ffd36b' });
+      if (e.shadow) text(v, '◆', x + 14 * s, y + 18 * s, 11, { align: 'center', weight: '900', color: '#c48bff' });
     }
     this.drawSide(L.side);
     const b = this.backRect();
@@ -164,7 +165,8 @@ export class PcScreen implements Screen {
   /** A box icon, scaled up by a whole number so its pixels stay square; the portrait if there is no icon. */
   private drawIcon(e: PcEntry, cx: number, cy: number, room: number): void {
     const h = this.ctx.view.hud;
-    const img = this.icon(e.dex);
+    // Shadow Lugia has no Gen 5 box icon: its own Shadow portrait stands in.
+    const img = e.shadow ? null : this.icon(e.dex);
     h.save();
     h.imageSmoothingEnabled = false;
     if (img) {
@@ -175,6 +177,10 @@ export class PcScreen implements Screen {
     } else {
       const f = this.sprites.get(e.dex, !!e.shiny).portraitSource();
       const ps = room * 0.8;
+      if (e.shadow) {
+        h.shadowColor = 'rgba(150,60,255,0.9)';
+        h.shadowBlur = 8 * this.ctx.view.baseScale;
+      }
       h.drawImage(f.image, f.sx, f.sy, f.w, f.h, cx - ps / 2, cy - ps / 2, ps, ps);
     }
     h.restore();
@@ -194,7 +200,7 @@ export class PcScreen implements Screen {
     const f = this.sprites.get(e.dex, !!e.shiny).portraitSource();
     const ps = 120 * s;
     h.save();
-    h.fillStyle = e.shiny ? 'rgba(80,140,170,0.5)' : 'rgba(255,255,255,0.08)';
+    h.fillStyle = e.shadow ? 'rgba(70,20,110,0.6)' : e.shiny ? 'rgba(80,140,170,0.5)' : 'rgba(255,255,255,0.08)';
     h.beginPath();
     h.roundRect(r.x + r.w / 2 - ps / 2 - 8 * s, r.y + 22 * s, ps + 16 * s, ps + 16 * s, 12 * s);
     h.fill();
@@ -204,8 +210,8 @@ export class PcScreen implements Screen {
     const y = r.y + 30 * s + ps + 40 * s;
     text(v, `${e.shiny ? '★ ' : ''}${e.name}`, r.x + r.w / 2, y, 20, { align: 'center', weight: '900', color: e.shiny ? '#9ff3ff' : '#ffffff', maxWidth: r.w - 24 * s });
     text(v, `Lv ${e.level}`, r.x + r.w / 2, y + 26 * s, 15, { align: 'center', weight: '700', color: '#cfe0ff' });
-    const tags = [e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
-    if (tags) text(v, tags, r.x + r.w / 2, y + 48 * s, 12, { align: 'center', weight: '700', color: '#ffd36b' });
+    const tags = [e.shadow ? 'Shadow' : '', e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
+    if (tags) text(v, tags, r.x + r.w / 2, y + 48 * s, 12, { align: 'center', weight: '700', color: e.shadow ? '#c48bff' : '#ffd36b' });
     text(v, e.via === 'win' ? 'Victory prize' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? '#ffd36b' : '#9be7ff' });
     if (e.moves?.length) text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + r.w / 2, y + 94 * s, 11, { align: 'center', color: '#b9c4dd', maxWidth: r.w - 24 * s });
   }

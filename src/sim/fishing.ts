@@ -5,6 +5,10 @@
  * Pokémon from the common, uncommon or rare pool (it bursts out of the water and leaps ashore to
  * fight), an item ball, or, with a Super Rod in Tide Lake, Lugia. Moving reels the line in.
  *
+ * Once the darkness has swallowed Tide Lake, a Super Rod cast there draws Shadow Lugia instead
+ * (config shadowLugia, once a match): a long, tense wait in the storm, a violet ripple, and only
+ * half a second to hook it.
+ *
  * Stages: cast (the bobber flies out) → wait → bite (Space to hook) → reel → done.
  */
 import { DIR_VECTORS, dirFromVector } from '../core/math';
@@ -42,7 +46,11 @@ export interface FishingState {
   /** The direction the trainer faces (unit vector). */
   fx: number;
   fy: number;
+  /** Shadow Lugia's line: the long wait and the short hook window. */
+  shadow?: boolean;
 }
+
+const SHADOW = CONFIG.shadowLugia;
 
 /** The best rod in a trainer's bag, if any. */
 export function bestRod(t: Trainer): string | null {
@@ -105,7 +113,9 @@ export function startFishing(m: Match, rod: string | null = null): string {
   const def = FISH.rods[r] as RodDef;
   p.dir = dirFromVector(spot.fx, spot.fy, p.dir);
   p.moving = false;
-  m.fishing = { rod: r, stage: 'cast', t: 0, bx: spot.bx, by: spot.by, wait: m.rng.range(def.wait[0], def.wait[1]), fx: spot.fx, fy: spot.fy };
+  const shadow = r === 'super-rod' && m.visitors.shadowLugiaWaits(spot.bx, spot.by);
+  const wait = shadow ? m.rng.range(SHADOW.waitSeconds[0] as number, SHADOW.waitSeconds[1] as number) : m.rng.range(def.wait[0], def.wait[1]);
+  m.fishing = { rod: r, stage: 'cast', t: 0, bx: spot.bx, by: spot.by, wait, fx: spot.fx, fy: spot.fy, shadow };
   m.battle.events.push({ type: 'fish', stage: 'cast', x: spot.bx, y: spot.by });
   return '';
 }
@@ -140,13 +150,24 @@ export function stepFishing(m: Match, dt: number): void {
     f.stage = 'wait';
     f.t = 0;
     m.battle.events.push({ type: 'fish', stage: 'land', x: f.bx, y: f.by });
+    if (f.shadow) m.battle.events.push({ type: 'notice', text: 'The black water goes still... something vast stirs below. Wait for it.', seconds: 3 });
+  } else if (f.stage === 'wait' && f.shadow && f.t < f.wait - 1) {
+    // The long wait: now and then a dark ring spreads from somewhere under the bobber.
+    if (Math.floor(f.t / 4) !== Math.floor((f.t - dt) / 4)) {
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_225', x: f.bx + m.rng.range(-1.5, 1.5), y: f.by + m.rng.range(-1, 1), scale: 1.6, ground: true, fps: 7, tint: '#3a1458' });
+    }
   } else if (f.stage === 'wait' && f.t >= f.wait) {
     f.stage = 'bite';
     f.t = 0;
     m.battle.events.push({ type: 'fish', stage: 'bite', x: f.bx, y: f.by });
-  } else if (f.stage === 'bite' && f.t >= FISH.biteWindow) {
+    if (f.shadow) {
+      // The violet ripple: the only warning.
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_225', x: f.bx, y: f.by, scale: 2.4, ground: true, fps: 14, tint: '#b04dff' });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_226', x: f.bx, y: f.by, scale: 3.2, ground: true, fps: 14, tint: '#7a2cff' });
+    }
+  } else if (f.stage === 'bite' && f.t >= (f.shadow ? SHADOW.biteWindow : FISH.biteWindow)) {
     m.fishing = null;
-    m.battle.events.push({ type: 'notice', text: 'It got away... (press Space when the "!" shows)', seconds: 2 });
+    m.battle.events.push({ type: 'notice', text: f.shadow ? 'The shadow sank back into the depths... (it bites only for half a second)' : 'It got away... (press Space when the "!" shows)', seconds: 2.4 });
   } else if (f.stage === 'reel' && f.t >= FISH.reelSeconds) {
     m.fishing = null;
     land(m, f);
@@ -157,6 +178,7 @@ export function stepFishing(m: Match, dt: number): void {
 function land(m: Match, f: FishingState): void {
   const def = FISH.rods[f.rod] as RodDef;
   const p = m.player;
+  if (f.shadow && m.visitors.summonShadowLugia({ x: f.bx, y: f.by })) return;
   const o = def.odds;
   const total = o.common + o.uncommon + o.rare + o.item + o.legend;
   let roll = m.rng.next() * total;

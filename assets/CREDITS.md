@@ -368,6 +368,10 @@ license, sheets). The current artists per folder, resolved through
 ### 0249 Lugia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,Hover
 
+### 0249-shadow Lugia (shadow)
+- <@!177522243985866754>: Attack,Charge,Double,Hop,Hover,Hurt,Idle,Rotate,Shoot,Sleep,Special0,Swing,Walk
+- <@!177522243985866754>: Attack,Charge,Double,EventSleep,Hop,Hurt,Idle,Rotate,Shake,Shoot,Sleep,Swing,Walk
+
 ### 0250 Ho_Oh
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Jab,Shoot,Hover,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -1671,6 +1675,11 @@ license, sheets). The current artists per folder, resolved through
 ### 0249 Lugia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!350050109741858829>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special3
+
+### 0249-shadow Lugia (shadow)
+- <@!533406104256905257>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!533406104256905257>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Special3,Stunned,Surprised,Teary-Eyed,Worried
+- <@!576876006636519434>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special3
 
 ### 0250 Ho_Oh
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal

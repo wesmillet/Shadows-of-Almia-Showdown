@@ -336,7 +336,7 @@ export class MatchScreen implements Screen {
     void v;
   }
 
-  /** The shop: 1-9 buys that line; a click on a bag slot (or Shift+1-6) sells one of it; E or Escape closes. */
+  /** The shop: 1-9 (and 0) buys that line; a click on a bag slot (or Shift+1-6) sells one of it; E or Escape closes. */
   private handleShopInput(input: Input): void {
     const shop = this.shopOpen;
     if (!shop) return;
@@ -352,8 +352,10 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
-    for (let i = 0; i < 9; i++) {
-      if (!input.pressed(`Digit${i + 1}`)) continue;
+    // 1-9, and 0 for a tenth line (the merchant's Storm Mask days).
+    for (let i = 0; i < 10; i++) {
+      if (!input.pressed(`Digit${(i + 1) % 10}`)) continue;
+      if (shift && i >= 9) continue;
       const msg = shift ? this.match.sell(this.match.player, tab, i) : this.match.buy(shop, i);
       if (msg) this.say(msg, 1.6);
     }
@@ -501,6 +503,16 @@ export class MatchScreen implements Screen {
   private throwAtTarget(): void {
     const m = this.match;
     const p = m.player;
+    const shadow = m.shadowBoutFoe();
+    if (shadow) {
+      // Shadow Lugia: the ball flies, and bounces off (Match.stepThrows).
+      const slot = m.ballSlot(p, this.selectedItem);
+      if (slot < 0) return this.say('No Poké Balls in the bag', 1);
+      p.dir = dirFromVector(shadow.x - p.x, shadow.y - p.y, p.dir);
+      m.throwBall(p, slot, { x: shadow.x, y: shadow.y });
+      if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
+      return;
+    }
     if (p.duelId) return this.say("You can't catch another trainer's Pokémon", 1.4);
     const t = m.lockTarget;
     if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {
@@ -2056,9 +2068,9 @@ export class MatchScreen implements Screen {
         drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
         continue;
       }
-      const base = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
+      const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
       const label = m.shiny ? `Shiny ${base}` : base;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff', m.alpha ? this.alphaBadge : null);
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff', m.alpha ? this.alphaBadge : null);
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

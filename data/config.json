@@ -176,6 +176,18 @@
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address to force it).",
     "hoopaChance": 0.15
   },
+  "shadowLugia": {
+    "_comment": "Once Tide Lake is inside the darkness, a Super Rod cast there draws Shadow Lugia (once a match): a long wait, then a hook window of biteWindow seconds. It fights at level, with hpMult times its HP and damageScale on its hits; its beam lasts beamSeconds and turns at beamTurnScale of the usual rate. Shadow Storm (a ring of dark gusts) every stormEvery[phase] seconds. Balls bounce off: under snagBelow of its HP a Snag Machine takes it; worn to nothing or winning the bout, it vanishes.",
+    "level": 100,
+    "waitSeconds": [16, 28],
+    "biteWindow": 0.5,
+    "hpMult": 1.5,
+    "damageScale": 0.45,
+    "beamSeconds": 3,
+    "beamTurnScale": 0.6,
+    "stormEvery": [6.5, 5, 3.5],
+    "snagBelow": 0.1
+  },
   "riding": {
     "_comment": "V rides (kind ride) or flies on (kind fly) the first mount in the party. seat: where the rider sits, as a fraction of the mount's body height above the ground; back: how far toward the tail the rider sits in side views (fraction of body width); scale: draw the mount bigger while ridden (a bird big enough to carry a trainer). Flying lifts the mount flyLift tiles, crosses water and keeps out of trainer battles.",
     "rideSpeed": 1.7,
@@ -207,6 +219,10 @@
     ],
     "sweepTilesPerSecond": 0.7,
     "drowsySeconds": 4,
+    "_stormMaskComment": "A Storm Mask in the bag (the Wandering Merchant sells one in stormMaskChance of matches) keeps that trainer's Pokémon awake stormMaskMultiplier times longer.",
+    "stormMaskMultiplier": 4,
+    "stormMaskChance": 0.05,
+    "stormMaskPrice": 20000,
     "badDreamsFraction": 0.0625,
     "wakeAfterSecondsOutside": 3
   },

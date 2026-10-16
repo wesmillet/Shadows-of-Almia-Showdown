@@ -15,3 +15,7 @@ gardevoirite, absolite, glalitite, latiosite, lucarionite, galladite):
 (https://github.com/PokeAPI/sprites, sprites/items/), added by hand.
 Pokemon item art by Game Freak / The Pokemon Company / Nintendo;
 non-commercial fan use only.
+
+storm-mask.png: the Devon Scuba Gear bag sprite (Pokémon Ruby/Sapphire/Emerald, by Game Freak /
+The Pokémon Company / Nintendo), supplied by the game's owner, centred on a 32x32 canvas.
+Non-commercial fan project use only.

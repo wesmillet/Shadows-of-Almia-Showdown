@@ -81,15 +81,29 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet; a leap lifts it on an arc.
   const leapLift = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) * view.pxPerTile : 0;
   const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * scaleMul * 0.15 - leapLift - lift * view.pxPerTile;
-  if (m.aura || m.alpha) {
-    // A purple glow for Pokémon under the darkness, a red one for Alphas.
+  if (m.shadow) {
+    // Shadow Lugia (its own Shadow sprites): a pulsing black aura with a violet rim.
+    const pulse = 0.75 + 0.25 * Math.sin(m.anim.time * 3 + m.id);
     ctx.save();
-    ctx.shadowColor = m.alpha && !m.aura ? 'rgba(255,60,70,0.9)' : 'rgba(150,60,255,0.95)';
-    ctx.shadowBlur = 14 * view.baseScale;
+    ctx.shadowColor = 'rgba(150,60,255,0.9)';
+    ctx.shadowBlur = 26 * view.baseScale * pulse;
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
+    ctx.shadowColor = 'rgba(0,0,0,1)';
+    ctx.shadowBlur = 16 * view.baseScale * pulse;
     ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
     ctx.restore();
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
+  } else {
+    if (m.aura || m.alpha) {
+      // A purple glow for Pokémon under the darkness, a red one for Alphas.
+      ctx.save();
+      ctx.shadowColor = m.alpha && !m.aura ? 'rgba(255,60,70,0.9)' : 'rgba(150,60,255,0.95)';
+      ctx.shadowBlur = 14 * view.baseScale;
+      ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
+      ctx.restore();
+    }
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
   }
-  ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
   if (embers) drawEmbers(ctx, m, sx, sy, s, 1);
   if (m.shiny && !m.fainted) drawSparkle(ctx, m.id, dx, dy, f.w * s, f.h * s, view.baseScale);
   if (m.flash > 0 && !m.fainted) {

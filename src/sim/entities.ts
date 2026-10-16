@@ -95,6 +95,14 @@ export interface Mon {
   calm?: number;
   /** A legendary from Hoopa's portal or the lake: worn down to its last HP it joins whoever beat it. */
   legend?: boolean;
+  /**
+   * Shadow Lugia's darkness: drawn dark purple in a black aura, it never falls asleep in the storm,
+   * balls bounce off it and only a Snag Machine takes it. It keeps the mark after joining (and in the PC).
+   */
+  shadow?: boolean;
+  /** Seconds to Shadow Lugia's next Shadow Storm; whether the "snag it now" hint was shown. */
+  shadowStormT?: number;
+  snagHinted?: boolean;
   /** A Pokémon that is part of the scenery (Hoopa): nobody fights or catches it. */
   npc?: 'hoopa';
   /** A leap in progress (Lugia out of the lake): seconds in, total seconds, peak height in tiles, start and end points. */

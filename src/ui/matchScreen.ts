@@ -10,7 +10,7 @@ import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, bodyRadius, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, drawScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
 import type { DuelSide, Match } from '../sim/match';
@@ -77,7 +77,6 @@ export class MatchScreen implements Screen {
   private noticeT = 0;
   private selectedItem = -1;
   /** The wild Pokémon clicked as the throw target. */
-  private throwTarget: Mon | null = null;
   /** Capture Styler: the line drawn while C is held (world points), closed loops flashing, and where each wild was last step. */
   private stylerLine: Array<{ x: number; y: number }> = [];
   private stylerFlash: Array<{ pts: Array<{ x: number; y: number }>; t: number }> = [];
@@ -166,10 +165,14 @@ export class MatchScreen implements Screen {
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
     const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
     if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
-    // The throw target follows the cursor: the wild Pokémon under or nearest it.
-    if (!overHud) this.throwTarget = this.wildNear(input.mouseX, input.mouseY);
+    // The ball locks onto the nearest wild; pointing at another wild (or Tab) switches the lock.
+    if (!overHud) {
+      const w = this.wildNear(input.mouseX, input.mouseY);
+      if (w && w !== this.match.lockTarget) this.match.pickLock(w);
+    }
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind !== 'release') this.hud.releaseArmed = -1;
       if (duelSide?.awaitingPick) {
         if (h?.kind === 'portrait') this.pickNext(h.index);
         continue;
@@ -197,12 +200,23 @@ export class MatchScreen implements Screen {
         } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
       else if (h?.kind === 'discard') this.discardSlot(h.index);
+      else if (h?.kind === 'release') {
+        // First click arms it ("Release?"), a second click on it lets the Pokémon go.
+        if (this.hud.releaseArmed === h.index) {
+          this.hud.releaseArmed = -1;
+          this.say(this.match.release(h.index), 2);
+        } else {
+          this.hud.releaseArmed = h.index;
+          const m = this.match.player.party[h.index];
+          if (m) this.say(`Click "Release?" again to let ${m.name} go`, 2);
+        }
+      }
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     // Tab: lock onto the next enemy in range. G: the bag's other tab.
     if (input.pressed('Tab')) {
       const t = this.match.cycleLock();
-      if (t) this.say(`Target: ${t.name}`, 0.8);
+      this.say(t ? `Ball target: ${t.name}` : 'No wild Pokémon in range', 0.8);
     }
     if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
     // Space talks to whoever is in reach, else picks up a ball in reach, else dodges.
@@ -221,7 +235,7 @@ export class MatchScreen implements Screen {
       if (input.rightDown) this.match.playerCast(1);
     }
     if (this.hud.ping) this.hud.ping.t -= 1 / 60;
-    // 1-4 always cast; Shift+1-6 (or the bag panel) uses items. After a knockout in a battle, 1-6 picks who goes next.
+    // 1-2 always cast; Shift+1-6 (or the bag panel) uses items. After a knockout in a battle, 1-6 picks who goes next.
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
     if (duelSide?.awaitingPick) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.pickNext(i);
@@ -230,11 +244,11 @@ export class MatchScreen implements Screen {
     for (let i = 0; i < 6; i++) {
       if (!input.pressed(`Digit${i + 1}`)) continue;
       if (shift) this.onItemSlot(i);
-      else if (i < 4) this.castFeedback(this.match.playerCast(i));
+      else if (i < MOVE_SLOTS) this.castFeedback(this.match.playerCast(i));
     }
-    // Q and E: moves 3 and 4, next to WASD.
-    if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(2));
-    if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(3));
+    // Q and E: moves 1 and 2 again, next to WASD.
+    if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
+    if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
     // Throwing: point at a wild Pokémon and press F.
     if (input.pressed('KeyF')) this.throwAtTarget();
     void v;
@@ -309,11 +323,9 @@ export class MatchScreen implements Screen {
     const m = this.match;
     const p = m.player;
     if (p.duelId) return this.say("You can't catch another trainer's Pokémon", 1.4);
-    const lk = m.lockTarget;
-    const t = this.throwTarget ?? (lk && m.wilds.includes(lk) ? lk : null);
+    const t = m.lockTarget;
     if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {
-      this.throwTarget = null;
-      return this.say('Lock onto or point at a wild Pokémon, then press F', 1.4);
+      return this.say('No wild Pokémon in range to throw at', 1.4);
     }
     if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange) return this.say(`${t.name} is out of range`, 1);
     const slot = m.ballSlot(p, this.selectedItem);
@@ -327,12 +339,8 @@ export class MatchScreen implements Screen {
 
   /** Corner brackets round the throw target: green in range, red out of range. */
   private drawThrowTarget(v: View): void {
-    const t = this.throwTarget;
-    if (!t) return;
-    if (t.fainted || t.captured || !this.match.wilds.includes(t)) {
-      this.throwTarget = null;
-      return;
-    }
+    const t = this.match.lockTarget;
+    if (!t || t.fainted || t.captured || !this.match.wilds.includes(t)) return;
     const p = this.match.player;
     const inRange = Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.catch.throwRange;
     const ctx = v.ctx;
@@ -487,16 +495,13 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /**
-   * The lock-on: a dotted line from the lead to its locked target and rotating red brackets round
-   * it. With nothing locked, the old aim: a line toward the cursor and a reticle where it would land.
-   */
+  /** The aim: a dotted line from the lead toward the cursor and a small reticle where a single-target move would land. */
   private drawAim(v: View): void {
     if (!this.showHud || this.playerDuelSide()?.awaitingPick) return;
     const m = lead(this.match.player);
     if (!m || m.fainted) return;
-    const lock = this.match.lockTarget;
-    const a = lock ? { x: lock.x, y: lock.y } : this.match.aim;
+    const snap = this.match.aimSnap();
+    const a = snap ? { x: snap.x, y: snap.y } : this.match.aim;
     if (!a) return;
     const range = 3.5 * CONFIG.battle.rangeScale;
     let dx = a.x - m.x;
@@ -509,33 +514,6 @@ export class MatchScreen implements Screen {
     const ox = v.toScreenX(m.x);
     const oy = v.toScreenY(m.y);
     ctx.save();
-    if (lock) {
-      const tx = v.toScreenX(lock.x);
-      const ty = v.toScreenY(lock.y);
-      const inReach = k >= 1;
-      ctx.strokeStyle = inReach ? 'rgba(255,120,130,0.45)' : 'rgba(255,190,120,0.4)';
-      ctx.lineWidth = Math.max(1.5, 2 * s);
-      ctx.setLineDash([6 * s, 7 * s]);
-      ctx.beginPath();
-      ctx.moveTo(ox + (tx - ox) * (0.6 / d), oy + (ty - oy) * (0.6 / d));
-      ctx.lineTo(tx, ty);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Four corner brackets turning slowly round the target, sized to its body.
-      const r = Math.max(0.6 * v.pxPerTile, bodyRadius(lock.species) * v.pxPerTile * 1.25);
-      const spin = this.match.time * 1.4;
-      ctx.strokeStyle = inReach ? 'rgba(255,80,100,0.95)' : 'rgba(255,190,120,0.85)';
-      ctx.lineWidth = Math.max(2, 2.5 * s);
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 4; i++) {
-        const ang = spin + (i * Math.PI) / 2;
-        ctx.beginPath();
-        ctx.arc(tx, ty, r, ang - 0.38, ang + 0.38);
-        ctx.stroke();
-      }
-      ctx.restore();
-      return;
-    }
     dx *= k;
     dy *= k;
     const tx = v.toScreenX(m.x + dx);
@@ -548,9 +526,10 @@ export class MatchScreen implements Screen {
     ctx.lineTo(tx, ty);
     ctx.stroke();
     ctx.setLineDash([]);
-    // Reticle: the single-target hit circle, with four ticks; orange when out of reach.
+    // Reticle: the single-target hit circle, with four ticks.
+    // White when aiming at open ground, red when snapped onto an enemy, orange when out of reach.
     const r = 0.65 * CONFIG.battle.rangeScale * v.pxPerTile;
-    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : snap ? 'rgba(255,90,110,0.95)' : 'rgba(255,255,255,0.75)';
     ctx.lineWidth = Math.max(2, 2.5 * s);
     ctx.beginPath();
     ctx.arc(tx, ty, r, 0, Math.PI * 2);
@@ -579,7 +558,7 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /** The TM prompt: 1-4 replaces that move, Escape keeps the current moves. */
+  /** The TM prompt: 1-2 replaces that move, Escape keeps the current moves. */
   private handleTeachInput(input: Input): void {
     if (!this.teach) return;
     if (input.pressed('Escape')) {
@@ -587,7 +566,7 @@ export class MatchScreen implements Screen {
       return;
     }
     const slot = this.teach.slot;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < MOVE_SLOTS; i++) {
       if (input.pressed(`Digit${i + 1}`)) {
         const msg = this.match.teach(this.match.player, slot, i);
         this.say(msg || 'Could not teach that move', 2.2);
@@ -598,13 +577,13 @@ export class MatchScreen implements Screen {
     input.takeClicks();
   }
 
-  /** A level-up move with four moves known: 1-4 forgets that move, Escape keeps the current four. */
+  /** A level-up move with both slots full: 1-2 forgets that move, Escape keeps the current two. */
   private handleLearnInput(input: Input): void {
     if (input.pressed('Escape')) {
       this.say(this.match.answerLearn(-1), 1.8);
       return;
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < MOVE_SLOTS; i++) {
       if (input.pressed(`Digit${i + 1}`)) {
         this.say(this.match.answerLearn(i), 2.2);
         break;
@@ -646,7 +625,7 @@ export class MatchScreen implements Screen {
         if (!m) return this.say('No Pokémon to teach', 1.2);
         if (!m.types.includes(def.tmType ?? '')) return this.say(`${m.name} cannot learn ${def.name.replace('TM ', '')} (${def.tmType} type)`, 2);
         // A free move slot takes the TM at once; with four moves, ask which to forget.
-        if (m.moves.length < 4) return this.say(this.match.teach(p, index, -1), 2);
+        if (m.moves.length < MOVE_SLOTS) return this.say(this.match.teach(p, index, -1), 2);
         this.teach = { slot: index };
         return;
       }
@@ -778,8 +757,8 @@ export class MatchScreen implements Screen {
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
       case 'learned':
-        if (ev.mon.owner === this.match.player && !ev.forgot) {
-          this.say(`${ev.mon.name} learned ${move(ev.moveId).name}!`, 2);
+        if (ev.mon.owner === this.match.player) {
+          this.say(ev.forgot ? `${ev.mon.name} forgot ${ev.forgot} and learned ${move(ev.moveId).name}!` : `${ev.mon.name} learned ${move(ev.moveId).name}!`, 2);
           this.floaters.add(ev.mon.x, ev.mon.y - 0.4, `New move: ${move(ev.moveId).name}`, '#9be7ff', 15);
         }
         break;

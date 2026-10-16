@@ -161,12 +161,13 @@ def main():
     court = ndimage.binary_erosion(d.castle, iterations=D.CASTLE_WALL)
     # the courtyard: slab paving round a battlefield of lighter slabs
     pav = np.zeros(W.shape, np.int32)
-    bx0, bx1, by0, by1 = 184, 209, 166, 179
+    bx0, bx1, by0, by1 = 186, 211, 166, 179
     pav[by0 - 3:by1 + 4, bx0 - 4:bx1 + 4] = F.color('Slab Floor')
     pav[by0:by1 + 1, bx0:bx1 + 1] = F.color('Mid Slab Floor')
-    pav[159:166, 194:209] = F.color('Slab Floor')               # the keep's forecourt
-    for (gx, gy, horiz) in D.GATES.values():                    # paved gateways
-        pav[gy - 3:gy + 4, gx - 3:gx + 4] = F.color('Slab Floor')
+    pav[157:162, 192:207] = F.color('Slab Floor')               # the keep's forecourt
+    half = D.GATE_W // 2
+    for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
+        pav[gy - 1:gy + 6, gx - half - 1:gx + half + 2] = F.color('Slab Floor')
     # the crystal's terrace in the middle of the plain
     cx, cy = D.CRYSTAL
     terrace = D.ellipse(cx + 0.5, cy + 0.5, 8, 6) < 1
@@ -174,7 +175,7 @@ def main():
     pav[D.ellipse(cx + 0.5, cy + 0.5, 4.5, 3.4) < 1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
     # one fountain on a paved pad east of the battlefield
-    fountains = [(215, 162)]
+    fountains = [(216, 158)]
     for (fx, fy) in fountains:
         pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
     pav[W] = 0
@@ -205,17 +206,26 @@ def main():
     # the keep in the castle's north wing, its door on the forecourt
     img, foot = stamps.stamp('keep_red')
     kh, kw = img.shape[0] // 16, img.shape[1] // 16
-    kx0, ky1 = 201 - kw // 2, 160
+    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2, 157
     objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16})
     blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
     placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
-    # towers on the outer corners and beside each gate
+    # towers on the four corners, halfway down the long sides, and either side of each gate.
+    # A tower's base lines up with the bottom of the brick face beside it, so no stray face
+    # pokes out under it; corner and gate towers cover the wall ends completely.
     timg, tfoot = stamps.stamp('tower_cone')
     th, tw = timg.shape[0] // 16, timg.shape[1] // 16
-    spots = [(222, 159), (187, 151), (211, 151), (171, 193), (222, 185), (165, 167)]
+    (cx0, cy0, cx1, cy1) = D.CASTLE_RECTS[0]
+    wl_ = D.CASTLE_WALL
+    north_base = cy0 + wl_ + castle.FACE_ROWS          # under the north wall's inner face
+    south_base = cy1 + castle.FACE_ROWS                # under the south wall's outer face
+    spots = [(cx0 - 1, north_base), (cx1 - tw + 1, north_base), (cx0 - 1, south_base), (cx1 - tw + 1, south_base),
+             (cx0 - 1, (cy0 + cy1) // 2 + 3), (cx1 - tw + 1, (cy0 + cy1) // 2 + 3)]
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():
-        if horiz: spots += [(gx - half - tw, gy + 4), (gx + half + 1, gy + 4)]
+        if horiz:
+            base = gy + 2 + castle.FACE_ROWS
+            spots += [(gx - half - tw, base), (gx + half + 1, base)]
     for (tx, yb) in spots:
         objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})
         blocked_stamps[yb - th:yb, tx:tx + tw] |= tfoot
@@ -226,7 +236,7 @@ def main():
     yard.free &= ~blocked_stamps
     trees = content3.catalogue('Objects_Trees_Castle', r'Tree_(Light|Emerald)_[1-6]')
     import random as _r; rr = _r.Random(3)
-    for (x, y) in [(171, 168), (171, 179), (177, 187), (190, 187), (204, 187), (219, 177), (219, 172), (176, 163)]:
+    for (x, y) in [(178, 162), (177, 172), (178, 185), (190, 185), (208, 185), (220, 185), (220, 174)]:
         yard.put(rr.choice(trees), x, y, clear=1)
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')
@@ -235,7 +245,7 @@ def main():
         if banner: yard.put(rr.choice(banner), x, y, clear=0, shadow=False)
     for x in range(bx0 + 3, bx1 - 2, 7):
         if bench: yard.put(bench[0], x, by1 + 3, clear=0, shadow=False)
-    for (x, y) in [(194, 163), (208, 163), (cx - 7, cy - 1), (cx + 8, cy - 1), (cx - 7, cy + 3), (cx + 8, cy + 3)]:
+    for (x, y) in [(191, 161), (207, 161), (cx - 7, cy - 1), (cx + 8, cy - 1), (cx - 7, cy + 3), (cx + 8, cy + 3)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
     placer.free &= yard.free

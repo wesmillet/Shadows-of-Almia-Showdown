@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { MOVES, SPECIES, drawScale, movesAt, species, statsAtLevel } from './data';
+import { MOVES, MOVE_SLOTS, SPECIES, drawScale, movesAt, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 import { applyEvolution, evolutionsAt, formAtLevel, stoneEvolution } from './evolution';
 import spawns from '../../data/spawns.json';
@@ -85,14 +85,14 @@ describe('evolving', () => {
     expect(m.anim.dir).toBe(2);
   });
 
-  it('learnsets: low levels start with fewer moves, later levels know the last four reached', () => {
+  it('learnsets: a Pokémon knows the newest two moves it has reached, attacks first', () => {
     const sp = species('0387');
-    expect(movesAt(sp, 1).length).toBeLessThan(4);
+    expect(movesAt(sp, 1).length).toBeLessThanOrEqual(MOVE_SLOTS);
     expect(movesAt(sp, 1)).toContain('tackle');
     const at40 = movesAt(sp, 40);
-    expect(at40.length).toBe(4);
-    const reached = (sp.learnset ?? []).filter(([lv]) => lv <= 40).map(([, id]) => id);
-    expect(at40).toEqual(reached.slice(-4));
+    expect(at40.length).toBe(MOVE_SLOTS);
+    const attacks = (sp.learnset ?? []).filter(([lv, id]) => lv <= 40 && (MOVES.get(id)?.power ?? 0) > 0).map(([, id]) => id);
+    expect(at40).toEqual([...new Set(attacks)].slice(-MOVE_SLOTS));
     for (const s of SPECIES.values()) for (const [, id] of s.learnset ?? []) expect(MOVES.has(id), `${s.name}: ${id}`).toBe(true);
   });
 });

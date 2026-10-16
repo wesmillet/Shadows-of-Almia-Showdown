@@ -11,7 +11,7 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, SPAWNS, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
@@ -358,13 +358,13 @@ export class Match {
     if (!m) return 'No Pokémon to teach';
     if (!m.types.includes(def.tmType ?? '')) return `${m.name} cannot learn ${move(def.move).name} (${def.tmType} type)`;
     if (m.moves.includes(def.move)) return `${m.name} already knows ${move(def.move).name}`;
-    if (m.moves.length < 4) {
+    if (m.moves.length < MOVE_SLOTS) {
       m.moves.push(def.move);
       m.cooldowns.push(0);
       this.takeItem(t, slot, 'held');
       return `${m.name} learned ${move(def.move).name}!`;
     }
-    if (replace < 0 || replace > 3) return '';
+    if (replace < 0 || replace >= MOVE_SLOTS) return '';
     const old = m.moves[replace];
     m.moves[replace] = def.move;
     m.cooldowns[replace] = 0;
@@ -373,27 +373,27 @@ export class Match {
   }
 
   /**
-   * New moves on levelling up. A free slot takes the move at once; with four moves the player
-   * is asked which to forget, and everyone else drops their weakest move for a stronger one.
+   * New moves on levelling up. A free slot takes the move at once; with both slots full, a
+   * stronger move replaces the weaker one by itself (no prompt mid-fight), for everyone.
    */
   learnOnLevelUp(m: Mon, fromLevel: number): void {
     for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
       if (m.moves.includes(id) || !MOVES.has(id)) continue;
-      if (m.moves.length < 4) {
+      if (m.moves.length < MOVE_SLOTS) {
         m.moves.push(id);
         m.cooldowns.push(0);
         this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: null });
-      } else if (m.owner?.isPlayer) {
-        if (!this.pendingLearn.some((p) => p.mon === m && p.moveId === id)) this.pendingLearn.push({ mon: m, moveId: id });
-      } else {
-        let weakest = 0;
-        m.moves.forEach((mid, i) => {
-          if (move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
-        });
-        if (move(id).power > move(m.moves[weakest] as string).power) {
-          m.moves[weakest] = id;
-          m.cooldowns[weakest] = 0;
-        }
+        continue;
+      }
+      let weakest = 0;
+      m.moves.forEach((mid, i) => {
+        if (move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
+      });
+      const old = m.moves[weakest] as string;
+      if (move(id).power > move(old).power) {
+        m.moves[weakest] = id;
+        m.cooldowns[weakest] = 0;
+        if (m.owner?.isPlayer) this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: move(old).name });
       }
     }
   }
@@ -1221,49 +1221,46 @@ export class Match {
   }
 
   /**
-   * Lock-on: the Pokémon the player's moves go at. It is the nearest enemy (one already fighting
-   * your team counts as closer) until the player picks another with Tab or by clicking it; a pick
-   * holds until that Pokémon falls, is caught, or gets out of range.
+   * Ball lock-on: the wild Pokémon a thrown ball goes at. It is the nearest catchable wild (one
+   * already fighting your team counts as closer) until the player picks another with Tab or by
+   * pointing at it; a pick holds until that Pokémon faints, is caught, or gets out of range.
    */
   lockTarget: Mon | null = null;
   private lockPicked = false;
   static readonly LOCK_RANGE = 9;
 
-  private lockScore(m: Mon, c: Mon): number {
-    const d = Math.hypot(c.x - m.x, c.y - m.y);
-    const engaged = (c.target && c.target.owner === this.player) || (c.owner && c.owner.duelId && c.owner.duelId === this.player.duelId);
+  private lockScore(c: Mon): number {
+    const p = this.player;
+    const d = Math.hypot(c.x - p.x, c.y - p.y);
+    const engaged = !!c.target && c.target.owner === p;
     return d - (engaged ? 4 : 0);
   }
 
-  /** Enemies of the lead within lock range, best first. */
+  private lockable(c: Mon): boolean {
+    const p = this.player;
+    return !c.fainted && !c.captured && !c.npc && !c.leap && this.wilds.includes(c) && Math.hypot(c.x - p.x, c.y - p.y) <= Match.LOCK_RANGE;
+  }
+
+  /** Catchable wilds in lock range, best first. */
   lockCandidates(): Mon[] {
-    const m = lead(this.player);
-    if (!m) return [];
-    const out: Mon[] = [];
-    for (const c of this.mons()) {
-      if (c === m || c.npc || !BattleSystem.active(c) || !this.battle.isEnemy(m, c)) continue;
-      if (Math.hypot(c.x - m.x, c.y - m.y) > Match.LOCK_RANGE) continue;
-      out.push(c);
-    }
-    return out.sort((a, b) => this.lockScore(m, a) - this.lockScore(m, b));
+    return this.wilds.filter((c) => this.lockable(c)).sort((a, b) => this.lockScore(a) - this.lockScore(b));
   }
 
   private stepLock(): void {
-    const m = lead(this.player);
     const t = this.lockTarget;
-    const valid = !!m && !!t && BattleSystem.active(t) && this.battle.isEnemy(m, t) && Math.hypot(t.x - m.x, t.y - m.y) <= Match.LOCK_RANGE + 1;
+    const valid = !!t && this.lockable(t);
     if (valid && this.lockPicked) return;
     const best = this.lockCandidates()[0] ?? null;
     if (!valid) {
       this.lockTarget = best;
       this.lockPicked = false;
-    } else if (best && best !== t && m && this.lockScore(m, best) < this.lockScore(m, t!) - 1.5) {
+    } else if (best && best !== t && this.lockScore(best) < this.lockScore(t!) - 1.5) {
       // Not picked by hand: follow the nearest, with a little stickiness so it does not flicker.
       this.lockTarget = best;
     }
   }
 
-  /** Tab: the next enemy in range (nearest first), held until it is gone. */
+  /** Tab: the next wild in range (nearest first), held until it is gone. */
   cycleLock(): Mon | null {
     const list = this.lockCandidates();
     if (!list.length) return null;
@@ -1273,16 +1270,16 @@ export class Match {
     return this.lockTarget;
   }
 
-  /** Lock onto a Pokémon the player clicked. */
+  /** Lock onto a wild the player pointed at. */
   pickLock(c: Mon): void {
+    if (!this.lockable(c)) return;
     this.lockTarget = c;
     this.lockPicked = true;
   }
 
   /**
-   * Player input: the lead casts move `slot` at its locked target (or at an enemy right under the
-   * cursor, which then becomes the lock). With nothing to lock onto it fires toward the cursor.
-   * Moves go where the target stands when cast, so a moving Pokémon can still step out.
+   * Player input: the lead casts move `slot` toward the aim point (snapped onto an enemy near
+   * the cursor). Nothing tracks the target after the cast, so a moving Pokémon can step out.
    */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
@@ -1293,9 +1290,7 @@ export class Match {
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     const f = DIR_VECTORS[p.dir] as { x: number; y: number };
     const snap = this.aimSnap();
-    if (snap && snap !== this.lockTarget) this.pickLock(snap);
-    const t = this.lockTarget;
-    const a = t ? { x: t.x, y: t.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    const a = snap ? { x: snap.x, y: snap.y } : this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
     return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
@@ -1352,8 +1347,7 @@ export class Match {
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
-    const lk = this.lockTarget;
-    const t = lk && Math.hypot(lk.x - m.x, lk.y - m.y) <= 5.5 ? lk : this.battle.pickTarget(m, this.mons(), 5.5);
+    const t = this.battle.pickTarget(m, this.mons(), 5.5);
     if (!t) return;
     const slot = this.battle.chooseMove(m, t);
     if (slot < 0) return;
@@ -1380,6 +1374,35 @@ export class Match {
   }
 
   /** Makes party member `index` the lead (fainted members cannot lead). */
+  /**
+   * Lets a party Pokémon go. It steps out where the player stands and wanders off as a calm wild
+   * Pokémon (it could be caught again). Not mid-battle, and never the last one.
+   */
+  release(index: number): string {
+    const p = this.player;
+    const m = p.party[index];
+    if (!m) return '';
+    if (p.duelId) return "You can't release a Pokémon during a battle";
+    if (p.party.length <= 1) return "You can't release your last Pokémon";
+    p.party.splice(index, 1);
+    m.owner = null;
+    m.stowed = false;
+    m.recall = false;
+    m.target = null;
+    m.casting = null;
+    if (this.lockTarget === m) this.lockTarget = null;
+    if (!m.fainted) {
+      m.x = m.px = p.x + 0.6;
+      m.y = m.py = p.y + 0.4;
+      m.homeX = m.targetX = m.x;
+      m.homeY = m.targetY = m.y;
+      m.calm = 20;
+      this.wilds.push(m);
+    }
+    this.battle.events.push({ type: 'released', mon: m });
+    return m.fainted ? `${m.name} was released` : `Bye, ${m.name}! It heads off into the wild`;
+  }
+
   swapLead(index: number): boolean {
     const p = this.player;
     if (p.duelId) return false;
@@ -1403,7 +1426,8 @@ export class Match {
       m.px = m.x;
       m.py = m.y;
     }
-    for (const t of this.allTrainers) {
+    // Everyone who moves this step, townsfolk and visitors included, keeps last step's spot for drawing in between.
+    for (const t of [...this.allTrainers, ...this.npcs]) {
       t.px = t.x;
       t.py = t.y;
     }
@@ -1427,7 +1451,12 @@ export class Match {
       if (!t.duelId) {
         this.fieldParty(t);
         // Freshly sent out: grow from the ball's flash to full size.
-        for (const m of t.party) if (!m.stowed && !m.captured && !m.fainted && m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
+        // (The white send-out flash fades with it; left alone it kept the Pokémon tinted red.)
+        for (const m of t.party) {
+          if (m.stowed || m.captured || m.fainted) continue;
+          if (m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
+          if (m.visual.flash > 0) m.visual.flash = Math.max(0, m.visual.flash - dt * 2.5);
+        }
         stepParty(t, lead(t), dt, pw);
       }
     }

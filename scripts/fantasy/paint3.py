@@ -39,7 +39,7 @@ def ground(d, seed=2):
     base = G.paint(cells)
     # dirt and light grass patches in the green lands
     patch = np.zeros_like(cells)
-    dirt = (noise(seed + 41, 4) > 1.3) & np.isin(d.biome, [MEADOW, CASTLE, FOREST]) & green
+    dirt = (noise(seed + 41, 4) > 1.3) & np.isin(d.biome, [MEADOW, FOREST]) & green
     patch[ndimage.binary_opening(dirt, structure=np.ones((3, 3)))] = G.color('Dirt')
     light = (noise(seed + 42, 5) > 1.0) & np.isin(d.biome, [MEADOW, CASTLE]) & green & (patch == 0)
     patch[ndimage.binary_opening(light, structure=np.ones((3, 3)))] = G.color('Light Grass')

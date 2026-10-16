@@ -7,7 +7,7 @@ import { clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
-import { move, typeColor } from '../sim/data';
+import { MOVE_SLOTS, move, typeColor } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
@@ -15,7 +15,7 @@ import { darken, fitSize, hit, lighten, rgba, uiFont } from './screens';
 import type { ItemIcons } from '../sprites/itemIcons';
 import type { PixelUi } from './pixelUi';
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number };
 
 interface Rect {
   x: number;
@@ -68,8 +68,8 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   ctx.fillText(label, sx, y - 3 * baseScale);
 }
 
-/** The key or button that casts each move slot (1-4 work too). */
-const MOVE_KEYS = ['LMB', 'RMB', 'Q', 'E'];
+/** The button that casts each move slot (1-2 and Q/E work too). */
+const MOVE_KEYS = ['LMB', 'RMB'];
 
 const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f', poison: '#b06cff', freeze: '#8fe0ff', confusion: '#ff8fd0' };
 
@@ -83,6 +83,9 @@ export class Hud {
   private tabRects: Rect[] = [];
   /** The X on a hovered bag slot that throws its item away. */
   private discardRects: Array<Rect & { index: number }> = [];
+  private releaseRects: Array<Rect & { index: number }> = [];
+  /** The party slot whose release X was clicked once (it turns into a confirm). */
+  releaseArmed = -1;
   private minimap: HTMLCanvasElement | null = null;
 
   constructor(private readonly view: View, private readonly icons: ItemIcons, private readonly ui: PixelUi) {}
@@ -94,6 +97,7 @@ export class Hud {
 
   hitTest(x: number, y: number): HudHit | null {
     for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
+    for (const d of this.releaseRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'release', index: d.index };
     for (let i = 0; i < this.behaviorRects.length; i++) {
       const r = this.behaviorRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'behavior', index: i };
@@ -201,7 +205,7 @@ export class Hud {
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.label(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 28 * s, 15, '#f4f1ff', 'center', '800', w - 28 * s);
-      this.label(ctx, 'Press 1-4 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
+      this.label(ctx, 'Press 1 or 2 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
       st.teach.moves.forEach((mv, i) => {
         this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#f4f1ff', 'left', '700', w - 60 * s);
       });
@@ -397,6 +401,7 @@ export class Hud {
     const x0 = 16 * s;
     const y0 = v.height - cardH - 16 * s;
     this.portraitRects = [];
+    this.releaseRects = [];
     const first = lead(p);
     p.party.forEach((m, i) => {
       const x = x0 + i * (cardW + gap);
@@ -497,6 +502,32 @@ export class Hud {
         this.icons.draw(ctx, m.heldItem, px + ps - 7 * s, py + ps - 7 * s, 18 * s);
       }
       this.portraitRects.push({ x, y: y0, w: cardW, h: cardH });
+      // Hovering a card (with more than one in the party): a red X in its corner releases it,
+      // after a second click on the "Release?" it turns into.
+      const armed = this.releaseArmed === i;
+      if ((hover || armed) && p.party.length > 1 && !p.duelId) {
+        const xs = 14 * s;
+        const label = armed ? 'Release?' : '';
+        ctx.font = this.font(9, '800');
+        const bw = armed ? ctx.measureText(label).width + 12 * s : xs;
+        const xx = x + cardW - bw + 3 * s;
+        const xy = y0 - 3 * s;
+        const over = hit(st.mouseX, st.mouseY, xx, xy, bw, xs);
+        ctx.fillStyle = over || armed ? '#ff5a6e' : 'rgba(150,40,60,0.95)';
+        ctx.fillRect(Math.round(xx), Math.round(xy), Math.round(bw), Math.round(xs));
+        if (armed) this.label(ctx, label, xx + bw / 2, xy + xs - 4 * s, 9, '#ffffff', 'center', '800');
+        else {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = Math.max(1.5, 2 * s);
+          ctx.beginPath();
+          ctx.moveTo(xx + 4 * s, xy + 4 * s);
+          ctx.lineTo(xx + xs - 4 * s, xy + xs - 4 * s);
+          ctx.moveTo(xx + xs - 4 * s, xy + 4 * s);
+          ctx.lineTo(xx + 4 * s, xy + xs - 4 * s);
+          ctx.stroke();
+        }
+        this.releaseRects.push({ x: xx, y: xy, w: bw, h: xs, index: i });
+      }
     });
   }
 
@@ -507,17 +538,16 @@ export class Hud {
     if (!m) return;
     const cx = v.width - 128 * s;
     const cy = v.height - 118 * s;
-    const R = 56 * s;
-    const r = 30 * s;
+    // Two move buttons side by side (left and right mouse button), on a dark pill.
+    const R = 40 * s;
+    const r = 34 * s;
     const offsets = [
-      [0, -R],
-      [R, 0],
-      [0, R],
       [-R, 0],
+      [R, 0],
     ];
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, R + r + 8 * s, 0, Math.PI * 2);
+    ctx.roundRect(cx - R - r - 8 * s, cy - r - 8 * s, 2 * (R + r + 8 * s), 2 * (r + 8 * s), r + 8 * s);
     ctx.fillStyle = 'rgba(12,12,22,0.55)';
     ctx.fill();
     ctx.restore();
@@ -525,7 +555,7 @@ export class Hud {
     const autoText = match.auto ? 'AUTO ON · R' : 'AUTO OFF · R';
     ctx.font = this.font(10, '800');
     const aw = ctx.measureText(autoText).width + 16 * s;
-    const ay = cy - R - r - 30 * s;
+    const ay = cy - r - 34 * s;
     ctx.fillStyle = match.auto ? 'rgba(70,160,110,0.9)' : 'rgba(60,50,90,0.85)';
     ctx.beginPath();
     ctx.roundRect(cx - aw / 2, ay, aw, 18 * s, 9 * s);
@@ -619,7 +649,7 @@ export class Hud {
       this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
     });
     // Slots not learned yet: faint and empty until a level-up fills them.
-    for (let i = m.moves.length; i < 4; i++) {
+    for (let i = m.moves.length; i < MOVE_SLOTS; i++) {
       const [ox, oy] = offsets[i] as [number, number];
       if (this.ui.circle(ctx, cx + ox, cy + oy, r + 3 * s, 'slate')) {
         this.label(ctx, '—', cx + ox, cy + oy + 5 * s, 14, 'rgba(255,255,255,0.45)', 'center', '600');

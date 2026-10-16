@@ -65,39 +65,34 @@ export class PixelUi {
   }
 
   /**
-   * An HP bar 7 source pixels tall with its top-left at (x, y), drawn in code at integer
-   * `scale` so its fill follows the exact fraction at any width: a dark rim, a dark track,
-   * and a fill with a light top row and a shaded bottom row. Green over half, amber over a
-   * fifth, red below (when `auto`); `color` picks the hue otherwise.
+   * A slim HP bar drawn in code, its bottom edge where a 7-pixel bar at `scale` would end
+   * (so callers lay out as before): a dark rim, a dark track, and a fill with a light top
+   * row that follows the exact fraction at any width. Green over half, amber over a fifth,
+   * red below (when `auto`); `color` picks the hue otherwise.
    */
   bar(ctx: CanvasRenderingContext2D, x: number, y: number, widthPx: number, scale: number, frac: number, color: BarColor = 'green', auto = true): void {
     const f = Math.max(0, Math.min(1, frac));
     let c = color;
     if (auto) c = f > 0.5 ? 'green' : f > 0.2 ? 'blue' : 'red';
     const hue = BAR_HUES[c];
+    const u = Math.max(1, Math.round(scale / 2));
+    const H = 4 * u;
     const X = Math.round(x);
-    const Y = Math.round(y);
-    const W = Math.max(4 * scale, Math.round(widthPx));
-    const H = 7 * scale;
-    const p = scale;
+    const Y = Math.round(y + 7 * scale - H);
+    const W = Math.max(4 * u, Math.round(widthPx));
     ctx.save();
-    // rim and track
-    ctx.fillStyle = 'rgba(10,6,22,0.92)';
-    ctx.fillRect(X + p, Y, W - 2 * p, H);
-    ctx.fillRect(X, Y + p, W, H - 2 * p);
+    ctx.fillStyle = 'rgba(10,6,22,0.9)';
+    ctx.fillRect(X, Y, W, H);
     ctx.fillStyle = '#3a3150';
-    ctx.fillRect(X + p, Y + p, W - 2 * p, H - 2 * p);
-    // the fill, snapped to whole source pixels but never empty while any HP is left
-    const inner = W - 2 * p;
-    let fw = Math.round((inner * f) / p) * p;
-    if (f > 0 && fw < p) fw = p;
+    ctx.fillRect(X + u, Y + u, W - 2 * u, H - 2 * u);
+    const inner = W - 2 * u;
+    let fw = Math.round(inner * f);
+    if (f > 0 && fw < u) fw = u;
     if (fw > 0) {
       ctx.fillStyle = hue.mid;
-      ctx.fillRect(X + p, Y + p, fw, H - 2 * p);
+      ctx.fillRect(X + u, Y + u, fw, H - 2 * u);
       ctx.fillStyle = hue.light;
-      ctx.fillRect(X + p, Y + p, fw, p);
-      ctx.fillStyle = hue.dark;
-      ctx.fillRect(X + p, Y + H - 2 * p, fw, p);
+      ctx.fillRect(X + u, Y + u, fw, u);
     }
     ctx.restore();
   }

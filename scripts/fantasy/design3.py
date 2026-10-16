@@ -6,8 +6,9 @@ at the centre; four lands surround it:
   north-east  the autumn wood (red and gold), a ridge along the coast
   south-west  the desert, with mesas and an oasis
   south-east  the green forest, its lake, and the castle in a clearing
-The castle is a stepped walled hold (keep, bastion, notched corner) round a
-courtyard with the champion's battlefield. Roads cross the plain and run to a
+The castle is a square walled hold (keep on the north wall, towers on the
+corners and either side of the north and south gates) round a courtyard with
+the champion's battlefield. Roads cross the plain and run to a
 town in each land and to the castle's gates. Every land keeps wide open
 ground (meadows, flats, plazas) for battles.
 
@@ -28,10 +29,10 @@ WATER, MEADOW, FOREST, SHORE, SNOW, DESERT, AUTUMN, CASTLE = range(8)
 
 # the castle: the union of these rectangles (x0, y0, x1, y1, exclusive ends) minus the cut-outs;
 # the outer 3 tiles are the wall walkway, the rest the courtyard
-CASTLE_RECTS = [(172, 156, 226, 192), (188, 148, 214, 158), (166, 164, 174, 184)]
-CASTLE_CUTS = [(216, 184, 226, 192)]
+CASTLE_RECTS = [(172, 150, 226, 190)]
+CASTLE_CUTS = []
 CASTLE_WALL = 3
-CASTLE_CENTER = (199, 172)
+CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
 PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
 TIDE_LAKE = (219, 98, 16, 9)        # Tide Lake (Lugia's): centre and radii
@@ -182,7 +183,7 @@ TOWNS = {
     'Greenhollow': (262, 128, FOREST),
 }
 # gates in the castle wall: (x, y) of the gap's middle, and whether the gap is in a N/S wall
-GATES = {'N': (180, 157, True), 'W': (167, 174, False)}
+GATES = {'N': (186, 151, True), 'S': (199, 188, True)}
 GATE_W = 5
 
 # (x, y): a road climbing north from row y meets a south-facing plateau edge in column x
@@ -201,10 +202,10 @@ ROADS = [
     ('1', [(200, 112), (200, 82), (246, 82)]),
     # south-west to the desert town
     ('1', [(160, 166), (136, 166), (136, 179), (124, 179)]),
-    # to the castle's north and west gates, brick at the gates
-    ('1', [(200, 112), (200, 140), (180, 140), (180, 148)]),
-    ('1', [(160, 166), (160, 174), (161, 174)]),
-    ('2', [(180, 146), (180, 159)]), ('2', [(160, 174), (169, 174)]),
+    # to the castle's north gate (from the plain and from the east road), brick through the gates
+    ('1', [(200, 112), (200, 140), (186, 140), (186, 148)]),
+    ('1', [(160, 140), (186, 140)]),
+    ('2', [(186, 146), (186, 158)]), ('2', [(199, 182), (199, 196)]),
 ]
 
 

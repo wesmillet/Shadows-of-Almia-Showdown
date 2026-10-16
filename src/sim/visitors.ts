@@ -259,7 +259,11 @@ export class Visitors {
       m.battle.events.push({ type: 'notice', text: `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
     }
     if (po.out && po.out.visual.scale < 1) po.out.visual.scale = Math.min(1, po.out.visual.scale + dt * 1.5);
-    if (po.t >= 4) this.portal = null;
+    if (po.out && po.out.visual.flash > 0) po.out.visual.flash = Math.max(0, po.out.visual.flash - dt * 1.5);
+    if (po.t >= 4) {
+      if (po.out) po.out.visual.flash = 0;
+      this.portal = null;
+    }
   }
 
   /** A legendary boss: triple HP, angry at anyone near, and it yields instead of fainting. */

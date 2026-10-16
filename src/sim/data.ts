@@ -41,14 +41,25 @@ export interface SpeciesDef {
 }
 
 /** The moves a Pokémon of this species knows at `level`: the last four it has reached. */
+/** How many moves a Pokémon knows at once. */
+export const MOVE_SLOTS = 2;
+
+/**
+ * The moves a species knows at a level: the newest two it has reached, preferring moves that
+ * deal damage (a status move only fills a slot no attack can).
+ */
 export function movesAt(sp: SpeciesDef, level: number): string[] {
-  if (!sp.learnset?.length) return [...sp.moves];
   const known: string[] = [];
-  for (const [lv, id] of sp.learnset) {
-    if (lv > level) break;
-    if (!known.includes(id) && MOVES.has(id)) known.push(id);
+  if (!sp.learnset?.length) known.push(...sp.moves.filter((id) => MOVES.has(id)));
+  else {
+    for (const [lv, id] of sp.learnset) {
+      if (lv > level) break;
+      if (!known.includes(id) && MOVES.has(id)) known.push(id);
+    }
   }
-  return known.slice(-4);
+  const pick = known.filter((id) => (MOVES.get(id)?.power ?? 0) > 0).slice(-MOVE_SLOTS);
+  for (let i = known.length - 1; i >= 0 && pick.length < MOVE_SLOTS; i--) if (!pick.includes(known[i] as string)) pick.push(known[i] as string);
+  return known.filter((id) => pick.includes(id));
 }
 
 /** Moves this species learns on reaching a level above `from` and up to `to`. */

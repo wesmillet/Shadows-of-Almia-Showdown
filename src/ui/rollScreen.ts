@@ -67,8 +67,11 @@ export class RollScreen implements Screen {
     const taken = new Set<string>();
     for (let r = 0; r < CHOICES; r++) {
       // Three different Pokémon (the same tier can come up twice).
+      // Every reel rolls its own tier at the full odds; a repeat Pokémon is re-drawn from the
+      // same tier, so the tier odds of each reel stay exactly as listed.
       let res = rollStarter(rng);
-      for (let k = 0; k < 20 && taken.has(res.dex); k++) res = rollStarter(rng);
+      const fresh = res.tier.dex.filter((d) => !taken.has(d));
+      if (taken.has(res.dex) && fresh.length) res = { tier: res.tier, dex: rng.pick(fresh) };
       taken.add(res.dex);
       const cards: Card[] = [];
       for (let i = 0; i < REEL - 1; i++) {
@@ -181,7 +184,7 @@ export class RollScreen implements Screen {
       button(v, this.done ? `${i + 1}  ${r.pick.def.name}` : 'Rolling…', b.x, b.y, b.w, b.h, hover, this.done ? '#8a6cff' : '#44405a');
     });
     // The odds, each in its tier colour.
-    const odds = STARTER_TIERS.map((t) => ({ t, label: `${t.name} ${t.weight}%` }));
+    const odds = [{ t: { color: '#9f97bb' } as StarterTier, label: 'Odds per reel:' }, ...STARTER_TIERS.map((t) => ({ t, label: `${t.name} ${t.weight}%` }))];
     h.save();
     h.font = `${Math.round(12 * s * 1.3)}px BoldPixels, sans-serif`;
     const gap = 18 * s;

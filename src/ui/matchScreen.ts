@@ -270,6 +270,7 @@ export class MatchScreen implements Screen {
         } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
       else if (h?.kind === 'discard') this.discardSlot(h.index);
+      else if (h?.kind === 'held') this.say(this.match.unequip(this.match.player, h.index), 1.6);
       else if (h?.kind === 'release') {
         // First click arms it ("Release?"), a second click on it lets the Pokémon go.
         if (this.hud.releaseArmed === h.index) {

@@ -26,7 +26,7 @@ function lightenHex(hex: string): string {
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number };
 
 interface Rect {
   x: number;
@@ -111,6 +111,8 @@ export class Hud {
   /** The X on a hovered bag slot that throws its item away. */
   private discardRects: Array<Rect & { index: number }> = [];
   private releaseRects: Array<Rect & { index: number }> = [];
+  /** The held-item icons on the party cards (a click takes the item back). */
+  private heldRects: Array<Rect & { index: number }> = [];
   private chestRects: Rect[] = [];
   private snagRects: Rect[] = [];
   /** The party slot whose release X was clicked once (it turns into a confirm). */
@@ -190,6 +192,7 @@ export class Hud {
   hitTest(x: number, y: number): HudHit | null {
     for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
     for (const d of this.releaseRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'release', index: d.index };
+    for (const d of this.heldRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'held', index: d.index };
     for (let i = 0; i < this.behaviorRects.length; i++) {
       const r = this.behaviorRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'behavior', index: i };
@@ -761,6 +764,7 @@ export class Hud {
     const y0 = v.height - cardH - 16 * s;
     this.portraitRects = [];
     this.releaseRects = [];
+    this.heldRects = [];
     const first = lead(p);
     p.party.forEach((m, i) => {
       const x = x0 + i * (cardW + gap);
@@ -885,8 +889,29 @@ export class Hud {
         this.label(ctx, tag, px + 13 * s, py + 9 * s, 9, '#1a1028', 'center', '800', 26 * s);
       }
       if (m.heldItem) {
-        // The held item as a small icon on the portrait's corner.
-        this.icons.draw(ctx, m.heldItem, px + ps - 7 * s, py + ps - 7 * s, 18 * s);
+        // The held item as a small icon on the portrait's corner; hovered, a ring and a hint (click takes it back).
+        const hx = px + ps - 7 * s;
+        const hy = py + ps - 7 * s;
+        const overHeld = hit(st.mouseX, st.mouseY, hx - 11 * s, hy - 11 * s, 22 * s, 22 * s);
+        if (overHeld) {
+          ctx.fillStyle = 'rgba(255,255,255,0.28)';
+          ctx.beginPath();
+          ctx.arc(hx, hy, 12 * s, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        this.icons.draw(ctx, m.heldItem, hx, hy, 18 * s);
+        if (overHeld) {
+          // A small tooltip pill beside the icon.
+          const tip = `Take ${ITEMS[m.heldItem]?.name ?? 'item'}`;
+          ctx.font = this.font(9, '800');
+          const tw = ctx.measureText(tip).width + 12 * s;
+          ctx.fillStyle = 'rgba(20,16,36,0.92)';
+          ctx.beginPath();
+          ctx.roundRect(hx + 13 * s, hy - 9 * s, tw, 18 * s, 6 * s);
+          ctx.fill();
+          this.label(ctx, tip, hx + 19 * s, hy + 4 * s, 9, '#ffe9a8', 'left', '800');
+        }
+        this.heldRects.push({ x: hx - 11 * s, y: hy - 11 * s, w: 22 * s, h: 22 * s, index: i });
       }
       this.portraitRects.push({ x, y: y0, w: cardW, h: cardH });
       // Hovering a card (with more than one in the party): a red X in its corner releases it,

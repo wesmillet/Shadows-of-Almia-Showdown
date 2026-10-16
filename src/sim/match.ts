@@ -527,6 +527,18 @@ export class Match {
     return `${m.name} holds the ${def.name}`;
   }
 
+  /** Takes party member `index`'s held item back into the Held & TMs tab. */
+  unequip(t: Trainer, index: number): string {
+    const m = t.party[index];
+    const id = m?.heldItem;
+    if (!m || !id) return '';
+    const def = ITEMS[id];
+    if (m.mega && def?.effect === 'mega') return `${m.name} needs its ${def.name} while Mega Evolved`;
+    if (!this.giveItem(t, id)) return 'No room in your Held & TMs tab';
+    m.heldItem = null;
+    return `Took the ${def?.name ?? 'item'} from ${m.name}`;
+  }
+
   /** Teaches a TM's move to the lead in move slot `replace` (0-3). */
   teach(t: Trainer, slot: number, replace: number): string {
     const entry = t.held[slot];

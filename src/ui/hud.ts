@@ -444,7 +444,7 @@ export class Hud {
       const lvW = ctx.measureText(lvText).width;
       const nameX = px + ps + 10 * s;
       this.label(ctx, lvText, x + cardW - 10 * s, y0 + 22 * s, 11, '#cdbfff', 'right', '600');
-      this.label(ctx, m.name, nameX, y0 + 22 * s, 13, m.fainted ? '#9b8fa8' : '#ffffff', 'left', '700', x + cardW - 10 * s - lvW - 6 * s - nameX);
+      this.label(ctx, m.shiny ? `${m.name} ★` : m.name, nameX, y0 + 22 * s, 13, m.fainted ? '#9b8fa8' : m.shiny ? '#9ff3ff' : '#ffffff', 'left', '700', x + cardW - 10 * s - lvW - 6 * s - nameX);
       // HP bar
       const bx = px + ps + 10 * s;
       const by = y0 + 30 * s;
@@ -536,7 +536,7 @@ export class Hud {
 
   private drawMoves(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
-    const m = lead(match.player);
+    const m = match.actingMon;
     this.moveRects = [];
     if (!m) return;
     const cx = v.width - 128 * s;
@@ -583,6 +583,18 @@ export class Hud {
     ctx.fillRect(cx - dw / 2, dy, dw * fill, 18 * s);
     ctx.restore();
     this.label(ctx, dText, cx, dy + 13 * s, 10, '#ffffff', 'center', '800');
+    // Which mode: steering a Pokémon, or the trainer (click a Pokémon to steer it).
+    if (!match.playerDuel) {
+      const modeText = match.controlled ? `STEERING ${m.name.toUpperCase()} · ESC` : 'TRAINER · CLICK A POKÉMON';
+      ctx.font = this.font(10, '800');
+      const mw = ctx.measureText(modeText).width + 16 * s;
+      const my = dy - 22 * s;
+      ctx.fillStyle = match.controlled ? 'rgba(40,130,170,0.92)' : 'rgba(30,24,52,0.85)';
+      ctx.beginPath();
+      ctx.roundRect(Math.min(cx - mw / 2, v.width - mw - 8 * s), my, mw, 18 * s, 9 * s);
+      ctx.fill();
+      this.label(ctx, modeText, Math.min(cx, v.width - mw / 2 - 8 * s), my + 13 * s, 10, '#ffffff', 'center', '800');
+    }
     m.moves.forEach((id, i) => {
       const def = move(id);
       const [ox, oy] = offsets[i] as [number, number];

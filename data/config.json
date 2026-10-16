@@ -60,6 +60,7 @@
     "eliteChance": 0.12,
     "eliteLevels": [5, 9],
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: level alphaLevel, fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
+    "shinyChance": 0.02,
     "alphaChance": 0.07,
     "alphaRadius": 55,
     "alphaLevel": 75,

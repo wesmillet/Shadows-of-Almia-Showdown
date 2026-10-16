@@ -87,6 +87,7 @@ export function drawMon(view: View, m: Mon, alpha: number): void {
     ctx.restore();
   }
   ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
+  if (m.shiny && !m.fainted) drawSparkle(ctx, m.id, dx, dy, f.w * s, f.h * s, view.baseScale);
   if (m.flash > 0 && !m.fainted) {
     // Two-frame white flash: draw the frame again through a white tint.
     ctx.save();
@@ -314,5 +315,40 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     const p = trainerPos(t, alpha);
     if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha, match.ground);
   }
+  ctx.restore();
+}
+
+/** A shiny's glint: a four-point star that twinkles somewhere on the body every couple of seconds. */
+function drawSparkle(ctx: CanvasRenderingContext2D, id: number, x: number, y: number, w: number, h: number, scale: number): void {
+  const t = performance.now() / 1000 + id * 0.73;
+  const cycle = Math.floor(t / 1.8);
+  const ph = (t / 1.8) % 1;
+  if (ph > 0.3) return;
+  const k = Math.sin((ph / 0.3) * Math.PI);
+  // A different spot each glint, from the cycle number.
+  const rx = ((cycle * 7919 + id * 104729) % 1000) / 1000;
+  const ry = ((cycle * 3571 + id * 7727) % 1000) / 1000;
+  const cx = x + w * (0.25 + rx * 0.5);
+  const cy = y + h * (0.2 + ry * 0.45);
+  const r = (5 + 4 * k) * scale;
+  ctx.save();
+  ctx.globalAlpha = 0.9 * k;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r);
+  ctx.lineTo(cx + r * 0.22, cy - r * 0.22);
+  ctx.lineTo(cx + r, cy);
+  ctx.lineTo(cx + r * 0.22, cy + r * 0.22);
+  ctx.lineTo(cx, cy + r);
+  ctx.lineTo(cx - r * 0.22, cy + r * 0.22);
+  ctx.lineTo(cx - r, cy);
+  ctx.lineTo(cx - r * 0.22, cy - r * 0.22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.5 * k;
+  ctx.fillStyle = '#bff6ff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }

@@ -4,6 +4,7 @@
  */
 import type { Dir8 } from '../core/math';
 import { Assets, imagePixels, warnOnce } from './assets';
+import shinyJson from '../../data/shiny.json';
 
 /**
  * Sprite sets by dex number, loaded on demand through a small queue so the
@@ -36,17 +37,29 @@ export class SpriteRegistry {
     return this.sets.get(dex)?.loaded ?? false;
   }
 
-  /** The sprite set for a species, starting an urgent load when it has not been asked for yet. */
-  get(dex: string): PokemonSprites {
-    void this.request(dex, true);
-    return this.sets.get(dex) as PokemonSprites;
+  /**
+   * The sprite set for a species, starting an urgent load when it has not been asked for yet.
+   * `shiny` recolours the species' sheets with its shiny palette (data/shiny.json).
+   */
+  get(dex: string, shiny = false): PokemonSprites {
+    const pal = shiny ? SHINY[dex] : undefined;
+    const key = pal ? `${dex}*` : dex;
+    void this.request(key, true);
+    return this.sets.get(key) as PokemonSprites;
   }
 
-  private request(dex: string, urgent: boolean): Promise<void> {
-    let s = this.sets.get(dex);
+  /** True when a species has a shiny palette. */
+  static hasShiny(dex: string): boolean {
+    return !!SHINY[dex];
+  }
+
+  private request(key: string, urgent: boolean): Promise<void> {
+    let s = this.sets.get(key);
     if (!s) {
-      s = PokemonSprites.create(this.assets, dex);
-      this.sets.set(dex, s);
+      const shiny = key.endsWith('*');
+      const dex = shiny ? key.slice(0, -1) : key;
+      s = PokemonSprites.create(this.assets, dex, shiny ? SHINY[dex] : undefined);
+      this.sets.set(key, s);
     }
     const set = s;
     if (set.state === 'idle') {
@@ -100,7 +113,7 @@ const FALLBACKS: Record<string, string[]> = {
 };
 
 interface Sheet {
-  anim: HTMLImageElement | null;
+  anim: HTMLImageElement | HTMLCanvasElement | null;
   /** The Shadow sheet baked to a dark, translucent drop shadow for this folder's ShadowSize. */
   shadow: HTMLCanvasElement | null;
   /** Raw Shadow sheet pixels, for finding each frame's ground point. */
@@ -148,7 +161,7 @@ export interface FrameRect {
 export class PokemonSprites {
   readonly sheets = new Map<string, Sheet>();
   readonly pending = new Map<string, Promise<void>>();
-  portrait: HTMLImageElement | null = null;
+  portrait: HTMLImageElement | HTMLCanvasElement | null = null;
   data: AnimData | null = null;
   /** idle: not asked for; queued: waiting or loading; the `ready` promise settles once Idle can be drawn. */
   state: 'idle' | 'queued' = 'idle';
@@ -158,13 +171,13 @@ export class PokemonSprites {
   readonly ready: Promise<void>;
   private markReady!: () => void;
 
-  private constructor(readonly dex: string, private readonly assets: Assets) {
+  private constructor(readonly dex: string, private readonly assets: Assets, readonly palette?: ShinyPalette) {
     this.ready = new Promise((res) => (this.markReady = res));
   }
 
-  /** An empty set that fills in as its sheets load. */
-  static create(assets: Assets, dex: string): PokemonSprites {
-    return new PokemonSprites(dex, assets);
+  /** An empty set that fills in as its sheets load (recoloured when a shiny palette is given). */
+  static create(assets: Assets, dex: string, palette?: ShinyPalette): PokemonSprites {
+    return new PokemonSprites(dex, assets, palette);
   }
 
   /** AnimData, the Idle sheet and the portrait: enough to draw the Pokémon standing. */
@@ -180,7 +193,7 @@ export class PokemonSprites {
       } else warnOnce(`pokemon/${this.dex}#missing`, `no sprite folder for pokemon/${this.dex} (drawing placeholders)`);
       await Promise.all([
         this.ensureSheet('Idle'),
-        this.assets.loadImage(`portraits/${this.dex}/Normal.png`).then((img) => (this.portrait = img)),
+        this.assets.loadImage(`portraits/${this.dex}/Normal.png`).then((img) => (this.portrait = img && this.palette?.portrait ? recolor(img, this.palette.portrait) : img)),
       ]);
     } finally {
       this.loaded = true;
@@ -211,7 +224,7 @@ export class PokemonSprites {
         table = decodeOffsets(imagePixels(offsets), offsets.naturalWidth, offsets.naturalHeight, def.frameWidth, def.frameHeight);
       }
       this.sheets.set(name, {
-        anim,
+        anim: anim && this.palette ? recolor(anim, this.palette.sprite) : anim,
         shadow: shadow ? bakeShadow(shadow, this.data?.shadowSize ?? 1) : null,
         ground: shadow ? { px: imagePixels(shadow), w: shadow.naturalWidth, h: shadow.naturalHeight } : null,
         offsets: table,
@@ -268,8 +281,8 @@ export class PokemonSprites {
       const ph = this.assets.placeholder(`#${this.dex} ${action}`, 32, 32);
       return { image: ph, sx: 0, sy: 0, w: 32, h: 32, placeholder: true };
     }
-    const cols = Math.max(1, Math.floor(img.naturalWidth / def.frameWidth));
-    const rows = Math.max(1, Math.floor(img.naturalHeight / def.frameHeight));
+    const cols = Math.max(1, Math.floor(img.width / def.frameWidth));
+    const rows = Math.max(1, Math.floor(img.height / def.frameHeight));
     const c = Math.min(index, cols - 1);
     const r = Math.min(dir, rows - 1);
     return { image: img, sx: c * def.frameWidth, sy: r * def.frameHeight, w: def.frameWidth, h: def.frameHeight, placeholder: false };
@@ -327,12 +340,37 @@ export class PokemonSprites {
 
   /** The HUD portrait: the SpriteCollab portrait, else the first Idle frame facing down. */
   portraitSource(): FrameRect {
-    if (this.portrait) return { image: this.portrait, sx: 0, sy: 0, w: this.portrait.naturalWidth, h: this.portrait.naturalHeight, placeholder: false };
+    if (this.portrait) return { image: this.portrait, sx: 0, sy: 0, w: this.portrait.width, h: this.portrait.height, placeholder: false };
     if (this.has('Idle')) return this.frame('Idle', 0, 0);
     if (!this.loaded) return { image: blankCanvas(), sx: 0, sy: 0, w: 1, h: 1, placeholder: true };
     const ph = this.assets.placeholder(`#${this.dex}`, 40, 40);
     return { image: ph, sx: 0, sy: 0, w: 40, h: 40, placeholder: true };
   }
+}
+
+export type ShinyPalette = { sprite: Array<[number, number]>; portrait?: Array<[number, number]> };
+const SHINY = shinyJson as unknown as Record<string, ShinyPalette>;
+
+/** A copy of an image with its colours swapped (0xRRGGBB pairs); alpha is kept. */
+function recolor(img: HTMLImageElement, pairs: Array<[number, number]>): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  g.drawImage(img, 0, 0);
+  const map = new Map<number, number>(pairs);
+  const data = g.getImageData(0, 0, c.width, c.height);
+  const px = data.data;
+  for (let i = 0; i < px.length; i += 4) {
+    if ((px[i + 3] ?? 0) === 0) continue;
+    const to = map.get(((px[i] ?? 0) << 16) | ((px[i + 1] ?? 0) << 8) | (px[i + 2] ?? 0));
+    if (to === undefined) continue;
+    px[i] = (to >> 16) & 255;
+    px[i + 1] = (to >> 8) & 255;
+    px[i + 2] = to & 255;
+  }
+  g.putImageData(data, 0, 0);
+  return c;
 }
 
 let blank: HTMLCanvasElement | null = null;

@@ -96,6 +96,10 @@ export interface Mon {
   elite?: boolean;
   /** An Alpha: a huge, fully evolved level-75 wild near the Shadow Crystal. */
   alpha?: boolean;
+  /** A shiny: its sheets recoloured with the species' shiny palette. Kept through evolution. */
+  shiny?: boolean;
+  /** Steered by the player (Pokémon mode): the party logic leaves it alone. */
+  steered?: boolean;
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
   /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */

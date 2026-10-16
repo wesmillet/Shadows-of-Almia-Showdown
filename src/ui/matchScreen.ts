@@ -4,7 +4,7 @@
  * pass and the HUD on top.
  */
 import type { Input } from '../core/input';
-import { clamp, dirFromVector } from '../core/math';
+import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
@@ -169,6 +169,22 @@ export class MatchScreen implements Screen {
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind !== 'release') this.hud.releaseArmed = -1;
+      if (!h && !this.match.playerDuel && c.button === 0) {
+        // Pokémon mode: click one of your Pokémon out on the field to steer it; click your
+        // trainer (or press Esc) to go back.
+        const own = this.ownMonNear(c.x, c.y);
+        if (own && own !== this.match.controlled && this.match.takeControl(own)) {
+          this.say(`Pokémon mode: you steer ${own.name}. It attacks the way it faces. Esc or click your trainer to go back`, 2.6);
+          this.holdBlocked = true;
+          continue;
+        }
+        if (this.match.controlled && this.trainerNear(c.x, c.y)) {
+          this.match.releaseControl();
+          this.say('Trainer mode', 1);
+          this.holdBlocked = true;
+          continue;
+        }
+      }
       if (!h && !this.match.playerDuel) {
         // A click on a wild Pokémon makes it the ball's target (the click still casts move 1 at it).
         const w = this.wildNear(c.x, c.y);
@@ -233,8 +249,14 @@ export class MatchScreen implements Screen {
       this.match.auto = !this.match.auto;
       this.say(this.match.auto ? 'Auto-battle on: your lead picks its own moves' : 'Auto-battle off: you pick the moves', 1.6);
     }
-    // Holding a mouse button on the field keeps casting that move as it comes off cooldown.
-    if (!overHud && !duelSide?.awaitingPick) {
+    if (input.pressed('Escape') && this.match.controlled) {
+      this.match.releaseControl();
+      this.say('Trainer mode', 1);
+    }
+    // Holding a mouse button on the field keeps casting that move as it comes off cooldown
+    // (not the click that switched modes).
+    if (this.holdBlocked && !input.mouseDown) this.holdBlocked = false;
+    if (!overHud && !duelSide?.awaitingPick && !this.holdBlocked) {
       if (input.mouseDown) this.match.playerCast(0);
       if (input.rightDown) this.match.playerCast(1);
     }
@@ -305,6 +327,33 @@ export class MatchScreen implements Screen {
   }
 
   /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
+  /** Set by the click that switched modes, until the button comes up. */
+  private holdBlocked = false;
+
+  /** The player's own Pokémon out on the field under (or nearest) a screen point. */
+  private ownMonNear(sx: number, sy: number): Mon | null {
+    const w = this.ctx.view.toWorld(sx, sy);
+    let best: Mon | null = null;
+    let bd = Infinity;
+    for (const m of this.match.player.party) {
+      if (m.fainted || m.stowed || m.captured || m.visual.alpha < 0.5) continue;
+      const hTiles = (m.species.body[1] * monScale(m)) / 16;
+      const d = Math.hypot(w.x - m.x, w.y - (m.y - hTiles / 2));
+      if (d < Math.max(1.1, hTiles * 0.7) && d < bd) {
+        bd = d;
+        best = m;
+      }
+    }
+    return best;
+  }
+
+  /** True when a screen point is on the player's trainer. */
+  private trainerNear(sx: number, sy: number): boolean {
+    const w = this.ctx.view.toWorld(sx, sy);
+    const p = this.match.player;
+    return Math.hypot(w.x - p.x, w.y - (p.y - 0.8)) < 1.1;
+  }
+
   private wildNear(sx: number, sy: number): Mon | null {
     const w = this.ctx.view.toWorld(sx, sy);
     let best: Mon | null = null;
@@ -499,52 +548,39 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /** The aim: a dotted line from the lead toward the cursor and a small reticle where a single-target move would land. */
+  /**
+   * Pokémon mode: a ring under the steered Pokémon and a chevron the way it faces (where its
+   * moves go). Trainer mode draws no aim at all.
+   */
   private drawAim(v: View): void {
-    // In a battle the steered Pokémon attacks the way it faces: no cursor reticle.
-    if (!this.showHud || this.match.playerDuel) return;
-    const m = lead(this.match.player);
-    if (!m || m.fainted) return;
-    const snap = this.match.aimSnap();
-    const a = snap ? { x: snap.x, y: snap.y } : this.match.aim;
-    if (!a) return;
-    const range = 3.5 * CONFIG.battle.rangeScale;
-    let dx = a.x - m.x;
-    let dy = a.y - m.y;
-    const d = Math.hypot(dx, dy);
-    if (d < 0.05) return;
-    const k = Math.min(1, range / d);
+    const m = this.match.controlled;
+    if (!this.showHud || !m || this.match.playerDuel) return;
     const ctx = v.ctx;
     const s = v.baseScale;
-    const ox = v.toScreenX(m.x);
-    const oy = v.toScreenY(m.y);
+    const x = v.toScreenX(m.x);
+    const y = v.toScreenY(m.y);
+    const r = Math.max(0.55, bodyRadius(m.species) * 1.2) * v.pxPerTile;
+    const f = DIR_VECTORS[m.dir] as { x: number; y: number };
+    const fl = Math.hypot(f.x, f.y) || 1;
+    const ux = f.x / fl;
+    const uy = f.y / fl;
     ctx.save();
-    dx *= k;
-    dy *= k;
-    const tx = v.toScreenX(m.x + dx);
-    const ty = v.toScreenY(m.y + dy);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = Math.max(1.5, 2 * s);
-    ctx.setLineDash([6 * s, 7 * s]);
-    ctx.beginPath();
-    ctx.moveTo(ox + (tx - ox) * (0.6 / (d * k)), oy + (ty - oy) * (0.6 / (d * k)));
-    ctx.lineTo(tx, ty);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Reticle: the single-target hit circle, with four ticks.
-    // White when aiming at open ground, red when snapped onto an enemy, orange when out of reach.
-    const r = 0.65 * CONFIG.battle.rangeScale * v.pxPerTile;
-    ctx.strokeStyle = k < 1 ? 'rgba(255,190,120,0.8)' : snap ? 'rgba(255,90,110,0.95)' : 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = 'rgba(125,220,255,0.85)';
     ctx.lineWidth = Math.max(2, 2.5 * s);
     ctx.beginPath();
-    ctx.arc(tx, ty, r, 0, Math.PI * 2);
+    ctx.ellipse(x, y, r, r * 0.5, 0, 0, Math.PI * 2);
     ctx.stroke();
+    // The chevron sits just past the ring, on the ground.
+    const cx = x + ux * (r + 0.45 * v.pxPerTile);
+    const cy = y + uy * (r * 0.5 + 0.3 * v.pxPerTile);
+    const k = 0.32 * v.pxPerTile;
+    ctx.fillStyle = 'rgba(125,220,255,0.9)';
     ctx.beginPath();
-    for (const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      ctx.moveTo(tx + ux * r * 0.55, ty + uy * r * 0.55);
-      ctx.lineTo(tx + ux * r * 1.15, ty + uy * r * 1.15);
-    }
-    ctx.stroke();
+    ctx.moveTo(cx + ux * k, cy + uy * k * 0.6);
+    ctx.lineTo(cx - ux * k * 0.4 - uy * k * 0.8, cy - uy * k * 0.25 + ux * k * 0.5);
+    ctx.lineTo(cx - ux * k * 0.4 + uy * k * 0.8, cy - uy * k * 0.25 - ux * k * 0.5);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
@@ -1434,9 +1470,14 @@ export class MatchScreen implements Screen {
     let fx = p.px + (p.x - p.px) * alpha;
     let fy = p.py + (p.y - p.py) * alpha;
     const focus = this.cameraFocus();
+    const steered = this.match.controlled;
     if (focus) {
       fx = focus.x;
       fy = focus.y;
+    } else if (steered && !fighting) {
+      // Pokémon mode: the camera rides with the steered Pokémon.
+      fx = steered.px + (steered.x - steered.px) * alpha;
+      fy = steered.py + (steered.y - steered.py) * alpha;
     } else if (duel && fighting) {
       const ma = duel.a.mon;
       const mb = duel.b.mon;
@@ -1579,8 +1620,9 @@ export class MatchScreen implements Screen {
         drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
         continue;
       }
-      const label = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.elite ? '#ffd36b' : '#fff');
+      const base = m.boss ? `${m.name} ★` : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
+      const label = m.shiny ? `Shiny ${base}` : base;
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff');
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

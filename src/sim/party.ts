@@ -160,7 +160,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
   const c = CONFIG.party;
   let slot = 0;
   for (const m of t.party) {
-    if (!w.active(m) || incapable(m)) continue;
+    if (!w.active(m) || incapable(m) || m.steered) continue;
     if (m.casting) {
       m.anim.dir = m.dir;
       continue;

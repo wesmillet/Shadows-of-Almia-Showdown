@@ -7,11 +7,11 @@ import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Input } from '../core/input';
 import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
-import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
+import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
@@ -45,6 +45,9 @@ export type MatchOutcome = null | 'win' | 'loss';
 let nextId = 1;
 
 /** One side of a one-on-one trainer battle. */
+/** What the Castle Champion can hand over as a shiny prize. */
+const CHAMPION_SHINIES = ['0448', '0445', '0130', '0149', '0373', '0376', '0248', '0635', '0887', '0706', '0143'];
+
 export interface DuelSide {
   trainer: Trainer;
   /** The Pokémon out on the field, or null between Pokémon. */
@@ -487,7 +490,7 @@ export class Match {
         return '';
       }
       case 'styler': {
-        if (activeParty(t).length >= this.partyCap) return `Party is full (${this.partyCap})`;
+        if (t.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card to make room`;
         let best: Mon | null = null;
         let bd = 3.5;
         for (const o of this.allTrainers) {
@@ -532,8 +535,8 @@ export class Match {
     const entry = t.items[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
     if (!entry || !def || def.kind !== 'ball') return false;
-    if (activeParty(t).length >= this.partyCap) {
-      this.battle.events.push({ type: 'notice', text: `Party is full (${this.partyCap})` });
+    if (t.party.length >= this.partyCap) {
+      this.battle.events.push({ type: 'notice', text: `Your party is full (${this.partyCap}). Release one from its card to make room`, seconds: 2.4 });
       return false;
     }
     this.takeItem(t, slot);
@@ -652,7 +655,13 @@ export class Match {
   pickUp(): boolean {
     const it = this.nearestItem();
     if (!it) return false;
-    if (!this.openBall(this.player, this.items.indexOf(it))) this.battle.events.push({ type: 'notice', text: 'Bag is full', seconds: 1 });
+    if (!this.openBall(this.player, this.items.indexOf(it))) {
+      // Held items and TMs go to their own tab, so say which one is out of room.
+      const gear = (it.contents ?? []).every((c) => isGear(c.id));
+      this.battle.events.push({ type: 'notice', text: gear ? 'The Held & TMs tab is full (G to look, the red X throws one away)' : 'The bag is full (the red X on a slot throws it away)', seconds: 2.2 });
+    } else if (it.contents?.length && this.items.includes(it)) {
+      this.battle.events.push({ type: 'notice', text: 'Some of it did not fit; the rest is still in the ball', seconds: 1.8 });
+    }
     return true;
   }
 
@@ -1013,10 +1022,10 @@ export class Match {
     };
   }
 
-  makeMon(dex: string, level: number, owner: Trainer | null, x: number, y: number): Mon {
+  makeMon(dex: string, level: number, owner: Trainer | null, x: number, y: number, shiny = false): Mon {
     const sp = species(dex);
     const stats = statsAtLevel(sp.stats, level);
-    const sprites = this.sprites.get(dex);
+    const sprites = this.sprites.get(dex, shiny);
     const moves = movesAt(sp, level);
     return {
       id: nextId++, dex, species: sp, name: sp.name, level, hp: stats.hp, maxHp: stats.hp, stats,
@@ -1027,6 +1036,7 @@ export class Match {
       heldItem: null, busy: 0, casting: null, target: null, captured: false,
       behavior: owner ? (owner.party.length === 0 ? 'aggressive' : 'guard') : 'guard', xp: 0, wander: null, wanderPause: 0,
       roamTarget: null, recall: false, sinceHit: 999, visual: { scale: 1, alpha: 1, flash: 0 }, evolving: null,
+      shiny: shiny && SpriteRegistry.hasShiny(dex),
     };
   }
 
@@ -1092,7 +1102,9 @@ export class Match {
         level = Math.min(100, level);
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
         const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
-        const mon = this.makeMon(dex, level, null, spot.x, spot.y);
+        // Now and then a shiny (Alphas a little more often).
+        const shiny = this.rng.chance(alpha ? w.shinyChance * 4 : w.shinyChance);
+        const mon = this.makeMon(dex, level, null, spot.x, spot.y, shiny);
         if (elite) mon.elite = true;
         if (alpha) mon.alpha = true;
         mon.dir = this.rng.int(0, 7) as Dir8;
@@ -1296,25 +1308,31 @@ export class Match {
    */
   playerCast(slot: number): 'cast' | 'cooldown' | 'no-lead' | 'asleep' | 'busy' {
     const p = this.player;
-    const m = lead(p);
+    const m = this.actingMon;
     if (!m) return 'no-lead';
     if (incapable(m)) return 'asleep';
     if (m.casting) return 'busy';
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     let a: { x: number; y: number };
     const duel = this.playerDuel;
-    if (duel) {
-      // Steering your Pokémon in a battle: it attacks the way it faces. If the opponent is
-      // roughly ahead (within 40 degrees), the move goes at it.
+    if (duel || this.controlled === m) {
+      // Steering a Pokémon (a battle, or Pokémon mode): it attacks the way it faces. If an enemy
+      // is roughly ahead (within 40 degrees) and in reach, the move goes at the nearest such one.
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
-      const foe = (duel.a.trainer === p ? duel.b : duel.a).mon;
-      a = { x: m.x + f.x * 3, y: m.y + f.y * 3 };
-      if (foe && BattleSystem.active(foe)) {
+      const fn = Math.hypot(f.x, f.y) || 1;
+      a = { x: m.x + (f.x / fn) * 3, y: m.y + (f.y / fn) * 3 };
+      const foes = duel ? [(duel.a.trainer === p ? duel.b : duel.a).mon] : [...this.mons()].filter((c) => c !== m && !c.npc && this.battle.isEnemy(m, c));
+      let best = Infinity;
+      for (const foe of foes) {
+        if (!foe || !BattleSystem.active(foe)) continue;
         const dx = foe.x - m.x;
         const dy = foe.y - m.y;
         const d = Math.hypot(dx, dy) || 1;
-        const fn = Math.hypot(f.x, f.y) || 1;
-        if ((dx * f.x + dy * f.y) / (d * fn) > Math.cos((40 * Math.PI) / 180)) a = { x: foe.x, y: foe.y };
+        if (d > 6 || d >= best) continue;
+        if ((dx * f.x + dy * f.y) / (d * fn) > Math.cos((40 * Math.PI) / 180)) {
+          best = d;
+          a = { x: foe.x, y: foe.y };
+        }
       }
     } else {
       const f = DIR_VECTORS[p.dir] as { x: number; y: number };
@@ -1328,7 +1346,7 @@ export class Match {
 
   /** Dodge: the lead dashes the way the player is moving (or the trainer faces), briefly untouchable. */
   playerDodge(): 'ok' | 'cooldown' | 'none' {
-    const m = lead(this.player);
+    const m = this.actingMon;
     if (!m || incapable(m)) return 'none';
     if ((m.dodgeCd ?? 0) > 0 || m.dodge) return 'cooldown';
     let dx = this.moveX;
@@ -1372,7 +1390,7 @@ export class Match {
   /** Auto-battle for the player's lead: the best ready move at the nearest enemy in reach. */
   private stepAutoLead(dt: number): void {
     if (!this.auto) return;
-    const m = lead(this.player);
+    const m = this.actingMon;
     if (!m || m.casting || incapable(m)) return;
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
@@ -1420,6 +1438,40 @@ export class Match {
       m.y = y;
     }
     if (k >= 1 || m.fainted || incapable(m)) m.leap = null;
+  }
+
+  /**
+   * Pokémon mode: the player has taken direct control of one of their Pokémon out on the field.
+   * The movement keys steer it, its moves fire the way it faces, and the trainer follows a few
+   * steps behind. Null in trainer mode.
+   */
+  controlled: Mon | null = null;
+
+  /** Takes control of a party Pokémon out on the field (Pokémon mode). */
+  takeControl(m: Mon): boolean {
+    const p = this.player;
+    if (p.duelId || m.owner !== p || m.stowed || m.fainted || m.captured || isRoaming(m)) return false;
+    if (this.controlled) this.controlled.steered = false;
+    this.controlled = m;
+    m.steered = true;
+    m.target = null;
+    return true;
+  }
+
+  /** Back to the trainer (trainer mode). */
+  releaseControl(): void {
+    const m = this.controlled;
+    this.controlled = null;
+    if (m) m.steered = false;
+    if (m && m.moving) {
+      m.moving = false;
+      m.anim.play('Idle');
+    }
+  }
+
+  /** The Pokémon the player's move keys act for: the controlled one, else the lead. */
+  get actingMon(): Mon | null {
+    return this.controlled ?? lead(this.player);
   }
 
   /**
@@ -1554,7 +1606,7 @@ export class Match {
         if (!e.swapped && e.t >= EVOLVE_SWAP) {
           e.swapped = true;
           const from = m.name;
-          applyEvolution(m, species(e.to), this.sprites.get(e.to));
+          applyEvolution(m, species(e.to), this.sprites.get(e.to, !!m.shiny));
           this.battle.events.push({ type: 'evolved', mon: m, from });
         }
         if (e.t >= EVOLVE_SECONDS) m.evolving = null;
@@ -1569,6 +1621,24 @@ export class Match {
     let moved = 0;
     // In a one-on-one battle the trainer stands back; the movement keys steer the Pokémon instead.
     if (p.duelId) {
+      if (this.controlled) this.releaseControl();
+      p.stats.timeSurvived = this.time;
+      return;
+    }
+    const c = this.controlled;
+    if (c && (c.fainted || c.stowed || c.captured || c.owner !== p || isRoaming(c))) this.releaseControl();
+    if (this.controlled) {
+      // Pokémon mode: the keys steer the Pokémon; the trainer keeps a few steps behind it.
+      const m = this.controlled;
+      this.stepDuelPlayerMon(m, dt);
+      const d = Math.hypot(m.x - p.x, m.y - p.y);
+      if (d > 3.2) {
+        const dir = this.nav.dir(p.x, p.y, m.x, m.y) ?? { x: (m.x - p.x) / d, y: (m.y - p.y) / d };
+        moved = tryMove(this.ground, p, dir.x * speed * dt, dir.y * speed * dt, CONFIG.player.radius);
+        p.dir = dirFromVector(dir.x, dir.y, p.dir);
+      }
+      this.separate(p);
+      this.afterTrainerMove(p, moved);
       p.stats.timeSurvived = this.time;
       return;
     }
@@ -1809,7 +1879,17 @@ export class Match {
       const spill: InventorySlot[] = [];
       for (const [id, n] of r.items) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
       if (spill.length) this.placeBall('cherish', spill, c.foe.x, c.foe.y + 1);
-      this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money} and his prizes`, seconds: 3.5 });
+      // The champion's trophy: a shiny Pokémon at your best level.
+      const pool = CHAMPION_SHINIES.filter((d) => SPECIES.has(d) && SpriteRegistry.hasShiny(d));
+      let prize = '';
+      if (pool.length && this.player.party.length < this.partyCap) {
+        const best = Math.max(...this.player.party.map((x) => x.level));
+        const mon = this.makeMon(pool[this.rng.int(0, pool.length - 1)] as string, best, this.player, this.player.x + 0.8, this.player.y + 0.5, true);
+        mon.stowed = true;
+        this.player.party.push(mon);
+        prize = ` and a shiny ${mon.name}`;
+      } else if (pool.length) prize = ' (no room in your party for his shiny Pokémon)';
+      this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money}, his items${prize}`, seconds: 4 });
     }
     const rivals = this.trainers.filter((t) => !t.challenger && !t.visitor);
     if (!this.player.alive) this.outcome = 'loss';

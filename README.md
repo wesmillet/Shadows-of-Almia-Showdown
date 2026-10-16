@@ -126,6 +126,12 @@ by the last circle. The partner out beside the dealer takes half, Pokémon in
 their balls 40%, and a catch gives the lead three quarters of a
 knockout. About one wild Pokémon in eight is an **Elite** (gold name): 5-9
 levels higher, often already evolved, worth 1.6x XP; land bosses pay 3x.
+About one wild Pokémon in fifty is **shiny** (four times that for Alphas):
+real shiny colours from SpriteCollab, a light-blue "Shiny" name and a glint
+that twinkles on its body; it stays shiny when caught and when it evolves.
+The shiny colours are stored as palette swaps in `data/shiny.json`
+(`scripts/shiny-palettes.py` reads each species' normal and shiny Idle sheet
+and portrait from SpriteCollab), so no second copy of the sheets ships.
 Wild levels climb toward the Shadow Crystal: base levels at the coast, the
 30s to about 60 in the middle (mostly evolved). Within 55 tiles of the crystal
 about one wild in fourteen is an **Alpha** (red name and glow, drawn bigger):
@@ -154,11 +160,12 @@ impact on the body, at most one aftershock.
 | WASD / arrows | move, 8 directions, 4 tiles/s; the party steers around you in formation |
 | mouse | aim: a reticle marks where a single-target move lands (up to 5.6 tiles out). Within 1.6 tiles of an enemy it snaps onto it (red) and the move goes where that Pokémon stands; nothing tracks it after the cast, so it can still step out |
 | left click / right click on the field | cast move 1 / move 2 at the aim point (hold a mouse button to keep casting as the move comes off cooldown); Q/E, 1-2 and clicking the move buttons work too. 0.3 s cast, telegraph on the ground, 1.5-6 s cooldowns; lines and cones fire toward the aim |
+| click one of your Pokémon on the field | **Pokémon mode**: you steer that Pokémon with the movement keys and its moves (mouse buttons, Q/E, 1-2) fire the way it faces, at the nearest enemy roughly ahead within 6 tiles; a ring and an arrow mark it, the camera rides with it and your trainer follows a few steps behind. Esc, or a click on your trainer, goes back to trainer mode (which shows no aim at all) |
 | R | auto-battle on or off (on at the start): the lead picks its own moves and targets while you steer, including in one-on-one battles; you can still cast by hand |
 | Shift+1-6, or click the bag | use an item; a ball's key arms it, and the armed ball's key again cycles to the next ball type |
 | G, or click the tabs above the bag | switch between the Bag and the Held & TMs tab |
 | Shift+1-6 on the Held & TMs tab | give the lead a held item, or teach it a TM (pick the move to replace with 1-2, Esc to keep them) |
-| Space beside a person | talk: a vendor opens the stall (1-9 buys, Space or Esc leaves; Poké Dollars come from knockouts), a healer restores the party, the Castle Champion takes your challenge (a friendly bout; beat his team for ₽3000 and prizes) |
+| Space beside a person | talk: a vendor opens the stall (1-9 buys, Space or Esc leaves; Poké Dollars come from knockouts), a healer restores the party, the Castle Champion takes your challenge (a friendly bout; beat his team for ₽3000, items and a shiny Pokémon at your best level) |
 | Space beside an item ball | pick it up: a popup reveals the contents |
 | Space with nothing in reach | dodge: your lead dashes the way you move (or face); hits in the first 0.3 s miss; 3 s cooldown (the pill above the move wheel) |
 | hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |

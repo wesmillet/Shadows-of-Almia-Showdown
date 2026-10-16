@@ -13,7 +13,7 @@ import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, drawScale, monScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
-import type { DuelSide, Match } from '../sim/match';
+import { Match, type DuelSide } from '../sim/match';
 import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
@@ -120,6 +120,7 @@ export class MatchScreen implements Screen {
     this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard']);
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
+    void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
     ctx.view.snapTo(match.player.x, match.player.y);
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
@@ -352,6 +353,8 @@ export class MatchScreen implements Screen {
   /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
   /** The Alpha mark (assets/ui/alpha.png), shown by an Alpha's name. */
   private alphaBadge: HTMLImageElement | null = null;
+  /** Darkrai's portal: three 36x50 frames (closed slit, half open, open). */
+  private portalSheet: HTMLImageElement | null = null;
 
   /** Set by the click that switched modes, until the button comes up. */
   private holdBlocked = false;
@@ -615,6 +618,36 @@ export class MatchScreen implements Screen {
       ctx.setLineDash([]);
       drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
     }
+    ctx.restore();
+  }
+
+  /** Darkrai's entrance portal, standing upright behind it: slit, half open, open, held, then closing. */
+  private drawDarkraiPortal(v: View, now: number): void {
+    const po = this.match.darkraiPortal;
+    const img = this.portalSheet;
+    if (!po || !img) return;
+    const T = Match.PORTAL_SECONDS;
+    const tt = po.t;
+    // Frame by time: open 0-0.9 s, hold, close over the last 0.8 s.
+    let frame = 2;
+    if (tt < 0.3) frame = 0;
+    else if (tt < 0.6) frame = 1;
+    else if (tt > T - 0.3) frame = 0;
+    else if (tt > T - 0.6) frame = 1;
+    const fade = tt > T - 0.3 ? Math.max(0, (T - tt) / 0.3) : 1;
+    const scale = v.spriteScale * 1.4;
+    const fw = 36;
+    const fh = 50;
+    const x = Math.round(v.toScreenX(po.x) - (fw * scale) / 2);
+    // Bottom of the open portal a little above the ground, so Darkrai seems to float out of it.
+    const y = Math.round(v.toScreenY(po.y) - fh * scale * 0.9 + Math.sin(now * 2) * 2);
+    const ctx = v.ctx;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = fade;
+    ctx.shadowColor = 'rgba(160,90,220,0.8)';
+    ctx.shadowBlur = 18 * v.baseScale;
+    ctx.drawImage(img, frame * fw, 0, fw, fh, x, y, fw * scale, fh * scale);
     ctx.restore();
   }
 
@@ -1027,7 +1060,11 @@ export class MatchScreen implements Screen {
     const targets: Array<{ x: number; y: number; mon: Mon | null }> = hits.length
       ? hits.map((h) => ({ x: h.x, y: h.y, mon: h }))
       : [{ x: area.tx, y: area.ty, mon: null }];
-    const focus = hits[0] ? { x: hits[0].x, y: hits[0].y } : { x: area.fx, y: area.fy };
+    // With no one hit, a beam runs to the end of its reach along the aim (fx, fy is a direction,
+    // not a point: aiming at it sent beams off toward the map's corner).
+    const reach = area.shape === 'line' ? 3.4 * R() : area.shape === 'cone' ? 2.9 * R() : 0;
+    const focus = hits[0] ? { x: hits[0].x, y: hits[0].y }
+      : reach ? { x: area.ox + area.fx * reach, y: area.oy + area.fy * reach } : { x: area.tx, y: area.ty };
     const playAt = (part: FxPart, t: { x: number; y: number; mon: Mon | null }, onBody: boolean): void => {
       const sheet = this.fx.sheet(part.id);
       if (!sheet) return;
@@ -1510,6 +1547,8 @@ export class MatchScreen implements Screen {
     list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
     const po = this.match.visitors.portal;
     if (po) list.push({ y: po.y - 0.1, draw: () => this.drawPortal(v, po) });
+    const dp = this.match.darkraiPortal;
+    if (dp) list.push({ y: dp.y - 0.05, draw: () => this.drawDarkraiPortal(v, performance.now() / 1000) });
     return list;
   }
 

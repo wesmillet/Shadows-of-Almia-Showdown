@@ -30,7 +30,7 @@ export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'passive']
 export const BEHAVIOR_LABEL: Record<Behavior, string> = {
   aggressive: 'Attack',
   guard: 'Guard',
-  passive: 'Follow',
+  passive: 'Passive',
   hold: 'Hold',
   roam: 'Roam',
   'roam-aggressive': 'Roam (Aggr.)',

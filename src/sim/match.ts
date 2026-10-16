@@ -1450,7 +1450,8 @@ export class Match {
   private stepAutoLead(dt: number): void {
     if (!this.auto) return;
     const m = this.actingMon;
-    if (!m || m.casting || incapable(m)) return;
+    // A Pokémon set to Passive never picks fights, auto-battle or not (you can still fire its moves yourself).
+    if (!m || m.casting || incapable(m) || m.behavior === 'passive') return;
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
@@ -1675,6 +1676,7 @@ export class Match {
     this.stepOutposts(dt);
     this.stepThrows(dt);
     this.stepDarkness(dt);
+    this.stepDarkraiPortal(dt);
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     for (const m of this.mons()) {
       this.stepSlam(m, dt);
@@ -2121,12 +2123,31 @@ export class Match {
 
   private spawnDarkrai(): void {
     // When the darkness has closed on the crystal, Darkrai comes out at level 100.
-    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY - 0.6);
+    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY + 1.6);
     d.boss = true;
     d.wild = false;
     d.maxHp = d.hp = d.stats.hp * CONFIG.battle.bossHpMultiplier;
-    d.busy = 2.5;
+    // It steps out of a dark portal (assets/fx/darkrai_portal.png): hidden until the portal is open.
+    d.busy = 3;
+    d.visual.alpha = 0;
     this.darkrai = d;
+    this.darkraiPortal = { x: d.x, y: d.y, t: 0 };
+  }
+
+  /** Darkrai's portal: opens (line, small, full) over 0.9 s, Darkrai fades out of it, then it closes. */
+  darkraiPortal: { x: number; y: number; t: number } | null = null;
+  static readonly PORTAL_SECONDS = 3.6;
+
+  private stepDarkraiPortal(dt: number): void {
+    const po = this.darkraiPortal;
+    if (!po) return;
+    po.t += dt;
+    const d = this.darkrai;
+    if (d && !d.fainted) d.visual.alpha = Math.max(0, Math.min(1, (po.t - 1.0) / 0.7));
+    if (po.t >= Match.PORTAL_SECONDS) {
+      if (d) d.visual.alpha = 1;
+      this.darkraiPortal = null;
+    }
   }
 
   /** Darkrai hovers by the crystal and punishes whoever is closest: Dark Void rings, Dark Pulse lines. */

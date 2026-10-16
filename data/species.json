@@ -21644,8 +21644,12 @@
           "ember"
         ],
         [
+          7,
+          "fire-spin"
+        ],
+        [
           9,
-          "gust"
+          "twister"
         ],
         [
           11,
@@ -21653,15 +21657,31 @@
         ],
         [
           14,
-          "fire-spin"
+          "flame-wheel"
+        ],
+        [
+          18,
+          "dragon-breath"
         ],
         [
           22,
-          "flamethrower"
+          "fire-fang"
+        ],
+        [
+          26,
+          "air-slash"
         ],
         [
           28,
-          "air-slash"
+          "dragon-claw"
+        ],
+        [
+          32,
+          "fire-punch"
+        ],
+        [
+          36,
+          "flamethrower"
         ],
         [
           44,
@@ -22294,7 +22314,7 @@
         ],
         [
           5,
-          "force-palm"
+          "karate-chop"
         ],
         [
           7,
@@ -22309,8 +22329,16 @@
           "bulk-up"
         ],
         [
+          14,
+          "low-kick"
+        ],
+        [
+          18,
+          "bullet-punch"
+        ],
+        [
           22,
-          "aura-sphere"
+          "double-kick"
         ],
         [
           26,
@@ -22318,15 +22346,27 @@
         ],
         [
           28,
-          "flash-cannon"
+          "iron-head"
         ],
         [
-          36,
+          32,
           "brick-break"
         ],
         [
           36,
+          "aura-sphere"
+        ],
+        [
+          36,
           "dragon-pulse"
+        ],
+        [
+          38,
+          "iron-tail"
+        ],
+        [
+          44,
+          "close-combat"
         ]
       ],
       "dex": "0448-mega",
@@ -22429,6 +22469,1749 @@
       "body": [
         21,
         30
+      ]
+    },
+    {
+      "dex": "0072",
+      "name": "Tentacool",
+      "types": [
+        "water",
+        "poison"
+      ],
+      "stats": {
+        "hp": 40,
+        "atk": 40,
+        "def": 35,
+        "spa": 50,
+        "spd": 100,
+        "spe": 70
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "aqua-tail",
+        "sludge-bomb",
+        "hydro-pump"
+      ],
+      "heightM": 0.9,
+      "evolves": [
+        {
+          "to": "0073",
+          "level": 30
+        }
+      ],
+      "body": [
+        19,
+        23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0073",
+      "name": "Tentacruel",
+      "types": [
+        "water",
+        "poison"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 70,
+        "def": 65,
+        "spa": 80,
+        "spd": 120,
+        "spe": 100
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "aqua-tail",
+        "sludge-bomb",
+        "hydro-pump"
+      ],
+      "heightM": 1.6,
+      "body": [
+        23,
+        23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "smog"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "acid"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "sludge"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "sludge-bomb"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0116",
+      "name": "Horsea",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 30,
+        "atk": 40,
+        "def": 70,
+        "spa": 70,
+        "spd": 25,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "bubble-beam",
+        "surf",
+        "hyper-voice",
+        "hydro-pump"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0117",
+          "level": 32
+        }
+      ],
+      "body": [
+        19,
+        21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0117",
+      "name": "Seadra",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 65,
+        "def": 95,
+        "spa": 95,
+        "spd": 45,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "bubble-beam",
+        "surf",
+        "hyper-voice",
+        "hydro-pump"
+      ],
+      "heightM": 1.2,
+      "evolves": [
+        {
+          "to": "0230",
+          "level": 50
+        }
+      ],
+      "body": [
+        27,
+        28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0230",
+      "name": "Kingdra",
+      "types": [
+        "water",
+        "dragon"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 95,
+        "def": 95,
+        "spa": 95,
+        "spd": 95,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "aqua-tail",
+        "dragon-claw",
+        "surf",
+        "hydro-pump"
+      ],
+      "heightM": 1.8,
+      "body": [
+        16,
+        32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "twister"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "dragon-breath"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "dragon-claw"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0118",
+      "name": "Goldeen",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 45,
+        "atk": 67,
+        "def": 60,
+        "spa": 35,
+        "spd": 50,
+        "spe": 63
+      },
+      "tier": 0,
+      "moves": [
+        "aqua-tail",
+        "slash",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0119",
+          "level": 33
+        }
+      ],
+      "body": [
+        22,
+        19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0119",
+      "name": "Seaking",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 92,
+        "def": 65,
+        "spa": 65,
+        "spd": 80,
+        "spe": 68
+      },
+      "tier": 0,
+      "moves": [
+        "aqua-tail",
+        "slash",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 1.3,
+      "body": [
+        24,
+        25
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0131",
+      "name": "Lapras",
+      "types": [
+        "water",
+        "ice"
+      ],
+      "stats": {
+        "hp": 130,
+        "atk": 85,
+        "def": 80,
+        "spa": 85,
+        "spd": 95,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "avalanche",
+        "surf",
+        "icicle-crash",
+        "hydro-pump"
+      ],
+      "heightM": 2.5,
+      "body": [
+        43,
+        34
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0170",
+      "name": "Chinchou",
+      "types": [
+        "water",
+        "electric"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 38,
+        "def": 38,
+        "spa": 56,
+        "spd": 56,
+        "spe": 67
+      },
+      "tier": 0,
+      "moves": [
+        "discharge",
+        "surf",
+        "thunderbolt",
+        "hydro-pump"
+      ],
+      "heightM": 0.5,
+      "evolves": [
+        {
+          "to": "0171",
+          "level": 27
+        }
+      ],
+      "body": [
+        24,
+        21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "thunder-shock"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "charge-beam"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "discharge"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "thunderbolt"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0171",
+      "name": "Lanturn",
+      "types": [
+        "water",
+        "electric"
+      ],
+      "stats": {
+        "hp": 125,
+        "atk": 58,
+        "def": 58,
+        "spa": 76,
+        "spd": 76,
+        "spe": 67
+      },
+      "tier": 0,
+      "moves": [
+        "discharge",
+        "surf",
+        "thunderbolt",
+        "hydro-pump"
+      ],
+      "heightM": 1.2,
+      "body": [
+        27,
+        27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "thunder-shock"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "charge-beam"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          28,
+          "discharge"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "thunderbolt"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0223",
+      "name": "Remoraid",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 35,
+        "atk": 65,
+        "def": 35,
+        "spa": 65,
+        "spd": 35,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0224",
+          "level": 25
+        }
+      ],
+      "body": [
+        13,
+        20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0224",
+      "name": "Octillery",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 75,
+        "atk": 105,
+        "def": 75,
+        "spa": 105,
+        "spd": 75,
+        "spe": 45
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 0.9,
+      "body": [
+        26,
+        28
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0320",
+      "name": "Wailmer",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 130,
+        "atk": 70,
+        "def": 35,
+        "spa": 70,
+        "spd": 35,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 2.0,
+      "evolves": [
+        {
+          "to": "0321",
+          "level": 40
+        }
+      ],
+      "body": [
+        27,
+        22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0321",
+      "name": "Wailord",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 170,
+        "atk": 90,
+        "def": 45,
+        "spa": 90,
+        "spd": 45,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 14.5,
+      "body": [
+        47,
+        61
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0339",
+      "name": "Barboach",
+      "types": [
+        "water",
+        "ground"
+      ],
+      "stats": {
+        "hp": 50,
+        "atk": 48,
+        "def": 43,
+        "spa": 46,
+        "spd": 41,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "bulldoze",
+        "surf",
+        "drill-run",
+        "hydro-pump"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0340",
+          "level": 30
+        }
+      ],
+      "body": [
+        14,
+        23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0340",
+      "name": "Whiscash",
+      "types": [
+        "water",
+        "ground"
+      ],
+      "stats": {
+        "hp": 110,
+        "atk": 78,
+        "def": 73,
+        "spa": 76,
+        "spd": 71,
+        "spe": 60
+      },
+      "tier": 0,
+      "moves": [
+        "bulldoze",
+        "surf",
+        "drill-run",
+        "hydro-pump"
+      ],
+      "heightM": 0.9,
+      "body": [
+        26,
+        24
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "mud-slap"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "sand-tomb"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "bulldoze"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "drill-run"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0349",
+      "name": "Feebas",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 20,
+        "atk": 15,
+        "def": 20,
+        "spa": 10,
+        "spd": 55,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 0.6,
+      "evolves": [
+        {
+          "to": "0350",
+          "level": 30
+        }
+      ],
+      "body": [
+        17,
+        22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0350",
+      "name": "Milotic",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 60,
+        "def": 79,
+        "spa": 100,
+        "spd": 125,
+        "spe": 81
+      },
+      "tier": 0,
+      "moves": [
+        "bubble-beam",
+        "surf",
+        "hyper-voice",
+        "hydro-pump"
+      ],
+      "heightM": 6.2,
+      "body": [
+        45,
+        44
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0456",
+      "name": "Finneon",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 49,
+        "atk": 49,
+        "def": 56,
+        "spa": 49,
+        "spd": 61,
+        "spe": 66
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 0.4,
+      "evolves": [
+        {
+          "to": "0457",
+          "level": 31
+        }
+      ],
+      "body": [
+        18,
+        22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0457",
+      "name": "Lumineon",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 69,
+        "atk": 69,
+        "def": 76,
+        "spa": 69,
+        "spd": 86,
+        "spe": 91
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "surf",
+        "body-slam",
+        "hydro-pump"
+      ],
+      "heightM": 1.2,
+      "body": [
+        23,
+        23
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "surf"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0211",
+      "name": "Qwilfish",
+      "types": [
+        "water",
+        "poison"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 95,
+        "def": 85,
+        "spa": 55,
+        "spd": 55,
+        "spe": 85
+      },
+      "tier": 0,
+      "moves": [
+        "poison-fang",
+        "aqua-tail",
+        "poison-jab",
+        "hydro-pump"
+      ],
+      "heightM": 0.5,
+      "body": [
+        15,
+        17
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "poison-sting"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "poison-fang"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "poison-jab"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0222",
+      "name": "Corsola",
+      "types": [
+        "water",
+        "rock"
+      ],
+      "stats": {
+        "hp": 65,
+        "atk": 55,
+        "def": 95,
+        "spa": 65,
+        "spd": 95,
+        "spe": 35
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "aqua-tail",
+        "power-gem",
+        "hydro-pump"
+      ],
+      "heightM": 0.6,
+      "body": [
+        19,
+        21
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          9,
+          "rock-throw"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "ancient-power"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "power-gem"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0370",
+      "name": "Luvdisc",
+      "types": [
+        "water"
+      ],
+      "stats": {
+        "hp": 43,
+        "atk": 30,
+        "def": 55,
+        "spa": 40,
+        "spd": 65,
+        "spe": 97
+      },
+      "tier": 0,
+      "moves": [
+        "surf",
+        "aqua-tail",
+        "hyper-voice",
+        "hydro-pump"
+      ],
+      "heightM": 0.6,
+      "body": [
+        11,
+        20
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bubble"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "swift"
+        ],
+        [
+          22,
+          "bubble-beam"
+        ],
+        [
+          32,
+          "surf"
+        ],
+        [
+          36,
+          "aqua-tail"
+        ],
+        [
+          38,
+          "hyper-voice"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
+      ]
+    },
+    {
+      "dex": "0369",
+      "name": "Relicanth",
+      "types": [
+        "water",
+        "rock"
+      ],
+      "stats": {
+        "hp": 100,
+        "atk": 90,
+        "def": 130,
+        "spa": 45,
+        "spd": 65,
+        "spe": 55
+      },
+      "tier": 0,
+      "moves": [
+        "aqua-tail",
+        "rock-slide",
+        "stone-edge",
+        "hydro-pump"
+      ],
+      "heightM": 1.0,
+      "body": [
+        23,
+        27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "water-gun"
+        ],
+        [
+          9,
+          "rock-throw"
+        ],
+        [
+          14,
+          "water-pulse"
+        ],
+        [
+          18,
+          "rock-tomb"
+        ],
+        [
+          22,
+          "aqua-tail"
+        ],
+        [
+          28,
+          "rock-slide"
+        ],
+        [
+          38,
+          "stone-edge"
+        ],
+        [
+          44,
+          "hydro-pump"
+        ]
       ]
     }
   ]

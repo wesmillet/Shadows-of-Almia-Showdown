@@ -18,7 +18,7 @@ import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
 import { CONFIG, hitPad, statsAtLevel } from './data';
 import { incapable, type Mon, type Trainer } from './entities';
-import { canStand, tryMove } from './movement';
+import { canStand, moveAround, tryMove } from './movement';
 import type { Nav } from './nav';
 
 export type Behavior = 'aggressive' | 'guard' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
@@ -142,7 +142,7 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, speed:
     vx = (vx / v) * cap;
     vy = (vy / v) * cap;
   }
-  const moved = tryMove(w.ground, m, vx * dt, vy * dt, 0.22);
+  const moved = moveAround(w.ground, m, vx * dt, vy * dt, 0.22, dt);
   if (moved > 1e-4) m.dir = dirFromVector(vx, vy, m.dir);
   return moved;
 }

@@ -16,7 +16,7 @@ import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './dar
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
-import { canStand, tryMove } from './movement';
+import { canStand, moveAround, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
@@ -1067,7 +1067,7 @@ export class Match {
           }
         }
         const speed = CONFIG.trainers.speed * (t.ai === 'flee' ? 1.1 : 1);
-        moved = tryMove(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius);
+        moved = moveAround(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius, dt);
         t.dir = dirFromVector(dx, dy, t.dir);
         if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
       }
@@ -1525,24 +1525,9 @@ export class Match {
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     } else if (duel) {
-      // A battle: the Pokémon attacks the way it faces. If an enemy is roughly ahead
-      // (within 40 degrees) and in reach, the move goes at the nearest such one.
+      // A battle: moves go where the player aims (the reticle on the cursor), as in Pokémon mode.
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
-      const fn = Math.hypot(f.x, f.y) || 1;
-      a = { x: m.x + (f.x / fn) * 3, y: m.y + (f.y / fn) * 3 };
-      const foes = [(duel.a.trainer === p ? duel.b : duel.a).mon];
-      let best = Infinity;
-      for (const foe of foes) {
-        if (!foe || !BattleSystem.active(foe)) continue;
-        const dx = foe.x - m.x;
-        const dy = foe.y - m.y;
-        const d = Math.hypot(dx, dy) || 1;
-        if (d > 6 || d >= best) continue;
-        if ((dx * f.x + dy * f.y) / (d * fn) > Math.cos((40 * Math.PI) / 180)) {
-          best = d;
-          a = { x: foe.x, y: foe.y };
-        }
-      }
+      a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     } else {
       const f = DIR_VECTORS[p.dir] as { x: number; y: number };
       const snap = this.aimSnap();
@@ -2196,7 +2181,7 @@ export class Match {
       return;
     }
     const step = Math.min(d, speed * dt);
-    const moved = tryMove(this.ground, w, (dx / d) * step, (dy / d) * step, 0.25);
+    const moved = moveAround(this.ground, w, (dx / d) * step, (dy / d) * step, 0.25, dt);
     w.dir = dirFromVector(dx, dy, w.dir);
     if (moved < step * 0.2) {
       w.moving = false;
@@ -2649,7 +2634,7 @@ export class Match {
       vy = (dx / d) * side * 0.8;
     }
     const speed = CONFIG.duel.monSpeed * (rush ? 1.25 : 0.9) * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
-    const moved = vx || vy ? tryMove(this.ground, m, vx * speed * dt, vy * speed * dt, 0.3) : 0;
+    const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.3, dt) : 0;
     const walking = moved > 1e-4;
     if (walking !== m.moving) {
       m.moving = walking;
@@ -2855,7 +2840,7 @@ export class Match {
       vy = (dx / d) * side * 0.45;
     }
     const speed = CONFIG.duel.monSpeed * 0.8 * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
-    const moved = vx || vy ? tryMove(this.ground, m, vx * speed * dt, vy * speed * dt, 0.22) : 0;
+    const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.22, dt) : 0;
     const walking = moved > 1e-4;
     if (walking !== m.moving) {
       m.moving = walking;

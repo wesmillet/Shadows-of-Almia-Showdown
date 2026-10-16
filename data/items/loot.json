@@ -18,18 +18,6 @@
           "weight": 6
         },
         {
-          "id": "x-attack",
-          "weight": 3
-        },
-        {
-          "id": "x-defend",
-          "weight": 3
-        },
-        {
-          "id": "x-speed",
-          "weight": 2
-        },
-        {
           "id": "old-rod",
           "weight": 2
         }

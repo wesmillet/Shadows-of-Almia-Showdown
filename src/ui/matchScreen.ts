@@ -302,17 +302,13 @@ export class MatchScreen implements Screen {
       if (input.rightDown) this.match.playerCast(1);
     }
     if (this.hud.ping) this.hud.ping.t -= 1 / 60;
-    // 1-2 always cast; Shift+1-6 (or the bag panel) uses items. After a knockout in a battle, 1-6 picks who goes next.
-    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    // 1-6 select (or use) that bag slot; moves are the mouse buttons, Q and E. After a knockout in
+    // a battle, 1-6 picks who goes next.
     if (duelSide?.awaitingPick) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.pickNext(i);
       return;
     }
-    for (let i = 0; i < 6; i++) {
-      if (!input.pressed(`Digit${i + 1}`)) continue;
-      if (shift) this.onItemSlot(i);
-      else if (i < MOVE_SLOTS) this.castFeedback(this.match.playerCast(i));
-    }
+    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.onItemSlot(i);
     // Q and E: moves 1 and 2 again, next to WASD.
     if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
     if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
@@ -670,12 +666,13 @@ export class MatchScreen implements Screen {
   }
 
   /**
-   * Pokémon mode: a ring under the steered Pokémon and a chevron the way it faces (where its
-   * moves go). Trainer mode draws no aim at all.
+   * Pokémon mode and trainer battles: a ring under the Pokémon you fight with and the reticle on
+   * the cursor (where its moves go). Trainer mode out of battle draws no aim.
    */
   private drawAim(v: View): void {
-    const m = this.match.controlled;
-    if (!this.showHud || !m || this.match.playerDuel) return;
+    const duel = this.playerDuelSide();
+    const m = duel ? (duel.awaitingPick ? null : duel.mon) : this.match.controlled;
+    if (!this.showHud || !m || m.fainted) return;
     const ctx = v.ctx;
     const s = v.baseScale;
     const x = v.toScreenX(m.x);
@@ -708,14 +705,27 @@ export class MatchScreen implements Screen {
       ctx.lineTo(ax, ay);
       ctx.stroke();
       ctx.setLineDash([]);
-      const img = foe ? this.reticleHot : this.reticle;
-      if (img) {
-        // Kenney's CC0 crosshair (Starter Kit FPS), pixelated to 28 px: assets/ui/reticle*.png.
-        const k = Math.max(1, Math.round(v.baseScale * 2));
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, Math.round(ax - (img.width * k) / 2), Math.round(ay - (img.height * k) / 2), img.width * k, img.height * k);
-      } else drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
+      this.reticleAt = { x: ax, y: ay, foe };
     }
+    ctx.restore();
+  }
+
+  /** Where drawAim put the reticle this frame; drawn on the HUD canvas so it sits over every sprite. */
+  private reticleAt: { x: number; y: number; foe: boolean } | null = null;
+
+  private drawReticleTop(v: View): void {
+    const r = this.reticleAt;
+    this.reticleAt = null;
+    if (!r) return;
+    const ctx = v.hud;
+    const img = r.foe ? this.reticleHot : this.reticle;
+    ctx.save();
+    if (img) {
+      // Kenney's CC0 crosshair (Starter Kit FPS), pixelated to 28 px: assets/ui/reticle*.png.
+      const k = Math.max(1, Math.round(v.baseScale * 2));
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, Math.round(r.x - (img.width * k) / 2), Math.round(r.y - (img.height * k) / 2), img.width * k, img.height * k);
+    } else drawReticle(ctx, r.x, r.y, Math.max(2, Math.round(v.baseScale * 3)), r.foe ? '255,90,90' : '125,220,255', performance.now() / 1000);
     ctx.restore();
   }
 
@@ -1883,6 +1893,7 @@ export class MatchScreen implements Screen {
       this.drawInfoBars(v, alpha);
     } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
+    this.drawReticleTop(v);
     this.drawDuelHud(v);
     this.drawDowned(v);
     this.drawOverlay(v);

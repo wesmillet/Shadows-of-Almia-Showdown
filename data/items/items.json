@@ -97,14 +97,6 @@
       "fraction": 1.0
     },
     {
-      "id": "x-attack",
-      "name": "X Attack",
-      "short": "X Atk",
-      "kind": "boost",
-      "stat": "atk",
-      "stages": 2
-    },
-    {
       "id": "leftovers",
       "name": "Leftovers",
       "short": "Leftovrs",
@@ -131,22 +123,6 @@
       "short": "H.Potion",
       "kind": "heal",
       "amount": 120
-    },
-    {
-      "id": "x-defend",
-      "name": "X Defend",
-      "short": "X Def",
-      "kind": "boost",
-      "stat": "def",
-      "stages": 2
-    },
-    {
-      "id": "x-speed",
-      "name": "X Speed",
-      "short": "X Spd",
-      "kind": "boost",
-      "stat": "spe",
-      "stages": 2
     },
     {
       "id": "choice-band",

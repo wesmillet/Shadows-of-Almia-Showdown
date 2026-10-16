@@ -73,18 +73,6 @@
       "name": "Battle gear",
       "stock": [
         [
-          "x-attack",
-          350
-        ],
-        [
-          "x-defend",
-          350
-        ],
-        [
-          "x-speed",
-          350
-        ],
-        [
           "leftovers",
           2500
         ],

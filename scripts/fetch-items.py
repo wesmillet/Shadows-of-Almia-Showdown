@@ -36,7 +36,6 @@ ITEMS = {
     'extraction-voucher': 's_s_ticket',   # a ticket: the Extraction Voucher
     'potion': 'potion', 'super-potion': 'super_potion', 'hyper-potion': 'hyper_potion',
     'revive': 'revive', 'max-revive': 'max_revive',
-    'x-attack': 'x_attack', 'x-defend': 'x_defense', 'x-speed': 'x_speed',
     'leftovers': 'leftovers', 'focus-sash': 'focus_sash', 'choice-band': 'choice_band', 'life-orb': 'life_orb',
     'charcoal': 'charcoal', 'mystic-water': 'mystic_water', 'magnet': 'magnet', 'miracle-seed': 'miracle_seed',
     'never-melt-ice': 'nevermeltice', 'black-belt': 'black_belt', 'soft-sand': 'soft_sand', 'sharp-beak': 'sharp_beak',

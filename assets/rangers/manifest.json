@@ -199,14 +199,14 @@
     "orig_00": {
       "file": "orig_00.png",
       "frame_w": 22,
-      "frame_h": 36,
+      "frame_h": 34,
       "frames": 15,
       "anchor": "bottom-center"
     },
     "orig_01": {
       "file": "orig_01.png",
       "frame_w": 22,
-      "frame_h": 36,
+      "frame_h": 34,
       "frames": 15,
       "anchor": "bottom-center"
     }

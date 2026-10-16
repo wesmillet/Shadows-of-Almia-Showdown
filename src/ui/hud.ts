@@ -84,7 +84,7 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
   }
 }
 
-/** The button that casts each move slot (1-2 and Q/E work too). */
+/** The button that casts each move slot (Q and E work too). */
 const MOVE_KEYS = ['LMB', 'RMB'];
 
 const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f', poison: '#b06cff', freeze: '#8fe0ff', confusion: '#ff8fd0' };

@@ -165,7 +165,7 @@
     "flySpeed": 2.1,
     "flyLift": 1.2,
     "mounts": {
-      "0243": { "kind": "ride", "seat": 0.5, "back": 0.12 },
+      "0243": { "kind": "ride", "seat": 0.52, "back": -0.02 },
       "1007": { "kind": "ride", "seat": 0.42, "back": 0.15 },
       "1008": { "kind": "ride", "seat": 0.34, "back": 0.06 },
       "0381": { "kind": "fly", "seat": 0.42, "back": 0.05 },

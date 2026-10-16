@@ -141,7 +141,7 @@ export class Hud {
     this.popupBox(ctx, x, y, w, h);
     this.label(ctx, `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`, x + w / 2, y + 28 * s, 15, '#ffd36b', 'center', '800', w - 28 * s);
     this.label(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', x + w / 2, y + 46 * s, 9.5, '#cfc6ea', 'center', '600', w - 28 * s);
-    this.label(ctx, "Every town's chest holds the same things, and they're safe if you're wiped out · E to close", x + w / 2, y + 62 * s, 9.5, '#9ff3c8', 'center', '600', w - 28 * s);
+    this.label(ctx, "Every town's chest holds the same things, kept between games and safe if you're wiped out · E to close", x + w / 2, y + 62 * s, 9.5, '#9ff3c8', 'center', '600', w - 28 * s);
     const gx = x + (w - gridW) / 2;
     const gy = y + 80 * s;
     let hovered: string | null = null;

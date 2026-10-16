@@ -18,6 +18,7 @@ import { activeParty, incapable, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
 import { canStand, moveAround, tryMove } from './movement';
 import { DEV_CHEST, isDev } from '../dev';
+import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
@@ -249,11 +250,17 @@ export class Match {
   /** A trainer's chest store (created empty on first use). */
   storageOf(t: Trainer): Array<InventorySlot | null> {
     if (t.storage) return t.storage;
-    // Tester mode (src/dev.ts): the player's chest starts stocked with the rare things.
-    const stock = t.isPlayer && isDev() ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
-    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6)).fill(null);
+    // The player's chest is kept between games in this browser (src/chest.ts); a tester's first
+    // chest starts stocked with the rare things (src/dev.ts).
+    const saved = t.isPlayer ? loadChest() : null;
+    const stock = t.isPlayer && !saved && isDev() ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
+    const kept = (saved ?? []).filter((e) => ITEMS[e.id]);
+    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6, kept.length)).fill(null);
     stock.forEach(([id, count], i) => (box[i] = { id, count }));
-    return (t.storage = box);
+    kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+    t.storage = box;
+    if (t.isPlayer) saveChest(box);
+    return box;
   }
 
   /** Puts a whole bag (or gear) stack in the chest. Returns what happened. */
@@ -270,6 +277,7 @@ export class Match {
       box[free] = { id: entry.id, count: entry.count };
     }
     list[slot] = null;
+    if (t.isPlayer) saveChest(box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -281,6 +289,7 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
+    if (t.isPlayer) saveChest(box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }

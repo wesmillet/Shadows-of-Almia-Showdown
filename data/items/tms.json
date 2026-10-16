@@ -80,6 +80,56 @@
       "id": "tm-return",
       "move": "return",
       "rare": true
+    },
+    {
+      "id": "tm-heat-wave",
+      "move": "heat-wave",
+      "rare": true
+    },
+    {
+      "id": "tm-thunder-punch",
+      "move": "thunder-punch",
+      "rare": false
+    },
+    {
+      "id": "tm-ice-punch",
+      "move": "ice-punch",
+      "rare": false
+    },
+    {
+      "id": "tm-giga-drain",
+      "move": "giga-drain",
+      "rare": false
+    },
+    {
+      "id": "tm-steel-wing",
+      "move": "steel-wing",
+      "rare": false
+    },
+    {
+      "id": "tm-sucker-punch",
+      "move": "sucker-punch",
+      "rare": false
+    },
+    {
+      "id": "tm-smack-down",
+      "move": "smack-down",
+      "rare": false
+    },
+    {
+      "id": "tm-swords-dance",
+      "move": "swords-dance",
+      "rare": true
+    },
+    {
+      "id": "tm-nasty-plot",
+      "move": "nasty-plot",
+      "rare": true
+    },
+    {
+      "id": "tm-agility",
+      "move": "agility",
+      "rare": false
     }
   ]
 }

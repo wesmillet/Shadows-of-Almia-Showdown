@@ -43,7 +43,7 @@ export interface SpeciesDef {
   stone?: string;
 }
 
-/** The moves a Pokémon of this species knows at `level`: the last four it has reached. */
+/** The moves a Pokémon of this species knows at `level`: its signature moves first, then the newest attacks it has reached (MOVE_SLOTS of them). */
 /** How many moves a Pokémon knows at once. */
 export const MOVE_SLOTS = 2;
 

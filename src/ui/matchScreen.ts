@@ -1214,14 +1214,17 @@ export class MatchScreen implements Screen {
   private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[]): void {
     const from = { x: attacker.x, y: attacker.y };
     const fromLift = this.bodyLift(attacker);
-    const targets: Array<{ x: number; y: number; mon: Mon | null }> = hits.length
-      ? hits.map((h) => ({ x: h.x, y: h.y, mon: h }))
-      : [{ x: area.tx, y: area.ty, mon: null }];
     // With no one hit, a beam runs to the end of its reach along the aim (fx, fy is a direction,
     // not a point: aiming at it sent beams off toward the map's corner).
     const reach = area.shape === 'line' ? 3.4 * R() : area.shape === 'cone' ? 2.9 * R() : 0;
     const focus = hits[0] ? { x: hits[0].x, y: hits[0].y }
       : reach ? { x: area.ox + area.fx * reach, y: area.oy + area.fy * reach } : { x: area.tx, y: area.ty };
+    // Impacts go on each Pokémon hit. A miss: lines and cones burst at the end of their reach, a
+    // ring (centred on the user) shows no stray impact, anything else lands on the aim point.
+    const targets: Array<{ x: number; y: number; mon: Mon | null }> = hits.length
+      ? hits.map((h) => ({ x: h.x, y: h.y, mon: h }))
+      : area.shape === 'ring' ? []
+        : [{ x: focus.x, y: focus.y, mon: null }];
     const playAt = (part: FxPart, t: { x: number; y: number; mon: Mon | null }, onBody: boolean): void => {
       const sheet = this.fx.sheet(part.id);
       if (!sheet) return;

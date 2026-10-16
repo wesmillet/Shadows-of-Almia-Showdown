@@ -2283,6 +2283,9 @@ export class Match {
     const d = this.makeMon('0491', 100, null, this.centerX, this.centerY + 1.6);
     d.boss = true;
     d.wild = false;
+    // Its boss kit: slot 0 Dark Void (sleep ring), slot 1 Dark Pulse (stepDarkrai relies on the order).
+    d.moves = ['dark-void', 'dark-pulse'];
+    d.cooldowns = [0, 0];
     d.maxHp = d.hp = d.stats.hp * CONFIG.battle.bossHpMultiplier;
     // It steps out of a dark portal (assets/fx/darkrai_portal.png): hidden until the portal is open.
     d.busy = 3;
@@ -2411,6 +2414,8 @@ export class Match {
       for (const m of t.party) {
         if (m.fainted || m.captured) continue;
         m.stowed = true;
+        // Back in the ball: stat changes wear off.
+        m.stages = { atk: 0, def: 0, spe: 0 };
         m.casting = null;
         m.target = null;
         m.recall = false;
@@ -2895,6 +2900,7 @@ export class Match {
         }
       } else if (!m.stowed) {
         m.stowed = true;
+        m.stages = { atk: 0, def: 0, spe: 0 };
         m.casting = null;
         m.target = null;
         m.moving = false;

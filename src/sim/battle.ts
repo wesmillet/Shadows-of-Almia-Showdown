@@ -384,7 +384,12 @@ export class BattleSystem {
           for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
         }
       }
-      if (m.stages?.self && this.rng.chance(m.stages.chance)) {
+    }
+    // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
+    // Combat, Draco Meteor) always lands; a boost from an attack (Charge Beam) only when it hit.
+    if (m.stages?.self && this.rng.chance(m.stages.chance)) {
+      const boost = Object.values(m.stages.self).some((d) => (d ?? 0) > 0);
+      if (!boost || m.category === 'status' || hits.some((h) => h !== attacker)) {
         for (const [stat, delta] of Object.entries(m.stages.self) as Array<['atk' | 'def', number]>) this.changeStage(attacker, stat, delta);
       }
     }
@@ -402,7 +407,8 @@ export class BattleSystem {
 
   changeStage(mon: Mon, stat: 'atk' | 'def' | 'spe', delta: number): void {
     const before = mon.stages[stat];
-    mon.stages[stat] = Math.max(-6, Math.min(6, before + delta));
+    // Stages stop at +/-3 (a stage is +/-50% here, and Speed also shortens cooldowns).
+    mon.stages[stat] = Math.max(-3, Math.min(3, before + delta));
     if (mon.stages[stat] !== before) this.events.push({ type: 'stages', target: mon, stat, delta });
   }
 

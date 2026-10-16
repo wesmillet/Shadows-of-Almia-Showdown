@@ -93,6 +93,12 @@ export class MatchScreen implements Screen {
   private extractPick: { slot: number } | null = null;
   /** The vendor whose stall is open (the match waits while you shop). */
   private shopOpen: Shop | null = null;
+  /** The storage chest that is open (index into match.chests); the match waits meanwhile. */
+  private chestOpen: number | null = null;
+  /** How far each chest's lid is open, 0..1 (animates on open and close). */
+  private chestLid = new Map<number, number>();
+  /** The Fan-tasy wooden chest opening: 4 frames of 30x38. */
+  private chestSheet: HTMLImageElement | null = null;
   private readonly strips = new Map<string, HTMLImageElement | null>();
   protected readonly fx: FxLibrary;
   /** Sunnyside glint strip (6 frames of 7x7) that sparkles on ground balls. */
@@ -123,6 +129,7 @@ export class MatchScreen implements Screen {
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
     void assets.loadImage('ui/shadow_crystal.png').then((img) => (this.crystalImg = img));
+    void assets.loadImage('ui/storage_chest.png').then((img) => (this.chestSheet = img));
     void assets.loadImage('ui/reticle.png').then((img) => (this.reticle = img));
     void assets.loadImage('ui/reticle_hot.png').then((img) => (this.reticleHot = img));
     ctx.view.snapTo(match.player.x, match.player.y);
@@ -173,6 +180,11 @@ export class MatchScreen implements Screen {
     }
     if (this.shopOpen) {
       this.handleShopInput(input);
+      return;
+    }
+    this.stepChestLids(dt);
+    if (this.chestOpen !== null) {
+      this.handleChestInput(input);
       return;
     }
     this.handleInput(input);
@@ -345,6 +357,44 @@ export class MatchScreen implements Screen {
     this.notices = this.notices.filter((n) => n.t > 0);
   }
 
+  /**
+   * The storage chest: a click on a bag slot (or 1-6) stores that stack, a click on a chest slot
+   * (or Shift+1-9) takes it back; G switches bag tabs; E, Space or Escape closes.
+   */
+  private handleChestInput(input: Input): void {
+    if (input.pressed('Escape') || input.pressed('KeyE') || input.pressed('Space')) {
+      this.chestOpen = null;
+      return;
+    }
+    const p = this.match.player;
+    if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
+    const tab = this.gearTab ? 'held' : 'items';
+    for (const c of input.takeClicks()) {
+      const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind === 'item') this.say(this.match.deposit(p, tab, h.index), 1.4);
+      else if (h?.kind === 'chest') this.say(this.match.withdraw(p, h.index), 1.4);
+      else if (h?.kind === 'tab') this.gearTab = h.index === 1;
+    }
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    for (let i = 0; i < 9; i++) {
+      if (!input.pressed(`Digit${i + 1}`)) continue;
+      const msg = shift ? this.match.withdraw(p, i) : this.match.deposit(p, tab, i);
+      if (msg) this.say(msg, 1.4);
+    }
+    for (const n of this.notices) n.t -= 1 / 60;
+    this.notices = this.notices.filter((n) => n.t > 0);
+  }
+
+  /** Lids swing open while their chest is in use and shut after. */
+  private stepChestLids(dt: number): void {
+    this.match.chests.forEach((_, i) => {
+      const cur = this.chestLid.get(i) ?? 0;
+      const want = this.chestOpen === i ? 1 : 0;
+      const next = want > cur ? Math.min(1, cur + dt * 5) : Math.max(0, cur - dt * 4);
+      if (next !== cur) this.chestLid.set(i, next);
+    });
+  }
+
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
   private interact(): boolean {
     // Fishing: Space hooks a bite (or reels in early).
@@ -364,6 +414,7 @@ export class MatchScreen implements Screen {
     }
     const s = this.match.nearService();
     if (s?.kind === 'shop') this.shopOpen = s.shop;
+    else if (s?.kind === 'chest') this.chestOpen = s.index;
     else if (s?.kind === 'challenge') this.say(this.match.startChallenge(), 3);
     else if (s?.kind === 'healer') this.say(this.match.healAtHealer(), 2);
     else if (this.match.nearestItem()) return this.match.pickUp();
@@ -1654,12 +1705,13 @@ export class MatchScreen implements Screen {
         entries: this.shopOpen.stock.map((e) => ({ name: ITEMS[e.id]?.name ?? e.id, price: e.price, affordable: this.match.player.money >= e.price })),
         sellPrice: (id: string) => this.match.sellPrice(id),
       } : null,
+      chest: this.chestOpen !== null ? { slots: this.match.storageOf(this.match.player), town: this.match.chests[this.chestOpen]?.town ?? '' } : null,
       lightingMode: this.lighting.mode,
     };
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
+    if (this.shopOpen || this.chestOpen !== null || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
     const f = this.match.fishing;
     if (f) return f.stage === 'bite' ? 'Space · Reel it in!' : f.stage === 'reel' ? null : 'Waiting for a bite... (move or Space to reel in)';
     const who = this.match.visitors.near();
@@ -1673,6 +1725,7 @@ export class MatchScreen implements Screen {
     }
     if (s.kind === 'shop') return `Space · Shop at the ${s.shop.name}`;
     if (s.kind === 'challenge') return `Space · Challenge the ${SHOPS.challenger.name}`;
+    if (s.kind === 'chest') return 'Space · Open your storage chest';
     return 'Space · Heal your party';
   }
 
@@ -1680,6 +1733,7 @@ export class MatchScreen implements Screen {
     const list: Array<{ y: number; draw: () => void }> = [];
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
     for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
+    this.match.chests.forEach((c, i) => list.push({ y: c.y - 0.4, draw: () => this.drawChest(v, c, this.chestLid.get(i) ?? 0) }));
     for (const th of this.match.throws) list.push({ y: th.y + 0.02, draw: () => this.drawThrow(v, th) });
     list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
     const po = this.match.visitors.portal;
@@ -1689,6 +1743,24 @@ export class MatchScreen implements Screen {
     const fishing = this.match.fishing;
     if (fishing) list.push({ y: this.match.player.y + 0.02, draw: () => this.drawFishing(v) });
     return list;
+  }
+
+  /** A town storage chest, its lid opening with `lid` (0 shut .. 1 open). */
+  private drawChest(v: View, c: { x: number; y: number }, lid: number): void {
+    const img = this.chestSheet;
+    if (!img) return;
+    const fw = 30;
+    const fh = img.height;
+    const frame = Math.min(3, Math.round(lid * 3));
+    const k = v.spriteScale;
+    const x = Math.round(v.toScreenX(c.x) - (fw * k) / 2);
+    const y = Math.round(v.toScreenY(c.y) - fh * k);
+    drawSoftShadow(v, v.toScreenX(c.x), v.toScreenY(c.y) - 2 * k, 0.75, 0.22);
+    const ctx = v.ctx;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, frame * fw, 0, fw, fh, x, y, fw * k, fh * k);
+    ctx.restore();
   }
 
   /** Hoopa's ring: a gold hoop standing on the ground, opening, swirling dark inside, then closing. */

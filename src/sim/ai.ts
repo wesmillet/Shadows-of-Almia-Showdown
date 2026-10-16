@@ -1,6 +1,6 @@
 /**
- * AI trainer brain: roam, seek item, engage, flee below 30% party HP, heal
- * at an outpost. One decision tick every few hundred milliseconds; movement
+ * AI trainer brain: roam, seek item, hunt wild Pokémon for XP, engage, flee below 30% party HP,
+ * heal at an outpost. One decision tick every few hundred milliseconds; movement
  * is continuous.
  */
 import type { Rng } from '../core/rng';
@@ -24,12 +24,27 @@ export interface AiWorld {
   wilds?: Mon[];
   /** Nearest the crystal a team of that level wants to roam (stronger wilds live further in). */
   comfortRadius?: (level: number) => number;
+  /** Targets this trainer gave up on (couldn't reach), by key: 'm<id>', 'i<id>', 'o<index>'. */
+  banned?: (key: string) => boolean;
+  /** Match time (outpost cooldowns). */
+  time?: number;
+}
+
+/** The decision and, for something the trainer walks to, its key (for giving up when stuck). */
+export interface AiDecision {
+  ai: TrainerAi;
+  target: { x: number; y: number } | null;
+  rival: Trainer | null;
+  key?: string | null;
 }
 
 /** The strongest level in a trainer's team that can still fight. */
 export function teamLevel(t: Trainer): number {
   return activeParty(t).reduce((a, m) => Math.max(a, m.level), 1);
 }
+
+/** Levels above the team at which a wild Pokémon is worth steering clear of. */
+const DANGER_LEVELS = 6;
 
 /** The closest wild Pokémon within `range` that is well above the team's level. */
 export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, x = t.x, y = t.y): Mon | null {
@@ -38,10 +53,36 @@ export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, 
   let best: Mon | null = null;
   let bd = range;
   for (const m of wilds) {
-    if (m.fainted || m.captured || m.level < lv + 5) continue;
+    if (m.fainted || m.captured || m.level < lv + DANGER_LEVELS) continue;
     const d = Math.hypot(m.x - x, m.y - y);
     if (d < bd) {
       bd = d;
+      best = m;
+    }
+  }
+  return best;
+}
+
+/**
+ * A wild Pokémon worth hunting for XP: the best pick within `range` at or below the team's level
+ * (up to `over` levels above it), out of the dark. Closer is better and a level nearer the team's
+ * pays more, so the score trades a tile of walking for a level. Bosses, Alphas, legends and wilds
+ * already fighting someone else's Pokémon are left alone.
+ */
+export function huntTarget(t: Trainer, wilds: Mon[] | undefined, range: number, over = 2, inLight: (x: number, y: number) => boolean = () => true, banned: (key: string) => boolean = () => false): Mon | null {
+  if (!wilds) return null;
+  const lv = teamLevel(t);
+  let best: Mon | null = null;
+  let bs = Infinity;
+  for (const m of wilds) {
+    if (m.fainted || m.captured || m.boss || m.landBoss || m.alpha || m.legend || m.leap) continue;
+    if (m.level > lv + over || m.level < lv - 12) continue;
+    if (m.target && m.target.owner && m.target.owner !== t) continue;
+    const d = Math.hypot(m.x - t.x, m.y - t.y);
+    if (d > range || !inLight(m.x, m.y) || banned(`m${m.id}`)) continue;
+    const score = d - Math.min(0, m.level - lv) * 0.8 - (m.target?.owner === t ? 6 : 0);
+    if (score < bs) {
+      bs = score;
       best = m;
     }
   }
@@ -72,11 +113,12 @@ export function nearestRival(t: Trainer, rivals: Trainer[], range: number): Trai
   return best;
 }
 
-export function nearestItem(t: Trainer, items: GroundItem[], range: number): GroundItem | null {
+export function nearestItem(t: Trainer, items: GroundItem[], range: number, banned: (key: string) => boolean = () => false): GroundItem | null {
   if (!t.items.includes(null)) return null;
   let best: GroundItem | null = null;
   let bd = range;
   for (const it of items) {
+    if (banned(`i${it.id}`)) continue;
     const d = Math.hypot(it.x - t.x, it.y - t.y);
     if (d < bd) {
       bd = d;
@@ -87,11 +129,18 @@ export function nearestItem(t: Trainer, items: GroundItem[], range: number): Gro
 }
 
 /** Picks the next state for a trainer. Pure: returns the state and target without moving anyone. */
-export function decide(t: Trainer, w: AiWorld): { ai: TrainerAi; target: { x: number; y: number } | null; rival: Trainer | null } {
+export function decide(t: Trainer, w: AiWorld): AiDecision {
   const hpFrac = partyHpFraction(t);
   const rival = nearestRival(t, w.rivals, 6.5);
   const inDark = Math.hypot(t.x - w.centerX, t.y - w.centerY) > w.darkRadius - 1.5;
-  const outpost = w.outposts.length ? w.outposts.reduce((a, b) => (Math.hypot(a.x - t.x, a.y - t.y) < Math.hypot(b.x - t.x, b.y - t.y) ? a : b)) : null;
+  const banned = w.banned ?? (() => false);
+  let outpostIdx = -1;
+  w.outposts.forEach((o, i) => {
+    if (banned(`o${i}`)) return;
+    const best = w.outposts[outpostIdx];
+    if (!best || Math.hypot(o.x - t.x, o.y - t.y) < Math.hypot(best.x - t.x, best.y - t.y)) outpostIdx = i;
+  });
+  const outpost = w.outposts[outpostIdx] ?? null;
 
   if (hpFrac < CONFIG.trainers.fleeHpFraction && activeParty(t).length > 0) {
     if (rival) {
@@ -107,7 +156,7 @@ export function decide(t: Trainer, w: AiWorld): { ai: TrainerAi; target: { x: nu
       }
       return { ai: 'flee', target: { x: t.x + ax * 4, y: t.y + ay * 4 }, rival: null };
     }
-    if (outpost) return { ai: 'heal', target: outpost, rival: null };
+    if (outpost) return { ai: 'heal', target: outpost, rival: null, key: `o${outpostIdx}` };
   }
   if (rival) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival };
   if (inDark && Number.isFinite(w.darkRadius)) {
@@ -124,8 +173,30 @@ export function decide(t: Trainer, w: AiWorld): { ai: TrainerAi; target: { x: nu
     const d = Math.hypot(dx, dy) || 1;
     return { ai: 'flee', target: { x: t.x + (dx / d) * 5, y: t.y + (dy / d) * 5 }, rival: null };
   }
-  const item = nearestItem(t, w.items, 9);
-  if (item && !dangerNear(t, w.wilds, 6, item.x, item.y)) return { ai: 'seekItem', target: { x: item.x, y: item.y }, rival: null };
+  // Items close by first, then the best wild to train on, then items further off.
+  const item = nearestItem(t, w.items, 9, banned);
+  const itemOk = item && !dangerNear(t, w.wilds, 6, item.x, item.y);
+  const seek = (it: GroundItem): AiDecision => ({ ai: 'seekItem', target: { x: it.x, y: it.y }, rival: null, key: `i${it.id}` });
+  if (item && itemOk && Math.hypot(item.x - t.x, item.y - t.y) < 4) return seek(item);
+  // Worn down (or a member fainted): patch up at the nearest outpost it can reach, then hunt again.
+  // Just healed (the outpost is cooling down) and the rest are fine: keep training meanwhile.
+  const fainted = t.party.some((m) => m.fainted && !m.captured);
+  const standing = activeParty(t);
+  const standingHp = standing.reduce((a, m) => a + m.hp, 0) / Math.max(1, standing.reduce((a, m) => a + m.maxHp, 0));
+  const cooling = (w.time ?? 0) < t.outpostReady && standing.length > 0 && standingHp > CONFIG.trainers.huntHpFraction;
+  if ((fainted || hpFrac <= CONFIG.trainers.huntHpFraction) && !cooling && outpost && Math.hypot(outpost.x - t.x, outpost.y - t.y) < CONFIG.trainers.healTripRange) {
+    return { ai: 'heal', target: outpost, rival: null, key: `o${outpostIdx}` };
+  }
+  // Hunt: train on a wild at or a little above the team's level while the Pokémon still standing are in shape.
+  if (standing.length && standingHp > CONFIG.trainers.huntHpFraction) {
+    const lightR = Number.isFinite(w.darkRadius) ? w.darkRadius - 3 : Infinity;
+    const prey = huntTarget(t, w.wilds, CONFIG.trainers.huntRange, CONFIG.trainers.huntOverLevel, (x, y) => Math.hypot(x - w.centerX, y - w.centerY) < lightR, banned);
+    // Nothing that easy about and the whole team fresh: take on something a few levels up.
+    const stretch = !prey && !fainted && hpFrac > 0.85 ? huntTarget(t, w.wilds, CONFIG.trainers.huntRange, DANGER_LEVELS - 1, (x, y) => Math.hypot(x - w.centerX, y - w.centerY) < lightR, banned) : null;
+    const pick = prey ?? stretch;
+    if (pick) return { ai: 'hunt', target: { x: pick.x, y: pick.y }, rival: null, key: `m${pick.id}` };
+  }
+  if (item && itemOk) return seek(item);
   // Roam: a random reachable point inside the light, no nearer the crystal than the team can handle
   // (unless the darkness has pushed everyone in), and away from wild Pokémon that outclass it.
   const safe = Math.max(4, w.darkRadius - 2);

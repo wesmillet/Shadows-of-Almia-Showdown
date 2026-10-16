@@ -51,6 +51,8 @@ export interface GroundRenderer {
   biomeAt(tx: number, ty: number): Biome;
   /** True when a character may stand on the tile (terrain only; decor is checked separately). */
   walkable(tx: number, ty: number): boolean;
+  /** Marks a tile as blocked (a prop placed after the map loaded, like a storage chest). */
+  block?(tx: number, ty: number): void;
   /** Sea, lake or river at this tile (Dive Ball targets). */
   inWater(tx: number, ty: number): boolean;
   /** Reachable from the map centre on foot (spawn points use this). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decide, partyHpFraction } from './ai';
+import { decide, huntTarget, partyHpFraction } from './ai';
 import type { Trainer } from './entities';
 import { Rng } from '../core/rng';
 
@@ -30,5 +30,18 @@ describe('trainer AI', () => {
     expect(partyHpFraction(hurt)).toBeCloseTo(0.2);
     expect(decide(hurt, world([foe])).ai).toBe('flee');
     expect(decide(hurt, world([])).ai).toBe('heal');
+  });
+
+  it('hunts the nearest wild at or a little above its level, never a boss or one far above', () => {
+    const me = trainer(10, 10, 100);
+    (me.party[0] as { level: number }).level = 10;
+    const wild = (id: number, x: number, level: number, extra: object = {}) => ({ id, x, y: 10, level, hp: 50, maxHp: 50, fainted: false, captured: false, target: null, ...extra }) as unknown as Trainer['party'][number];
+    const wilds = [wild(1, 30, 25), wild(2, 16, 9), wild(3, 13, 11, { boss: true }), wild(4, 20, 12)];
+    expect(huntTarget(me, wilds, 30)?.id).toBe(2);
+    expect(huntTarget(me, wilds, 30, 2, () => true, (k) => k === 'm2')?.id).toBe(4);
+    const w = { ...world([]), wilds };
+    const d = decide(me, w);
+    expect(d.ai).toBe('hunt');
+    expect(d.key).toBe('m2');
   });
 });

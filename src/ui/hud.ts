@@ -19,7 +19,7 @@ import type { PixelUi } from './pixelUi';
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number };
 
 interface Rect {
   x: number;
@@ -54,6 +54,8 @@ export interface HudState {
   prompt: string | null;
   /** An open stall: its lines with prices. */
   shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }>; sellPrice: (id: string) => number } | null;
+  /** The open storage chest: its slots (shared by every town's chest) and the town it stands in. */
+  chest?: { slots: Array<InventorySlot | null>; town: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
 }
@@ -98,6 +100,7 @@ export class Hud {
   /** The X on a hovered bag slot that throws its item away. */
   private discardRects: Array<Rect & { index: number }> = [];
   private releaseRects: Array<Rect & { index: number }> = [];
+  private chestRects: Rect[] = [];
   /** The party slot whose release X was clicked once (it turns into a confirm). */
   releaseArmed = -1;
   private minimap: HTMLCanvasElement | null = null;
@@ -107,6 +110,69 @@ export class Hud {
   /** Integer pixel scale for ui/ art on the HUD canvas. */
   private get px(): number {
     return Math.max(2, Math.round(this.view.baseScale * 3));
+  }
+
+  /** The storage chest: two rows of slots; bag slots below deposit, chest slots withdraw. */
+  private drawChestPanel(ctx: CanvasRenderingContext2D, st: HudState, chest: { slots: Array<InventorySlot | null>; town: string }): void {
+    const v = this.view;
+    const s = v.baseScale;
+    const cols = 6;
+    const rows = Math.ceil(chest.slots.length / cols);
+    const slot = 44 * s;
+    const gap = 6 * s;
+    const gridW = cols * slot + (cols - 1) * gap;
+    const w = Math.max(gridW + 48 * s, 380 * s);
+    const h = (96 + 26) * s + rows * slot + (rows - 1) * gap;
+    const x = v.width / 2 - w / 2;
+    // Below the trainer, so the open chest stays in view.
+    const y = Math.min(v.height / 2 + 56 * s, v.height - h - 12 * s);
+    this.popupBox(ctx, x, y, w, h);
+    this.label(ctx, `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`, x + w / 2, y + 28 * s, 15, '#ffd36b', 'center', '800', w - 28 * s);
+    this.label(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', x + w / 2, y + 46 * s, 9.5, '#cfc6ea', 'center', '600', w - 28 * s);
+    this.label(ctx, "Every town's chest holds the same things, and they're safe if you're wiped out · E to close", x + w / 2, y + 62 * s, 9.5, '#9ff3c8', 'center', '600', w - 28 * s);
+    const gx = x + (w - gridW) / 2;
+    const gy = y + 80 * s;
+    let hovered: string | null = null;
+    chest.slots.forEach((entry, i) => {
+      const sx = gx + (i % cols) * (slot + gap);
+      const sy = gy + Math.floor(i / cols) * (slot + gap);
+      const hover = hit(st.mouseX, st.mouseY, sx, sy, slot, slot);
+      const kit = this.ui.slot(ctx, sx, sy, slot, Math.max(1, Math.round(this.px / 3)), false);
+      if (!kit) {
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(sx, sy, slot, slot);
+      }
+      if (hover) {
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(sx + 4 * s, sy + 4 * s, slot - 8 * s, slot - 8 * s);
+      }
+      if (i < 9) this.label(ctx, String(i + 1), sx + 6 * s, sy + 13 * s, 9, kit ? '#9f97bb' : '#b9b4cc', 'left', '600');
+      const def = entry ? ITEMS[entry.id] : undefined;
+      if (entry && def) {
+        this.icons.draw(ctx, def.id, sx + slot / 2, sy + slot / 2, 34 * s, def.tmType);
+        if (entry.count > 1) this.countBadge(ctx, entry.count, sx, sy, slot);
+        if (hover) hovered = `${def.name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
+      }
+      this.chestRects.push({ x: sx, y: sy, w: slot, h: slot });
+    });
+    const used = chest.slots.filter(Boolean).length;
+    this.label(ctx, hovered ?? `${used}/${chest.slots.length} slots used`, x + w / 2, y + h - 14 * s, 11, hovered ? '#f4f1ff' : '#9f97bb', 'center', '700', w - 28 * s);
+  }
+
+  /** "×3" in a slot's bottom-right corner, white on dark. */
+  private countBadge(ctx: CanvasRenderingContext2D, count: number, x: number, y: number, slot: number): void {
+    const s = this.view.baseScale;
+    const t = `×${count}`;
+    ctx.font = this.font(9, '800');
+    const bw = ctx.measureText(t).width + 8 * s;
+    const bh = 13 * s;
+    const bx = x + slot - bw - 2 * s;
+    const by = y + slot - bh - 2 * s;
+    ctx.fillStyle = 'rgba(30,18,10,0.85)';
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 4 * s);
+    ctx.fill();
+    this.label(ctx, t, bx + bw / 2, by + bh - 3 * s, 9, '#ffffff', 'center', '800');
   }
 
   hitTest(x: number, y: number): HudHit | null {
@@ -123,6 +189,10 @@ export class Hud {
     for (let i = 0; i < this.portraitRects.length; i++) {
       const r = this.portraitRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'portrait', index: i };
+    }
+    for (let i = 0; i < this.chestRects.length; i++) {
+      const r = this.chestRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'chest', index: i };
     }
     for (let i = 0; i < this.itemRects.length; i++) {
       const r = this.itemRects[i] as Rect;
@@ -265,6 +335,8 @@ export class Hud {
         this.label(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, col, 'right', '700');
       });
     }
+    this.chestRects = [];
+    if (st.chest) this.drawChestPanel(ctx, st, st.chest);
     if (st.prompt && !st.shop && !st.teach) {
       const y = v.height - 170 * s;
       ctx.save();

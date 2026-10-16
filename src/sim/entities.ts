@@ -118,7 +118,7 @@ export interface TrainerStats {
   timeSurvived: number;
 }
 
-export type TrainerAi = 'roam' | 'seekItem' | 'engage' | 'flee' | 'heal';
+export type TrainerAi = 'roam' | 'seekItem' | 'engage' | 'flee' | 'heal' | 'hunt';
 
 export interface Trainer {
   id: number;
@@ -138,6 +138,8 @@ export interface Trainer {
   items: Array<InventorySlot | null>;
   /** Gear tab: held items and TMs. */
   held: Array<InventorySlot | null>;
+  /** What this trainer keeps in the town storage chests (one store shared by every chest). */
+  storage?: Array<InventorySlot | null>;
   alive: boolean;
   /** Wiped out by wild Pokémon: back in the match at this time (see Match.down). */
   downUntil?: number;
@@ -148,6 +150,11 @@ export interface Trainer {
   ai: TrainerAi;
   aiTimer: number;
   aiTarget: { x: number; y: number } | null;
+  /** AI: what it is walking to ('m12' a wild, 'i4' an item, 'o2' an outpost) and its progress, for giving up when stuck. */
+  aiKey?: string | null;
+  aiProgress?: { best: number; since: number };
+  /** AI: targets it gave up on (unreachable), by key, until a match time. */
+  aiBans?: Record<string, number>;
   /** Ranger outpost heal progress. */
   healing: number;
   /** Match time the trainer may next use an outpost. */

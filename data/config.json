@@ -76,7 +76,12 @@
     "fleeHpFraction": 0.3,
     "partySize": 3,
     "level": 5,
-    "aggroRange": 7
+    "aggroRange": 7,
+    "_huntComment": "Rivals with no fainted member and party HP above huntHpFraction walk to the best wild within huntRange tiles that is at most huntOverLevel levels above their team, so they level up through the match; worn down, they go back to an outpost within healTripRange tiles to heal, then hunt again.",
+    "huntRange": 30,
+    "huntOverLevel": 3,
+    "huntHpFraction": 0.5,
+    "healTripRange": 70
   },
   "battle": {
     "castSeconds": 0.3,
@@ -106,7 +111,9 @@
     "inventorySize": 6,
     "groundItems": 120,
     "pickupRadius": 0.8,
-    "playerReach": 1.4
+    "playerReach": 1.4,
+    "_storageComment": "Every town has a storage chest beside its healer. They share one store per trainer (storageSlots slots, each stacking any number of one item) that keeps items safe when you are wiped out.",
+    "storageSlots": 12
   },
   "styler": {
     "_comment": "Capture Styler: hold C and draw loops round a wild Pokémon. It needs baseLoops + 1 per perLevel levels (+eliteLoops for elites, +bossLoops for land bosses, at most maxLoops). A full set calms it for calmSeconds: it stops fighting and every ball thrown at it counts catchMultiplier times. The line reaches maxRange tiles from the trainer; if the Pokémon runs through the line it breaks and one loop is lost.",

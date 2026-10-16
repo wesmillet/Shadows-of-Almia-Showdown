@@ -82,6 +82,19 @@ export interface Duel {
   winner: Trainer | null;
 }
 
+/** A town's storage chest: its bottom-centre (tiles) and the town. */
+export interface StorageChest {
+  x: number;
+  y: number;
+  town: string;
+}
+
+/** Something the player can use with Space when standing by it. */
+export type Service = { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } | { kind: 'chest'; index: number };
+
+/** Chest spots per island (the ground is shared by every match played on it). */
+const CHEST_SPOTS = new WeakMap<object, StorageChest[]>();
+
 export class Match {
   readonly ground: GroundRenderer;
   readonly rng: Rng;
@@ -192,13 +205,85 @@ export class Match {
         this.challenge = { npc, arena: this.ground.features.arena, state: 'idle', foe: null, readyAt: 0 };
       }
     }
+    this.placeChests(npcs);
+  }
+
+  /**
+   * The storage chests, one beside every town healer (the chest's bottom-centre, in tiles). Spots are
+   * picked once per island and its two tiles blocked, so later matches on the same island reuse them.
+   */
+  chests: StorageChest[] = [];
+
+  private placeChests(npcs: MapNpc[]): void {
+    const g = this.ground;
+    const known = CHEST_SPOTS.get(g);
+    if (known) {
+      this.chests = known.map((c) => ({ ...c }));
+      return;
+    }
+    const people = npcs.map((n) => ({ x: n.x, y: n.y }));
+    const offsets: Array<[number, number]> = [[-3, 0], [-3, -1], [-4, 0], [-4, -1], [2, -1], [2, 0], [-3, 1], [2, 1], [-1, -2], [-1, 2]];
+    for (const n of npcs) {
+      if (n.role !== 'healer') continue;
+      const hx = Math.floor(n.x);
+      const hy = Math.floor(n.y);
+      for (const [dx, dy] of offsets) {
+        const tx = hx + dx;
+        const ty = hy + dy;
+        // Two tiles for the chest, open ground in front of it to stand on, nobody in the way.
+        const free = [tx, tx + 1].every((x) => g.walkable(x, ty) && g.walkable(x, ty + 1) && g.walkable(x, ty - 1));
+        if (!free) continue;
+        const cx = tx + 1;
+        const cy = ty + 1;
+        if (people.some((p) => Math.hypot(p.x - cx, p.y - (cy - 0.5)) < 2)) continue;
+        g.block?.(tx, ty);
+        g.block?.(tx + 1, ty);
+        this.chests.push({ x: cx, y: cy, town: n.town });
+        break;
+      }
+    }
+    CHEST_SPOTS.set(g, this.chests.map((c) => ({ ...c })));
+  }
+
+  /** A trainer's chest store (created empty on first use). */
+  storageOf(t: Trainer): Array<InventorySlot | null> {
+    return (t.storage ??= new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null));
+  }
+
+  /** Puts a whole bag (or gear) stack in the chest. Returns what happened. */
+  deposit(t: Trainer, tab: 'items' | 'held', slot: number): string {
+    const list = t[tab];
+    const entry = list[slot];
+    if (!entry) return '';
+    const box = this.storageOf(t);
+    const same = box.find((s) => s?.id === entry.id);
+    if (same) same.count += entry.count;
+    else {
+      const free = box.indexOf(null);
+      if (free < 0) return 'The chest is full';
+      box[free] = { id: entry.id, count: entry.count };
+    }
+    list[slot] = null;
+    const name = ITEMS[entry.id]?.name ?? entry.id;
+    return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
+  }
+
+  /** Takes a whole chest stack back into the bag (or gear). Returns what happened. */
+  withdraw(t: Trainer, slot: number): string {
+    const box = this.storageOf(t);
+    const entry = box[slot];
+    if (!entry) return '';
+    if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
+    box[slot] = null;
+    const name = ITEMS[entry.id]?.name ?? entry.id;
+    return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
 
   /** The vendor, challenger or healer within reach of the player, nearest first. */
-  nearService(reach = 1.8): { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } | null {
+  nearService(reach = 1.8): Service | null {
     const p = this.player;
-    let best: { d: number; s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } } | null = null;
-    const consider = (x: number, y: number, s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' }, extra = 0) => {
+    let best: { d: number; s: Service } | null = null;
+    const consider = (x: number, y: number, s: Service, extra = 0) => {
       const d = Math.hypot(x - p.x, y - p.y);
       if (d <= reach + extra && (!best || d < best.d)) best = { d, s };
     };
@@ -206,7 +291,8 @@ export class Match {
     for (const sh of this.shops) consider(sh.npc.x, sh.npc.y, { kind: 'shop', shop: sh }, sh.npc.counter ? 0.8 : 0);
     if (this.challenge?.state === 'idle') consider(this.challenge.npc.x, this.challenge.npc.y, { kind: 'challenge' });
     for (const o of this.outposts) consider(o.x, o.y, { kind: 'healer' });
-    return best ? (best as { s: { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } }).s : null;
+    this.chests.forEach((c, i) => consider(c.x, c.y - 0.3, { kind: 'chest', index: i }, 0.3));
+    return best ? (best as { s: Service }).s : null;
   }
 
   /** Buys entry `i` of a shop for the player. Returns what happened. */
@@ -894,6 +980,30 @@ export class Match {
   }
 
   /**
+   * Gives up on a target the trainer is not getting any closer to (behind a cliff, across water,
+   * inside a building): after `stuckSeconds` without a tile of progress it is banned for a while.
+   */
+  private watchAiProgress(t: Trainer): void {
+    if (!t.aiKey || !t.aiTarget) {
+      t.aiProgress = undefined;
+      return;
+    }
+    const d = Math.hypot(t.aiTarget.x - t.x, t.aiTarget.y - t.y);
+    const p = t.aiProgress;
+    if (!p || d < p.best - 1) {
+      t.aiProgress = { best: d, since: this.time };
+      return;
+    }
+    const near = t.ai === 'hunt' ? 4 : t.ai === 'heal' ? CONFIG.outpost.radius : 1;
+    if (d > near && this.time - p.since > 6) {
+      (t.aiBans ??= {})[t.aiKey] = this.time + 40;
+      t.aiKey = null;
+      t.aiProgress = undefined;
+      t.aiTimer = 0;
+    }
+  }
+
+  /**
    * How close to the crystal a team of `level` can wander before the wild
    * Pokémon outclass it (wilds up to about three levels above it).
    */
@@ -912,14 +1022,20 @@ export class Match {
     t.aiTimer -= dt;
     if (t.aiTimer <= 0) {
       t.aiTimer = this.rng.range(0.4, 0.9);
+      const bans = t.aiBans ?? {};
+      world.banned = (key) => (bans[key] ?? 0) > this.time;
+      world.time = this.time;
       const d = decide(t, world);
       t.ai = d.ai;
       t.aiTarget = d.target;
+      if ((d.key ?? null) !== (t.aiKey ?? null)) t.aiProgress = undefined;
+      t.aiKey = d.key ?? null;
       if (d.ai === 'roam') {
         const beacon = this.outposts.find((o) => o.beacon > 0.5 && o.users.some((u) => u !== t));
         if (beacon && Math.hypot(beacon.x - t.x, beacon.y - t.y) < 20) {
           t.aiTarget = { x: beacon.x, y: beacon.y };
           t.ai = 'engage';
+          t.aiKey = null;
         }
       }
       // Use a potion when the lead is low.
@@ -939,6 +1055,7 @@ export class Match {
       let stop = 0.35;
       if (t.ai === 'engage') stop = 2.4;
       if (t.ai === 'heal') stop = 0.5;
+      if (t.ai === 'hunt') stop = 3;
       if (d > stop) {
         dx /= d;
         dy /= d;
@@ -955,6 +1072,7 @@ export class Match {
         if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
       }
     }
+    this.watchAiProgress(t);
     this.separate(t);
     this.afterTrainerMove(t, moved);
     // Occasionally send one member roaming so lone enemy Pokémon can be met on the map.

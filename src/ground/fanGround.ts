@@ -310,6 +310,10 @@ export class FanGround implements GroundRenderer {
     return this.biomeAt(tx, ty) === 'water';
   }
 
+  block(tx: number, ty: number): void {
+    if (this.inBounds(tx, ty)) this.walk[this.idx(tx, ty)] = 0;
+  }
+
   walkable(tx: number, ty: number): boolean {
     return this.inBounds(tx, ty) && this.walk[this.idx(tx, ty)] === 1;
   }

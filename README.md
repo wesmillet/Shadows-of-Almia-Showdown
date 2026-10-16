@@ -114,7 +114,8 @@ Kirlia to Gallade, Roselia, Doublade, Charjabug, Vulpix and Alolan Vulpix.
 Each town's medicine stall sells its own stone and the Wandering Merchant has
 a stone of the day; stones are not found in item balls. Great and Ultra Balls
 can hold the **Snag Machine** (Shift+number beside a rival's fainted Pokémon
-to claim it), Mega Stones and Extraction Vouchers.
+to claim it), Mega Stones, Extraction Vouchers and **Max Revives** (a fainted
+Pokémon back at full HP; the Wandering Merchant sells them too).
 
 **Two out at a time.** Every trainer has at most two Pokémon out: the first
 two in party order that can still fight. The others wait in their balls (a

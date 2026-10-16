@@ -21,7 +21,7 @@ import type { Shop } from './town';
 /** The merchant's stock: rare things the town stalls do not carry (at most nine lines). */
 const MERCHANT_STOCK: Array<[string, number]> = [
   ['rare-candy', 900], ['exp-share', 2000], ['lucky-egg', 2000], ['master-ball', 8000], ['extraction-voucher', 6000],
-  ['leftovers', 2200], ['life-orb', 2600], ['crystal-shard', 1500],
+  ['leftovers', 2200], ['life-orb', 2600], ['crystal-shard', 1500], ['max-revive', 2500],
 ];
 const STONES = ['fire-stone', 'water-stone', 'thunder-stone', 'leaf-stone', 'ice-stone', 'moon-stone', 'sun-stone', 'shiny-stone', 'dusk-stone', 'dawn-stone'];
 

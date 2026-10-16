@@ -78,6 +78,10 @@
         {
           "id": "capture-styler",
           "weight": 3
+        },
+        {
+          "id": "max-revive",
+          "weight": 1
         }
       ]
     },
@@ -213,6 +217,10 @@
         {
           "id": "mega-stone",
           "weight": 4
+        },
+        {
+          "id": "max-revive",
+          "weight": 3
         }
       ]
     }

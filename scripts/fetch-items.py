@@ -35,7 +35,7 @@ DATA = os.path.join(WORK, 'res', 'items', 'data')
 ITEMS = {
     'extraction-voucher': 's_s_ticket',   # a ticket: the Extraction Voucher
     'potion': 'potion', 'super-potion': 'super_potion', 'hyper-potion': 'hyper_potion',
-    'revive': 'revive',
+    'revive': 'revive', 'max-revive': 'max_revive',
     'x-attack': 'x_attack', 'x-defend': 'x_defense', 'x-speed': 'x_speed',
     'leftovers': 'leftovers', 'focus-sash': 'focus_sash', 'choice-band': 'choice_band', 'life-orb': 'life_orb',
     'charcoal': 'charcoal', 'mystic-water': 'mystic_water', 'magnet': 'magnet', 'miracle-seed': 'miracle_seed',

@@ -90,6 +90,13 @@
       "fraction": 0.5
     },
     {
+      "id": "max-revive",
+      "name": "Max Revive",
+      "short": "MaxRev",
+      "kind": "revive",
+      "fraction": 1.0
+    },
+    {
       "id": "x-attack",
       "name": "X Attack",
       "short": "X Atk",

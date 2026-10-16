@@ -87,8 +87,8 @@ works the same way (and a loss there is friendly).
   Gyarados) or a powerful Pokémon (Metagross, Salamence, Goodra, Dragapult...) at your level. Lose and she
   patches your team up; try again a minute later;
 - **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios or
-  Rayquaza) comes through as a boss with triple HP. Legendaries never faint: worn down to their last HP
-  they join whoever's Pokémon did it, so a rival can steal yours. Hoopa only turns up in about one
+  Rayquaza) comes through with triple HP and challenges you to a **legend bout**, fought like a trainer
+  battle (see below). Hoopa only turns up in about one
   match in seven (`visitors.hoopaChance`; add `?hoopa=1` to the address to force it). Once per match;
 - **Lugia** sleeps in **Tide Lake** (the lake between the plain and the autumn wood). Only a Super Rod
   cast into the lake can hook it (3% of bites, once a match): the water churns, Lugia bursts out
@@ -237,6 +237,18 @@ Lumineon, Whiscash, Qwilfish, Corsola, Tentacruel and Seadra; rare ones
 Gyarados, Lapras, Dratini, Feebas, Relicanth, Kingdra, Milotic and Wailord.
 Better rods hook higher levels (and the water near the crystal more still); a
 hooked Pokémon bursts out of the water, leaps ashore and fights you.
+
+**Legend bouts.** Hoopa's portal legends and Lugia fight you one-on-one in
+the battle ring, like a trainer: your team goes back in its balls and you send
+them out one at a time. A legend is harder than any rival: it keeps to mid
+range and strafes, dashes out of most of your telegraphs, recovers its moves
+faster as it weakens, follows one cast with another when pressed ("getting
+serious" under two thirds of its HP), and under a third it is **enraged**
+(Attack and Speed up). Worn down to its last HP it joins you (or, with a full
+party, leaves an Extraction Voucher). If it beats your whole team it vanishes
+and your Pokémon are patched up; a legend bout never knocks you out of the
+match. If you are already battling when it appears, it stays out as a wild
+boss instead, and whoever wears it down gets it.
 
 **Respawning.** If wild Pokémon knock out your whole party you are not
 out: every item you carry drops where you fell (one Premier Ball) and you

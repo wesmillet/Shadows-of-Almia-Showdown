@@ -1056,7 +1056,7 @@ export class MatchScreen implements Screen {
         // The ball pops open where the Pokémon appears.
         this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2.5, fps: 20 });
         const mine = ev.trainer === this.match.player;
-        if (mine || ev.duel.a.trainer === this.match.player || ev.duel.b.trainer === this.match.player) {
+        if (!ev.trainer.legendBout && (mine || ev.duel.a.trainer === this.match.player || ev.duel.b.trainer === this.match.player)) {
           this.say(mine ? `Go, ${ev.mon.name}!` : `${ev.trainer.name} sent out ${ev.mon.name}!`, 1.6);
         }
         break;

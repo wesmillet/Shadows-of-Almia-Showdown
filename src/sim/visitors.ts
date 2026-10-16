@@ -275,7 +275,10 @@ export class Visitors {
       L.visual.flash = 1;
       m.wilds.push(L);
       po.out = L;
-      m.battle.events.push({ type: 'notice', text: `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
+      // It challenges the player to a one-on-one bout (a trainer-style battle); if they can't fight
+      // right now it stays out as a wild boss anyone can wear down.
+      const bout = m.startLegendBout(L);
+      m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
     }
     if (po.out && po.out.visual.scale < 1) po.out.visual.scale = Math.min(1, po.out.visual.scale + dt * 1.5);
     if (po.out && po.out.visual.flash > 0) po.out.visual.flash = Math.max(0, po.out.visual.flash - dt * 1.5);
@@ -386,6 +389,7 @@ export class Visitors {
       s.stage = 3;
     } else if (s.stage === 3 && !L.leap) {
       L.calm = 0;
+      m.startLegendBout(L);
       m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
       this.lugiaIntro = null;
     }

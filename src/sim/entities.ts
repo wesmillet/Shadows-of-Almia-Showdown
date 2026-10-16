@@ -102,6 +102,8 @@ export interface Mon {
   steered?: boolean;
   /** Mega Evolved this match; `megaFrom` is the form it came from (what the PC stores). */
   mega?: boolean;
+  /** A legend's fighting phase in a bout: 0 calm, 1 pressed (under 2/3 HP), 2 enraged (under 1/3). */
+  legendPhase?: number;
   megaFrom?: { dex: string; name: string };
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
@@ -168,6 +170,10 @@ export interface Trainer {
   duelReadyAt?: number;
   /** Mega Evolution is once a match per trainer. */
   megaUsed?: boolean;
+  /** Not drawn (the stand-in "trainer" that holds a legendary in a legend bout). */
+  hidden?: boolean;
+  /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */
+  legendBout?: boolean;
 }
 
 export interface InventorySlot {

@@ -2000,6 +2000,21 @@ export class Match {
   private handleKnockouts(): void {
     for (const ev of [...this.battle.events]) {
       if (ev.type === 'yield') {
+        const host = ev.mon.owner?.legendBout ? ev.mon.owner : null;
+        if (host) {
+          // Won a legend bout: the legend joins the player and the battle ends.
+          const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
+          host.party = host.party.filter((x) => x !== ev.mon);
+          if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
+          ev.mon.duelId = undefined;
+          const by = ev.by?.owner === this.player ? ev.by : lead(this.player) ?? this.player.party.find((x) => !x.fainted) ?? null;
+          ev.mon.owner = null;
+          ev.mon.wild = true;
+          this.visitors.legendYields(ev.mon, by);
+          if (d) this.endDuel(d, this.player);
+          this.endLegendBout(host);
+          continue;
+        }
         this.visitors.legendYields(ev.mon, ev.by);
         continue;
       }
@@ -2316,9 +2331,125 @@ export class Match {
     this.battle.events.push({ type: 'duel-start', duel });
     if (a.isPlayer || b.isPlayer) {
       const foe = a.isPlayer ? b : a;
-      this.battle.events.push({ type: 'notice', text: `${foe.name} wants to battle!`, seconds: 2.2 });
+      if (!foe.legendBout) this.battle.events.push({ type: 'notice', text: `${foe.name} wants to battle!`, seconds: 2.2 });
     }
     return duel;
+  }
+
+  /**
+   * A legendary's one-on-one bout with the player (portal legends, Lugia), fought like a trainer
+   * battle: the player's team goes back in its balls and fights it one at a time in the ring. The
+   * legend has its own hard AI (stepLegendMon). Worn down to its last HP it joins the player; beat
+   * the player's whole team and it leaves, and the team is patched up (a friendly bout).
+   * Returns false (the legend stays a wild boss) when the player cannot battle right now.
+   */
+  startLegendBout(L: Mon): boolean {
+    const p = this.player;
+    if (p.duelId || !p.alive || p.downUntil !== undefined || !this.canBattle(p) || this.finalStarted) return false;
+    const host = this.makeTrainer(L.name, 'legend', false, L.x, L.y);
+    host.visitor = true;
+    host.hidden = true;
+    host.legendBout = true;
+    this.wilds = this.wilds.filter((w) => w !== L);
+    L.owner = host;
+    L.wild = false;
+    L.behavior = 'aggressive';
+    L.calm = 0;
+    L.target = null;
+    L.legendPhase = 0;
+    host.party.push(L);
+    this.trainers.push(host);
+    if (this.controlled) this.releaseControl();
+    this.fishing = null;
+    const d = this.startDuel(p, host, undefined, { x: L.x, y: L.y });
+    // The legend is already out: it does not come from a ball.
+    this.sendOut(d, d.b);
+    L.visual.flash = 0;
+    L.visual.scale = Math.max(L.visual.scale, 0.6);
+    return true;
+  }
+
+  /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */
+  private endLegendBout(host: Trainer): void {
+    host.alive = false;
+    this.trainers = this.trainers.filter((t) => t !== host);
+  }
+
+  /**
+   * A legendary in a bout: harder than any rival. It keeps to mid range and strafes, reads the
+   * player's telegraphs and dashes out of most of them, casts more often as it weakens, chains
+   * casts when pressed, and at a third of its HP it is enraged (Attack and Speed up, red flash).
+   */
+  private stepLegendMon(m: Mon, foe: Mon | null, dt: number): void {
+    const frac = m.hp / m.maxHp;
+    const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
+    if (phase > (m.legendPhase ?? 0)) {
+      m.legendPhase = phase;
+      if (phase === 1) this.battle.events.push({ type: 'notice', text: `${m.name} is getting serious!`, seconds: 2 });
+      else {
+        this.battle.changeStage(m, 'atk', 1);
+        this.battle.changeStage(m, 'spe', 1);
+        m.flash = 0.4;
+        this.battle.events.push({ type: 'notice', text: `${m.name} is enraged!`, seconds: 2.4 });
+        this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: m.x, y: m.y, scale: 2.4, ground: true, shake: 0.6, tint: '#ff6b6b' });
+      }
+    }
+    // It recovers faster the lower it gets.
+    const haste = [0, 0.35, 0.8][phase] as number;
+    for (let i = 0; i < m.cooldowns.length; i++) m.cooldowns[i] = Math.max(0, (m.cooldowns[i] ?? 0) - dt * haste);
+    if (m.casting || incapable(m)) return;
+    if (foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
+      if (this.rng.chance([0.55, 0.7, 0.85][phase] as number)) {
+        const side = this.rng.chance(0.5) ? 1 : -1;
+        this.startDodge(m, -(foe.y - m.y) * side, (foe.x - m.x) * side);
+        m.dodgeCd = [1.4, 1.0, 0.7][phase] as number;
+        return;
+      }
+      m.dodgeCd = 0.4;
+    }
+    if (!foe || foe.fainted || m.visual.scale < 1) {
+      if (m.moving) {
+        m.moving = false;
+        m.anim.play('Idle');
+      }
+      return;
+    }
+    const dx = foe.x - m.x;
+    const dy = foe.y - m.y;
+    const d = Math.hypot(dx, dy) || 1;
+    m.target = foe;
+    // Mid range, strafing; switches side every couple of seconds; enraged, it rushes in now and then.
+    const rush = phase === 2 && Math.sin(this.time * 0.9 + m.id) > 0.75;
+    let vx = 0;
+    let vy = 0;
+    if (rush ? d > 1.8 : d > 4.6) {
+      vx = dx / d;
+      vy = dy / d;
+    } else if (d < 2.4 && !rush) {
+      vx = -dx / d;
+      vy = -dy / d;
+    } else {
+      const side = Math.sin(this.time * 1.3 + m.id) > 0 ? 1 : -1;
+      vx = (-dy / d) * side * 0.8;
+      vy = (dx / d) * side * 0.8;
+    }
+    const speed = CONFIG.duel.monSpeed * (rush ? 1.25 : 0.9) * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const moved = vx || vy ? tryMove(this.ground, m, vx * speed * dt, vy * speed * dt, 0.3) : 0;
+    const walking = moved > 1e-4;
+    if (walking !== m.moving) {
+      m.moving = walking;
+      m.anim.play(walking ? 'Walk' : 'Idle');
+    }
+    m.dir = dirFromVector(dx, dy, m.dir);
+    if (m.busy <= 0) {
+      const [lo, hi] = ([[1.1, 1.6], [0.8, 1.3], [0.5, 1.0]] as const)[phase] as readonly [number, number];
+      m.busy = this.rng.range(lo, hi);
+      const slot = this.battle.chooseMove(m, foe);
+      if (slot >= 0 && this.battle.castAt(m, slot, this.mons(), 7)) {
+        // Pressed, it often follows up at once.
+        if (phase >= 1 && this.rng.chance(phase === 2 ? 0.5 : 0.3)) m.busy = 0.25;
+      }
+    }
   }
 
   /** Sends out party member `index` (or the first able one) for a side of a battle. */
@@ -2427,6 +2558,7 @@ export class Match {
       if (!m || m.fainted) continue;
       const foe = (s === d.a ? d.b : d.a).mon;
       if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
+      else if (s.trainer.legendBout) this.stepLegendMon(m, foe, dt);
       else this.stepDuelAiMon(m, foe, dt);
       // The battle stays in its ring.
       const r = Math.hypot(m.x - d.cx, m.y - d.cy);
@@ -2623,6 +2755,21 @@ export class Match {
       s.awaitingPick = false;
     }
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
+    if (winner.legendBout) {
+      // Lost a legend bout: it is friendly. The legend leaves and the team is patched up.
+      const p = this.player;
+      for (const m of winner.party) m.captured = true;
+      this.endLegendBout(winner);
+      for (const m of p.party) {
+        if (m.captured) continue;
+        m.fainted = false;
+        m.hp = Math.max(m.hp, Math.round(m.maxHp * 0.25));
+        m.status = null;
+        m.anim.play('Idle', { restart: true });
+      }
+      this.placeParty(p);
+      this.battle.events.push({ type: 'notice', text: `${winner.name} was too strong and vanished. Your Pokémon were patched up`, seconds: 3.5 });
+    }
   }
 
   /**

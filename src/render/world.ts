@@ -270,7 +270,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     drawSoftShadow(view, view.toScreenX(p.x) + gx * k, view.toScreenY(p.y) + gy * k, r, 0.28 * m.visual.alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive || t.downUntil !== undefined) continue;
+    if (!t.alive || t.downUntil !== undefined || t.hidden) continue;
     const p = trainerPos(t, alpha);
     // Wider than the stance and centred just above the soles, so the feet stand in the shade.
     if (inView(p.x, p.y)) drawSoftShadow(view, view.toScreenX(p.x), view.toScreenY(p.y) - view.spriteScale, 0.5, 0.3);
@@ -290,7 +290,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     list.push({ y: p.y, draw: () => drawMon(view, m, alpha) });
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive || t.downUntil !== undefined) continue;
+    if (!t.alive || t.downUntil !== undefined || t.hidden) continue;
     const p = trainerPos(t, alpha);
     if (!inView(p.x, p.y)) continue;
     const c = t.counter;
@@ -315,7 +315,7 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
     if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawMon(view, m, alpha);
   }
   for (const t of [match.player, ...match.trainers, ...match.npcs]) {
-    if (!t.alive || t.downUntil !== undefined) continue;
+    if (!t.alive || t.downUntil !== undefined || t.hidden) continue;
     const p = trainerPos(t, alpha);
     if (inView(p.x, p.y) && match.ground.underCanopy(p.x, p.y)) drawTrainer(view, t, opts.rangers, alpha, match.ground);
   }

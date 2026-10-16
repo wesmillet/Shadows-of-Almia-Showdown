@@ -19,3 +19,8 @@ non-commercial fan use only.
 storm-mask.png: the Devon Scuba Gear bag sprite (Pokémon Ruby/Sapphire/Emerald, by Game Freak /
 The Pokémon Company / Nintendo), supplied by the game's owner, centred on a 32x32 canvas.
 Non-commercial fan project use only.
+
+bag-balls/<kind>-ball.png: 30x30 bag icons for every ball, from the PokeAPI sprites repository
+(https://github.com/PokeAPI/sprites, sprites/items/). Shown in the bag; the overworld ball
+sprites in balls/ stay for balls on the ground and in flight. Pokemon item art by Game Freak /
+The Pokemon Company / Nintendo; non-commercial fan use only.

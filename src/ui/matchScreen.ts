@@ -1954,7 +1954,8 @@ export class MatchScreen implements Screen {
     const w = 420 * s;
     const x = v.width / 2 - w / 2;
     const y = 12 * s;
-    panel(v, x, y, w, 50 * s);
+    const k = Math.max(2, Math.round(s * 3));
+    if (!this.ui.flat(h, 'cream', x, y, w, 50 * s + 2 * k, k)) panel(v, x, y, w, 50 * s);
     const balls = (t: Trainer, cx: number) => {
       const n = t.party.length;
       for (let i = 0; i < n; i++) {
@@ -1968,10 +1969,10 @@ export class MatchScreen implements Screen {
         h.fillRect(cx + (i - (n - 1) / 2) * 14 * s - 5 * s, y + 33 * s - 0.5 * s, 10 * s, 1.5 * s);
       }
     };
-    text(v, 'You', x + w * 0.22, y + 19 * s, 14, { align: 'center', color: '#bfe3ff', maxWidth: w * 0.36 });
+    text(v, 'You', x + w * 0.22, y + 19 * s, 14, { align: 'center', color: '#1f5aa0', maxWidth: w * 0.36, shadow: false });
     balls(me.trainer, x + w * 0.22);
-    text(v, 'VS', v.width / 2, y + 28 * s, 18, { align: 'center', color: '#ffd36b' });
-    text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#ffb3b3', maxWidth: w * 0.36 });
+    text(v, 'VS', v.width / 2, y + 28 * s, 18, { align: 'center', color: '#c2611a', shadow: false });
+    text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#b0302a', maxWidth: w * 0.36, shadow: false });
     balls(foe.trainer, x + w * 0.78);
     if (!me.awaitingPick) return;
     // Choose the next Pokémon.
@@ -2006,34 +2007,34 @@ export class MatchScreen implements Screen {
     return Math.min(1, m.drowsy / this.match.drowsySeconds(m));
   }
 
-  /** The storm meter: a purple bar with a crescent moon, pulsing once the Pokémon is asleep. */
+  /**
+   * The storm meter over a Pokémon in the darkness: the flat skin's gold-rimmed bar with a purple fill
+   * toward sleep, pulsing once it is asleep (with a "Zzz" beside it).
+   */
   private drawStormMeter(v: View, cx: number, y: number, w: number, px: number, frac: number, asleep: boolean): void {
     const h = v.hud;
-    const bh = Math.max(3, Math.round(px * 1.4));
+    const k = Math.max(2, Math.round(v.baseScale * 2));
     const x = Math.round(cx - w / 2);
-    h.save();
-    h.fillStyle = 'rgba(14,6,26,0.85)';
-    h.fillRect(x - px, y - px, w + 2 * px, bh + 2 * px);
-    h.fillStyle = 'rgba(70,40,110,0.9)';
-    h.fillRect(x, y, w, bh);
     const pulse = asleep ? 0.65 + 0.35 * Math.sin(performance.now() / 160) : 1;
-    h.fillStyle = `rgba(190,120,255,${pulse})`;
-    h.fillRect(x, y, Math.round(w * frac), bh);
-    h.fillStyle = 'rgba(255,255,255,0.35)';
-    h.fillRect(x, y, Math.round(w * frac), Math.max(1, Math.round(bh / 3)));
-    // crescent moon at the left end
-    const r = bh * 0.95;
-    const mx = x - px - r - 2;
-    const my = y + bh / 2;
-    h.fillStyle = '#d9b8ff';
-    h.beginPath();
-    h.arc(mx, my, r, 0, Math.PI * 2);
-    h.fill();
-    h.globalCompositeOperation = 'destination-out';
-    h.beginPath();
-    h.arc(mx + r * 0.55, my - r * 0.3, r * 0.85, 0, Math.PI * 2);
-    h.fill();
-    h.restore();
+    const fill = `rgba(${asleep ? '190,120,255' : '155,92,255'},${pulse})`;
+    if (!this.ui.flatBar(h, x, y - 4 * k, w, k, frac, fill, '#1a0f2e')) {
+      h.fillStyle = 'rgba(14,6,26,0.85)';
+      h.fillRect(x - px, y - px, w + 2 * px, 3 * px);
+      h.fillStyle = fill;
+      h.fillRect(x, y, Math.round(w * frac), px);
+    }
+    if (asleep) {
+      h.save();
+      h.font = uiFont(9 * v.baseScale);
+      h.textAlign = 'left';
+      h.textBaseline = 'middle';
+      h.lineWidth = 3;
+      h.strokeStyle = 'rgba(26,15,46,0.9)';
+      h.strokeText('Zzz', x + w + 4 * v.baseScale, y + k);
+      h.fillStyle = '#e2ccff';
+      h.fillText('Zzz', x + w + 4 * v.baseScale, y + k);
+      h.restore();
+    }
   }
 
   private drawInfoBars(v: View, alpha: number): void {

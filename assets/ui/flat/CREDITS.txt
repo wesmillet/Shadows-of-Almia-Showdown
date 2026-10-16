@@ -1,0 +1,4 @@
+Complete UI Essential Pack (Free), 01_Flat_Theme sprites, by Crusenho Agus Hennihuno
+(https://crusenho.itch.io), licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Files copied unchanged from the pack's Sprites folder, with the "UI_Flat_" prefix dropped.
+Used for the in-match HUD (src/ui/pixelUi.ts, nine-sliced at whole-pixel scales).

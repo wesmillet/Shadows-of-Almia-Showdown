@@ -90,10 +90,10 @@ works the same way (and a loss there is friendly).
   Rayquaza) comes through as a boss with triple HP. Legendaries never faint: worn down to their last HP
   they join whoever's Pokémon did it, so a rival can steal yours. Hoopa only turns up in about one
   match in seven (`visitors.hoopaChance`; add `?hoopa=1` to the address to force it). Once per match;
-- **Lugia** sleeps in **Tide Lake** (the new lake between the plain and the autumn wood): while you are at
-  the lakeside the water may churn (spreading rings), then Lugia bursts out of the lake (Guardian Signs'
-  own Lugia sheet, fx_135, in a column of spray), leaps ashore beside you and fights as a legendary. Once
-  per match.
+- **Lugia** sleeps in **Tide Lake** (the lake between the plain and the autumn wood). Only a Super Rod
+  cast into the lake can hook it (3% of bites, once a match): the water churns, Lugia bursts out
+  (Guardian Signs' own Lugia sheet, fx_135, in a column of spray), leaps ashore beside you and fights as
+  a legendary.
 
 The map also has more ways down from high ground: every plateau now has a flight of stairs in each long
 south face (about every 22 tiles), on top of the ones where roads climb.
@@ -216,6 +216,26 @@ Great and Ultra Ball loot (usually a stone for a Pokémon you have), and an Alph
 one of these lines always drops its stone. A Mega sent to the PC is stored
 as its regular form. Data: `scripts/megas.py` adds the Mega species and
 stones; the rules are in `src/sim/mega.ts`.
+
+**Fishing.** Carry a rod (Old Rod and Good Rod at the Poké Ball stalls, the
+Super Rod from the Wandering Merchant; all three also turn up in item balls),
+stand at the water's edge and press **Space** (or use the rod from the bag).
+The line goes out, the bobber waits, and when the **!** pops up you have about
+a second to press Space and hook it; moving reels the line in. What bites
+depends on the rod (`data/fishing.json`):
+
+| | common | uncommon | rare | item ball | Lugia |
+|---|---|---|---|---|---|
+| Old Rod | 80% | 17% | 3% | | |
+| Good Rod | 55% | 30% | 10% | 5% | |
+| Super Rod | 30% | 35% | 22% | 10% | 3% (Tide Lake only) |
+
+Common bites are Magikarp, Goldeen, Tentacool, Remoraid, Finneon, Barboach,
+Luvdisc and Horsea; uncommon ones Chinchou, Wailmer, Seaking, Octillery,
+Lumineon, Whiscash, Qwilfish, Corsola, Tentacruel and Seadra; rare ones
+Gyarados, Lapras, Dratini, Feebas, Relicanth, Kingdra, Milotic and Wailord.
+Better rods hook higher levels (and the water near the crystal more still); a
+hooked Pokémon bursts out of the water, leaps ashore and fights you.
 
 **Respawning.** If wild Pokémon knock out your whole party you are not
 out: every item you carry drops where you fell (one Premier Ball) and you

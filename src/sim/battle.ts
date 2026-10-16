@@ -44,6 +44,7 @@ export type BattleEvent =
   | { type: 'notice'; text: string; seconds?: number }
   | { type: 'downed'; trainer: Trainer; seconds: number }
   | { type: 'mega-start'; mon: Mon }
+  | { type: 'fish'; stage: 'cast' | 'land' | 'bite'; x: number; y: number }
   | { type: 'respawned'; trainer: Trainer }
   | { type: 'caught'; mon: Mon; by: Trainer }
   | { type: 'broke-free'; mon: Mon }

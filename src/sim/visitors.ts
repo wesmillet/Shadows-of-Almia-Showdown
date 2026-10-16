@@ -6,8 +6,8 @@
  *   - Hoopa, who floats about until the player talks to it, then opens a ring
  *     portal: a legendary comes through as a boss, and when it is worn down to
  *     its last HP it joins whoever beat it;
- *   - Lugia, asleep under Tide Lake: while the player is at the lakeside it may
- *     leap out (its Hop animation, a splash) and land on the shore as a legendary.
+ *   - Lugia, asleep under Tide Lake: a Super Rod cast into the lake can hook it (a small
+ *     chance, src/sim/fishing.ts); it bursts out and lands on the shore as a legendary.
  * Each happens once per match (the merchant and Celeste stay all match).
  */
 import { dirFromVector } from '../core/math';
@@ -20,7 +20,7 @@ import type { Shop } from './town';
 
 /** The merchant's stock: rare things the town stalls do not carry (at most nine lines). */
 const MERCHANT_STOCK: Array<[string, number]> = [
-  ['rare-candy', 900], ['exp-share', 2000], ['lucky-egg', 2000], ['master-ball', 8000], ['extraction-voucher', 6000],
+  ['rare-candy', 900], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
   ['leftovers', 2200], ['life-orb', 2600], ['crystal-shard', 1500], ['max-revive', 2500],
 ];
 const STONES = ['fire-stone', 'water-stone', 'thunder-stone', 'leaf-stone', 'ice-stone', 'moon-stone', 'sun-stone', 'shiny-stone', 'dusk-stone', 'dawn-stone'];
@@ -57,7 +57,6 @@ export class Visitors {
   lugiaDone = false;
   /** Lugia's entrance in progress: the lake churns, Lugia bursts out (Guardian Signs' Lugia sheet), then leaps ashore. */
   lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number } | null = null;
-  private lugiaCheck = 15;
 
   constructor(private readonly m: Match) {
     const rng = m.rng;
@@ -310,35 +309,32 @@ export class Visitors {
       if (k >= 1) {
         w.leap = null;
         w.anim.play('Idle', { restart: true });
-        m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: w.x, y: w.y, scale: 2.4, ground: true });
+        // A big landing ring for Lugia, a small one for a fish leaping ashore.
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: w.x, y: w.y, scale: lp.h >= 3 ? 2.4 : 0.9, ground: true });
       }
     }
     this.stepLugiaIntro(dt);
-    if (this.lugiaDone || !lake || !SPECIES.has(LUGIA)) return;
-    this.lugiaCheck -= dt;
-    if (this.lugiaCheck > 0) return;
-    this.lugiaCheck = 12;
+    void lake;
+  }
+
+  /** True while Lugia can still be hooked this match (a Super Rod in Tide Lake, src/sim/fishing.ts). */
+  lugiaAvailable(): boolean {
+    return !this.lugiaDone && !!this.m.ground.features?.lake && SPECIES.has(LUGIA);
+  }
+
+  /** True when a point is in Tide Lake (its ellipse, a tile of margin). */
+  inTideLake(x: number, y: number): boolean {
+    const lake = this.m.ground.features?.lake;
+    return !!lake && ((x - lake.x) / (lake.rx + 1)) ** 2 + ((y - lake.y) / (lake.ry + 1)) ** 2 < 1;
+  }
+
+  /** Lugia takes the bait: it bursts out of the water at `from` (the bobber) and leaps ashore by the player. */
+  summonLugia(from: { x: number; y: number }): boolean {
+    if (!this.lugiaAvailable()) return false;
+    const m = this.m;
+    const lake = m.ground.features?.lake as { x: number; y: number };
     const p = m.player;
-    const nearLake = ((p.x - lake.x) / (lake.rx + 7)) ** 2 + ((p.y - lake.y) / (lake.ry + 7)) ** 2 < 1;
-    if (!nearLake || p.duelId || !m.rng.chance(0.3)) return;
     this.lugiaDone = true;
-    // Out of the water between the lake's middle and the player, onto the shore beside them.
-    // Out of the water a few tiles off the shore nearest the player, so the burst is in view.
-    let from = { x: lake.x + (p.x - lake.x) * 0.25, y: lake.y + (p.y - lake.y) * 0.25 };
-    {
-      const dx = lake.x - p.x;
-      const dy = lake.y - p.y;
-      const d = Math.hypot(dx, dy) || 1;
-      for (let k = 1; k < d; k += 0.5) {
-        const x = p.x + (dx / d) * k;
-        const y = p.y + (dy / d) * k;
-        if (!m.ground.walkable(Math.floor(x), Math.floor(y))) {
-          const kk = Math.min(d, k + 2.5);
-          from = { x: p.x + (dx / d) * kk, y: p.y + (dy / d) * kk };
-          break;
-        }
-      }
-    }
     let to = { x: p.x + 2.5, y: p.y };
     for (let i = 0; i < 24; i++) {
       const a = Math.atan2(lake.y - p.y, lake.x - p.x) + ((i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI) / 12;
@@ -359,7 +355,8 @@ export class Visitors {
     L.leap = { t: 0, dur: 99, h: 0, fx: from.x, fy: from.y, tx: from.x, ty: from.y };
     m.wilds.push(L);
     this.lugiaIntro = { t: 0, L, from, to, stage: 0 };
-    m.battle.events.push({ type: 'notice', text: 'Tide Lake churns...', seconds: 2 });
+    m.battle.events.push({ type: 'notice', text: 'Something huge took the bait... Tide Lake churns!', seconds: 2.5 });
+    return true;
   }
 
   /** The entrance, beat by beat: ripples, the burst out of the water, the leap ashore. */

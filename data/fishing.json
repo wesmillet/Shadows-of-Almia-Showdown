@@ -1,0 +1,176 @@
+{
+  "_comment": "Fishing (src/sim/fishing.ts). Face the water with a rod in the bag and press Space (or use the rod): the line goes out reach tiles, a bite comes after a wait drawn from the rod's wait range, and Space within biteWindow seconds hooks it. odds are percentages per rod for each outcome: a Pokemon from the common, uncommon or rare pool (dex, weight), an item ball (itemTier), or the legend (Lugia, Super Rod in Tide Lake only, once a match; elsewhere it counts as rare). Hooked Pokemon are levels[0]-levels[1] for the rod plus centerLevelFactor of the wild level bonus where you fish, met already evolved past their evolution level, and leap ashore to fight.",
+  "reach": 3,
+  "castSeconds": 0.6,
+  "biteWindow": 1.3,
+  "reelSeconds": 0.7,
+  "centerLevelFactor": 0.8,
+  "rods": {
+    "old-rod": {
+      "odds": {
+        "common": 80,
+        "uncommon": 17,
+        "rare": 3,
+        "item": 0,
+        "legend": 0
+      },
+      "wait": [
+        3,
+        7
+      ],
+      "levels": [
+        4,
+        10
+      ],
+      "itemTier": "common"
+    },
+    "good-rod": {
+      "odds": {
+        "common": 55,
+        "uncommon": 30,
+        "rare": 10,
+        "item": 5,
+        "legend": 0
+      },
+      "wait": [
+        2.5,
+        6
+      ],
+      "levels": [
+        12,
+        22
+      ],
+      "itemTier": "uncommon"
+    },
+    "super-rod": {
+      "odds": {
+        "common": 30,
+        "uncommon": 35,
+        "rare": 22,
+        "item": 10,
+        "legend": 3
+      },
+      "wait": [
+        2,
+        5
+      ],
+      "levels": [
+        22,
+        32
+      ],
+      "itemTier": "rare"
+    }
+  },
+  "pools": {
+    "common": [
+      [
+        "0129",
+        30
+      ],
+      [
+        "0118",
+        14
+      ],
+      [
+        "0072",
+        12
+      ],
+      [
+        "0223",
+        10
+      ],
+      [
+        "0456",
+        10
+      ],
+      [
+        "0339",
+        8
+      ],
+      [
+        "0370",
+        8
+      ],
+      [
+        "0116",
+        8
+      ]
+    ],
+    "uncommon": [
+      [
+        "0170",
+        12
+      ],
+      [
+        "0320",
+        10
+      ],
+      [
+        "0119",
+        8
+      ],
+      [
+        "0224",
+        8
+      ],
+      [
+        "0457",
+        8
+      ],
+      [
+        "0340",
+        8
+      ],
+      [
+        "0211",
+        8
+      ],
+      [
+        "0222",
+        8
+      ],
+      [
+        "0073",
+        6
+      ],
+      [
+        "0117",
+        6
+      ]
+    ],
+    "rare": [
+      [
+        "0130",
+        14
+      ],
+      [
+        "0131",
+        12
+      ],
+      [
+        "0147",
+        10
+      ],
+      [
+        "0349",
+        10
+      ],
+      [
+        "0369",
+        8
+      ],
+      [
+        "0230",
+        4
+      ],
+      [
+        "0350",
+        4
+      ],
+      [
+        "0321",
+        4
+      ]
+    ]
+  }
+}

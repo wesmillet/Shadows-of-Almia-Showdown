@@ -26,6 +26,7 @@ import { extractToPc } from '../pc';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
 import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
+import { bestRod, canFish, FISHING, hookOrReel, startFishing } from '../sim/fishing';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
 import { drawSoftShadow } from '../render/world';
@@ -77,8 +78,8 @@ export class MatchScreen implements Screen {
   /** Camera shake, 0..1, decaying. */
   private shake = 0;
   private readonly floaters = new Floaters();
-  private notice = '';
-  private noticeT = 0;
+  /** Messages on screen, newest last; up to three show at once, stacked, each on its own timer. */
+  private notices: Array<{ text: string; t: number }> = [];
   private selectedItem = -1;
   /** The wild Pokémon clicked as the throw target. */
   /** Capture Styler: the line drawn while C is held (world points), closed loops flashing, and where each wild was last step. */
@@ -127,8 +128,16 @@ export class MatchScreen implements Screen {
   }
 
   say(s: string, seconds = 1.6): void {
-    this.notice = s;
-    this.noticeT = seconds;
+    if (!s) return;
+    // The same message again just refreshes its timer.
+    const same = this.notices.find((n) => n.text === s);
+    if (same) {
+      same.t = Math.max(same.t, seconds);
+      return;
+    }
+    this.notices.push({ text: s, t: seconds });
+    // Keep the three newest; an older one leaves a little early rather than piling up.
+    while (this.notices.length > 3) this.notices.shift();
   }
 
   step(dt: number, input: Input): void {
@@ -168,10 +177,8 @@ export class MatchScreen implements Screen {
     this.match.step(dt, input);
     this.stepStyler(dt, input);
     this.consumeEvents();
-    if (this.noticeT > 0) {
-      this.noticeT -= dt;
-      if (this.noticeT <= 0) this.notice = '';
-    }
+    for (const n of this.notices) n.t -= dt;
+    this.notices = this.notices.filter((n) => n.t > 0);
   }
 
   protected handleInput(input: Input): void {
@@ -322,6 +329,12 @@ export class MatchScreen implements Screen {
 
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
   private interact(): boolean {
+    // Fishing: Space hooks a bite (or reels in early).
+    if (this.match.fishing) {
+      const msg = hookOrReel(this.match);
+      if (msg) this.say(msg, 1.4);
+      return true;
+    }
     const who = this.match.visitors.near();
     if (who === 'ace') {
       this.say(this.match.visitors.challengeAce(), 3);
@@ -335,7 +348,11 @@ export class MatchScreen implements Screen {
     if (s?.kind === 'shop') this.shopOpen = s.shop;
     else if (s?.kind === 'challenge') this.say(this.match.startChallenge(), 3);
     else if (s?.kind === 'healer') this.say(this.match.healAtHealer(), 2);
-    else return this.match.pickUp();
+    else if (this.match.nearestItem()) return this.match.pickUp();
+    else if (canFish(this.match)) {
+      const msg = startFishing(this.match);
+      if (msg) this.say(msg, 1.4);
+    } else return this.match.pickUp();
     return true;
   }
 
@@ -620,6 +637,112 @@ export class MatchScreen implements Screen {
       ctx.stroke();
       ctx.setLineDash([]);
       drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Fishing, drawn on whole sprite pixels: the rod in the trainer's hand, the line sagging out to a
+   * red-and-white bobber with rings on the water, the cast arc, the "!" when something bites, and the
+   * taut line as it is reeled in.
+   */
+  private drawFishing(v: View): void {
+    const f = this.match.fishing;
+    if (!f) return;
+    const p = this.match.player;
+    const ctx = v.ctx;
+    const u = Math.max(2, Math.round(v.spriteScale));
+    const now = performance.now() / 1000;
+    const sx = Math.round(v.toScreenX(p.x));
+    const sy = Math.round(v.toScreenY(p.y));
+    const side = Math.abs(f.fx) > Math.abs(f.fy);
+    const up = !side && f.fy < 0;
+    const hand = { x: sx + (side ? Math.sign(f.fx) * 4 : 6) * u, y: sy - (up ? 14 : 13) * u };
+    // Rod tip at rest: out over the water and up.
+    let tip = { x: hand.x + (f.fx * 9 + (side ? 0 : 2)) * u, y: hand.y + (f.fy * 6 - 12) * u };
+    const castT = Math.min(1, f.t / FISHING.castSeconds);
+    if (f.stage === 'cast' && castT < 0.35) tip = { x: hand.x - f.fx * 5 * u, y: hand.y - (f.fy * 3 + 15) * u };
+    const bite = f.stage === 'bite';
+    if (bite) tip = { x: tip.x + f.fx * 2 * u + Math.sin(now * 40) * u * 0.6, y: tip.y + (f.fy * 2 + 3) * u };
+    if (f.stage === 'reel') tip = { x: tip.x + f.fx * 3 * u, y: tip.y + 4 * u };
+    // Where the bobber is on screen.
+    const b0 = { x: v.toScreenX(f.bx), y: v.toScreenY(f.by) };
+    let bob = { x: b0.x, y: b0.y };
+    let sag = 6 * u;
+    if (f.stage === 'cast') {
+      const k = Math.max(0, (castT - 0.35) / 0.65);
+      bob = { x: tip.x + (b0.x - tip.x) * k, y: tip.y + (b0.y - tip.y) * k - Math.sin(Math.PI * k) * 14 * u };
+      sag = 2 * u;
+    } else if (f.stage === 'reel') {
+      const k = Math.min(1, f.t / FISHING.reelSeconds);
+      const shore = { x: v.toScreenX(p.x + f.fx * 1.3), y: v.toScreenY(p.y + f.fy * 1.3) };
+      bob = { x: b0.x + (shore.x - b0.x) * k, y: b0.y + (shore.y - b0.y) * k };
+      sag = 0;
+    } else if (bite) {
+      sag = u;
+    }
+    const inWater = f.stage !== 'cast';
+    const dip = !inWater ? 0 : bite ? (2 + Math.round(Math.abs(Math.sin(now * 18)) * 3)) * u : Math.round(Math.sin(now * 3) * 0.8) * u;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    // Rings on the water.
+    if (inWater) {
+      const period = bite ? 0.45 : 1.6;
+      for (let j = 0; j < 2; j++) {
+        const k = ((now / period + j * 0.5) % 1);
+        const r = (2 + k * (bite ? 9 : 7)) * u;
+        ctx.strokeStyle = `rgba(235,250,255,${(bite ? 0.85 : 0.55) * (1 - k)})`;
+        ctx.lineWidth = Math.max(1, u * 0.6);
+        ctx.beginPath();
+        ctx.ellipse(bob.x, bob.y + u, r, r * 0.42, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    // The line: a sagging curve from the tip to the bobber.
+    ctx.strokeStyle = 'rgba(245,245,250,0.9)';
+    ctx.lineWidth = Math.max(1, Math.round(u * 0.4));
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y);
+    ctx.quadraticCurveTo((tip.x + bob.x) / 2, Math.max(tip.y, bob.y) + sag, bob.x, bob.y - 3 * u + dip);
+    ctx.stroke();
+    // The rod: a dark handle and a lighter, thinner tip.
+    const mid = { x: hand.x + (tip.x - hand.x) * 0.35, y: hand.y + (tip.y - hand.y) * 0.35 };
+    ctx.lineCap = 'square';
+    ctx.strokeStyle = '#3c2a1c';
+    ctx.lineWidth = u * 1.7;
+    ctx.beginPath();
+    ctx.moveTo(hand.x, hand.y);
+    ctx.lineTo(mid.x, mid.y);
+    ctx.stroke();
+    ctx.strokeStyle = '#a8743f';
+    ctx.lineWidth = u * 1.1;
+    ctx.beginPath();
+    ctx.moveTo(mid.x, mid.y);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.stroke();
+    // The bobber: red top, white bottom, dark outline.
+    const bx = Math.round(bob.x / u) * u;
+    const by = Math.round((bob.y + dip) / u) * u;
+    ctx.fillStyle = '#281c22';
+    ctx.fillRect(bx - 3 * u, by - 5 * u, 6 * u, 6 * u);
+    ctx.fillStyle = '#e83c3c';
+    ctx.fillRect(bx - 2 * u, by - 4 * u, 4 * u, 2 * u);
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(bx - 2 * u, by - 2 * u, 4 * u, 2 * u);
+    // "!" over the trainer when something bites.
+    if (bite) {
+      const hx = sx;
+      const hy = sy - 52 * u;
+      const w = 10 * u;
+      const hh = 12 * u;
+      ctx.fillStyle = '#1e1428';
+      ctx.fillRect(hx - w / 2 - u, hy - u, w + 2 * u, hh + 2 * u);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(hx - w / 2, hy, w, hh);
+      ctx.fillRect(hx - u, hy + hh, 2 * u, 2 * u);
+      ctx.fillStyle = '#e1303e';
+      ctx.fillRect(hx - u, hy + 2 * u, 2 * u, 5 * u);
+      ctx.fillRect(hx - u, hy + 8 * u, 2 * u, 2 * u);
     }
     ctx.restore();
   }
@@ -964,6 +1087,10 @@ export class MatchScreen implements Screen {
       case 'evolve-start':
         if (ev.mon.owner?.isPlayer) this.say(`What? ${ev.mon.name} is evolving!`, 1.6);
         this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2, fps: 12 });
+        break;
+      case 'fish':
+        // A small splash where the bobber lands, a bigger one when something bites.
+        if (ev.stage !== 'cast') this.vfx.add(new ImpactBurst(ev.x, ev.y, '#d8f2ff', ev.stage === 'bite' ? 0.7 : 0.4));
         break;
       case 'mega-start':
         if (ev.mon.owner?.isPlayer) this.say(`${ev.mon.name}'s ${ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'} is reacting!`, 1.6);
@@ -1472,7 +1599,7 @@ export class MatchScreen implements Screen {
       darkRadius: this.match.darkness.radius,
       darkPhaseLabel: phaseLabel(this.match.darkness),
       nextPulseIn: this.match.darkness.nextPulseIn,
-      notice: this.notice,
+      notices: this.notices.map((n) => n.text),
       selectedItem: this.selectedItem,
       gearTab: this.gearTab,
       popup: this.popup,
@@ -1502,11 +1629,17 @@ export class MatchScreen implements Screen {
 
   private servicePrompt(): string | null {
     if (this.shopOpen || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
+    const f = this.match.fishing;
+    if (f) return f.stage === 'bite' ? 'Space · Reel it in!' : f.stage === 'reel' ? null : 'Waiting for a bite... (move or Space to reel in)';
     const who = this.match.visitors.near();
     if (who === 'ace') return 'Space · Battle Ace Trainer Celeste (win a rare Pokémon)';
     if (who === 'hoopa') return 'Space · Talk to Hoopa';
     const s = this.match.nearService();
-    if (!s) return this.match.nearestItem() ? 'Space · Pick up' : null;
+    if (!s) {
+      if (this.match.nearestItem()) return 'Space · Pick up';
+      if (canFish(this.match)) return `Space · Fish (${ITEMS[bestRod(this.match.player) ?? '']?.name ?? 'rod'})`;
+      return null;
+    }
     if (s.kind === 'shop') return `Space · Shop at the ${s.shop.name}`;
     if (s.kind === 'challenge') return `Space · Challenge the ${SHOPS.challenger.name}`;
     return 'Space · Heal your party';
@@ -1522,6 +1655,8 @@ export class MatchScreen implements Screen {
     if (po) list.push({ y: po.y - 0.1, draw: () => this.drawPortal(v, po) });
     const dp = this.match.darkraiPortal;
     if (dp) list.push({ y: dp.y - 0.05, draw: () => this.drawDarkraiPortal(v, performance.now() / 1000) });
+    const fishing = this.match.fishing;
+    if (fishing) list.push({ y: this.match.player.y + 0.02, draw: () => this.drawFishing(v) });
     return list;
   }
 

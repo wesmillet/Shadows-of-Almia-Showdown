@@ -17,7 +17,17 @@ export class Floaters {
   private list: Floater[] = [];
 
   add(x: number, y: number, label: string, color: string, size = 22): void {
-    this.list.push({ x, y, t: 0, life: 1.0, label, color, size, vy: -1.3 });
+    // Several labels at once on the same spot (XP, level up, money after a knockout) stack upward
+    // instead of drawing over each other, and each new one waits a beat longer before fading.
+    let ny = y;
+    let extra = 0;
+    for (let guard = 0; guard < 8; guard++) {
+      const clash = this.list.find((f) => f.t < 0.6 && Math.abs(f.x - x) < 1.6 && Math.abs(f.y - ny) < 0.42);
+      if (!clash) break;
+      ny = clash.y - 0.45;
+      extra += 0.15;
+    }
+    this.list.push({ x, y: ny, t: 0, life: 1.0 + Math.min(0.6, extra), label, color, size, vy: -1.3 });
   }
 
   update(dt: number): void {

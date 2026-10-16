@@ -23,6 +23,7 @@ import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, t
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
+import { startFishing, stepFishing, type FishingState } from './fishing';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -531,6 +532,8 @@ export class Match {
         return 'Pick a move slot to replace';
       case 'voucher':
         return 'Pick a Pokémon to extract';
+      case 'rod':
+        return t.isPlayer ? startFishing(this, def.id) : '';
       case 'shard': {
         if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
         this.lightZones.push({ x: t.x, y: t.y, r: def.radius ?? 5, t: def.seconds ?? 10 });
@@ -1506,6 +1509,8 @@ export class Match {
    * steps behind. Null in trainer mode.
    */
   controlled: Mon | null = null;
+  /** The player's line in the water, if fishing (src/sim/fishing.ts). */
+  fishing: FishingState | null = null;
   /** Set when the steered Pokémon faints: control passes to the next one out (until this time). */
   private handoffUntil = 0;
 
@@ -1635,6 +1640,7 @@ export class Match {
     this.moveX = axis.x;
     this.moveY = axis.y;
     this.stepPlayer(dt);
+    stepFishing(this, dt);
     this.visitors.step(dt);
     this.stepDodges(dt);
     this.stepLock();

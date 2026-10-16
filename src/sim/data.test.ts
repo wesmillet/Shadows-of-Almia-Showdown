@@ -79,3 +79,15 @@ describe('species data', () => {
     }
   });
 });
+
+describe('fishing data', () => {
+  it('has three rods whose odds add up to 100 and pools of known species', async () => {
+    const fishing = (await import('../../data/fishing.json')).default as unknown as {
+      rods: Record<string, { odds: Record<string, number> }>;
+      pools: Record<string, Array<[string, number]>>;
+    };
+    expect(Object.keys(fishing.rods).sort()).toEqual(['good-rod', 'old-rod', 'super-rod']);
+    for (const r of Object.values(fishing.rods)) expect(Object.values(r.odds).reduce((a, b) => a + b, 0)).toBe(100);
+    for (const pool of Object.values(fishing.pools)) for (const [dex] of pool) expect(SPECIES.has(dex), dex).toBe(true);
+  });
+});

@@ -490,6 +490,27 @@
       "effect": "mega",
       "megaFor": "0475",
       "desc": "Held by Gallade: press M to Mega Evolve it (once a match)"
+    },
+    {
+      "id": "old-rod",
+      "name": "Old Rod",
+      "short": "Old Rod",
+      "kind": "rod",
+      "desc": "Fish at the water's edge (Space): mostly Magikarp and friends"
+    },
+    {
+      "id": "good-rod",
+      "name": "Good Rod",
+      "short": "GoodRod",
+      "kind": "rod",
+      "desc": "Fish at the water's edge (Space): better odds of rare bites"
+    },
+    {
+      "id": "super-rod",
+      "name": "Super Rod",
+      "short": "SuperRod",
+      "kind": "rod",
+      "desc": "Fish at the water's edge (Space): the best bites, items, and something big in Tide Lake"
     }
   ]
 }

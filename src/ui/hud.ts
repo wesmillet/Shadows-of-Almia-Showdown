@@ -35,7 +35,8 @@ export interface HudState {
   darkRadius: number;
   darkPhaseLabel: string;
   nextPulseIn: number;
-  notice: string;
+  /** Messages to show, oldest first (stacked down from the top). */
+  notices: string[];
   selectedItem: number;
   /** Which bag tab is open. */
   gearTab: boolean;
@@ -181,14 +182,19 @@ export class Hud {
     this.drawParty(ctx, match, st, s);
     this.drawMoves(ctx, match, st, s);
     this.drawItems(ctx, match, st, s);
-    if (st.notice) {
+    st.notices.forEach((msg, i) => {
+      // Older messages above, a touch smaller and dimmer, so the newest reads first.
+      const newest = i === st.notices.length - 1;
+      const size = newest ? 18 : 15;
       ctx.save();
-      ctx.font = this.font(18, '700');
-      const w = ctx.measureText(st.notice).width + 40 * s;
-      this.popupBox(ctx, v.width / 2 - w / 2, 86 * s, w, 40 * s);
-      this.label(ctx, st.notice, v.width / 2, 113 * s, 18, '#f4f1ff', 'center', '700');
+      ctx.font = this.font(size, '700');
+      const w = ctx.measureText(msg).width + 40 * s;
+      const y = (86 + i * 40) * s;
+      ctx.globalAlpha = newest ? 1 : 0.85;
+      this.popupBox(ctx, v.width / 2 - w / 2, y, w, (newest ? 40 : 34) * s);
+      this.label(ctx, msg, v.width / 2, y + (newest ? 27 : 23) * s, size, '#f4f1ff', 'center', '700');
       ctx.restore();
-    }
+    });
     if (st.popup) {
       const names = st.popup.items.map((it) => `${ITEMS[it.id]?.name ?? it.id}${it.count > 1 ? ` ×${it.count}` : ''}`);
       const title = `Found ${names.join(', ')}!`;
@@ -196,7 +202,7 @@ export class Hud {
       let w = Math.max(300 * s, ctx.measureText(title).width + 110 * s);
       const h = 54 * s;
       let x = v.width / 2 - w / 2;
-      const y = 140 * s;
+      const y = (140 + Math.max(0, st.notices.length - 1) * 40) * s;
       const first = st.popup.items[0];
       const def = first ? ITEMS[first.id] : undefined;
       // One icon per kind of item found (not the ball it came in, and no repeats).

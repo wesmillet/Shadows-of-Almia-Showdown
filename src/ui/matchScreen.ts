@@ -32,7 +32,7 @@ import { drawSoftShadow } from '../render/world';
 import { panel, rgba, text, uiFont, type GameContext, type Screen } from './screens';
 
 /** Effects that sim events ask for by id (scene-fx), loaded with the rest. */
-const SCENE_FX = ['fx_135', 'fx_225', 'fx_226', 'fx_229', 'fx_081', 'fx_070', 'fx_067', 'fx_190', 'fx_215', 'fx_009', 'fx_017', 'fx_172', 'fx_201', 'fx_204'];
+const SCENE_FX = ['fx_135', 'fx_225', 'fx_226', 'fx_229', 'fx_081', 'fx_070', 'fx_067', 'fx_190', 'fx_215', 'fx_009', 'fx_017', 'fx_172', 'fx_201', 'fx_204', 'fx_239', 'fx_175', 'fx_093'];
 
 /** Effects used outside moves: the capture sequence, Bad Dreams and status icons. */
 export const EXTRA_FX = {
@@ -1691,10 +1691,37 @@ export class MatchScreen implements Screen {
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {
       if (n.role !== 'merchant' && n.role !== 'ace') continue;
-      if (Math.hypot(n.x - p.x, n.y - p.y) > 9) continue;
+      const dist = Math.hypot(n.x - p.x, n.y - p.y);
+      if (dist > 16) continue;
       const sx = Math.round(v.toScreenX(n.x));
       const top = Math.round(v.toScreenY(n.y)) - 2.4 * v.pxPerTile;
       const h = v.hud;
+      // A bubble over their head that bobs: a coin for the merchant, "!" for Celeste when she is ready.
+      const vis = this.match.visitors;
+      const ready = n.role === 'merchant' || (vis.aceState === 'idle' && this.match.time >= vis.aceReadyAt);
+      const bob = Math.sin(this.match.time * 4) * 3 * v.baseScale;
+      const r = 11 * v.baseScale;
+      const by = top - 22 * v.baseScale + bob;
+      h.save();
+      h.fillStyle = 'rgba(14,10,28,0.85)';
+      h.strokeStyle = n.role === 'merchant' ? '#ffe27a' : '#ff9ad5';
+      h.lineWidth = Math.max(2, 2 * v.baseScale);
+      h.beginPath();
+      h.arc(sx, by, r, 0, Math.PI * 2);
+      h.fill();
+      h.stroke();
+      h.beginPath();
+      h.moveTo(sx - 4 * v.baseScale, by + r - 1);
+      h.lineTo(sx, by + r + 6 * v.baseScale);
+      h.lineTo(sx + 4 * v.baseScale, by + r - 1);
+      h.fill();
+      h.font = uiFont(13 * v.baseScale);
+      h.textAlign = 'center';
+      h.textBaseline = 'middle';
+      h.fillStyle = n.role === 'merchant' ? '#ffe27a' : ready ? '#ff9ad5' : '#9f97bb';
+      h.fillText(n.role === 'merchant' ? '₽' : ready ? '!' : `${Math.ceil(vis.aceReadyAt - this.match.time)}`, sx, by + 1);
+      h.restore();
+      if (dist > 9) continue;
       h.save();
       h.font = uiFont(11 * v.baseScale);
       h.textAlign = 'center';

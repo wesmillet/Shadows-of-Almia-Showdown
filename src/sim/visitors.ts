@@ -97,8 +97,22 @@ export class Visitors {
 
   // ---------------------------------------------------------------- stepping
 
+  /** Visitors the player has already been told about (once each, the first time they come near). */
+  private announced = new Set<string>();
+
+  private announce(key: string, x: number, y: number, text: string): void {
+    if (this.announced.has(key)) return;
+    const p = this.m.player;
+    if (Math.hypot(x - p.x, y - p.y) > 14) return;
+    this.announced.add(key);
+    this.m.battle.events.push({ type: 'notice', text, seconds: 3.2 });
+  }
+
   step(dt: number): void {
     const m = this.m;
+    if (this.merchant) this.announce('merchant', this.merchant.npc.x, this.merchant.npc.y, 'A Wandering Merchant is nearby: rare items for sale (Space to shop)');
+    if (this.ace && this.aceState === 'idle') this.announce('ace', this.ace.npc.x, this.ace.npc.y, 'Ace Trainer Celeste is looking for a challenge (Space to battle)');
+    if (this.hoopa && !this.hoopaUsed) this.announce('hoopa', this.hoopa.x, this.hoopa.y, 'Hoopa is floating nearby, giggling... (Space to talk)');
     if (this.merchant) this.walk(this.merchant, dt, 2.0);
     if (this.ace && this.aceState === 'idle') this.walk(this.ace, dt, 2.4);
     if (this.aceFoe) {
@@ -394,6 +408,13 @@ export class Visitors {
     L.status = null;
     L.behavior = 'guard';
     m.wilds = m.wilds.filter((w) => w !== L);
+    if (t.party.length >= m.partyCap) {
+      // No room: it flies off, leaving the trainer a voucher to remember it by.
+      L.captured = true;
+      if (t.isPlayer) m.giveItem(t, 'extraction-voucher', 1);
+      m.battle.events.push({ type: 'notice', text: t.isPlayer ? `${L.name} wanted to join, but your party is full. It leaves you an Extraction Voucher` : `${L.name} flew off`, seconds: 3.5 });
+      return;
+    }
     t.party.push(L);
     if (t.duelId) L.stowed = true;
     m.battle.events.push({ type: 'notice', text: t.isPlayer ? `${L.name} acknowledges your strength and joins your team!` : `${L.name} joined ${t.name}'s team!`, seconds: 3.5 });
@@ -423,10 +444,19 @@ export class Visitors {
       const pool = (shiny ? SHINY_PRIZES : POWER_PRIZES).filter((d) => SPECIES.has(d));
       const dex = pool[m.rng.int(0, pool.length - 1)] as string;
       const top = Math.max(1, ...pl.party.map((x) => x.level));
-      const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8);
-      prize.behavior = 'guard';
-      pl.party.push(prize);
-      m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you ${shiny ? 'a shiny ' : ''}${prize.name}!`, seconds: 4 });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: pl.x, y: pl.y, scale: 2.4, lift: 1, fps: 10 });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: pl.x, y: pl.y, scale: 2.4, ground: true, fps: 10, tint: '#ffd6f0' });
+      if (pl.party.length >= m.partyCap) {
+        // No room for a Pokémon: she hands over a voucher (and some money) instead.
+        m.giveItem(pl, 'extraction-voucher', 1);
+        pl.money += 2000;
+        m.battle.events.push({ type: 'notice', text: 'Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!', seconds: 4 });
+      } else {
+        const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8);
+        prize.behavior = 'guard';
+        pl.party.push(prize);
+        m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you ${shiny ? 'a shiny ' : ''}${prize.name}!`, seconds: 4 });
+      }
     } else {
       // A friendly bout: she patches your team up and you may try again later.
       this.aceState = 'idle';

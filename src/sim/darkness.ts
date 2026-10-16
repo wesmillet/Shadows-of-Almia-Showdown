@@ -2,8 +2,8 @@
  * The darkness: every pulse the safe radius around the Shadow Crystal
  * shrinks and darkness sweeps inward from the edges. Pokémon left in it
  * grow drowsy, fall asleep, and take Bad Dreams damage; wild Pokémon gain
- * a purple aura and cannot be caught. Full Heal (or three seconds back in
- * the light) wakes a sleeper. In the final phase Darkrai appears.
+ * a purple aura and cannot be caught. Three seconds back in the light
+ * wakes a sleeper. In the final phase Darkrai appears.
  */
 import { CONFIG } from './data';
 

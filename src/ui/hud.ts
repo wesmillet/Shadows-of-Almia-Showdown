@@ -192,23 +192,28 @@ export class Hud {
       const names = st.popup.items.map((it) => `${ITEMS[it.id]?.name ?? it.id}${it.count > 1 ? ` ×${it.count}` : ''}`);
       const title = `Found ${names.join(', ')}!`;
       ctx.font = this.font(15, '800');
-      const w = Math.max(300 * s, ctx.measureText(title).width + 110 * s);
+      let w = Math.max(300 * s, ctx.measureText(title).width + 110 * s);
       const h = 54 * s;
-      const x = v.width / 2 - w / 2;
+      let x = v.width / 2 - w / 2;
       const y = 140 * s;
       const first = st.popup.items[0];
       const def = first ? ITEMS[first.id] : undefined;
+      // One icon per kind of item found (not the ball it came in, and no repeats).
+      const ids = [...new Set(st.popup.items.map((it) => it.id))].slice(0, 4);
+      const iconW = 36 * s;
+      const pad = 18 * s + ids.length * iconW;
+      w = Math.max(w, pad + ctx.measureText(title).width + 24 * s);
+      x = v.width / 2 - w / 2;
       this.popupBox(ctx, x, y, w, h);
-      // The ball it came in, then what was inside.
-      this.icons.draw(ctx, `${st.popup.ball}-ball`, x + 22 * s, y + h / 2, 36 * s);
-      if (first) this.icons.draw(ctx, first.id, x + 58 * s, y + h / 2, 32 * s, def?.tmType);
-      this.label(ctx, title, x + 86 * s, y + 24 * s, 15, '#f4f1ff', 'left', '800');
+      ids.forEach((id, i) => this.icons.draw(ctx, id, x + 28 * s + i * iconW, y + h / 2, 32 * s, ITEMS[id]?.tmType));
+      const tx = x + pad;
+      this.label(ctx, title, tx, y + 24 * s, 15, '#f4f1ff', 'left', '800');
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
-      this.label(ctx, hint, x + 86 * s, y + 42 * s, 11, '#cfc6ea', 'left', '600', w - 100 * s);
+      this.label(ctx, hint, tx, y + 42 * s, 11, '#cfc6ea', 'left', '600', w - (tx - x) - 14 * s);
     }
     if (st.teach) {
       const w = 340 * s;

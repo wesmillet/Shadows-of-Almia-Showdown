@@ -46,10 +46,6 @@
           "weight": 5
         },
         {
-          "id": "full-heal",
-          "weight": 4
-        },
-        {
           "id": "revive",
           "weight": 4
         },

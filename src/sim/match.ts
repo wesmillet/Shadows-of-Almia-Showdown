@@ -15,7 +15,7 @@ import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, hitPad, move, movesAt, move
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
-import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, type BallKind, type LootTier } from './items';
+import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
 import { canStand, tryMove } from './movement';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
@@ -305,6 +305,27 @@ export class Match {
   dropLoot(x: number, y: number): void {
     const tier = rollTier(this.rng);
     this.items.push({ id: nextId++, ball: ballOfTier(tier), tier, contents: null, x, y, bob: this.rng.next() * 6 });
+  }
+
+  /**
+   * The guaranteed Alpha prize, dropped when one is knocked out or caught: a
+   * rare TM, two Rare Candies or a rare-tier roll, plus a small chance at an
+   * Extraction Voucher on top. It lands as a rare-tier ball with known contents.
+   */
+  alphaReward(x: number, y: number, by: Trainer | null): void {
+    const contents: InventorySlot[] = [];
+    const r = this.rng.next();
+    const rareTms = TM_LIST.filter((t) => t.rare);
+    if (r < 0.4 && rareTms.length) contents.push({ id: this.rng.pick(rareTms).id, count: 1 });
+    else if (r < 0.75) contents.push({ id: 'rare-candy', count: 2 });
+    else contents.push(rollLoot(this.rng, 'rare'));
+    const voucher = this.rng.chance(0.12);
+    if (voucher) contents.push({ id: 'extraction-voucher', count: 1 });
+    this.placeBall(ballOfTier('rare'), contents, x, y);
+    if (by?.isPlayer) {
+      const names = contents.map((c) => `${ITEMS[c.id]?.name ?? c.id}${c.count > 1 ? ` x${c.count}` : ''}`).join(' + ');
+      this.battle.events.push({ type: 'notice', text: `Alpha prize dropped: ${names}`, seconds: voucher ? 3.2 : 2.4 });
+    }
   }
 
   /** A ball with known contents at a point (Master, Premier, Cherish and dropped bags). */
@@ -622,6 +643,7 @@ export class Match {
           th.thrower.party.push(w);
           th.thrower.stats.catches++;
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
+          if (w.alpha) this.alphaReward(th.thrower.x, th.thrower.y, th.thrower);
           // The lead that wore it down learns from the catch too.
           const leadMon = lead(th.thrower);
           const share = (CONFIG.party as typeof CONFIG.party & { catchXpShare?: number }).catchXpShare ?? 0;
@@ -1861,7 +1883,8 @@ export class Match {
           if (r.levels > 0) this.learnOnLevelUp(r.mon, r.mon.level - r.levels);
         }
       }
-      if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) this.dropLoot(ev.mon.x, ev.mon.y);
+      if (ev.mon.wild && ev.mon.alpha) this.alphaReward(ev.mon.x, ev.mon.y, owner ?? null);
+      else if (ev.mon.wild && this.rng.chance(CONFIG.party.wildDropChance)) this.dropLoot(ev.mon.x, ev.mon.y);
     }
   }
 
@@ -1959,7 +1982,7 @@ export class Match {
           if (m.drowsy >= c.drowsySeconds) {
             m.drowsy = 0;
             this.battle.applyStatus(m, 'sleep');
-            m.statusTimer = 1e9; // only Full Heal or the light wakes a darkness sleeper
+            m.statusTimer = 1e9; // only the light wakes a darkness sleeper
             this.battle.events.push({ type: 'text', mon: m, text: 'The darkness lulls it to sleep…' });
           }
         }

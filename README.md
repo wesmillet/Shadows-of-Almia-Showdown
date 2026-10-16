@@ -102,7 +102,7 @@ skips a move), sleep, and three more: poison ticks 7% of max HP every 2 s until
 cured (Poison and Steel types are immune); freeze stops a Pokémon for 2.5-4 s
 and a Fire hit thaws it (Ice and Fire types are immune); confusion lasts 4-6 s
 and sends 40% of its moves off in a random direction. Poison, ice and psychic
-moves cause them (`EXTRA_STATUS` in `scripts/moves.py`). Full Heal cures all.
+moves cause them (`EXTRA_STATUS` in `scripts/moves.py`). Healing at an outpost cures all.
 
 **Items for levels and evolution.** Rare Candy (a level for the lead), Exp.
 Share (held: full XP even waiting in its ball), Lucky Egg (held: 1.5x XP).
@@ -136,7 +136,10 @@ and portrait from SpriteCollab), so no second copy of the sheets ships.
 Wild levels climb toward the Shadow Crystal: base levels at the coast, the
 30s to about 60 in the middle (mostly evolved). Within 55 tiles of the crystal
 about one wild in fourteen is an **Alpha** (the Alpha mark by its red name, a red glow and a breathing red aura on the ground, drawn half again as big):
-level 75, always the last form of its line, worth 2.5x XP.
+level 75, always the last form of its line, worth 2.5x XP. Knocking one out
+or catching it always drops an Ultra Ball prize: a rare TM (40%), two Rare
+Candies (35%) or a rare-tier roll (25%), plus a 12% chance of an Extraction
+Voucher on top.
 Every hit is scaled by `battle.damageScale` (0.55), so fights last several
 exchanges.
 
@@ -188,7 +191,7 @@ impact on the body, at most one aftershock.
 Every 200 s the Shadow Crystal pulses (five pulses) and darkness creeps
 inward from the edges at 0.7 tiles a second, slow enough to walk ahead of. In the dark a Pokémon grows drowsy after 4 s and falls asleep,
 sleepers take Bad Dreams damage every second, wild Pokémon get a purple
-aura and cannot be caught. Full Heal (or three seconds back in the light)
+aura and cannot be caught. Three seconds back in the light
 wakes them. When the last safe circle closes, Darkrai appears at the
 crystal at level 100 and hunts the remaining trainers with Dark Void rings
 and Dark Pulse lines.

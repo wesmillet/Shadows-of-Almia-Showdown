@@ -28,8 +28,8 @@ describe('catchChance', () => {
     expect(ballModifier('net-ball', ctx())).toBe(1);
     expect(ballModifier('net-ball', ctx({ target: { ...target, types: ['water'] } as Mon }))).toBe(3);
     expect(ballModifier('dusk-ball', ctx({ inDark: true }))).toBe(3);
-    expect(ballModifier('quick-ball', ctx({ matchTime: 30 }))).toBe(5);
-    expect(ballModifier('quick-ball', ctx({ matchTime: 200 }))).toBe(1);
+    expect(ballModifier('quick-ball', ctx())).toBe(5);
+    expect(ballModifier('quick-ball', ctx({ target: { ...target, everHit: true } as Mon }))).toBe(1);
     expect(ballKind('quick-ball')).toBe('quick');
   });
 

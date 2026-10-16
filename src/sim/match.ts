@@ -1177,6 +1177,9 @@ export class Match {
     return out;
   }
 
+  /** The species each land's wild Pokémon were drawn from this match (for checks and tests). */
+  spawnRotation: Record<string, string[]> = {};
+
   /** Towns' healers, vendors and challenger from the map file, for keeping starts away from them. */
   private mapServices(): Array<{ x: number; y: number }> {
     const npcs = this.ground.features?.npcs ?? [];
@@ -1273,18 +1276,41 @@ export class Match {
     }
     type Row = { dex: string; weight: number; levels?: number[] };
     type Table = { count: number; levels?: number[]; table?: Row[]; use?: string };
-    const tables = SPAWNS.biomes as unknown as Record<Biome, Table>;
+    // Every match differs: each land keeps its own table (weights jittered) plus a few species drawn
+    // from its rotation pool for this match, and every line that can Mega Evolve is placed in its land.
+    const extra = SPAWNS as unknown as {
+      rotation?: Record<string, Row[]>; rotationPicks?: number; tableJitter?: [number, number];
+      megaLines?: Array<{ dex: string; land: string }>;
+    };
+    const tables = {} as Record<Biome, Table>;
+    for (const [b, t] of Object.entries(SPAWNS.biomes as unknown as Record<Biome, Table>) as Array<[Biome, Table]>) {
+      if (!t.table) {
+        tables[b] = t;
+        continue;
+      }
+      const [j0, j1] = extra.tableJitter ?? [1, 1];
+      const rows: Row[] = t.table.map((r) => ({ ...r, weight: r.weight * this.rng.range(j0, j1) }));
+      const lv = t.levels ?? [3, 6];
+      for (const r of this.rng.shuffle([...(extra.rotation?.[b] ?? [])]).slice(0, extra.rotationPicks ?? 0)) {
+        if (rows.some((x) => x.dex === r.dex)) continue;
+        // Rare picks (starters, pseudo-legendaries) come a little stronger, like a table's rare entries.
+        rows.push(r.weight <= 1.5 ? { ...r, levels: [(lv[0] ?? 3) + 3, (lv[1] ?? 6) + 2] } : { ...r });
+      }
+      tables[b] = { ...t, table: rows };
+    }
+    this.spawnRotation = Object.fromEntries(Object.entries(tables).map(([b, t]) => [b, (t.table ?? []).map((r) => r.dex)]));
     const nearest = (tables.meadow?.use || tables.shore?.use) ? this.nearestLand(tables) : null;
     for (const [biome, table] of Object.entries(tables) as Array<[Biome, Table]>) {
       const spots = this.rng.shuffle([...byBiome[biome]]);
       const n = Math.min(table.count, spots.length);
+      const forced: Row[] = (extra.megaLines ?? []).filter((l) => l.land === biome).map((l) => ({ dex: l.dex, weight: 1 }));
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
         // Meadows and beaches borrow the table of the land they border.
         const land = table.use && nearest ? nearest[Math.floor(spot.y) * g.cols + Math.floor(spot.x)] : biome;
         const t = land ? tables[land as Biome] : undefined;
         if (!t?.table?.length) continue;
-        let row = this.rng.weighted(t.table, (r) => r.weight);
+        let row = forced[i] ?? this.rng.weighted(t.table, (r) => r.weight);
         const lv = row.levels ?? t.levels ?? [3, 6];
         // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
         // easing to none at the coast, so the outer lands stay gentle for fresh teams.
@@ -1905,6 +1931,7 @@ export class Match {
     this.stepDarkness(dt);
     this.stepDarkraiPortal(dt);
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
+    this.battle.stepFlights(dt);
     for (const m of this.mons()) {
       this.stepSlam(m, dt);
       this.battle.stepMon(m, dt, () => this.mons());
@@ -2115,7 +2142,9 @@ export class Match {
    */
   sparing(attacker: Mon, target: Mon): boolean {
     const p = this.player;
-    if (attacker.owner !== p || target !== this.lockTarget || !this.lockPicked || !target.wild) return false;
+    if (attacker.owner !== p || !target.wild) return false;
+    // Catch mode spares every weak wild Pokémon; otherwise only the one picked as the ball's target.
+    if (attacker.behavior !== 'catch' && (target !== this.lockTarget || !this.lockPicked)) return false;
     if (target.hp >= target.maxHp * 0.25) return false;
     if (this.sparedNotice !== target) {
       this.sparedNotice = target;

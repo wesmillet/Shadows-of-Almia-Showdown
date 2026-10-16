@@ -1028,21 +1028,10 @@ export class MatchScreen implements Screen {
       case 'resolve':
         this.spawnMoveVfx(ev.attacker, ev.move, ev.area, ev.hits);
         break;
-      case 'hit': {
-        // The numbers and the flash land with the effect: a thrown or falling move hits on arrival.
-        const wait = this.impactDelay(ev.attacker, ev.target, ev.move);
-        if (wait > 0.04) {
-          const flash = ev.target.flash;
-          ev.target.flash = 0;
-          this.later.push({ t: wait, fn: () => {
-            ev.target.flash = Math.max(ev.target.flash, flash);
-            this.onEvent(ev, v, true);
-          } });
-          break;
-        }
+      case 'hit':
+        // The sim lands the hit when the effect arrives (battle.ts impactDelay), so show it now.
         this.showHit(ev);
         break;
-      }
       case 'status': {
         const LABEL: Record<string, [string, string]> = {
           sleep: ['Fell asleep!', '#b39dff'], burn: ['Burned!', '#ff8a65'], paralysis: ['Paralyzed!', '#ffe76b'],
@@ -1245,14 +1234,6 @@ export class MatchScreen implements Screen {
   }
 
   /** Seconds from a move's resolve until its effect reaches `target` (projectile flight, a fall, a beam reaching out). */
-  private impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
-    const carrier = m.fx?.find((p) => p.anchor === 'projectile' || p.anchor === 'sky');
-    if (carrier?.anchor === 'projectile') return Math.max(0.12, Math.hypot(target.x - attacker.x, target.y - attacker.y) / (carrier.speed ?? 11));
-    if (carrier?.anchor === 'sky') return Math.max(0.12, Math.abs((carrier.height ?? 6) - this.bodyLift(target)) / (carrier.speed ?? 14));
-    if (m.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'beam')) return 0.1;
-    return 0;
-  }
-
   /** Height of the middle of a Pokémon's drawn body above its feet, in tiles (where hits land). */
   private bodyLift(m: Mon | null): number {
     if (!m) return 0.45;

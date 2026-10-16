@@ -21,15 +21,18 @@ import { incapable, type Mon, type Trainer } from './entities';
 import { canStand, moveAround, tryMove } from './movement';
 import type { Nav } from './nav';
 
-export type Behavior = 'aggressive' | 'guard' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
+export type Behavior = 'aggressive' | 'guard' | 'catch' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
 /**
  * The choices the player cycles through: Attack (go after anything in range), Guard (fight what
- * comes near) and Follow (stay out of fights). Hold and the roaming modes are for rivals and scripts.
+ * comes near), Catch (fight like Guard but never knock out a wild Pokémon: hits leave it at 1 HP
+ * and the team holds back once it is weak, ready for a ball) and Passive (stay out of fights).
+ * Hold and the roaming modes are for rivals and scripts.
  */
-export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'passive'];
+export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'catch', 'passive'];
 export const BEHAVIOR_LABEL: Record<Behavior, string> = {
   aggressive: 'Attack',
   guard: 'Guard',
+  catch: 'Catch',
   passive: 'Passive',
   hold: 'Hold',
   roam: 'Roam',
@@ -280,7 +283,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
     // Aggressive: chase hostiles within range, as long as the trainer stays inside the leash.
     let chasing: Mon | null = null;
     if (m.behavior === 'aggressive' && threat && threatNearTrainer < leash + 2) chasing = threat;
-    if (m.behavior === 'guard' && threat && threatNearTrainer < c.guardRange) chasing = threat;
+    if ((m.behavior === 'guard' || m.behavior === 'catch') && threat && threatNearTrainer < c.guardRange) chasing = threat;
     if (chasing) {
       const dp = Math.hypot(chasing.x - m.x, chasing.y - m.y);
       if (dp > 2.4) {

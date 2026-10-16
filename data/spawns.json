@@ -401,5 +401,347 @@
         "0808"
       ]
     }
+  ],
+  "rotation": {
+    "forest": [
+      {
+        "dex": "0010",
+        "weight": 4
+      },
+      {
+        "dex": "0401",
+        "weight": 4
+      },
+      {
+        "dex": "0736",
+        "weight": 4
+      },
+      {
+        "dex": "0265",
+        "weight": 4
+      },
+      {
+        "dex": "0406",
+        "weight": 4
+      },
+      {
+        "dex": "0753",
+        "weight": 4
+      },
+      {
+        "dex": "0133",
+        "weight": 1.2
+      },
+      {
+        "dex": "0396",
+        "weight": 4
+      },
+      {
+        "dex": "0399",
+        "weight": 4
+      },
+      {
+        "dex": "0163",
+        "weight": 4
+      },
+      {
+        "dex": "0161",
+        "weight": 4
+      },
+      {
+        "dex": "0025",
+        "weight": 4
+      },
+      {
+        "dex": "0403",
+        "weight": 4
+      },
+      {
+        "dex": "0236",
+        "weight": 1.2
+      },
+      {
+        "dex": "0840",
+        "weight": 4
+      },
+      {
+        "dex": "0357",
+        "weight": 4
+      },
+      {
+        "dex": "0704",
+        "weight": 1.2
+      },
+      {
+        "dex": "0001",
+        "weight": 1.2
+      },
+      {
+        "dex": "0152",
+        "weight": 1.2
+      },
+      {
+        "dex": "0252",
+        "weight": 1.2
+      },
+      {
+        "dex": "0387",
+        "weight": 1.2
+      },
+      {
+        "dex": "0495",
+        "weight": 1.2
+      },
+      {
+        "dex": "0650",
+        "weight": 1.2
+      },
+      {
+        "dex": "0722",
+        "weight": 1.2
+      },
+      {
+        "dex": "0810",
+        "weight": 1.2
+      },
+      {
+        "dex": "0906",
+        "weight": 1.2
+      }
+    ],
+    "autumn": [
+      {
+        "dex": "0390",
+        "weight": 1.2
+      },
+      {
+        "dex": "0037",
+        "weight": 4
+      },
+      {
+        "dex": "0935",
+        "weight": 4
+      },
+      {
+        "dex": "0240",
+        "weight": 1.2
+      },
+      {
+        "dex": "0570",
+        "weight": 4
+      },
+      {
+        "dex": "0859",
+        "weight": 4
+      },
+      {
+        "dex": "0216",
+        "weight": 4
+      },
+      {
+        "dex": "0585",
+        "weight": 4
+      },
+      {
+        "dex": "0052",
+        "weight": 4
+      },
+      {
+        "dex": "0446",
+        "weight": 4
+      },
+      {
+        "dex": "0577",
+        "weight": 4
+      },
+      {
+        "dex": "0518",
+        "weight": 4
+      },
+      {
+        "dex": "0679",
+        "weight": 4
+      },
+      {
+        "dex": "0239",
+        "weight": 1.2
+      },
+      {
+        "dex": "0885",
+        "weight": 1.2
+      },
+      {
+        "dex": "0633",
+        "weight": 1.2
+      },
+      {
+        "dex": "0155",
+        "weight": 1.2
+      },
+      {
+        "dex": "0255",
+        "weight": 1.2
+      },
+      {
+        "dex": "0498",
+        "weight": 1.2
+      },
+      {
+        "dex": "0653",
+        "weight": 1.2
+      },
+      {
+        "dex": "0725",
+        "weight": 1.2
+      },
+      {
+        "dex": "0813",
+        "weight": 1.2
+      },
+      {
+        "dex": "0909",
+        "weight": 1.2
+      }
+    ],
+    "snow": [
+      {
+        "dex": "0220",
+        "weight": 4
+      },
+      {
+        "dex": "0363",
+        "weight": 4
+      },
+      {
+        "dex": "0238",
+        "weight": 1.2
+      },
+      {
+        "dex": "0698",
+        "weight": 4
+      },
+      {
+        "dex": "0996",
+        "weight": 1.2
+      },
+      {
+        "dex": "0374",
+        "weight": 1.2
+      },
+      {
+        "dex": "0436",
+        "weight": 4
+      },
+      {
+        "dex": "0147",
+        "weight": 1.2
+      },
+      {
+        "dex": "0393",
+        "weight": 1.2
+      },
+      {
+        "dex": "0656",
+        "weight": 1.2
+      },
+      {
+        "dex": "0728",
+        "weight": 1.2
+      },
+      {
+        "dex": "0816",
+        "weight": 1.2
+      },
+      {
+        "dex": "0912",
+        "weight": 1.2
+      },
+      {
+        "dex": "0158",
+        "weight": 1.2
+      },
+      {
+        "dex": "0007",
+        "weight": 1.2
+      }
+    ],
+    "desert": [
+      {
+        "dex": "0027",
+        "weight": 4
+      },
+      {
+        "dex": "0449",
+        "weight": 4
+      },
+      {
+        "dex": "0074",
+        "weight": 4
+      },
+      {
+        "dex": "0443",
+        "weight": 1.2
+      },
+      {
+        "dex": "0371",
+        "weight": 1.2
+      },
+      {
+        "dex": "0782",
+        "weight": 1.2
+      },
+      {
+        "dex": "0331",
+        "weight": 4
+      },
+      {
+        "dex": "0554",
+        "weight": 4
+      },
+      {
+        "dex": "0258",
+        "weight": 1.2
+      },
+      {
+        "dex": "0436",
+        "weight": 4
+      }
+    ]
+  },
+  "rotationPicks": 5,
+  "megaLines": [
+    {
+      "dex": "0004",
+      "land": "autumn"
+    },
+    {
+      "dex": "0092",
+      "land": "autumn"
+    },
+    {
+      "dex": "0361",
+      "land": "snow"
+    },
+    {
+      "dex": "0447",
+      "land": "forest"
+    },
+    {
+      "dex": "0280",
+      "land": "forest"
+    },
+    {
+      "dex": "0246",
+      "land": "desert"
+    },
+    {
+      "dex": "0359",
+      "land": "snow"
+    }
+  ],
+  "_rotationComment": "Every match is different: each land's own table is always used (its weights jittered by tableJitter), plus rotationPicks species drawn at random from that land's rotation pool for that match. megaLines: every Pokemon line that can Mega Evolve has at least one of its first form placed in its land each match, so its Mega Stone is always usable.",
+  "tableJitter": [
+    0.6,
+    1.4
   ]
 }

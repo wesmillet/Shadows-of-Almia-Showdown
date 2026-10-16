@@ -734,7 +734,9 @@ export class Hud {
       const roaming = isRoaming(m);
       const chipY = y0 + cardH - 18 * s;
       const chipHover = hit(st.mouseX, st.mouseY, chipX, chipY, chipW, 14 * s);
-      ctx.fillStyle = roaming ? (chipHover ? 'rgba(255,170,90,0.9)' : 'rgba(230,140,60,0.8)') : chipHover ? 'rgba(170,150,255,0.9)' : 'rgba(110,90,200,0.75)';
+      ctx.fillStyle = roaming ? (chipHover ? 'rgba(255,170,90,0.9)' : 'rgba(230,140,60,0.8)')
+        : m.behavior === 'catch' ? (chipHover ? 'rgba(245,100,100,0.95)' : 'rgba(205,55,65,0.85)')
+        : chipHover ? 'rgba(170,150,255,0.9)' : 'rgba(110,90,200,0.75)';
       ctx.beginPath();
       ctx.roundRect(chipX, chipY, chipW, 14 * s, 7);
       ctx.fill();

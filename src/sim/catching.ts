@@ -53,8 +53,8 @@ export function ballModifier(ballId: string, ctx: CatchContext): number {
     case 'dusk':
       return base * (ctx.inDark ? 3 : 1);
     case 'quick':
-      // Strong until the first pulse of darkness.
-      return base * (ctx.matchTime < CONFIG.darkness.pulseSeconds ? 5 : 1);
+      // Thrown first, before anything has attacked it.
+      return base * (ctx.target.everHit ? 1 : 5);
     case 'heal':
     default:
       return base;

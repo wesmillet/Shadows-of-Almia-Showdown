@@ -81,6 +81,8 @@ export interface Mon {
   recall: boolean;
   /** Seconds since this Pokémon last took damage (info bars show after a hit). */
   sinceHit: number;
+  /** Has anything damaged it yet (a Quick Ball works only on one that hasn't been hit). */
+  everHit?: boolean;
   /** A dodge in progress: dash velocity (tiles/s) and seconds of dash and of untouchability left. */
   dodge?: { vx: number; vy: number; dash: number; safe: number } | null;
   /** Capture Styler: loops drawn round it so far, and seconds left calmed (no fighting, easy to catch). */

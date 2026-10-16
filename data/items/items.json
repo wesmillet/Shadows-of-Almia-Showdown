@@ -65,7 +65,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x5 before the first darkness pulse",
+      "desc": "x5 if thrown before it has been attacked",
       "special": "quick"
     },
     {

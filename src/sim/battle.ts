@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, bodyRadius, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
+import { CONFIG, bodyRadius, drawScale, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
@@ -156,8 +156,34 @@ export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
   return score;
 }
 
+/**
+ * Seconds from a move resolving to it reaching a target: a thrown move (a projectile) flies there,
+ * a falling one (from the sky) drops onto the middle of its body, a beam takes a moment to reach;
+ * anything else lands at once. The damage waits for this, so HP drops as the effect arrives.
+ */
+/** Seconds into an attack animation to its strike frame (HitFrame), or null when it has none. */
+export function strikeSeconds(def: { durations: number[]; hitFrame: number | undefined } | undefined): number | null {
+  if (!def || def.hitFrame === undefined) return null;
+  let ticks = 0;
+  for (let i = 0; i < Math.min(def.hitFrame, def.durations.length); i++) ticks += def.durations[i] ?? 0;
+  return ticks / 60;
+}
+
+export function impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
+  const carrier = m.fx?.find((p) => p.anchor === 'projectile' || p.anchor === 'sky');
+  if (carrier?.anchor === 'projectile') return Math.max(0.12, Math.hypot(target.x - attacker.x, target.y - attacker.y) / (carrier.speed ?? 11));
+  if (carrier?.anchor === 'sky') {
+    const lift = Math.max(0.2, (target.species.body[1] * drawScale(target.species)) / 16 / 2);
+    return Math.max(0.12, Math.abs((carrier.height ?? 6) - lift) / (carrier.speed ?? 14));
+  }
+  if (m.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'beam')) return 0.1;
+  return 0;
+}
+
 export class BattleSystem {
   events: BattleEvent[] = [];
+  /** Hits on their way to their targets (see impactDelay). */
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef }> = [];
   /** Seconds of hit-stop left; the match skips simulation while positive. */
   hitStop = 0;
   /** Pokémon whose Faint animation is still playing. */
@@ -274,7 +300,15 @@ export class BattleSystem {
       const k = d > 0.01 ? (d - back) / d : 0;
       attacker.leap = { t: 0, dur: attacker.casting.t, h: 1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
       attacker.anim.play(attacker.anim.sprites.def('Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
-    } else attacker.anim.play(m.anim, { restart: true, loop: false });
+    } else {
+      attacker.anim.play(m.anim, { restart: true, loop: false });
+      // The move goes off on the attack animation's strike frame (SpriteCollab's HitFrame), so the
+      // swing, the shot and the impact line up; moves with their own wind-up keep it.
+      if (m.cast === undefined) {
+        const strike = strikeSeconds(attacker.anim.sprites.def(attacker.anim.action));
+        if (strike !== null) attacker.casting.t = Math.max(0.12, Math.min(0.6, strike));
+      }
+    }
     this.events.push({ type: 'cast', attacker: attacker, move: m, area });
     return true;
   }
@@ -357,33 +391,10 @@ export class BattleSystem {
     }
     this.events.push({ type: 'resolve', attacker, move: m, area, hits });
     for (const target of hits) {
-      if (target !== attacker) {
-        const r = computeDamage(this.rng, attacker, target, m);
-        if (r.damage > 0) {
-          this.applyDamage(target, r.damage, attacker);
-          target.flash = 0.06;
-          if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
-          if (attacker.owner) attacker.owner.stats.damage += r.damage;
-          if (attacker.heldItem === 'life-orb' && !attacker.fainted) {
-            const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
-            this.applyDamage(attacker, recoil, null);
-            this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'burn' });
-          }
-        }
-        this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });
-        // A Fire hit thaws a frozen Pokémon.
-        if (target.status === 'freeze' && m.type === 'fire' && r.damage > 0) {
-          target.status = null;
-          target.statusTimer = 0;
-          target.anim.play('Idle');
-          this.events.push({ type: 'thaw', mon: target });
-        }
-        if (r.effectiveness === 0) continue;
-        if (m.status && !target.status && !target.fainted && this.rng.chance(m.status.chance)) this.applyStatus(target, m.status.kind);
-        if (m.stages?.target && this.rng.chance(m.stages.chance)) {
-          for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
-        }
-      }
+      if (target === attacker) continue;
+      const wait = impactDelay(attacker, target, m);
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m });
+      else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
     // Combat, Draco Meteor) always lands; a boost from an attack (Charge Beam) only when it hit.
@@ -392,6 +403,50 @@ export class BattleSystem {
       if (!boost || m.category === 'status' || hits.some((h) => h !== attacker)) {
         for (const [stat, delta] of Object.entries(m.stages.self) as Array<['atk' | 'def', number]>) this.changeStage(attacker, stat, delta);
       }
+    }
+  }
+
+  /** Advances hits in flight; each lands if its target can still be hit. */
+  stepFlights(dt: number): void {
+    if (!this.inFlight.length) return;
+    const due: typeof this.inFlight = [];
+    this.inFlight = this.inFlight.filter((f) => {
+      f.t -= dt;
+      if (f.t > 0) return true;
+      due.push(f);
+      return false;
+    });
+    for (const f of due) if (BattleSystem.active(f.target)) this.landHit(f.attacker, f.target, f.m);
+  }
+
+  /** One Pokémon struck by a move: damage, the hit event, status and stat changes. */
+  private landHit(attacker: Mon, target: Mon, m: MoveDef): void {
+    const r = computeDamage(this.rng, attacker, target, m);
+    // A Pokémon set to Catch holds back like False Swipe: a wild Pokémon is left with at least 1 HP.
+    if (attacker.behavior === 'catch' && target.wild && !target.owner) r.damage = Math.min(r.damage, Math.max(0, target.hp - 1));
+    if (r.damage > 0) {
+      this.applyDamage(target, r.damage, attacker);
+      target.flash = 0.06;
+      if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
+      if (attacker.owner) attacker.owner.stats.damage += r.damage;
+      if (attacker.heldItem === 'life-orb' && !attacker.fainted) {
+        const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
+        this.applyDamage(attacker, recoil, null);
+        this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'burn' });
+      }
+    }
+    this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });
+    // A Fire hit thaws a frozen Pokémon.
+    if (target.status === 'freeze' && m.type === 'fire' && r.damage > 0) {
+      target.status = null;
+      target.statusTimer = 0;
+      target.anim.play('Idle');
+      this.events.push({ type: 'thaw', mon: target });
+    }
+    if (r.effectiveness === 0) return;
+    if (m.status && !target.status && !target.fainted && this.rng.chance(m.status.chance)) this.applyStatus(target, m.status.kind);
+    if (m.stages?.target && this.rng.chance(m.stages.chance)) {
+      for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
     }
   }
 
@@ -466,6 +521,7 @@ export class BattleSystem {
     }
     target.hp = Math.max(0, target.hp - damage);
     target.sinceHit = 0;
+    target.everHit = true;
     if (target.hp === 0) this.faint(target, by);
   }
 

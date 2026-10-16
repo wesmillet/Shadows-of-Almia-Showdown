@@ -16,6 +16,8 @@ import { RollScreen } from './ui/rollScreen';
 import { setUiSkin, text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
 import { PcScreen } from './ui/pcScreen';
+import { CharacterScreen } from './ui/characterScreen';
+import { loadLook } from './look';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
@@ -94,6 +96,9 @@ async function boot(): Promise<void> {
   // Everything else trickles in behind the title at low priority; anything needed sooner jumps the queue.
   void sprites.preload([...matchCast()].filter((d) => !first.has(d)));
   const rangers = await rangersP;
+  // The trainer look picked on the title screen (Trainer, C), kept in this browser.
+  const look = loadLook();
+  if (look) await rangers.setRole('player', look);
   const ui = new PixelUi(assets);
   await ui.load();
   setUiSkin(ui);
@@ -188,7 +193,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, () => void showTitle(false))));
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, () => void showTitle(false))), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))));
     debug.showdown.screen = title;
     game.setScreen(title);
   };

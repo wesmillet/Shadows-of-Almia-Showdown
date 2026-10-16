@@ -143,6 +143,53 @@ export class RangerSprites {
     return s;
   }
 
+  /** Every character in the manifest (the trainer looks a player can pick from). */
+  characters(): string[] {
+    return Object.keys(this.manifest?.characters ?? {}).sort();
+  }
+
+  /** The character a role is played by. */
+  characterOf(role: string): string {
+    return this.sheets.get(role)?.character ?? ROLES[role]?.character ?? '';
+  }
+
+  private previews = new Map<string, RangerSheet>();
+
+  /** A sheet for any manifest character (for the character picker), loading it on first ask. */
+  preview(character: string): RangerSheet {
+    let s = this.previews.get(character);
+    if (s) return s;
+    const def = this.manifest?.characters[character] ?? null;
+    s = new RangerSheet(`look:${character}`, character, character, def, null, this.manifest, this.assets);
+    this.previews.set(character, s);
+    if (def) {
+      void this.assets.loadImage(`rangers/${def.file}`).then((img) => {
+        this.previews.set(character, new RangerSheet(`look:${character}`, character, character, def, img, this.manifest, this.assets));
+      });
+    }
+    return s;
+  }
+
+  /**
+   * Plays a role with another character (the player's chosen look). A rival who already used that
+   * character takes the player's default instead, so no two trainers look the same.
+   */
+  async setRole(role: string, character: string): Promise<void> {
+    const def = this.manifest?.characters[character];
+    if (!def) return;
+    const before = this.characterOf(role);
+    const img = await this.assets.loadImage(`rangers/${def.file}`);
+    if (!img) return;
+    this.sheets.set(role, new RangerSheet(role, ROLES[role]?.name ?? role, character, def, img, this.manifest, this.assets));
+    for (const [other, sheet] of this.sheets) {
+      if (other === role || sheet.character !== character || !before) continue;
+      const bdef = this.manifest?.characters[before];
+      if (!bdef) continue;
+      const bimg = await this.assets.loadImage(`rangers/${bdef.file}`);
+      this.sheets.set(other, new RangerSheet(other, sheet.name, before, bdef, bimg, this.manifest, this.assets));
+    }
+  }
+
   /** Display name for a role from data/characters.json. */
   roleName(role: string): string {
     return ROLES[role]?.name ?? role;

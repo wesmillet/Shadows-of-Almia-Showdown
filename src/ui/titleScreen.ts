@@ -101,6 +101,7 @@ export class TitleScreen implements Screen {
     private readonly onDemo: () => void,
     private readonly onGallery: () => void,
     private readonly onPc: () => void = () => {},
+    private readonly onCharacter: () => void = () => {},
   ) {
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
@@ -238,6 +239,12 @@ export class TitleScreen implements Screen {
     return { x: g.x, y: g.y + g.h + 10 * s, w: g.w, h: g.h };
   }
 
+  private characterRect(): { x: number; y: number; w: number; h: number } {
+    const s = this.ctx.view.baseScale;
+    const p = this.pcRect();
+    return { x: p.x, y: p.y + p.h + 10 * s, w: p.w, h: p.h };
+  }
+
   step(dt: number, input: Input): void {
     this.t += dt;
     this.stepScene(dt);
@@ -251,10 +258,15 @@ export class TitleScreen implements Screen {
         const p = this.pcRect();
         if (hit(c.x, c.y, g.x, g.y, g.w, g.h)) this.leave(this.onGallery);
         else if (hit(c.x, c.y, p.x, p.y, p.w, p.h)) this.leave(this.onPc);
+        else {
+          const ch = this.characterRect();
+          if (hit(c.x, c.y, ch.x, ch.y, ch.w, ch.h)) this.leave(this.onCharacter);
+        }
       }
     }
     if (input.pressed('KeyM')) this.leave(this.onGallery);
     if (input.pressed('KeyP')) this.leave(this.onPc);
+    if (input.pressed('KeyC')) this.leave(this.onCharacter);
     if (input.pressed('Enter') || input.pressed('Space')) this.leave(this.onStart);
     if (input.pressed('KeyD')) this.leave(this.onDemo);
   }
@@ -835,6 +847,8 @@ export class TitleScreen implements Screen {
     button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');
     const pr = this.pcRect();
     button(v, `My PC (P) · ${this.pcCount}`, pr.x, pr.y, pr.w, pr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, pr.x, pr.y, pr.w, pr.h), '#3f8f9f');
+    const tr = this.characterRect();
+    button(v, 'Trainer (C)', tr.x, tr.y, tr.w, tr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, tr.x, tr.y, tr.w, tr.h), '#8a6cff');
     text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up · Tab or click a wild for the ball, F throws · R auto · hold C styler', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;

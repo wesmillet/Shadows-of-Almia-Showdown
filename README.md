@@ -197,6 +197,12 @@ wakes them. When the last safe circle closes, Darkrai appears at the
 crystal at level 100 and hunts the remaining trainers with Dark Void rings
 and Dark Pulse lines.
 
+**Your trainer.** **Trainer (C)** on the title screen picks your look from
+every trainer sheet in `assets/rangers` (ten Ranger Union members and
+thirteen townsfolk). The pick is kept in this browser (`src/look.ts`) and a
+rival who wore that look switches to yours. All looks are free for now; they
+are meant to become unlockables once the game is online.
+
 **Mega Evolution.** Ten Pokémon can Mega Evolve: Charizard (X), Gengar,
 Steelix, Tyranitar, Gardevoir, Absol, Glalie, Latios, Lucario and Gallade
 (the Megas with full SpriteCollab sprite sets). Give one its own Mega Stone

@@ -22,6 +22,7 @@ import { BEHAVIOR_LABEL, isRoaming, nextBehavior } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
+import { extractToPc } from '../pc';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
 import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
@@ -87,6 +88,8 @@ export class MatchScreen implements Screen {
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
+  /** The Extraction Voucher in this bag slot is waiting for a Pokémon to be picked. */
+  private extractPick: { slot: number } | null = null;
   /** The vendor whose stall is open (the match waits while you shop). */
   private shopOpen: Shop | null = null;
   private readonly strips = new Map<string, HTMLImageElement | null>();
@@ -144,6 +147,10 @@ export class MatchScreen implements Screen {
     }
     if (this.teach) {
       this.handleTeachInput(input);
+      return;
+    }
+    if (this.extractPick) {
+      this.handleExtractInput(input);
       return;
     }
     if (this.match.pendingLearn.length) {
@@ -605,6 +612,26 @@ export class MatchScreen implements Screen {
   }
 
   /** The TM prompt: 1-2 replaces that move, Escape keeps the current moves. */
+  /** The voucher prompt: 1-6 or a click on a party card extracts that Pokémon, Escape cancels. */
+  private handleExtractInput(input: Input): void {
+    const ex = this.extractPick;
+    if (!ex) return;
+    if (input.pressed('Escape')) {
+      this.extractPick = null;
+      return;
+    }
+    let pick = -1;
+    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) pick = i;
+    for (const c of input.takeClicks()) {
+      const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind === 'portrait') pick = h.index;
+    }
+    if (pick < 0 || pick >= this.match.player.party.length) return;
+    this.extractPick = null;
+    const msg = this.match.extractWithVoucher(ex.slot, pick);
+    if (msg) this.say(msg, 2.4);
+  }
+
   private handleTeachInput(input: Input): void {
     if (!this.teach) return;
     if (input.pressed('Escape')) {
@@ -692,6 +719,11 @@ export class MatchScreen implements Screen {
       if (cur) this.say(`${cur.name} ready: click a wild Pokémon, then F to throw${cur.desc ? ` · ${cur.desc}` : ''}`, 1.8);
       return;
     }
+    if (def?.kind === 'voucher') {
+      if (p.duelId) return this.say("You can't extract a Pokémon during a battle", 1.6);
+      this.extractPick = { slot: index };
+      return;
+    }
     const msg = this.match.useItem(p, index);
     if (msg) this.say(msg, 1.4);
   }
@@ -767,6 +799,14 @@ export class MatchScreen implements Screen {
         } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: ev.lift ?? 0.6, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint });
         if (ev.shake) this.shake = Math.max(this.shake, ev.shake);
         break;
+      case 'extracted': {
+        // Into the PC for keeps (this browser's storage): a beam of light takes it away.
+        const saved = extractToPc(ev.mon, ev.via);
+        this.playFx('fx_093', { x: ev.mon.x, y: ev.mon.y, lift: 2.4, scale: 1.4, fps: 10, tint: '#bff6ff' });
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.8, saved ? `${ev.mon.name} → PC` : 'PC unavailable', '#9ff3ff', 16);
+        if (!saved) this.say("Couldn't reach your PC (this browser blocks saving)", 2.4);
+        break;
+      }
       case 'yield':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.8, `${ev.mon.name} stops fighting`, '#ffd36b', 16);
         break;
@@ -1398,6 +1438,7 @@ export class MatchScreen implements Screen {
         mon: pl.mon.name,
         title: `${pl.mon.name} wants to learn ${move(pl.moveId).name}`,
       }))(this.match.pendingLearn[0]) : null,
+      extract: this.extractPick ? { names: this.match.player.party.map((m) => `${m.shiny ? '★ ' : ''}${m.name}  Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`) } : null,
       aiming: 0,
       money: this.match.player.money,
       prompt: this.servicePrompt(),

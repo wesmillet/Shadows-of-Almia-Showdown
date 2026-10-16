@@ -15,6 +15,7 @@ import { MatchScreen } from './ui/matchScreen';
 import { RollScreen } from './ui/rollScreen';
 import { setUiSkin, text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
+import { PcScreen } from './ui/pcScreen';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
@@ -187,7 +188,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery());
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, () => void showTitle(false))));
     debug.showdown.screen = title;
     game.setScreen(title);
   };

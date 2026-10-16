@@ -390,6 +390,15 @@
       "short": "Dawn St.",
       "kind": "stone",
       "desc": "Evolves certain Pokémon"
+    },
+    {
+      "id": "extraction-voucher",
+      "name": "Extraction Voucher",
+      "short": "Voucher",
+      "kind": "voucher",
+      "tier": 3,
+      "stack": 1,
+      "desc": "Sends one Pokémon from your party to your PC for keeps (it leaves the match)"
     }
   ]
 }

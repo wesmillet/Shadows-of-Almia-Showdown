@@ -240,6 +240,10 @@
         {
           "id": "lucky-egg",
           "weight": 2
+        },
+        {
+          "id": "extraction-voucher",
+          "weight": 2
         }
       ]
     }

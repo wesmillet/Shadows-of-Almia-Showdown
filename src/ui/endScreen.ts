@@ -1,11 +1,21 @@
-/** Win / loss with the match stats. */
+/**
+ * Win / loss with the match stats. A win lets the player extract one Pokémon
+ * from the party to their PC (src/pc.ts) before playing again.
+ */
 import type { Input } from '../core/input';
 import type { Match } from '../sim/match';
+import type { Mon } from '../sim/entities';
+import { extractToPc, loadPc } from '../pc';
 import { button, hit, panel, text, wrapText, type GameContext, type Screen } from './screens';
 import type { MatchScreen } from './matchScreen';
 
+type Rect = { x: number; y: number; w: number; h: number };
+
 export class EndScreen implements Screen {
   private t = 0;
+  /** After a win: the Pokémon sent to the PC (or 'skipped'), null while the player chooses. */
+  private extracted: Mon | 'skipped' | null = null;
+  private saveFailed = false;
 
   constructor(
     private readonly ctx: GameContext,
@@ -14,14 +24,57 @@ export class EndScreen implements Screen {
     private readonly onRestart: () => void,
   ) {}
 
-  private buttonRect(): { x: number; y: number; w: number; h: number } {
+  private get win(): boolean {
+    return this.match.outcome === 'win';
+  }
+
+  /** Still choosing who to extract (wins only). */
+  private get choosing(): boolean {
+    return this.win && this.extracted === null && this.match.player.party.length > 0;
+  }
+
+  private buttonRect(): Rect {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 176 * s, w: 220 * s, h: 52 * s };
+    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 196 * s, w: 220 * s, h: 52 * s };
+  }
+
+  /** One button per party member for the extraction pick, in two columns. */
+  private pickRects(): Rect[] {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const pw = 520 * s;
+    const px = v.width / 2 - pw / 2;
+    const y0 = v.height / 2 + 34 * s;
+    const bw = (pw - 80 * s - 12 * s) / 2;
+    return this.match.player.party.map((_, i) => ({ x: px + 40 * s + (i % 2) * (bw + 12 * s), y: y0 + Math.floor(i / 2) * 40 * s, w: bw, h: 34 * s }));
+  }
+
+  private extract(i: number): void {
+    const m = this.match.player.party[i];
+    if (!m) return;
+    this.saveFailed = !extractToPc(m, 'win');
+    this.extracted = m;
   }
 
   step(dt: number, input: Input): void {
     this.t += dt;
+    if (this.choosing) {
+      if (this.t < 0.6) {
+        input.takeClicks();
+        return;
+      }
+      const rects = this.pickRects();
+      for (const c of input.takeClicks()) {
+        rects.forEach((r, i) => {
+          if (this.choosing && hit(c.x, c.y, r.x, r.y, r.w, r.h)) this.extract(i);
+        });
+        const b = this.buttonRect();
+        if (this.choosing && hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.extracted = 'skipped';
+      }
+      for (let i = 0; i < 6; i++) if (this.choosing && input.pressed(`Digit${i + 1}`)) this.extract(i);
+      return;
+    }
     const b = this.buttonRect();
     for (const c of input.takeClicks()) if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.onRestart();
     if (this.t > 0.8 && (input.pressed('Enter') || input.pressed('Space'))) this.onRestart();
@@ -35,9 +88,9 @@ export class EndScreen implements Screen {
     const fade = Math.min(1, this.t / 0.8);
     h.fillStyle = `rgba(6,3,14,${0.72 * fade})`;
     h.fillRect(0, 0, v.width, v.height);
-    const win = this.match.outcome === 'win';
+    const win = this.win;
     const pw = 520 * s;
-    const ph = 360 * s;
+    const ph = 400 * s;
     const px = v.width / 2 - pw / 2;
     const py = v.height / 2 - ph / 2 - 20 * s;
     panel(v, px, py, pw, ph, 22, 'rgba(18,14,34,0.92)');
@@ -53,15 +106,33 @@ export class EndScreen implements Screen {
       ['Time survived', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],
     ];
     rows.forEach(([k, val], i) => {
-      const y = py + 140 * s + i * 34 * s;
-      text(v, k, px + 50 * s, y, 16, { weight: '600', color: '#b9b4cc' });
-      text(v, val, px + pw - 50 * s, y, 16, { align: 'right', weight: '800', color: '#ffffff' });
+      const y = py + 128 * s + i * 28 * s;
+      text(v, k, px + 50 * s, y, 15, { weight: '600', color: '#b9b4cc' });
+      text(v, val, px + pw - 50 * s, y, 15, { align: 'right', weight: '800', color: '#ffffff' });
     });
-    // The party under the stats, wrapped inside the panel.
-    const party = this.match.player.party.map((m) => `${m.name} Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-';
-    text(v, 'Party', v.width / 2, py + 140 * s + rows.length * 34 * s, 14, { align: 'center', weight: '600', color: '#b9b4cc' });
-    wrapText(v, party, v.width / 2, py + 162 * s + rows.length * 34 * s, 13, inner, 20 * s, 3, { align: 'center', color: '#ffffff' });
+    const mx = this.ctx.input.mouseX;
+    const my = this.ctx.input.mouseY;
     const b = this.buttonRect();
-    button(v, 'Play again', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h));
+    if (this.choosing) {
+      // The winner's prize: one Pokémon from the party goes to the PC for keeps.
+      text(v, 'Extract one Pokémon to your PC (1-6 or click)', v.width / 2, py + 252 * s, 13, { align: 'center', weight: '700', color: '#9ff3ff', maxWidth: inner });
+      this.pickRects().forEach((r, i) => {
+        const m = this.match.player.party[i] as Mon;
+        const label = `${i + 1}  ${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}`;
+        button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), m.shiny ? '#6fc8d8' : '#8a6cff');
+      });
+      button(v, 'Skip', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');
+      return;
+    }
+    const party = this.match.player.party.map((m) => `${m.name} Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-';
+    text(v, 'Party', v.width / 2, py + 252 * s, 14, { align: 'center', weight: '600', color: '#b9b4cc' });
+    wrapText(v, party, v.width / 2, py + 274 * s, 13, inner, 20 * s, 2, { align: 'center', color: '#ffffff' });
+    if (this.extracted && this.extracted !== 'skipped') {
+      const msg = this.saveFailed
+        ? "Couldn't save to your PC (this browser blocks saving)"
+        : `${this.extracted.shiny ? 'Shiny ' : ''}${this.extracted.name} was sent to your PC (${loadPc().length} stored)`;
+      text(v, msg, v.width / 2, py + 330 * s, 14, { align: 'center', weight: '700', color: this.saveFailed ? '#ff8fa3' : '#9ff3ff', maxWidth: inner });
+    }
+    button(v, 'Play again', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
   }
 }

@@ -193,6 +193,17 @@ wakes them. When the last safe circle closes, Darkrai appears at the
 crystal at level 100 and hunts the remaining trainers with Dark Void rings
 and Dark Pulse lines.
 
+**Extraction and the PC.** Pokémon can be kept between matches in your PC
+(`src/pc.ts`, stored in this browser's localStorage, so it stays on this
+device). There are two ways in: win a match and pick one Pokémon from your
+party on the victory screen (1-6 or click, or Skip), or use an **Extraction
+Voucher** mid-match (a rare find in Ultra Ball loot, or ₽6000 from the
+Wandering Merchant): Shift+its slot opens a prompt, 1-6 or a click on a party
+card picks who goes, and that Pokémon leaves the match in a beam of light
+(not during a battle, and never your last one that can fight). **My PC (P)**
+on the title screen shows everything extracted so far, with shinies, Alphas
+and legends marked. Nothing in the PC comes back into a match yet.
+
 **The final showdown.** The Shadow Crystal stands in the centre circle of a
 paved battlefield on the plain, ringed by ruined pillars, purple banners and
 crystal clusters. When only two trainers are left, both are called there:

@@ -41,6 +41,8 @@ export interface HudState {
   armedBall: string | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
   teach: { moveName: string; moves: string[]; mon: string; title?: string } | null;
+  /** The Extraction Voucher's prompt: the party, to pick who goes to the PC. */
+  extract: { names: string[] } | null;
   /** Poké Dollars. */
   money: number;
   /** What E would do here (shop, challenge), or a hint. */
@@ -208,6 +210,18 @@ export class Hud {
       this.label(ctx, 'Press 1 or 2 to replace a move, Esc to keep them', x + w / 2, y + 46 * s, 10, '#cfc6ea', 'center', '600', w - 28 * s);
       st.teach.moves.forEach((mv, i) => {
         this.label(ctx, `${i + 1}  ${mv}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#f4f1ff', 'left', '700', w - 60 * s);
+      });
+    }
+    if (st.extract) {
+      const w = 360 * s;
+      const h = (84 + st.extract.names.length * 18) * s;
+      const x = v.width / 2 - w / 2;
+      const y = v.height / 2 - h / 2;
+      this.popupBox(ctx, x, y, w, h);
+      this.label(ctx, 'Extraction Voucher', x + w / 2, y + 28 * s, 15, '#ffd36b', 'center', '800', w - 28 * s);
+      this.label(ctx, 'Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', x + w / 2, y + 46 * s, 9.5, '#cfc6ea', 'center', '600', w - 28 * s);
+      st.extract.names.forEach((n, i) => {
+        this.label(ctx, `${i + 1}  ${n}`, x + 30 * s, y + 72 * s + i * 18 * s, 12, '#f4f1ff', 'left', '700', w - 60 * s);
       });
     }
     if (st.shop) {

@@ -33,6 +33,7 @@ DATA = os.path.join(WORK, 'res', 'items', 'data')
 
 # game item id -> decomp item name
 ITEMS = {
+    'extraction-voucher': 's_s_ticket',   # a ticket: the Extraction Voucher
     'potion': 'potion', 'super-potion': 'super_potion', 'hyper-potion': 'hyper_potion',
     'full-heal': 'full_heal', 'revive': 'revive',
     'x-attack': 'x_attack', 'x-defend': 'x_defense', 'x-speed': 'x_speed',

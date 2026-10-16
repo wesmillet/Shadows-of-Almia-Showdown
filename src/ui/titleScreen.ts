@@ -6,6 +6,7 @@
  * two fight until one of them is driven off. Everyone is drawn at the island's
  * own scale (the camera is zoomed in) and depth-sorted with the trees.
  */
+import { loadPc } from '../pc';
 import type { Input } from '../core/input';
 import { dirFromVector, type Dir8 } from '../core/math';
 import type { DecorItem, GroundRenderer } from '../ground/types';
@@ -63,6 +64,8 @@ interface Wild extends Actor {
 export class TitleScreen implements Screen {
   private t = 0;
   private readonly lighting: Lighting;
+  /** How many Pokémon the PC holds (read once when the title opens). */
+  private readonly pcCount = loadPc().length;
   private readonly fx: FxLibrary;
   private readonly vfx = new VfxLayer();
   private readonly groundVfx = new VfxLayer();
@@ -97,6 +100,7 @@ export class TitleScreen implements Screen {
     private readonly onStart: () => void,
     private readonly onDemo: () => void,
     private readonly onGallery: () => void,
+    private readonly onPc: () => void = () => {},
   ) {
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
@@ -228,6 +232,12 @@ export class TitleScreen implements Screen {
     return { x: d.x, y: d.y + d.h + 30 * s, w: d.w, h: 40 * s };
   }
 
+  private pcRect(): { x: number; y: number; w: number; h: number } {
+    const s = this.ctx.view.baseScale;
+    const g = this.galleryRect();
+    return { x: g.x, y: g.y + g.h + 10 * s, w: g.w, h: g.h };
+  }
+
   step(dt: number, input: Input): void {
     this.t += dt;
     this.stepScene(dt);
@@ -238,10 +248,13 @@ export class TitleScreen implements Screen {
       else if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) this.leave(this.onDemo);
       else {
         const g = this.galleryRect();
+        const p = this.pcRect();
         if (hit(c.x, c.y, g.x, g.y, g.w, g.h)) this.leave(this.onGallery);
+        else if (hit(c.x, c.y, p.x, p.y, p.w, p.h)) this.leave(this.onPc);
       }
     }
     if (input.pressed('KeyM')) this.leave(this.onGallery);
+    if (input.pressed('KeyP')) this.leave(this.onPc);
     if (input.pressed('Enter') || input.pressed('Space')) this.leave(this.onStart);
     if (input.pressed('KeyD')) this.leave(this.onDemo);
   }
@@ -820,7 +833,9 @@ export class TitleScreen implements Screen {
     text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     const g = this.galleryRect();
     button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');
-    text(v, 'WASD move · mouse aims · click, right click, Q, E cast · Space dodge / talk / pick up · hold C to draw styler loops · F throws · R auto', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
+    const pr = this.pcRect();
+    button(v, `My PC (P) · ${this.pcCount}`, pr.x, pr.y, pr.w, pr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, pr.x, pr.y, pr.w, pr.h), '#3f8f9f');
+    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up · Tab or click a wild for the ball, F throws · R auto · hold C styler', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     h.save();

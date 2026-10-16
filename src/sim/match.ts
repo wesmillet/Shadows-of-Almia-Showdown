@@ -485,6 +485,8 @@ export class Match {
       }
       case 'tm':
         return 'Pick a move slot to replace';
+      case 'voucher':
+        return 'Pick a Pokémon to extract';
       case 'shard': {
         if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
         this.lightZones.push({ x: t.x, y: t.y, r: def.radius ?? 5, t: def.seconds ?? 10 });
@@ -1505,6 +1507,28 @@ export class Match {
     }
     this.battle.events.push({ type: 'released', mon: m });
     return m.fainted ? `${m.name} was released` : `Bye, ${m.name}! It heads off into the wild`;
+  }
+
+  /**
+   * Extraction Voucher: party member `index` is sent to the player's PC (the UI stores it) and
+   * leaves the match for good. Not during a battle, and never the last Pokémon that can fight.
+   */
+  extractWithVoucher(itemSlot: number, index: number): string {
+    const p = this.player;
+    const entry = p.items[itemSlot];
+    if (!entry || ITEMS[entry.id]?.kind !== 'voucher') return '';
+    const m = p.party[index];
+    if (!m) return '';
+    if (p.duelId) return "You can't extract a Pokémon during a battle";
+    if (!p.party.some((o) => o !== m && !o.fainted && !o.captured)) return "You can't extract your last Pokémon that can fight";
+    this.takeItem(p, itemSlot);
+    p.party.splice(index, 1);
+    if (this.controlled === m) this.releaseControl();
+    if (this.lockTarget === m) this.lockTarget = null;
+    m.casting = null;
+    m.target = null;
+    this.battle.events.push({ type: 'extracted', mon: m, via: 'voucher' });
+    return `${m.name} was extracted to your PC!`;
   }
 
   /** Makes party member `index` the lead (fainted members cannot lead). */

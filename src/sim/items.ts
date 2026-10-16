@@ -20,7 +20,7 @@ export interface ItemDef {
   id: string;
   name: string;
   short: string;
-  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'shard' | 'candy' | 'stone';
+  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'shard' | 'candy' | 'stone' | 'voucher';
   /** Balls: base catch modifier. */
   tier?: number;
   special?: BallSpecial;

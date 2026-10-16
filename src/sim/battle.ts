@@ -56,6 +56,7 @@ export type BattleEvent =
   | { type: 'ball-burst'; mon: Mon; x: number; y: number }
   | { type: 'learned'; mon: Mon; moveId: string; forgot: string | null }
   | { type: 'released'; mon: Mon }
+  | { type: 'extracted'; mon: Mon; via: 'win' | 'voucher' }
   | { type: 'duel-start'; duel: Duel }
   | { type: 'duel-send'; duel: Duel; mon: Mon; trainer: Trainer }
   | { type: 'duel-end'; duel: Duel; winner: Trainer };

@@ -33,11 +33,11 @@ your starter (no rerolls).
 
 | Rarity | Chance | Pokémon |
 | --- | --- | --- |
-| Common | 55% | Pikachu, Meowth, Magikarp, Psyduck, Geodude, Shinx, Starly, Bidoof |
+| Common | 50% | Pikachu, Meowth, Magikarp, Psyduck, Geodude, Shinx, Starly, Bidoof |
 | Uncommon | 27% | Elekid, Magby, Smoochum, Tyrogue, Munchlax, Riolu, Eevee |
 | Rare | 13% | every region's starter trio, Kanto to Paldea (27) |
-| Epic | 4% | the pseudo-legendary lines: Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy, Jangmo-o, Dreepy, Frigibax |
-| Mythic | 1% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Marshadow, Meltan |
+| Epic | 7% | the pseudo-legendary lines: Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy, Jangmo-o, Dreepy, Frigibax |
+| Mythic | 3% | Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini, Marshadow, Meltan |
 
 Each starter comes with its whole evolution line (`scripts/add_starters.py`
 writes the species from PokeAPI data; the tiers live in `data/spawns.json`

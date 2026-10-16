@@ -304,7 +304,7 @@
     {
       "id": "common",
       "name": "Common",
-      "weight": 55,
+      "weight": 50,
       "color": "#b8b8c8",
       "dex": [
         "0025",
@@ -370,7 +370,7 @@
     {
       "id": "epic",
       "name": "Epic",
-      "weight": 4,
+      "weight": 7,
       "color": "#b06cff",
       "dex": [
         "0147",
@@ -388,7 +388,7 @@
     {
       "id": "mythic",
       "name": "Mythic",
-      "weight": 1,
+      "weight": 3,
       "color": "#ffcf4a",
       "dex": [
         "0151",

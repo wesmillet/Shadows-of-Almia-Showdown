@@ -1,6 +1,6 @@
 /**
- * Starter roll: three reels, each rolling its own rarity tier (Common 55%,
- * Uncommon 27%, Rare 13%, Epic 4%, Mythic 1%; data/spawns.json starterTiers)
+ * Starter roll: three reels, each rolling its own rarity tier (Common 50%,
+ * Uncommon 27%, Rare 13%, Epic 7%, Mythic 3%; data/spawns.json starterTiers)
  * and then a Pokémon of that tier. The reels stop one after another; pick one
  * of the three (click its card or button, or press 1-3) to begin the match.
  */

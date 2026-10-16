@@ -849,7 +849,7 @@ export class TitleScreen implements Screen {
     button(v, `My PC (P) · ${this.pcCount}`, pr.x, pr.y, pr.w, pr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, pr.x, pr.y, pr.w, pr.h), '#3f8f9f');
     const tr = this.characterRect();
     button(v, 'Trainer (C)', tr.x, tr.y, tr.w, tr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, tr.x, tr.y, tr.w, tr.h), '#8a6cff');
-    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up · Tab or click a wild for the ball, F throws · R auto · hold C styler', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
+    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up, fish · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
     // Build stamp, top right on a dark pill: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     h.save();

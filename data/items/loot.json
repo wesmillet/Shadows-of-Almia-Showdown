@@ -11,8 +11,7 @@
         },
         {
           "id": "poke-ball",
-          "weight": 12,
-          "count": 2
+          "weight": 12
         },
         {
           "id": "super-potion",
@@ -38,8 +37,7 @@
       "entries": [
         {
           "id": "great-ball",
-          "weight": 8,
-          "count": 2
+          "weight": 8
         },
         {
           "id": "hyper-potion",
@@ -117,8 +115,7 @@
       "entries": [
         {
           "id": "ultra-ball",
-          "weight": 6,
-          "count": 2
+          "weight": 6
         },
         {
           "id": "rare-tm",

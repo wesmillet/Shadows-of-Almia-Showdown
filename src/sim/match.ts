@@ -291,10 +291,10 @@ export class Match {
     // Guarantee the player a few balls nearby, then weight the rest.
     const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 9).slice(0, 3);
     let id = 0;
-    for (const p of near) this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 2 }], x: p.x, y: p.y, bob: id++ });
+    for (const p of near) this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 1 }], x: p.x, y: p.y, bob: id++ });
     // And a pair of Quick Balls, best thrown before the first pulse.
     const quick = spots.find((p) => !near.includes(p) && Math.hypot(p.x - this.player.x, p.y - this.player.y) < 12);
-    if (quick) this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 2 }], x: quick.x, y: quick.y, bob: id++ });
+    if (quick) this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 1 }], x: quick.x, y: quick.y, bob: id++ });
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };
       if (near.includes(p)) continue;
@@ -1455,7 +1455,7 @@ export class Match {
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
-    const t = this.battle.pickTarget(m, this.mons(), 5.5);
+    const t = this.battle.pickTarget(m, [...this.mons()].filter((c) => !this.sparing(m, c)), 5.5);
     if (!t) return;
     const slot = this.battle.chooseMove(m, t);
     if (slot < 0) return;
@@ -1836,7 +1836,7 @@ export class Match {
       ground: this.ground,
       rng: this.rng,
       mons: () => this.mons(),
-      isEnemy: (a, b) => this.battle.isEnemy(a, b),
+      isEnemy: (a, b) => this.battle.isEnemy(a, b) && !this.sparing(a, b),
       active: (m) => BattleSystem.active(m),
       inHostileTelegraph: (m) => this.inHostileTelegraph(m),
       attack: (m, target, range) => this.autoAttack(m, target, range),
@@ -1855,9 +1855,25 @@ export class Match {
     return false;
   }
 
+  /**
+   * The wild the player picked to catch, once under 25% HP: their Pokémon stop attacking it on
+   * their own (moves fired by hand still hit), so it is not knocked out before the ball goes.
+   */
+  sparing(attacker: Mon, target: Mon): boolean {
+    const p = this.player;
+    if (attacker.owner !== p || target !== this.lockTarget || !this.lockPicked || !target.wild) return false;
+    if (target.hp >= target.maxHp * 0.25) return false;
+    if (this.sparedNotice !== target) {
+      this.sparedNotice = target;
+      this.battle.events.push({ type: 'notice', text: `${target.name} is weak: your team holds back. Throw a ball (F)!`, seconds: 2.4 });
+    }
+    return true;
+  }
+  private sparedNotice: Mon | null = null;
+
   /** A party member attacks on its own timer (the player's 1-4 casts bypass this). */
   private autoAttack(m: Mon, target: Mon, range: number): void {
-    if (m.casting || incapable(m)) return;
+    if (m.casting || incapable(m) || this.sparing(m, target)) return;
     if (Math.hypot(target.x - m.x, target.y - m.y) > range) return;
     if (m.busy > 0) return;
     const slot = this.battle.chooseMove(m, target);

@@ -40,26 +40,26 @@ describe('items and loot', () => {
     expect(mine / found).toBeGreaterThan(0.5);
   });
 
-  it('rolls tiers by weight and stacks from the tier; rare TMs only from Ultra Balls', () => {
+  it('rolls tiers by weight, balls one at a time; rare TMs only from Ultra Balls', () => {
     const rng = new Rng(11);
     const counts = { common: 0, uncommon: 0, rare: 0 };
     for (let i = 0; i < 1000; i++) counts[rollTier(rng)]++;
     expect(counts.common).toBeGreaterThan(counts.uncommon);
     expect(counts.uncommon).toBeGreaterThan(counts.rare);
-    let doubles = 0;
+    let balls = 0;
     for (let i = 0; i < 300; i++) {
       const common = rollLoot(rng, 'common');
       expect(ITEMS[common.id]).toBeDefined();
       if (common.id === 'poke-ball') {
-        expect(common.count).toBe(2);
-        doubles++;
+        expect(common.count).toBe(1);
+        balls++;
       }
       const uncommon = rollLoot(rng, 'uncommon');
       if (ITEMS[uncommon.id]?.kind === 'tm') expect(ITEMS[uncommon.id]?.rare).toBe(false);
       const rare = rollLoot(rng, 'rare');
       if (ITEMS[rare.id]?.kind === 'tm') expect(ITEMS[rare.id]?.rare).toBe(true);
     }
-    expect(doubles).toBeGreaterThan(0);
+    expect(balls).toBeGreaterThan(0);
   });
 
   it('every TM type matches at least one starter or wild type', () => {

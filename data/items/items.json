@@ -115,7 +115,7 @@
       "name": "Snag Machine",
       "short": "Snag",
       "kind": "styler",
-      "desc": "Claims a rival's fainted Pokémon nearby"
+      "desc": "Beat a trainer to take one of their Pokémon (or use it by a rival's fainted Pokémon)"
     },
     {
       "id": "hyper-potion",

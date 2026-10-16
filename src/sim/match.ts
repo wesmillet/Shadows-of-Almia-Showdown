@@ -17,6 +17,7 @@ import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
 import { canStand, moveAround, tryMove } from './movement';
+import { DEV_CHEST, isDev } from '../dev';
 import { Nav } from './nav';
 import { areaContains, makeArea } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
@@ -247,7 +248,12 @@ export class Match {
 
   /** A trainer's chest store (created empty on first use). */
   storageOf(t: Trainer): Array<InventorySlot | null> {
-    return (t.storage ??= new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null));
+    if (t.storage) return t.storage;
+    // Tester mode (src/dev.ts): the player's chest starts stocked with the rare things.
+    const stock = t.isPlayer && isDev() ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
+    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6)).fill(null);
+    stock.forEach(([id, count], i) => (box[i] = { id, count }));
+    return (t.storage = box);
   }
 
   /** Puts a whole bag (or gear) stack in the chest. Returns what happened. */
@@ -689,6 +695,52 @@ export class Match {
     }
   }
 
+  /** After beating a trainer with a Snag Machine in the bag: whose Pokémon the player may take one of. */
+  snagOffer: { from: Trainer } | null = null;
+
+  /** The bag slot of a Snag Machine, or -1. */
+  snagSlot(t: Trainer): number {
+    return t.items.findIndex((e) => ITEMS[e?.id ?? '']?.kind === 'styler');
+  }
+
+  /**
+   * Takes Pokémon `index` of the beaten trainer's party with the Snag Machine (spent). It joins
+   * the player's party at half HP. Returns what happened.
+   */
+  snag(index: number): string {
+    const offer = this.snagOffer;
+    const p = this.player;
+    if (!offer) return '';
+    const from = offer.from;
+    const m = from.party.filter((x) => !x.captured)[index];
+    if (!m) return '';
+    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
+    const slot = this.snagSlot(p);
+    if (slot < 0) {
+      this.snagOffer = null;
+      return '';
+    }
+    from.party.splice(from.party.indexOf(m), 1);
+    m.owner = p;
+    m.wild = false;
+    m.fainted = false;
+    m.duelId = undefined;
+    m.hp = Math.max(1, Math.floor(m.maxHp * 0.5));
+    m.status = null;
+    m.target = null;
+    m.behavior = 'guard';
+    m.x = m.px = p.x + 0.8;
+    m.y = m.py = p.y + 0.4;
+    m.anim.play('Idle', { restart: true });
+    p.party.push(m);
+    p.stats.catches++;
+    this.takeItem(p, slot);
+    this.snagOffer = null;
+    this.fieldParty(p);
+    this.battle.events.push({ type: 'caught', mon: m, by: p });
+    return `Snagged ${from.name}'s ${m.name}!`;
+  }
+
   /** First bag slot holding a ball, preferring the given slot. */
   ballSlot(t: Trainer, preferred = -1): number {
     const isBall = (i: number) => ITEMS[t.items[i]?.id ?? '']?.kind === 'ball';
@@ -1031,6 +1083,8 @@ export class Match {
       const bans = t.aiBans ?? {};
       world.banned = (key) => (bans[key] ?? 0) > this.time;
       world.time = this.time;
+      const left = this.allTrainers.filter((o) => o.alive && !o.challenger && !o.visitor);
+      world.lastFoe = left.length === 2 && left.includes(t) ? (left.find((o) => o !== t) ?? null) : null;
       const d = decide(t, world);
       t.ai = d.ai;
       t.aiTarget = d.target;
@@ -1633,6 +1687,25 @@ export class Match {
   }
 
   /**
+   * Points every channelled beam where its user wants it: the player's Pokémon follows the cursor,
+   * anything else tracks the Pokémon it is fighting.
+   */
+  private steerChannels(): void {
+    const mine = this.playerDuel ? (this.playerDuel.a.trainer === this.player ? this.playerDuel.a.mon : this.playerDuel.b.mon) : this.actingMon;
+    for (const m of this.mons()) {
+      const ch = m.channel;
+      if (!ch) continue;
+      if (m === mine && this.aim) {
+        ch.aimX = this.aim.x;
+        ch.aimY = this.aim.y;
+      } else if (m.target && BattleSystem.active(m.target)) {
+        ch.aimX = m.target.x;
+        ch.aimY = m.target.y;
+      }
+    }
+  }
+
+  /**
    * What an ordinary wild Pokémon could ever be hostile to: trainers' Pokémon and bosses (wild
    * Pokémon leave each other alone). Built once a step, so hundreds of wilds looking for a target
    * don't each walk every Pokémon on the island.
@@ -1932,6 +2005,7 @@ export class Match {
     this.stepDarkraiPortal(dt);
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     this.battle.stepFlights(dt);
+    this.steerChannels();
     for (const m of this.mons()) {
       this.stepSlam(m, dt);
       this.battle.stepMon(m, dt, () => this.mons());
@@ -1947,7 +2021,8 @@ export class Match {
     this.handleKnockouts();
     this.stepEvolutions(dt);
     this.checkElimination();
-    this.stepFinalShowdown(dt);
+    // The last two are no longer pulled to the crystal's arena: they find each other on the map.
+    if (CONFIG.duel.finalShowdown) this.stepFinalShowdown(dt);
   }
 
   /** Party Pokémon past an evolution level start evolving; evolutions in progress tick on. */
@@ -3022,6 +3097,12 @@ export class Match {
       s.awaitingPick = false;
     }
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
+    // Beat a trainer while carrying a Snag Machine: pick one of their Pokémon to take.
+    const loser = d.a.trainer === winner ? d.b.trainer : d.a.trainer;
+    if (winner === this.player && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured)) {
+      this.snagOffer = { from: loser };
+      this.battle.events.push({ type: 'notice', text: `Snag Machine ready: take one of ${loser.name}'s Pokémon (1-6), Esc to keep it`, seconds: 3 });
+    }
     if (winner.legendBout) {
       // Lost a legend bout: it is friendly. The legend leaves and the team is patched up.
       const p = this.player;

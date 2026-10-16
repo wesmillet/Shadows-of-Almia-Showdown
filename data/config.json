@@ -32,8 +32,8 @@
     "xpBase": 30,
     "xpPerLevel": 5,
     "xpPerLevelSq": 0.15,
-    "xpKoBase": 30,
-    "xpKoPerLevel": 12,
+    "xpKoBase": 27,
+    "xpKoPerLevel": 10.8,
     "xpEliteMultiplier": 1.6,
     "xpBossMultiplier": 3,
     "xpAlphaMultiplier": 2.5,
@@ -84,6 +84,14 @@
     "healTripRange": 70
   },
   "battle": {
+    "_channelComment": "Channelled beams: these moves keep firing for channel.seconds after they go off, a pulse every channel.tick seconds, and the user steers the beam (the player with the cursor, others at their target) turning at most channel.turnDegPerSec. The user stands still meanwhile. The whole channel deals powerMult x the move's power, spread over the pulses.",
+    "channel": {
+      "moves": ["flamethrower", "ice-beam", "thunderbolt", "dragon-pulse", "hydro-pump", "solar-beam", "flash-cannon", "aeroblast", "psybeam", "aurora-beam", "signal-beam", "dark-pulse"],
+      "seconds": 2,
+      "tick": 0.25,
+      "powerMult": 1.6,
+      "turnDegPerSec": 140
+    },
     "castSeconds": 0.3,
     "rangeScale": 1.6,
     "hitStopMs": 60,
@@ -135,6 +143,8 @@
     "aiChance": 0.35
   },
   "duel": {
+    "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",
+    "finalShowdown": false,
     "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed and picks every move (auto-battle is off in battles). A rival picks its next Pokémon after aiPickSeconds; zoom is the camera zoom while the player battles.",
     "startRange": 6,
     "standGap": 9,

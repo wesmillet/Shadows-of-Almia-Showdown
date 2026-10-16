@@ -10,6 +10,7 @@
  *     chance, src/sim/fishing.ts); it bursts out and lands on the shore as a legendary.
  * Each happens once per match (the merchant and Celeste stay all match).
  */
+import { isDev } from '../dev';
 import { dirFromVector } from '../core/math';
 import { CONFIG, SPECIES } from './data';
 import type { Mon, Trainer } from './entities';
@@ -85,8 +86,8 @@ export class Visitors {
     m.npcs.push(ace);
     this.ace = { npc: ace, goal: null, wait: 0 };
     // Hoopa, floating somewhere away from the start, in only some matches (hoopaChance;
-    // ?hoopa=1 in the address forces it for testing).
-    const forced = typeof location !== 'undefined' && new URLSearchParams(location.search).get('hoopa') === '1';
+    // ?hoopa=1 in the address, or tester mode, src/dev.ts, brings it every match).
+    const forced = isDev() || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('hoopa') === '1');
     if (forced || rng.chance(CONFIG.visitors.hoopaChance)) {
       const hs = spot(45);
       const h = m.makeMon('0720', 50, null, hs.x, hs.y);

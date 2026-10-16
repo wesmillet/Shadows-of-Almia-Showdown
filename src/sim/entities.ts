@@ -58,6 +58,11 @@ export interface Mon {
   busy: number;
   /** Fired when an attack animation should resolve (set by the battle system). */
   casting: null | { moveId: string; t: number; targetX: number; targetY: number; targetId: number | null };
+  /**
+   * A channelled beam in progress (config battle.channel): seconds left, time to the next pulse,
+   * the beam's current direction, and where its user wants it to point (steered each frame).
+   */
+  channel?: { moveId: string; left: number; next: number; dirX: number; dirY: number; aimX: number; aimY: number } | null;
   /** Current hostile this Pokémon is focused on (its own targeting). */
   target: Mon | null;
   /** True while shut inside a Poké Ball: cannot act or be targeted. */

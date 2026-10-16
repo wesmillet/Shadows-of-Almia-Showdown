@@ -32,6 +32,8 @@ export type BattleEvent =
   | { type: 'thaw'; mon: Mon }
   | { type: 'dodged'; mon: Mon }
   | { type: 'dodge-start'; mon: Mon }
+  | { type: 'channel-start'; mon: Mon; move: MoveDef }
+  | { type: 'channel-end'; mon: Mon }
   | { type: 'styler-loop'; mon: Mon; loops: number; needed: number }
   | { type: 'styler-break'; mon: Mon }
   | { type: 'calmed'; mon: Mon }
@@ -167,6 +169,11 @@ export function strikeSeconds(def: { durations: number[]; hitFrame: number | und
   let ticks = 0;
   for (let i = 0; i < Math.min(def.hitFrame, def.durations.length); i++) ticks += def.durations[i] ?? 0;
   return ticks / 60;
+}
+
+/** Is this move a channelled beam (config battle.channel.moves)? */
+export function isChannel(id: string): boolean {
+  return (CONFIG.battle.channel.moves as readonly string[]).includes(id);
 }
 
 export function impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
@@ -354,10 +361,23 @@ export class BattleSystem {
         this.events.push({ type: 'tick', target: mon, damage: dmg, source: 'burn' });
       }
     }
-    if (mon.casting) {
+    if (mon.channel) {
+      this.stepChannel(mon, dt, candidates);
+    } else if (mon.casting) {
       mon.casting.t -= dt;
       if (mon.casting.t <= 0) {
         const m = move(mon.casting.moveId);
+        if (isChannel(m.id) && !mon.fainted) {
+          // A channelled beam: it keeps pouring out, steerable, for a couple of seconds.
+          const c = CONFIG.battle.channel;
+          const dx = mon.casting.targetX - mon.x;
+          const dy = mon.casting.targetY - mon.y;
+          const d = Math.hypot(dx, dy) || 1;
+          mon.channel = { moveId: m.id, left: c.seconds, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
+          this.events.push({ type: 'channel-start', mon, move: m });
+          this.stepChannel(mon, 0, candidates);
+          return;
+        }
         const area = makeArea(m, { ...mon, x: mon.x, y: mon.y } as Mon, mon.casting.targetX, mon.casting.targetY);
         // Line, cone and ring areas follow the caster's position at cast start; `single` keeps its locked point.
         this.resolve(mon, m, area, candidates());
@@ -404,6 +424,62 @@ export class BattleSystem {
         for (const [stat, delta] of Object.entries(m.stages.self) as Array<['atk' | 'def', number]>) this.changeStage(attacker, stat, delta);
       }
     }
+  }
+
+  /**
+   * One frame of a channelled beam: the beam turns toward where its user aims (at a limited rate),
+   * and every `tick` seconds it pulses, hitting what is in the line with a share of the power.
+   * The user stays rooted (its cast stays open) until the beam runs out or it is knocked out of it.
+   */
+  private stepChannel(mon: Mon, dt: number, candidates: () => Iterable<Mon>): void {
+    const ch = mon.channel;
+    if (!ch) return;
+    const c = CONFIG.battle.channel;
+    if (mon.fainted || incapable(mon)) {
+      this.endChannel(mon);
+      return;
+    }
+    // Turn toward the aim.
+    const ax = ch.aimX - mon.x;
+    const ay = ch.aimY - mon.y;
+    const al = Math.hypot(ax, ay);
+    if (al > 0.2) {
+      const cur = Math.atan2(ch.dirY, ch.dirX);
+      let want = Math.atan2(ay, ax) - cur;
+      while (want > Math.PI) want -= Math.PI * 2;
+      while (want < -Math.PI) want += Math.PI * 2;
+      const maxTurn = (c.turnDegPerSec * Math.PI / 180) * dt;
+      const a = cur + Math.max(-maxTurn, Math.min(maxTurn, want));
+      ch.dirX = Math.cos(a);
+      ch.dirY = Math.sin(a);
+    }
+    mon.dir = dirFromVector(ch.dirX, ch.dirY, mon.dir);
+    mon.anim.dir = mon.dir;
+    if (mon.casting) mon.casting.t = Math.max(mon.casting.t, 0.05);
+    ch.left -= dt;
+    ch.next -= dt;
+    if (ch.next <= 0) {
+      ch.next += c.tick;
+      const base = move(ch.moveId);
+      const pulses = Math.max(1, Math.round(c.seconds / c.tick) + 1);
+      // Each pulse carries its share of the power; status rolls a little each time; no stat changes.
+      const pulse: MoveDef = {
+        ...base,
+        power: Math.max(1, Math.round((base.power * c.powerMult) / pulses)),
+        status: base.status ? { ...base.status, chance: Math.min(1, (base.status.chance * 1.5) / pulses) } : base.status,
+        stages: undefined,
+      };
+      const tx = mon.x + ch.dirX * 3;
+      const ty = mon.y + ch.dirY * 3;
+      this.resolve(mon, pulse, makeArea(base, mon, tx, ty), candidates());
+    }
+    if (ch.left <= 0) this.endChannel(mon);
+  }
+
+  private endChannel(mon: Mon): void {
+    mon.channel = null;
+    mon.casting = null;
+    this.events.push({ type: 'channel-end', mon });
   }
 
   /** Advances hits in flight; each lands if its target can still be hit. */

@@ -28,6 +28,8 @@ export interface AiWorld {
   banned?: (key: string) => boolean;
   /** Match time (outpost cooldowns). */
   time?: number;
+  /** When only two trainers are left: the other one, whom this trainer goes looking for. */
+  lastFoe?: Trainer | null;
 }
 
 /** The decision and, for something the trainer walks to, its key (for giving up when stuck). */
@@ -159,6 +161,10 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
     if (outpost) return { ai: 'heal', target: outpost, rival: null, key: `o${outpostIdx}` };
   }
   if (rival) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival };
+  // The last two: go and find the other one (after patching up if the team is in a bad way).
+  if (w.lastFoe && w.lastFoe.alive && hpFrac > CONFIG.trainers.huntHpFraction) {
+    return { ai: 'engage', target: { x: w.lastFoe.x, y: w.lastFoe.y }, rival: null, key: 'last' };
+  }
   if (inDark && Number.isFinite(w.darkRadius)) {
     // Head for the light.
     const ang = Math.atan2(t.y - w.centerY, t.x - w.centerX);

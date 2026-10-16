@@ -3,6 +3,7 @@
  * VFX, numbers and hit-stop, draws the world through the lighting
  * pass and the HUD on top.
  */
+import { isDev } from '../dev';
 import type { Input } from '../core/input';
 import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
@@ -121,6 +122,7 @@ export class MatchScreen implements Screen {
     // The minimap shows the island's painted picture once it has loaded (flat colours until then).
     const mapName = match.ground.mapName;
     if (mapName) void assets.loadImage(`maps/${mapName}_minimap.png`).then((img) => (this.hud.mapPicture = img));
+    if (isDev()) this.say('Tester mode: Hoopa is on the island and your storage chests are stocked (?dev=0 turns it off)', 4);
     this.fx = new FxLibrary(assets);
     const ids = new Set<string>(Object.values(EXTRA_FX));
     for (const m of MOVES.values()) for (const part of m.fx ?? []) ids.add(part.id);
@@ -175,6 +177,10 @@ export class MatchScreen implements Screen {
     }
     if (this.extractPick) {
       this.handleExtractInput(input);
+      return;
+    }
+    if (this.match.snagOffer) {
+      this.handleSnagInput(input);
       return;
     }
     if (this.match.pendingLearn.length) {
@@ -885,6 +891,24 @@ export class MatchScreen implements Screen {
 
   /** The TM prompt: 1-2 replaces that move, Escape keeps the current moves. */
   /** The voucher prompt: 1-6 or a click on a party card extracts that Pokémon, Escape cancels. */
+  /** The Snag Machine prompt after a won battle: 1-6 (or a click on a line) takes that Pokémon, Escape keeps the machine. */
+  private handleSnagInput(input: Input): void {
+    if (input.pressed('Escape')) {
+      this.match.snagOffer = null;
+      this.say('You kept your Snag Machine', 1.4);
+      return;
+    }
+    let pick = -1;
+    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) pick = i;
+    for (const c of input.takeClicks()) {
+      const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind === 'snag') pick = h.index;
+    }
+    if (pick < 0) return;
+    const msg = this.match.snag(pick);
+    if (msg) this.say(msg, 2.4);
+  }
+
   private handleExtractInput(input: Input): void {
     const ex = this.extractPick;
     if (!ex) return;
@@ -1222,7 +1246,10 @@ export class MatchScreen implements Screen {
   private showHit(ev: Extract<BattleEvent, { type: 'hit' }>): void {
     const color = typeColor(ev.move.type);
     if (ev.effectiveness === 0) this.floaters.add(ev.target.x, ev.target.y, 'No effect', '#cfd8dc', 16);
-    else if (ev.damage > 0) {
+    else if (ev.damage > 0 && ev.attacker.channel) {
+      // A channelled beam's pulses: small numbers, no hit-stop (it would stutter the whole beam).
+      this.floaters.add(ev.target.x + (Math.random() - 0.5) * 0.4, ev.target.y, `${ev.damage}`, color, ev.effectiveness > 1 ? 18 : 15);
+    } else if (ev.damage > 0) {
       this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
       if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
       else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
@@ -1233,7 +1260,6 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** Seconds from a move's resolve until its effect reaches `target` (projectile flight, a fall, a beam reaching out). */
   /** Height of the middle of a Pokémon's drawn body above its feet, in tiles (where hits land). */
   private bodyLift(m: Mon | null): number {
     if (!m) return 0.45;
@@ -1690,6 +1716,10 @@ export class MatchScreen implements Screen {
         mon: pl.mon.name,
         title: `${pl.mon.name} wants to learn ${move(pl.moveId).name}`,
       }))(this.match.pendingLearn[0]) : null,
+      snag: this.match.snagOffer ? {
+        from: this.match.snagOffer.from.name,
+        names: this.match.snagOffer.from.party.filter((m) => !m.captured).map((m) => `${m.shiny ? '★ ' : ''}${m.name}  Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`),
+      } : null,
       extract: this.extractPick ? { names: this.match.player.party.map((m) => `${m.shiny ? '★ ' : ''}${m.name}  Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`) } : null,
       aiming: 0,
       money: this.match.player.money,
@@ -1705,7 +1735,7 @@ export class MatchScreen implements Screen {
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.chestOpen !== null || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
+    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
     const f = this.match.fishing;
     if (f) return f.stage === 'bite' ? 'Space · Reel it in!' : f.stage === 'reel' ? null : 'Waiting for a bite... (move or Space to reel in)';
     const who = this.match.visitors.near();

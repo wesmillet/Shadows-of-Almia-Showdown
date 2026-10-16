@@ -19,7 +19,7 @@ import type { PixelUi } from './pixelUi';
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number };
 
 interface Rect {
   x: number;
@@ -54,6 +54,8 @@ export interface HudState {
   prompt: string | null;
   /** An open stall: its lines with prices. */
   shop: { name: string; entries: Array<{ name: string; price: number; affordable: boolean }>; sellPrice: (id: string) => number } | null;
+  /** A won battle with a Snag Machine in the bag: the beaten trainer and their Pokémon to choose from. */
+  snag?: { from: string; names: string[] } | null;
   /** The open storage chest: its slots (shared by every town's chest) and the town it stands in. */
   chest?: { slots: Array<InventorySlot | null>; town: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
@@ -101,6 +103,7 @@ export class Hud {
   private discardRects: Array<Rect & { index: number }> = [];
   private releaseRects: Array<Rect & { index: number }> = [];
   private chestRects: Rect[] = [];
+  private snagRects: Rect[] = [];
   /** The party slot whose release X was clicked once (it turns into a confirm). */
   releaseArmed = -1;
   private minimap: HTMLCanvasElement | null = null;
@@ -189,6 +192,10 @@ export class Hud {
     for (let i = 0; i < this.portraitRects.length; i++) {
       const r = this.portraitRects[i] as Rect;
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'portrait', index: i };
+    }
+    for (let i = 0; i < this.snagRects.length; i++) {
+      const r = this.snagRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'snag', index: i };
     }
     for (let i = 0; i < this.chestRects.length; i++) {
       const r = this.chestRects[i] as Rect;
@@ -337,7 +344,26 @@ export class Hud {
     }
     this.chestRects = [];
     if (st.chest) this.drawChestPanel(ctx, st, st.chest);
-    if (st.prompt && !st.shop && !st.teach) {
+    this.snagRects = [];
+    if (st.snag) {
+      const w = 380 * s;
+      const h = (92 + st.snag.names.length * 24) * s;
+      const x = v.width / 2 - w / 2;
+      const y = v.height / 2 - h / 2;
+      this.popupBox(ctx, x, y, w, h);
+      this.label(ctx, `Snag Machine · beat ${st.snag.from}`, x + w / 2, y + 28 * s, 15, '#ff9a9a', 'center', '800', w - 28 * s);
+      this.label(ctx, 'Take one of their Pokémon: 1-6 or click · Esc keeps the machine', x + w / 2, y + 46 * s, 9.5, '#cfc6ea', 'center', '600', w - 28 * s);
+      st.snag.names.forEach((n, i) => {
+        const ry = y + 62 * s + i * 24 * s;
+        const r = { x: x + 20 * s, y: ry, w: w - 40 * s, h: 21 * s };
+        const over = hit(st.mouseX, st.mouseY, r.x, r.y, r.w, r.h);
+        ctx.fillStyle = over ? 'rgba(255,120,120,0.28)' : 'rgba(255,255,255,0.06)';
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        this.label(ctx, `${i + 1}  ${n}`, r.x + 10 * s, ry + 15 * s, 12, '#f4f1ff', 'left', '700', r.w - 20 * s);
+        this.snagRects.push(r);
+      });
+    }
+    if (st.prompt && !st.shop && !st.teach && !st.snag) {
       const y = v.height - 170 * s;
       ctx.save();
       ctx.font = this.font(13, '700');

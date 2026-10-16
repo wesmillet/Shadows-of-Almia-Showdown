@@ -1,6 +1,7 @@
 /**
  * Win / loss with the match stats. A win lets the player extract one Pokémon
- * from the party to their PC (src/pc.ts) before playing again.
+ * from the party to their PC (src/pc.ts) before playing again, plus one more
+ * for every Extraction Voucher still in the bag.
  */
 import type { Input } from '../core/input';
 import type { Match } from '../sim/match';
@@ -13,16 +14,24 @@ type Rect = { x: number; y: number; w: number; h: number };
 
 export class EndScreen implements Screen {
   private t = 0;
-  /** After a win: the Pokémon sent to the PC (or 'skipped'), null while the player chooses. */
-  private extracted: Mon | 'skipped' | null = null;
+  /** After a win: the Pokémon sent to the PC so far. */
+  private sent: Mon[] = [];
+  /** The player pressed Skip / Done. */
+  private finished = false;
   private saveFailed = false;
+  /** Extractions a win allows: one free, plus one per Extraction Voucher carried to the end. */
+  private readonly picks: number;
 
   constructor(
     private readonly ctx: GameContext,
     private readonly match: Match,
     private readonly behind: MatchScreen,
     private readonly onRestart: () => void,
-  ) {}
+  ) {
+    const vouchers = match.player.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0);
+    this.picks = 1 + vouchers;
+  }
+
 
   private get win(): boolean {
     return this.match.outcome === 'win';
@@ -30,7 +39,7 @@ export class EndScreen implements Screen {
 
   /** Still choosing who to extract (wins only). */
   private get choosing(): boolean {
-    return this.win && this.extracted === null && this.match.player.party.length > 0;
+    return this.win && !this.finished && this.sent.length < this.picks && this.match.player.party.some((m) => !this.sent.includes(m));
   }
 
   private buttonRect(): Rect {
@@ -52,9 +61,14 @@ export class EndScreen implements Screen {
 
   private extract(i: number): void {
     const m = this.match.player.party[i];
-    if (!m) return;
-    this.saveFailed = !extractToPc(m, 'win');
-    this.extracted = m;
+    if (!m || this.sent.includes(m)) return;
+    if (!extractToPc(m, this.sent.length === 0 ? 'win' : 'voucher')) this.saveFailed = true;
+    // Every pick after the free one spends a voucher from the bag.
+    if (this.sent.length > 0) {
+      const slot = this.match.player.items.findIndex((e) => e?.id === 'extraction-voucher');
+      if (slot >= 0) this.match.takeItem(this.match.player, slot);
+    }
+    this.sent.push(m);
   }
 
   step(dt: number, input: Input): void {
@@ -70,7 +84,7 @@ export class EndScreen implements Screen {
           if (this.choosing && hit(c.x, c.y, r.x, r.y, r.w, r.h)) this.extract(i);
         });
         const b = this.buttonRect();
-        if (this.choosing && hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.extracted = 'skipped';
+        if (this.choosing && hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.finished = true;
       }
       for (let i = 0; i < 6; i++) if (this.choosing && input.pressed(`Digit${i + 1}`)) this.extract(i);
       return;
@@ -114,23 +128,29 @@ export class EndScreen implements Screen {
     const my = this.ctx.input.mouseY;
     const b = this.buttonRect();
     if (this.choosing) {
-      // The winner's prize: one Pokémon from the party goes to the PC for keeps.
-      text(v, 'Extract one Pokémon to your PC (1-6 or click)', v.width / 2, py + 252 * s, 13, { align: 'center', weight: '700', color: '#9ff3ff', maxWidth: inner });
+      // The winner's prize: one Pokémon from the party goes to the PC for keeps, plus one per voucher.
+      const left = this.picks - this.sent.length;
+      const head = this.sent.length === 0
+        ? (this.picks > 1 ? `Extract up to ${this.picks} Pokémon to your PC: 1 free + ${this.picks - 1} Extraction Voucher${this.picks > 2 ? 's' : ''} (1-6 or click)` : 'Extract one Pokémon to your PC (1-6 or click)')
+        : `${this.sent.map((m) => m.name).join(', ')} sent! ${left} more with your voucher${left > 1 ? 's' : ''}`;
+      text(v, head, v.width / 2, py + 252 * s, 13, { align: 'center', weight: '700', color: '#9ff3ff', maxWidth: inner });
       this.pickRects().forEach((r, i) => {
         const m = this.match.player.party[i] as Mon;
-        const label = `${i + 1}  ${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}`;
-        button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), m.shiny ? '#6fc8d8' : '#8a6cff');
+        const done = this.sent.includes(m);
+        const label = `${i + 1}  ${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${done ? '  ✓ in PC' : ''}`;
+        button(v, label, r.x, r.y, r.w, r.h, !done && hit(mx, my, r.x, r.y, r.w, r.h), done ? '#3d5a4a' : m.shiny ? '#6fc8d8' : '#8a6cff');
       });
-      button(v, 'Skip', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');
+      button(v, this.sent.length ? 'Done' : 'Skip', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');
       return;
     }
     const party = this.match.player.party.map((m) => `${m.name} Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-';
     text(v, 'Party', v.width / 2, py + 252 * s, 14, { align: 'center', weight: '600', color: '#b9b4cc' });
     wrapText(v, party, v.width / 2, py + 274 * s, 13, inner, 20 * s, 2, { align: 'center', color: '#ffffff' });
-    if (this.extracted && this.extracted !== 'skipped') {
+    if (this.sent.length) {
+      const names = this.sent.map((m) => `${m.shiny ? 'Shiny ' : ''}${m.name}`).join(', ');
       const msg = this.saveFailed
         ? "Couldn't save to your PC (this browser blocks saving)"
-        : `${this.extracted.shiny ? 'Shiny ' : ''}${this.extracted.name} was sent to your PC (${loadPc().length} stored)`;
+        : `${names} ${this.sent.length > 1 ? 'were' : 'was'} sent to your PC (${loadPc().length} stored)`;
       text(v, msg, v.width / 2, py + 330 * s, 14, { align: 'center', weight: '700', color: this.saveFailed ? '#ff8fa3' : '#9ff3ff', maxWidth: inner });
     }
     button(v, 'Play again', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));

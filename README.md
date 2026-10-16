@@ -111,9 +111,10 @@ Evolution stones (Fire, Water, Thunder, Leaf, Ice, Moon, Sun, Shiny, Dusk,
 Dawn) evolve the lead when its species has that stone evolution: Pikachu,
 Eevee (five of its forms; Espeon, Umbreon and Sylveon still come by level),
 Kirlia to Gallade, Roselia, Doublade, Charjabug, Vulpix and Alolan Vulpix.
-Each town's medicine stall sells its own stone; the rest turn up in item
-balls. The old Capture Styler item is now the Snag Machine (claims a rival's
-fainted Pokémon).
+Each town's medicine stall sells its own stone and the Wandering Merchant has
+a stone of the day; stones are not found in item balls. Great and Ultra Balls
+can hold the **Snag Machine** (Shift+number beside a rival's fainted Pokémon
+to claim it), Mega Stones and Extraction Vouchers.
 
 **Two out at a time.** Every trainer has at most two Pokémon out: the first
 two in party order that can still fight. The others wait in their balls (a
@@ -210,7 +211,7 @@ Steelix, Tyranitar, Gardevoir, Absol, Glalie, Latios, Lucario and Gallade
 it becomes its Mega form for the rest of the match, with the Mega's types
 and base stats at its level. Each trainer can Mega Evolve once a match, and
 rivals do it as soon as a stone holder is fighting. Mega Stones come from
-Ultra Ball loot (usually a stone for a Pokémon you have), and an Alpha of
+Great and Ultra Ball loot (usually a stone for a Pokémon you have), and an Alpha of
 one of these lines always drops its stone. A Mega sent to the PC is stored
 as its regular form. Data: `scripts/megas.py` adds the Mega species and
 stones; the rules are in `src/sim/mega.ts`.

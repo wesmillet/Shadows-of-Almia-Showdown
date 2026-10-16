@@ -214,7 +214,9 @@ export class Hud {
         : def?.effect === 'mega' ? `Mega Stone · give it to ${def.megaFor ? (SPECIES.get(def.megaFor)?.name ?? 'its Pokémon') : 'its Pokémon'}, then press M`
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
-        : def?.kind === 'shard' ? (def.desc ?? '') : 'Shift+number to use';
+        : def?.kind === 'shard' ? (def.desc ?? '')
+        : def?.kind === 'styler' ? `${def.desc ?? ''} · Shift+number`
+        : 'Shift+number to use';
       this.label(ctx, hint, tx, y + 42 * s, 11, '#cfc6ea', 'left', '600', w - (tx - x) - 14 * s);
     }
     if (st.teach) {

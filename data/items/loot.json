@@ -1,5 +1,5 @@
 {
-  "_comment": "Item balls on the ground roll their contents from these tiers when opened. tier weight picks the tier and the ball sprite (common = Poké Ball, uncommon = Great Ball, rare = Ultra Ball). Entries are item ids with weights and an optional count; 'tm' draws a random non-rare TM, 'rare-tm' a rare one. Wild knockouts roll from the same table. Master (crystal, final phase), Premier (eliminated trainers), Cherish (Darkrai) balls are placed by the match, not rolled. 'mega-stone' draws a Mega Stone (usually one for a Pokémon in the finder's party).",
+  "_comment": "Item balls on the ground roll their contents from these tiers when opened. tier weight picks the tier and the ball sprite (common = Poké Ball, uncommon = Great Ball, rare = Ultra Ball). Entries are item ids with weights and an optional count; 'tm' draws a random non-rare TM, 'rare-tm' a rare one. Wild knockouts roll from the same table. Evolution stones are not in item balls (town stalls and the merchant sell them). Master (crystal, final phase), Premier (eliminated trainers), Cherish (Darkrai) balls are placed by the match, not rolled. 'mega-stone' draws a Mega Stone (usually one for a Pokémon in the finder's party).",
   "tiers": {
     "common": {
       "weight": 62,
@@ -68,44 +68,16 @@
           "weight": 3
         },
         {
-          "id": "fire-stone",
-          "weight": 1
+          "id": "mega-stone",
+          "weight": 3
         },
         {
-          "id": "water-stone",
-          "weight": 1
+          "id": "extraction-voucher",
+          "weight": 2
         },
         {
-          "id": "thunder-stone",
-          "weight": 1
-        },
-        {
-          "id": "leaf-stone",
-          "weight": 1
-        },
-        {
-          "id": "ice-stone",
-          "weight": 1
-        },
-        {
-          "id": "moon-stone",
-          "weight": 1
-        },
-        {
-          "id": "sun-stone",
-          "weight": 1
-        },
-        {
-          "id": "shiny-stone",
-          "weight": 1
-        },
-        {
-          "id": "dusk-stone",
-          "weight": 1
-        },
-        {
-          "id": "dawn-stone",
-          "weight": 1
+          "id": "capture-styler",
+          "weight": 3
         }
       ]
     },
@@ -123,7 +95,7 @@
         },
         {
           "id": "capture-styler",
-          "weight": 2
+          "weight": 3
         },
         {
           "id": "crystal-shard",
@@ -236,11 +208,11 @@
         },
         {
           "id": "extraction-voucher",
-          "weight": 2
+          "weight": 3
         },
         {
           "id": "mega-stone",
-          "weight": 3
+          "weight": 4
         }
       ]
     }

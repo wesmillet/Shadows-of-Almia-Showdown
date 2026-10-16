@@ -120,11 +120,10 @@ two in party order that can still fight. The others wait in their balls (a
 small ball on their portrait) and one comes out when an outside Pokémon
 faints or you swap the order by clicking a portrait.
 
-**Levels and damage.** XP to the next level is 25 + 3L + 0.08L², and a
-knockout pays 30 + 14 per level of the fallen Pokémon (up to double against
-higher levels): an even fight is over a level early on and about two thirds
-of a level by level 40, so a team that keeps fighting reaches level 50 or so
-by the last circle. The partner out beside the dealer takes half, Pokémon in
+**Levels and damage.** XP to the next level is 30 + 5L + 0.15L², and a
+knockout pays 25 + 10 per level of the fallen Pokémon (up to double against
+higher levels): an even fight is worth about a level and a quarter early on,
+one level around level 25 and under a level by level 40. The partner out beside the dealer takes half, Pokémon in
 their balls 40%, and a catch gives the lead three quarters of a
 knockout. About one wild Pokémon in eight is an **Elite** (gold name): 5-9
 levels higher, often already evolved, worth 1.6x XP; land bosses pay 3x.
@@ -181,7 +180,7 @@ impact on the body, at most one aftershock.
 | Space beside an item ball | pick it up: a popup reveals the contents |
 | Space with nothing in reach | dodge: your lead dashes the way you move (or face); hits in the first 0.3 s miss; 3 s cooldown (the pill above the move wheel) |
 | hold C and draw loops with the mouse | the Capture Styler: each loop closed round a wild Pokémon counts toward calming it (2 loops, +1 per 10 levels, more for Elites and bosses). If it runs through your line, the line breaks and a loop is lost. A calmed Pokémon stops fighting for 12 s and every ball counts 4x against it |
-| F (Tab or click a wild to switch target) | the ball locks onto the nearest catchable wild within 9 tiles (one fighting your team counts as closer), marked by turning brackets (green in range, red out of range). Tab steps through the wilds in range; clicking a wild locks onto it. A picked target holds until it faints, is caught or leaves range. F throws the armed ball at it; throws reach 7 tiles |
+| F (Tab or click a wild to switch target) | the ball locks onto the nearest catchable wild within 9 tiles (one fighting your team counts as closer), marked by turning brackets (green in range, red out of range). Tab steps through the wilds in range; clicking any wild on screen locks onto it, however far. A picked target holds until it faints, is caught or gets about a screen away (24 tiles); the brackets turn green once it is within a throw. F throws the armed ball at it; throws reach 7 tiles |
 | M | Mega Evolve the Pokémon you steer (or your lead) when it holds its own Mega Stone; once a match |
 | click a portrait | swap the lead; click a behaviour chip to cycle Attack (go after anything in range) / Guard (fight what comes near) / Follow (stay out of fights) |
 | hover a party card | a red X in its corner releases that Pokémon (click again on "Release?" to confirm): it walks off into the wild, calm for a while, and could be caught again. Not during a battle, and never your last one |

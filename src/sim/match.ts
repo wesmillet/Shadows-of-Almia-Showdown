@@ -1300,11 +1300,14 @@ export class Match {
   /**
    * Ball lock-on: the wild Pokémon a thrown ball goes at. It is the nearest catchable wild (one
    * already fighting your team counts as closer) until the player picks another with Tab or by
-   * pointing at it; a pick holds until that Pokémon faints, is caught, or gets out of range.
+   * pointing at it; a pick (a click works on any wild on screen) holds until that Pokémon faints, is caught, or
+   * gets about a screen away; the marker is green when a throw can reach it and red when not.
    */
   lockTarget: Mon | null = null;
   private lockPicked = false;
   static readonly LOCK_RANGE = 9;
+  /** A wild picked by hand (a click) stays the target out to about a screen away. */
+  static readonly PICK_RANGE = 24;
 
   private lockScore(c: Mon): number {
     const p = this.player;
@@ -1313,9 +1316,9 @@ export class Match {
     return d - (engaged ? 4 : 0);
   }
 
-  private lockable(c: Mon): boolean {
+  private lockable(c: Mon, range = Match.LOCK_RANGE): boolean {
     const p = this.player;
-    return !c.fainted && !c.captured && !c.npc && !c.leap && this.wilds.includes(c) && Math.hypot(c.x - p.x, c.y - p.y) <= Match.LOCK_RANGE;
+    return !c.fainted && !c.captured && !c.npc && !c.leap && this.wilds.includes(c) && Math.hypot(c.x - p.x, c.y - p.y) <= range;
   }
 
   /** Catchable wilds in lock range, best first. */
@@ -1325,7 +1328,7 @@ export class Match {
 
   private stepLock(): void {
     const t = this.lockTarget;
-    const valid = !!t && this.lockable(t);
+    const valid = !!t && this.lockable(t, this.lockPicked ? Match.PICK_RANGE : Match.LOCK_RANGE);
     if (valid && this.lockPicked) return;
     const best = this.lockCandidates()[0] ?? null;
     if (!valid) {
@@ -1349,7 +1352,7 @@ export class Match {
 
   /** Lock onto a wild the player pointed at. */
   pickLock(c: Mon): void {
-    if (!this.lockable(c)) return;
+    if (!this.lockable(c, Match.PICK_RANGE)) return;
     this.lockTarget = c;
     this.lockPicked = true;
   }
@@ -1367,13 +1370,17 @@ export class Match {
     if ((m.cooldowns[slot] ?? 0) > 0) return 'cooldown';
     let a: { x: number; y: number };
     const duel = this.playerDuel;
-    if (duel || this.controlled === m) {
-      // Steering a Pokémon (a battle, or Pokémon mode): it attacks the way it faces. If an enemy
-      // is roughly ahead (within 40 degrees) and in reach, the move goes at the nearest such one.
+    if (this.controlled === m && !duel) {
+      // Pokémon mode: moves go where the player aims (the reticle on the cursor).
+      const f = DIR_VECTORS[m.dir] as { x: number; y: number };
+      a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+    } else if (duel) {
+      // A battle: the Pokémon attacks the way it faces. If an enemy is roughly ahead
+      // (within 40 degrees) and in reach, the move goes at the nearest such one.
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
       const fn = Math.hypot(f.x, f.y) || 1;
       a = { x: m.x + (f.x / fn) * 3, y: m.y + (f.y / fn) * 3 };
-      const foes = duel ? [(duel.a.trainer === p ? duel.b : duel.a).mon] : [...this.mons()].filter((c) => c !== m && !c.npc && this.battle.isEnemy(m, c));
+      const foes = [(duel.a.trainer === p ? duel.b : duel.a).mon];
       let best = Infinity;
       for (const foe of foes) {
         if (!foe || !BattleSystem.active(foe)) continue;

@@ -596,17 +596,25 @@ export class MatchScreen implements Screen {
     ctx.beginPath();
     ctx.ellipse(x, y, r, r * 0.5, 0, 0, Math.PI * 2);
     ctx.stroke();
-    // The chevron sits just past the ring, on the ground.
-    const cx = x + ux * (r + 0.45 * v.pxPerTile);
-    const cy = y + uy * (r * 0.5 + 0.3 * v.pxPerTile);
-    const k = 0.32 * v.pxPerTile;
-    ctx.fillStyle = 'rgba(125,220,255,0.9)';
-    ctx.beginPath();
-    ctx.moveTo(cx + ux * k, cy + uy * k * 0.6);
-    ctx.lineTo(cx - ux * k * 0.4 - uy * k * 0.8, cy - uy * k * 0.25 + ux * k * 0.5);
-    ctx.lineTo(cx - ux * k * 0.4 + uy * k * 0.8, cy - uy * k * 0.25 - ux * k * 0.5);
-    ctx.closePath();
-    ctx.fill();
+    void ux;
+    void uy;
+    // The reticle on the cursor: where its moves go. Red over an enemy, a faint line back to it.
+    const aim = this.match.aim;
+    if (aim) {
+      const ax = Math.round(v.toScreenX(aim.x));
+      const ay = Math.round(v.toScreenY(aim.y));
+      const foe = [...this.match.mons()].some((o) => o !== m && !o.npc && this.match.battle.isEnemy(m, o) && Math.hypot(o.x - aim.x, o.y - aim.y) < Math.max(0.6, bodyRadius(o.species)));
+      const col = foe ? '255,90,90' : '125,220,255';
+      ctx.strokeStyle = `rgba(${col},0.35)`;
+      ctx.lineWidth = Math.max(1, 1.5 * s);
+      ctx.setLineDash([4 * s, 6 * s]);
+      ctx.beginPath();
+      ctx.moveTo(x, y - r * 0.3);
+      ctx.lineTo(ax, ay);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawReticle(ctx, ax, ay, Math.max(2, Math.round(v.baseScale * 3)), col, performance.now() / 1000);
+    }
     ctx.restore();
   }
 
@@ -1836,4 +1844,34 @@ function inPoly(pts: Pt[], x: number, y: number): boolean {
     if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
   }
   return inside;
+}
+
+/**
+ * A pixel-art reticle drawn on whole art pixels of size `u`: four corner brackets that breathe
+ * in and out, a centre dot, and a dark outline so it reads on grass, sand and water alike.
+ */
+function drawReticle(ctx: CanvasRenderingContext2D, x: number, y: number, u: number, rgb: string, t: number): void {
+  const gap = 4 + Math.round((Math.sin(t * 5) + 1) * 0.75);
+  const arm = 3;
+  const px = (cx: number, cy: number, w: number, h: number) => ctx.fillRect(x + cx * u, y + cy * u, w * u, h * u);
+  const draw = (pad: number) => {
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const cx = sx > 0 ? gap - arm + 1 : -gap;
+      const cy = sy > 0 ? gap : -gap;
+      // horizontal arm
+      px(cx - pad, cy - pad, arm + pad * 2, 1 + pad * 2);
+      // vertical arm
+      const vx = sx > 0 ? gap : -gap;
+      const vy = sy > 0 ? gap - arm + 1 : -gap;
+      px(vx - pad, vy - pad, 1 + pad * 2, arm + pad * 2);
+    }
+    px(-pad, -pad, 1 + pad * 2, 1 + pad * 2);
+  };
+  ctx.save();
+  ctx.translate(-u / 2, -u / 2);
+  ctx.fillStyle = 'rgba(10,12,24,0.75)';
+  draw(1);
+  ctx.fillStyle = `rgb(${rgb})`;
+  draw(0);
+  ctx.restore();
 }

@@ -1658,7 +1658,7 @@ export class Match {
     if (w.fainted || w.captured || w.casting || incapable(w)) return;
     if ((w.calm ?? 0) > 0) w.calm = Math.max(0, (w.calm ?? 0) - dt);
     // Anything hostile that wanders close gets attacked.
-    if (this.stepHostile(w, dt, w.landBoss ? CONFIG.wild.bossAggroRange : CONFIG.wild.aggroRange)) {
+    if (this.stepHostile(w, dt, w.landBoss || w.alpha ? CONFIG.wild.bossAggroRange : CONFIG.wild.aggroRange)) {
       if (w.moving) {
         w.moving = false;
         w.anim.play('Idle');
@@ -1668,7 +1668,7 @@ export class Match {
     if (!w.moving) {
       w.idleTimer -= dt;
       if (w.idleTimer <= 0) {
-        const r = w.landBoss ? CONFIG.wild.bossWanderRadius : CONFIG.wild.wanderRadius;
+        const r = w.landBoss || w.alpha ? CONFIG.wild.bossWanderRadius : CONFIG.wild.wanderRadius;
         for (let tries = 0; tries < 6; tries++) {
           const tx = w.homeX + this.rng.range(-r, r);
           const ty = w.homeY + this.rng.range(-r, r);

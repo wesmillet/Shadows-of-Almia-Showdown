@@ -8,7 +8,7 @@ import { clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
-import { CONFIG, MOVE_SLOTS, SPECIES, move, typeColor } from '../sim/data';
+import { CONFIG, MOVE_SLOTS, SPECIES, move, typeColor, type MoveDef } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
@@ -678,6 +678,7 @@ export class Hud {
       ctx.restore();
       this.label(ctx, megaText, Math.min(cx, v.width - gw / 2 - 8 * s), gy + 13 * s, 10, '#ffffff', 'center', '800');
     }
+    let hoveredMove: MoveDef | null = null;
     m.moves.forEach((id, i) => {
       const def = move(id);
       const [ox, oy] = offsets[i] as [number, number];
@@ -686,6 +687,7 @@ export class Hud {
       const cd = m.cooldowns[i] ?? 0;
       const ready = cd <= 0 && !incapable(m);
       const hover = Math.hypot(st.mouseX - x, st.mouseY - y) < r;
+      if (hover) hoveredMove = def;
       const color = typeColor(def.type);
       // A wood ring frame (Kenney pixel kit) round a type-coloured face.
       if (this.ui.circle(ctx, x, y, r + 3 * s, ready && hover ? 'parchment' : 'wood')) {
@@ -746,11 +748,12 @@ export class Hud {
       if (!ready && cd > 0) this.label(ctx, cd.toFixed(1), x, y + 22 * s, 8, '#ffe9a8', 'center', '600');
       this.moveRects.push({ x: x - r, y: y - r, w: r * 2, h: r * 2 });
     });
+    if (hoveredMove) this.drawMoveTip(ctx, hoveredMove, cx + R + r + 8 * s, cy - r - 8 * s);
     // Slots not learned yet: faint and empty until a level-up fills them.
     for (let i = m.moves.length; i < MOVE_SLOTS; i++) {
       const [ox, oy] = offsets[i] as [number, number];
       if (this.ui.circle(ctx, cx + ox, cy + oy, r + 3 * s, 'slate')) {
-        this.label(ctx, '—', cx + ox, cy + oy + 5 * s, 14, 'rgba(255,255,255,0.45)', 'center', '600');
+        this.label(ctx, '-', cx + ox, cy + oy + 5 * s, 14, 'rgba(255,255,255,0.45)', 'center', '600');
         continue;
       }
       ctx.save();
@@ -868,4 +871,63 @@ export class Hud {
       this.label(ctx, name, tx + tw / 2, ty + 16 * s, 11, '#ffffff', 'center', '700');
     }
   }
+
+  /** A move's tooltip, right-aligned to `right` and sitting on `bottom`: what it is and what it does. */
+  private drawMoveTip(ctx: CanvasRenderingContext2D, def: MoveDef, right: number, bottom: number): void {
+    const s = this.view.baseScale;
+    const lines = describeMove(def);
+    const head = def.name;
+    const sub = `${def.type[0]?.toUpperCase()}${def.type.slice(1)} · ${def.category === 'status' ? 'Status' : def.category === 'physical' ? 'Physical' : 'Special'}`;
+    ctx.font = this.font(14, '800');
+    let w = ctx.measureText(head).width;
+    ctx.font = this.font(10, '700');
+    w = Math.max(w, ctx.measureText(sub).width);
+    ctx.font = this.font(10, '600');
+    for (const l of lines) w = Math.max(w, ctx.measureText(l).width);
+    w += 28 * s;
+    const h = (44 + lines.length * 15 + 8) * s;
+    const x = Math.max(8 * s, right - w);
+    const y = bottom - h;
+    this.popupBox(ctx, x, y, w, h);
+    const col = typeColor(def.type);
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 8 * s, y + 10 * s, 4 * s, 30 * s);
+    this.label(ctx, head, x + 18 * s, y + 24 * s, 14, '#f4f1ff', 'left', '800');
+    this.label(ctx, sub, x + 18 * s, y + 38 * s, 10, lighten(col, 0.35), 'left', '700');
+    lines.forEach((l, i) => this.label(ctx, l, x + 14 * s, y + (58 + i * 15) * s, 10, '#cfc6ea', 'left', '600'));
+  }
+}
+
+const STAT_NAME = { atk: 'Attack', def: 'Defense', spe: 'Speed' } as const;
+const STATUS_VERB: Record<string, string> = {
+  sleep: 'put the target to sleep', burn: 'burn', paralysis: 'paralyze', poison: 'poison', freeze: 'freeze', confusion: 'confuse',
+};
+
+/** Plain lines describing a move from its data: numbers, reach, and side effects. */
+export function describeMove(def: MoveDef): string[] {
+  const out: string[] = [];
+  const nums = [def.power > 0 ? `Power ${def.power}` : '', `Cooldown ${def.cooldown}s`, def.cast ? `Charge ${def.cast}s` : ''].filter(Boolean);
+  out.push(nums.join(' · '));
+  const reach: Record<string, string> = {
+    single: 'Hits one target where you aim',
+    line: 'Hits everything along a line',
+    cone: 'Hits everything in a cone in front',
+    ring: 'Hits everything in a ring around the user',
+    self: 'Affects the user',
+  };
+  out.push(reach[def.shape] ?? '');
+  if (def.status) out.push(`${Math.round(def.status.chance * 100)}% chance to ${STATUS_VERB[def.status.kind] ?? def.status.kind}`);
+  if (def.stages) {
+    const parts: string[] = [];
+    for (const [who, block] of [['its own', def.stages.self], ["the target's", def.stages.target]] as const) {
+      for (const [k, n] of Object.entries(block ?? {}) as Array<[keyof typeof STAT_NAME, number]>) {
+        if (!n) continue;
+        parts.push(`${n > 0 ? 'Raises' : 'Lowers'} ${who} ${STAT_NAME[k]}${Math.abs(n) > 1 ? ' sharply' : ''}`);
+      }
+    }
+    if (parts.length) out.push(`${parts.join(', ')}${def.stages.chance < 1 ? ` (${Math.round(def.stages.chance * 100)}%)` : ''}`);
+  }
+  if (def.leap) out.push('The user leaps and slams down on the target');
+  if (def.signature) out.push('Signature move');
+  return out.filter(Boolean);
 }

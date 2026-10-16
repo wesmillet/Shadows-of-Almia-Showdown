@@ -892,7 +892,7 @@ export class TitleScreen implements Screen {
     // The demo team, shown while its button is hovered.
     const d = this.demoRect();
     if (hit(mx, my, d.x, d.y, d.w, d.h)) strip(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, b.y - 40 * s, 11, INK.text);
-    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up, fish · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
+    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     const sm = strip(v, stamp, 0, -9999, 11);

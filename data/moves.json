@@ -1028,7 +1028,7 @@
       "shake": 0.15
     },
     {
-      "id": "stone-edge",
+      "id": "stone-edge", "contact": false,
       "name": "Stone Edge",
       "type": "rock",
       "category": "physical",
@@ -3283,7 +3283,7 @@
       ]
     },
     {
-      "id": "sand-tomb",
+      "id": "sand-tomb", "contact": false,
       "name": "Sand Tomb",
       "type": "ground",
       "category": "physical",
@@ -4527,7 +4527,7 @@
       "cast": 0.6
     },
     {
-      "id": "sacred-fire",
+      "id": "sacred-fire", "contact": false,
       "name": "Sacred Fire",
       "type": "fire",
       "category": "physical",

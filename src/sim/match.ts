@@ -11,7 +11,7 @@ import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, hitPad, move, movesAt, movesLearnedBetween, species, statsAtLevel } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, hitPad, move, movesAt, movesLearnedBetween, moveSpeed, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
@@ -581,16 +581,26 @@ export class Match {
   }
 
   /**
-   * New moves on levelling up. A free slot takes the move at once; with both slots full, a
-   * stronger move replaces the weaker one by itself (no prompt mid-fight), for everyone.
+   * New moves on levelling up. A free slot takes the move at once. With both slots full, your own
+   * Pokémon ask (the learn card: forget one, or keep both); everyone else's swap a stronger move in
+   * for their weaker one by themselves.
    */
   learnOnLevelUp(m: Mon, fromLevel: number): void {
+    const asked: string[] = [];
     for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
       if (m.moves.includes(id) || !MOVES.has(id)) continue;
       if (m.moves.length < MOVE_SLOTS) {
         m.moves.push(id);
         m.cooldowns.push(0);
         this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: null });
+        continue;
+      }
+      if (m.owner?.isPlayer) {
+        // Only if it could forget something for it (a pair of signature moves stays put).
+        if (m.moves.some((mid) => !move(mid).signature) && !this.pendingLearn.some((p) => p.mon === m && p.moveId === id)) {
+          this.pendingLearn.push({ mon: m, moveId: id });
+          asked.push(move(id).name);
+        }
         continue;
       }
       // Never drops a signature move.
@@ -607,15 +617,43 @@ export class Match {
         if (m.owner?.isPlayer) this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: move(old).name });
       }
     }
+    // One line for the lot; the card on the right asks about each in turn.
+    if (asked.length) this.battle.events.push({ type: 'notice', text: asked.length === 1 ? `${m.name} wants to learn ${asked[0]}` : `${m.name} wants to learn ${asked.length} new moves`, seconds: 2.6 });
   }
 
-  /** Answers the first pending move: replace slot `slot` (0-3), or -1 to keep the current moves. */
+  /**
+   * The move offer to show now: the first one still worth asking about (the Pokémon still yours,
+   * still without that move, both slots still full). Stale ones are dropped on the way.
+   */
+  get learnOffer(): { mon: Mon; moveId: string } | null {
+    while (this.pendingLearn.length) {
+      const p = this.pendingLearn[0] as { mon: Mon; moveId: string };
+      const ok = this.player.party.includes(p.mon) && !p.mon.moves.includes(p.moveId) && p.mon.moves.length >= MOVE_SLOTS;
+      if (ok) return p;
+      this.pendingLearn.shift();
+      // A slot came free in the meantime: it simply learns it.
+      if (this.player.party.includes(p.mon) && !p.mon.moves.includes(p.moveId) && p.mon.moves.length < MOVE_SLOTS) {
+        p.mon.moves.push(p.moveId);
+        p.mon.cooldowns.push(0);
+        this.battle.events.push({ type: 'learned', mon: p.mon, moveId: p.moveId, forgot: null });
+      }
+    }
+    return null;
+  }
+
+  /** Answers the move offer: forget slot `slot` (0-1) for the new move, or -1 to keep the current moves. */
   answerLearn(slot: number): string {
-    const p = this.pendingLearn.shift();
-    if (!p) return '';
+    if (!this.learnOffer) return '';
+    const p = this.pendingLearn.shift() as { mon: Mon; moveId: string };
     const name = move(p.moveId).name;
     if (slot < 0 || slot >= p.mon.moves.length) return `${p.mon.name} did not learn ${name}`;
+    if (move(p.mon.moves[slot] as string).signature) {
+      this.pendingLearn.unshift(p);
+      return `${p.mon.name} will not forget its signature move`;
+    }
     const old = move(p.mon.moves[slot] as string).name;
+    // A move mid-cast or mid-beam in that slot is cut off cleanly.
+    if (p.mon.casting?.moveId === p.mon.moves[slot] || p.mon.channel?.moveId === p.mon.moves[slot]) this.battle.interrupt(p.mon);
     p.mon.moves[slot] = p.moveId;
     p.mon.cooldowns[slot] = 0;
     this.battle.events.push({ type: 'learned', mon: p.mon, moveId: p.moveId, forgot: old });
@@ -1693,10 +1731,15 @@ export class Match {
     return 'cast';
   }
 
-  /** Dodge: the lead dashes the way the player is moving (or the trainer faces), briefly untouchable. */
+  /** Can the player dodge right now? Only while steering a Pokémon (Pokémon mode or a one-on-one battle), not the trainer. */
+  get canDodge(): boolean {
+    return !!this.controlled || !!this.playerDuel;
+  }
+
+  /** Dodge: the Pokémon you are steering dashes the way you are moving (or it faces), briefly untouchable. */
   playerDodge(): 'ok' | 'cooldown' | 'none' {
     const m = this.actingMon;
-    if (!m || incapable(m)) return 'none';
+    if (!this.canDodge || !m || incapable(m)) return 'none';
     if ((m.dodgeCd ?? 0) > 0 || m.dodge) return 'cooldown';
     let dx = this.moveX;
     let dy = this.moveY;
@@ -1831,6 +1874,48 @@ export class Match {
       m.y = y;
     }
     if (k >= 1 || m.fainted || incapable(m)) m.leap = null;
+  }
+
+  /**
+   * A contact move's lunge (battle.startLunge): the attacker rushes along the ground toward its
+   * target, following it if it moves, so that it arrives just as the cast runs out. Walls stop it.
+   */
+  private stepLunge(m: Mon, dt: number): void {
+    const l = m.lunge;
+    if (!l) return;
+    if (!m.casting || m.fainted || incapable(m)) {
+      m.lunge = null;
+      return;
+    }
+    if (l.target && BattleSystem.active(l.target) && this.battle.isEnemy(m, l.target)) {
+      l.tx = l.target.x;
+      l.ty = l.target.y;
+      // The strike lands where the target is now, not where it stood when the lunge began.
+      m.casting.targetX = l.tx;
+      m.casting.targetY = l.ty;
+    }
+    const left = Math.max(dt, l.dur - l.t);
+    l.t += dt;
+    const dx = l.tx - m.x;
+    const dy = l.ty - m.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const remain = d - l.stop;
+    if (remain > 0.02) {
+      const step = Math.min(remain, (remain * dt) / left);
+      tryMove(this.ground, m, (dx / d) * step, (dy / d) * step, 0.22);
+      m.dir = dirFromVector(dx, dy, m.dir);
+    }
+    if (l.t >= l.dur) m.lunge = null;
+  }
+
+  /** A shove from a contact hit (battle.shove): a short slide away from the attacker. */
+  private stepKnock(m: Mon, dt: number): void {
+    const k = m.knock;
+    if (!k) return;
+    const step = Math.min(dt, k.t);
+    tryMove(this.ground, m, k.vx * step, k.vy * step, 0.22);
+    k.t -= dt;
+    if (k.t <= 0) m.knock = null;
   }
 
   /**
@@ -2081,11 +2166,14 @@ export class Match {
     this.steerChannels();
     for (const m of this.mons()) {
       this.stepSlam(m, dt);
+      this.stepLunge(m, dt);
+      this.stepKnock(m, dt);
       this.battle.stepMon(m, dt, () => this.mons());
       // Pokémon on a ladder face the cliff while they climb.
       m.anim.dir = this.ground.onLadder?.(Math.floor(m.x), Math.floor(m.y)) ? 4 : m.dir;
       // Frozen solid: the pose holds until it thaws.
-      if (m.status !== 'freeze') m.anim.update(dt);
+      // Fast Pokémon take quicker steps, slow ones plod (the walk cycle keeps pace with the ground).
+      if (m.status !== 'freeze') m.anim.update(m.anim.action === 'Walk' ? dt * Math.max(0.75, Math.min(1.35, moveSpeed(m))) : dt);
     }
     for (const gone of this.battle.stepFainting(dt)) {
       const i = this.wilds.indexOf(gone);
@@ -2377,7 +2465,7 @@ export class Match {
     const dx = w.targetX - w.x;
     const dy = w.targetY - w.y;
     const d = Math.hypot(dx, dy);
-    const speed = CONFIG.wild.wanderSpeed * (w.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const speed = CONFIG.wild.wanderSpeed * moveSpeed(w);
     // Close enough counts as there (a spot by a wall can be a hair out of reach for its body).
     if (d < 0.3) {
       w.moving = false;
@@ -2938,7 +3026,7 @@ export class Match {
       vx = (-dy / d) * side * 0.8;
       vy = (dx / d) * side * 0.8;
     }
-    const speed = CONFIG.duel.monSpeed * (rush ? 1.25 : 0.9) * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const speed = CONFIG.duel.monSpeed * (rush ? 1.25 : 0.9) * moveSpeed(m);
     const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.3, dt) : 0;
     const walking = moved > 1e-4;
     if (walking !== m.moving) {
@@ -3097,7 +3185,7 @@ export class Match {
       }
       return;
     }
-    const speed = CONFIG.duel.monSpeed * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const speed = CONFIG.duel.monSpeed * moveSpeed(m);
     const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
     m.dir = dirFromVector(mx, my, m.dir);
     const walking = moved > 1e-4;
@@ -3144,7 +3232,7 @@ export class Match {
       vx = (-dy / d) * side * 0.45;
       vy = (dx / d) * side * 0.45;
     }
-    const speed = CONFIG.duel.monSpeed * 0.8 * (m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
+    const speed = CONFIG.duel.monSpeed * 0.8 * moveSpeed(m);
     const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.22, dt) : 0;
     const walking = moved > 1e-4;
     if (walking !== m.moving) {

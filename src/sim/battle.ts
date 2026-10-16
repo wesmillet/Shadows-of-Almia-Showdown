@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, bodyRadius, drawScale, effectiveness, hitPad, move, type MoveDef, type StatusKind } from './data';
+import { CONFIG, bodyRadius, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
@@ -240,16 +240,18 @@ export class BattleSystem {
     let tx = attacker.x + (f.x / fl) * 1.5 * R();
     let ty = attacker.y + (f.y / fl) * 1.5 * R();
     let tid: number | null = null;
+    let target: Mon | null = null;
     if (m.shape === 'single') {
       const t = this.pickTarget(attacker, candidates, range, 70);
       if (t) {
         tx = t.x;
         ty = t.y;
         tid = t.id;
+        target = t;
       }
     }
     // An AI or auto cast: a beam from it is not steered by the cursor.
-    const ok = this.tryCast(attacker, slot, tx, ty, tid);
+    const ok = this.tryCast(attacker, slot, tx, ty, tid, target);
     if (ok) attacker.manualCast = false;
     return ok;
   }
@@ -290,7 +292,7 @@ export class BattleSystem {
   }
 
   /** Begins a cast if the move is ready and the mon can act. */
-  tryCast(attacker: Mon, slot: number, targetX: number, targetY: number, targetId: number | null): boolean {
+  tryCast(attacker: Mon, slot: number, targetX: number, targetY: number, targetId: number | null, target: Mon | null = null): boolean {
     const id = attacker.moves[slot];
     if (!id || attacker.fainted || attacker.casting || attacker.channel) return false;
     if ((attacker.cooldowns[slot] ?? 0) > 0) return false;
@@ -310,6 +312,7 @@ export class BattleSystem {
       targetX = attacker.x + Math.cos(a) * d;
       targetY = attacker.y + Math.sin(a) * d;
       targetId = null;
+      target = null;
       this.events.push({ type: 'confused', mon: attacker });
     }
     const area = makeArea(m, attacker, targetX, targetY);
@@ -335,9 +338,43 @@ export class BattleSystem {
         const strike = strikeSeconds(attacker.anim.sprites.def(attacker.anim.action));
         if (strike !== null) attacker.casting.t = Math.max(0.12, Math.min(0.6, strike));
       }
+      // A contact move: rush in and strike on arrival.
+      if (isContact(m)) this.startLunge(attacker, targetX, targetY, target);
     }
     this.events.push({ type: 'cast', attacker: attacker, move: m, area });
     return true;
+  }
+
+  /**
+   * Sets a contact move's lunge going: from the user to just short of its target (the two bodies
+   * touching), fast, over at most lunge.maxSeconds; the cast resolves the moment it arrives. Already
+   * close enough, it simply strikes where it stands.
+   */
+  private startLunge(a: Mon, tx: number, ty: number, target: Mon | null): void {
+    const L = CONFIG.battle.lunge;
+    if (!a.casting) return;
+    const gx = target ? target.x : tx;
+    const gy = target ? target.y : ty;
+    const stop = 0.15 + bodyRadius(a.species) * 0.55 + (target ? bodyRadius(target.species) * 0.55 : 0.2);
+    const travel = Math.hypot(gx - a.x, gy - a.y) - stop;
+    if (travel < L.minTiles) return;
+    const dur = Math.max(0.08, Math.min(L.maxSeconds, travel / (L.speed * moveSpeed(a))));
+    a.lunge = { t: 0, dur, target, tx: gx, ty: gy, stop };
+    a.casting.t = dur + 0.04;
+  }
+
+  /** A contact hit shoves its target back a little (not bosses, legends, Alphas or much bigger bodies). */
+  private shove(a: Mon, target: Mon, m: MoveDef): void {
+    if (target.boss || target.legend || target.landBoss || target.alpha || target.leap || target.shadow) return;
+    if (bodyRadius(target.species) > bodyRadius(a.species) * 1.6 + 0.2) return;
+    const L = CONFIG.battle.lunge;
+    const dx = target.x - a.x;
+    const dy = target.y - a.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const [lo, hi] = L.knockScale;
+    const dist = L.knockTiles * Math.max(lo ?? 0.6, Math.min(hi ?? 1.6, m.power / 80));
+    const v = dist / L.knockSeconds;
+    target.knock = { vx: (dx / d) * v, vy: (dy / d) * v, t: L.knockSeconds };
   }
 
   /** Advances cooldowns, casts and status for one Pokémon. `candidates` are the Pokémon a resolving cast may hit. */
@@ -503,6 +540,7 @@ export class BattleSystem {
   interrupt(mon: Mon): void {
     if (mon.channel) this.endChannel(mon);
     else mon.casting = null;
+    mon.lunge = null;
   }
 
   private endChannel(mon: Mon): void {
@@ -534,6 +572,7 @@ export class BattleSystem {
       this.applyDamage(target, r.damage, attacker);
       target.flash = 0.06;
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
+      if (!target.fainted && isContact(m)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;
       // Life Orb's recoil comes once per move used, not per Pokémon hit or per pulse of a beam.
       if (attacker.heldItem === 'life-orb' && !attacker.fainted && attacker.orbPaid !== attacker.castSeq) {

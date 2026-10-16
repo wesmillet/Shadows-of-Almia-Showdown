@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { areaContains, computeDamage, makeArea, moveScore, R } from './battle';
-import { move, species, statsAtLevel } from './data';
+import { dirFromVector } from '../core/math';
+import { BattleSystem, areaContains, computeDamage, makeArea, moveScore, R } from './battle';
+import { isContact, move, moveSpeed, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 
 function mon(dex: string, x = 0, y = 0): Mon {
@@ -84,5 +85,53 @@ describe('statuses', () => {
     expect(b.tryCast(f, 0, 0, 0, null)).toBe(false);
     b.stepMon(f, 5, () => []);
     expect(f.status).toBeNull();
+  });
+});
+
+describe('contact moves and speed', () => {
+  it('marks touching physical moves as contact, not thrown, falling or ranged ones', () => {
+    expect(isContact(move('tackle'))).toBe(true);
+    expect(isContact(move('close-combat'))).toBe(true);
+    expect(isContact(move('bite'))).toBe(true);
+    expect(isContact(move('rock-throw'))).toBe(false); // thrown
+    expect(isContact(move('icicle-crash'))).toBe(false); // falls from the sky
+    expect(isContact(move('stone-edge'))).toBe(false); // spikes from the ground
+    expect(isContact(move('body-slam'))).toBe(false); // has its own leap
+    expect(isContact(move('ember'))).toBe(false); // special
+    expect(isContact(move('earthquake'))).toBe(false); // ring
+  });
+
+  it('turns base Speed into movement speed, with stages and paralysis', () => {
+    const slow = mon('0143'); // Snorlax, base 30
+    const fast = mon('0135'); // Jolteon, base 130
+    expect(moveSpeed(slow)).toBeLessThan(0.8);
+    expect(moveSpeed(fast)).toBeGreaterThan(1.25);
+    const agile = { ...fast, stages: { atk: 0, def: 0, spe: 2 } };
+    expect(moveSpeed(agile)).toBeCloseTo(moveSpeed(fast) * 1.2, 5);
+    expect(moveSpeed({ ...fast, status: 'paralysis' as const })).toBeCloseTo(moveSpeed(fast) * 0.5, 5);
+  });
+
+  it('a contact cast sets up a lunge that ends just short of the target', () => {
+    const bs = new BattleSystem(new Rng(3));
+    const a = mon('0025', 0, 0);
+    a.moves = ['tackle', 'thunder-shock'];
+    a.anim = { play() {}, sprites: { def: () => undefined }, action: 'Attack', dir: 0 } as unknown as Mon['anim'];
+    a.dir = dirFromVector(1, 0, 0);
+    const t = mon('0129', 4, 0);
+    t.id = 2;
+    t.owner = { isPlayer: false } as unknown as Mon['owner'];
+    expect(bs.castAt(a, 0, [a, t], 6)).toBe(true);
+    expect(a.lunge).toBeTruthy();
+    expect(a.lunge?.target).toBe(t);
+    expect(a.lunge!.stop).toBeGreaterThan(0.3);
+    expect(a.lunge!.stop).toBeLessThan(2);
+    // The cast resolves as the lunge arrives.
+    expect(a.casting!.t).toBeCloseTo(a.lunge!.dur + 0.04, 5);
+    // A ranged move does not lunge.
+    const b = mon('0025', 0, 0);
+    b.moves = ['thunder-shock'];
+    b.anim = a.anim;
+    bs.castAt(b, 0, [b, t], 6);
+    expect(b.lunge ?? null).toBeNull();
   });
 });

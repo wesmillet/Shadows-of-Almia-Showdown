@@ -16,7 +16,7 @@
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
-import { CONFIG, hitPad, statsAtLevel } from './data';
+import { CONFIG, hitPad, moveSpeed, statsAtLevel } from './data';
 import { incapable, type Mon, type Trainer } from './entities';
 import { canStand, moveAround, tryMove } from './movement';
 import type { Nav } from './nav';
@@ -116,8 +116,13 @@ function separation(m: Mon, t: Trainer, w: PartyWorld): { x: number; y: number }
   return { x: sx, y: sy };
 }
 
-/** Moves one member toward `px, py` with separation; returns distance moved. */
-function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, speed: number, dt: number, stopAt: number): number {
+/**
+ * Moves one member toward `px, py` with separation; returns distance moved. `speed` is the normal
+ * pace, scaled by the Pokémon's own Speed (moveSpeed); `floor` keeps a slow one from falling
+ * behind when it has to hurry back to its trainer.
+ */
+function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, pace: number, dt: number, stopAt: number, floor = 0): number {
+  const speed = Math.max(floor, pace * moveSpeed(m));
   const dx = px - m.x;
   const dy = py - m.y;
   const d = Math.hypot(dx, dy);
@@ -209,7 +214,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
       const low = m.hp < m.maxHp * c.roamFleeFraction && m.behavior === 'roam';
       if (m.recall || low) {
         // Path back to the trainer; rejoin as a guard on arrival.
-        const moved = steer(m, t, w, t.x, t.y, c.hurrySpeed, dt, 1.4);
+        const moved = steer(m, t, w, t.x, t.y, c.hurrySpeed, dt, 1.4, CONFIG.battle.speed.followFloor);
         setWalking(m, moved > 1e-4);
         unstick(m, t, w, null);
         if (distT < 2) {
@@ -302,8 +307,8 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
     // Formation: hurry back when past the leash, settle onto the preferred spot, otherwise wander and pause.
     const dDesired = Math.hypot(desiredX - m.x, desiredY - m.y);
     if (distT > leash || t.moving || dDesired > 1.2) {
-      const speed = distT > leash + 1 ? c.hurrySpeed : c.followSpeed;
-      const moved = steer(m, t, w, desiredX, desiredY, speed, dt, 0.25);
+      const hurry = distT > leash + 1;
+      const moved = steer(m, t, w, desiredX, desiredY, hurry ? c.hurrySpeed : c.followSpeed, dt, 0.25, hurry ? CONFIG.battle.speed.followFloor : 0);
       setWalking(m, moved > 1e-4);
       if (distT > 2) unstick(m, t, w, null);
       else m.stuckT = 0;

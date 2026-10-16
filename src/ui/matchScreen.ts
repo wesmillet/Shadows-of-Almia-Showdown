@@ -184,10 +184,6 @@ export class MatchScreen implements Screen {
       this.handleSnagInput(input);
       return;
     }
-    if (this.match.pendingLearn.length) {
-      this.handleLearnInput(input);
-      return;
-    }
     if (this.shopOpen) {
       this.handleShopInput(input);
       return;
@@ -272,6 +268,7 @@ export class MatchScreen implements Screen {
       } else if (h?.kind === 'item') this.onItemSlot(h.index);
       else if (h?.kind === 'discard') this.discardSlot(h.index);
       else if (h?.kind === 'held') this.say(this.match.unequip(this.match.player, h.index), 1.6);
+      else if (h?.kind === 'learn') this.say(this.match.answerLearn(h.index === 2 ? -1 : h.index), 2.2);
       else if (h?.kind === 'release') {
         // First click arms it ("Release?"), a second click on it lets the Pokémon go.
         if (this.hud.releaseArmed === h.index) {
@@ -291,7 +288,7 @@ export class MatchScreen implements Screen {
       this.say(t ? `Ball target: ${t.name}` : 'No wild Pokémon in range', 0.8);
     }
     if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
-    // Space talks to whoever is in reach, else picks up a ball in reach, else dodges.
+    // Space talks to whoever is in reach, else picks up a ball in reach, else dodges (only while steering a Pokémon).
     if (input.pressed('Space') && !this.interact()) {
       const r = this.match.playerDodge();
       if (r === 'cooldown') this.say('Dodge not ready', 0.5);
@@ -965,21 +962,6 @@ export class MatchScreen implements Screen {
         const msg = this.match.teach(this.match.player, slot, i);
         this.say(msg || 'Could not teach that move', 2.2);
         this.teach = null;
-        break;
-      }
-    }
-    input.takeClicks();
-  }
-
-  /** A level-up move with both slots full: 1-2 forgets that move, Escape keeps the current two. */
-  private handleLearnInput(input: Input): void {
-    if (input.pressed('Escape')) {
-      this.say(this.match.answerLearn(-1), 1.8);
-      return;
-    }
-    for (let i = 0; i < MOVE_SLOTS; i++) {
-      if (input.pressed(`Digit${i + 1}`)) {
-        this.say(this.match.answerLearn(i), 2.2);
         break;
       }
     }
@@ -1755,12 +1737,8 @@ export class MatchScreen implements Screen {
         const entry = this.match.player.held[slot];
         const def = entry ? ITEMS[entry.id] : undefined;
         return { moveName: def?.name.replace('TM ', '') ?? '?', moves: m ? m.moves.map((id) => move(id).name) : [], mon: m?.name ?? '?' };
-      })(this.teach.slot) : this.match.pendingLearn[0] ? ((pl) => ({
-        moveName: move(pl.moveId).name,
-        moves: pl.mon.moves.map((id) => move(id).name),
-        mon: pl.mon.name,
-        title: `${pl.mon.name} wants to learn ${move(pl.moveId).name}`,
-      }))(this.match.pendingLearn[0]) : null,
+      })(this.teach.slot) : null,
+      learn: ((o) => (o ? { mon: o.mon.name, level: o.mon.level, moveId: o.moveId, moves: [...o.mon.moves], queued: this.match.pendingLearn.length - 1 } : null))(this.match.learnOffer),
       storm: this.match.player.party.map((m) => (m.stowed || m.fainted ? 0 : this.stormLevel(m))),
       snag: this.match.snagOffer ? {
         from: this.match.snagOffer.from.name,
@@ -1781,7 +1759,7 @@ export class MatchScreen implements Screen {
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.match.pendingLearn.length || this.match.player.downUntil !== undefined) return null;
+    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.match.player.downUntil !== undefined) return null;
     const f = this.match.fishing;
     if (f) return f.stage === 'bite' ? 'Space · Reel it in!' : f.stage === 'reel' ? null : 'Waiting for a bite... (move or Space to reel in)';
     const who = this.match.visitors.near();

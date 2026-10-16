@@ -134,6 +134,17 @@ export interface MoveDef {
   signature?: boolean;
   /** Screen shake on impact, 0..1 (heavy moves only). */
   shake?: number;
+  /** Override for isContact: false for a physical move that strikes from range (Stone Edge's spikes). */
+  contact?: boolean;
+}
+
+/**
+ * A contact move: physical, aimed at one Pokémon, and not thrown or dropped from the sky. Its user
+ * lunges at the target and strikes it (Pokémon Rumble style) instead of hitting from where it stands.
+ */
+export function isContact(m: MoveDef): boolean {
+  if (m.contact !== undefined) return m.contact;
+  return m.category === 'physical' && m.shape === 'single' && !m.leap && !(m.fx ?? []).some((p) => p.anchor === 'projectile' || p.anchor === 'sky');
 }
 
 export const MOVES = new Map<string, MoveDef>();
@@ -216,6 +227,18 @@ export function effectiveness(moveType: string, defenderTypes: readonly string[]
   const row = TYPE_CHART.chart[moveType] ?? {};
   for (const t of defenderTypes) m *= row[t] ?? 1;
   return m;
+}
+
+/**
+ * How fast a Pokémon moves, as a multiplier on the normal pace: its species' base Speed (slow
+ * bases toward slowMult, fast ones toward fastMult), its Speed stage (Agility) and paralysis.
+ */
+export function moveSpeed(m: { species: SpeciesDef; stages?: { spe: number }; status?: StatusKind | null }): number {
+  const c = CONFIG.battle.speed;
+  const f = Math.max(0, Math.min(1, (m.species.stats.spe - c.slowBase) / (c.fastBase - c.slowBase)));
+  const stage = 1 + c.stagePerStep * (m.stages?.spe ?? 0);
+  const para = m.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1;
+  return (c.slowMult + (c.fastMult - c.slowMult) * f) * stage * para;
 }
 
 /** Actual stats at a level from base stats (flat IV/EV-free formula). */

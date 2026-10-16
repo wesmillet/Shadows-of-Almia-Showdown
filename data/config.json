@@ -92,6 +92,8 @@
       "powerMult": 1.6,
       "turnDegPerSec": 140
     },
+    "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at lungeSpeed tiles a second (times its Speed multiplier), at most lungeMaxSeconds, and strikes on arrival. A contact hit shoves the target knockTiles (times power / 80, within knockScale) unless it is a boss, a legend, an Alpha or much bigger than the attacker.",
+    "lunge": { "speed": 16, "maxSeconds": 0.45, "minTiles": 0.3, "knockTiles": 0.45, "knockSeconds": 0.14, "knockScale": [0.6, 1.6] },
     "castSeconds": 0.3,
     "rangeScale": 1.6,
     "hitStopMs": 60,
@@ -105,6 +107,8 @@
     "freezeSeconds": [2.5, 4],
     "confusionSeconds": [4, 6],
     "confusionMissChance": 0.4,
+    "_speedComment": "Movement speed from the Speed stat: a Pokémon with base Speed slowBase moves at slowMult of the normal pace, one with fastBase at fastMult, in a straight line between (clamped to that range). Speed stages add stagePerStep each (Agility), paralysis multiplies by paralysisSpeed. Following its trainer a Pokémon never drops below followFloor tiles a second when hurrying, so slow ones still keep up.",
+    "speed": { "slowBase": 20, "fastBase": 150, "slowMult": 0.7, "fastMult": 1.4, "stagePerStep": 0.1, "followFloor": 6.2 },
     "paralysisSkipChance": 0.25,
     "paralysisSpeed": 0.5,
     "sleepSeconds": [

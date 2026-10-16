@@ -109,6 +109,14 @@ export interface Mon {
   npc?: 'hoopa';
   /** A leap in progress (Lugia out of the lake): seconds in, total seconds, peak height in tiles, start and end points. */
   leap?: { t: number; dur: number; h: number; fx: number; fy: number; tx: number; ty: number; slam?: boolean } | null;
+  /**
+   * A contact move's lunge (Tackle, Bite, Close Combat...): the Pokémon rushes along the ground at
+   * its target over the cast and strikes on arrival. `target` is tracked as it moves; `stop` is
+   * how far short of its middle the lunge ends (the two bodies just touching).
+   */
+  lunge?: { t: number; dur: number; target: Mon | null; tx: number; ty: number; stop: number } | null;
+  /** A shove from a contact hit: velocity in tiles a second and seconds left. */
+  knock?: { vx: number; vy: number; t: number } | null;
   /** Moves used so far (counts casts), and the cast Life Orb last took its recoil for. */
   castSeq?: number;
   orbPaid?: number;

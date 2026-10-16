@@ -8,7 +8,7 @@ import { DIR_VECTORS, clamp } from '../core/math';
 import type { View } from '../render/view';
 import { incapable, lead } from '../sim/entities';
 import { BEHAVIOR_LABEL, isRoaming, xpToNext } from '../sim/party';
-import { CONFIG, MOVE_SLOTS, SPECIES, move, typeColor, type MoveDef } from '../sim/data';
+import { CONFIG, MOVE_SLOTS, SPECIES, isContact, move, typeColor, type MoveDef } from '../sim/data';
 import type { Match } from '../sim/match';
 import { ITEMS, type BallKind } from '../sim/items';
 import type { InventorySlot } from '../sim/entities';
@@ -26,7 +26,7 @@ function lightenHex(hex: string): string {
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number };
 
 interface Rect {
   x: number;
@@ -51,6 +51,11 @@ export interface HudState {
   popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null;
   /** Name of the ball F will throw, if one is armed. */
   armedBall: string | null;
+  /**
+   * A move one of your Pokémon could learn with both slots full (Match.learnOffer): its name, the
+   * new move, its two current moves (a signature move cannot be forgotten) and how many more wait.
+   */
+  learn: { mon: string; level: number; moveId: string; moves: string[]; queued: number } | null;
   /** TM teach prompt: the TM's move name and the lead's current moves. */
   teach: { moveName: string; moves: string[]; mon: string; title?: string } | null;
   /** The Extraction Voucher's prompt: the party, to pick who goes to the PC. */
@@ -113,6 +118,8 @@ export class Hud {
   private releaseRects: Array<Rect & { index: number }> = [];
   /** The held-item icons on the party cards (a click takes the item back). */
   private heldRects: Array<Rect & { index: number }> = [];
+  /** The learn card's buttons: 0 and 1 forget that move, 2 keeps both. */
+  private learnRects: Array<Rect & { index: number }> = [];
   private chestRects: Rect[] = [];
   private snagRects: Rect[] = [];
   /** The party slot whose release X was clicked once (it turns into a confirm). */
@@ -249,6 +256,7 @@ export class Hud {
   }
 
   hitTest(x: number, y: number): HudHit | null {
+    for (const d of this.learnRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'learn', index: d.index };
     for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
     for (const d of this.releaseRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'release', index: d.index };
     for (const d of this.heldRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'held', index: d.index };
@@ -383,6 +391,7 @@ export class Hud {
     this.drawParty(ctx, match, st, s);
     this.drawMoves(ctx, match, st, s);
     this.drawItems(ctx, match, st, s);
+    this.drawLearn(ctx, st, s);
     // The darkness strip, top centre (the battle banner takes that spot in a battle), and the
     // messages stacked under it: cream strips, older ones above, smaller and dimmer.
     let ny = (match.playerDuel ? 70 : 12) * s;
@@ -1022,8 +1031,9 @@ export class Hud {
       cy -= 4 * s;
     };
     chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
+    // Dodging is for steering a Pokémon (Pokémon mode or a battle), not walking the trainer.
     const dcd = m.dodgeCd ?? 0;
-    chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
+    if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
     if (!match.playerDuel) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
     if (canMega(match.player, m)) chip('Mega Evolve · M', FLAT_INK.storm, 'rgba(190,120,255,0.95)');
     let hoveredMove: MoveDef | null = null;
@@ -1195,6 +1205,81 @@ export class Hud {
   }
 
   /** A move's tooltip, right-aligned to `right` and sitting on `bottom`: what it is and what it does. */
+  /**
+   * The learn card, right of centre: a Pokémon wants a new move and both its slots are full. It
+   * shows the new move beside the two it knows, each as a type-coloured row with its numbers;
+   * click a known move to forget it for the new one, or "Keep both" to pass. The match carries on
+   * meanwhile (nothing is paused or blocked), and the offer waits until it is answered.
+   */
+  private drawLearn(ctx: CanvasRenderingContext2D, st: HudState, s: number): void {
+    this.learnRects = [];
+    const L = st.learn;
+    if (!L) return;
+    const v = this.view;
+    const w = Math.round(300 * s);
+    const rowH = Math.round(40 * s);
+    const gap = Math.round(6 * s);
+    const h = Math.round(64 * s + rowH + 22 * s + 2 * (rowH + gap) + 42 * s);
+    const x = Math.round(v.width - w - 16 * s);
+    const y = Math.round(Math.max(200 * s, v.height / 2 - h / 2 - 30 * s));
+    this.popupBox(ctx, x, y, w, h);
+    this.occupied.push({ x, y, w, h });
+    const pad = Math.round(14 * s);
+    this.ink(ctx, `${L.mon} wants to learn`, x + w / 2, y + 26 * s, 12, FLAT_INK.dim, 'center', w - 2 * pad);
+    const fresh = move(L.moveId);
+    this.ink(ctx, fresh.name, x + w / 2, y + 46 * s, 16, FLAT_INK.accent, 'center', w - 2 * pad);
+    if (L.queued > 0) this.ink(ctx, `+${L.queued} more`, x + w - pad, y + 18 * s, 9, FLAT_INK.dim, 'right');
+    const row = (def: MoveDef, rx: number, ry: number, rw: number, state: 'new' | 'hover' | 'idle' | 'locked') => {
+      const col = typeColor(def.type);
+      ctx.fillStyle = state === 'locked' ? 'rgba(138,106,74,0.12)' : state === 'hover' ? 'rgba(194,97,26,0.16)' : state === 'new' ? 'rgba(106,63,200,0.1)' : 'rgba(138,106,74,0.08)';
+      ctx.fillRect(rx, ry, rw, rowH);
+      if (state === 'hover') {
+        ctx.fillStyle = FLAT_INK.accent;
+        ctx.fillRect(rx, ry, rw, Math.max(1, Math.round(s)));
+        ctx.fillRect(rx, ry + rowH - Math.max(1, Math.round(s)), rw, Math.max(1, Math.round(s)));
+      }
+      // The type stripe.
+      ctx.fillStyle = '#2a1a10';
+      ctx.fillRect(rx, ry, Math.round(6 * s), rowH);
+      ctx.fillStyle = state === 'locked' ? darken(col, 0.4) : col;
+      ctx.fillRect(rx + Math.round(s), ry + Math.round(s), Math.round(4 * s), rowH - 2 * Math.round(s));
+      const tx = rx + 14 * s;
+      this.ink(ctx, def.name, tx, ry + 17 * s, 12, state === 'locked' ? FLAT_INK.dim : FLAT_INK.text, 'left', rw * 0.55);
+      const kind = `${def.type[0]?.toUpperCase()}${def.type.slice(1)} · ${def.category === 'status' ? 'Status' : def.category === 'physical' ? (isContact(def) ? 'Physical, lunge' : 'Physical') : 'Special'}`;
+      this.ink(ctx, kind, tx, ry + 32 * s, 9, darken(col, 0.3), 'left', rw * 0.6);
+      const nums = `${def.power > 0 ? `Pow ${def.power}` : 'No damage'} · ${def.cooldown}s`;
+      this.ink(ctx, nums, rx + rw - 8 * s, ry + 17 * s, 10, FLAT_INK.text, 'right');
+      const tag = state === 'new' ? 'NEW' : state === 'locked' ? 'Signature: kept' : state === 'hover' ? 'Forget this' : 'Click to forget';
+      this.ink(ctx, tag, rx + rw - 8 * s, ry + 32 * s, 9, state === 'new' ? FLAT_INK.storm : state === 'hover' ? FLAT_INK.bad : FLAT_INK.dim, 'right');
+    };
+    const rx = x + pad;
+    const rw = w - 2 * pad;
+    let ry = y + 58 * s;
+    row(fresh, rx, ry, rw, 'new');
+    ry += rowH + 22 * s;
+    this.ink(ctx, 'Forget one of these for it:', rx, ry - 6 * s, 10, FLAT_INK.dim);
+    L.moves.forEach((id, i) => {
+      const def = move(id);
+      const locked = !!def.signature;
+      const over = !locked && hit(st.mouseX, st.mouseY, rx, ry, rw, rowH);
+      row(def, rx, ry, rw, locked ? 'locked' : over ? 'hover' : 'idle');
+      if (!locked) this.learnRects.push({ x: rx, y: ry, w: rw, h: rowH, index: i });
+      ry += rowH + gap;
+    });
+    // Keep both: a cream button along the bottom (the button art has a lip above its face, so it
+    // is drawn that much taller to fill its box), rising a pixel under the pointer.
+    const k = this.px2;
+    const bw = Math.round(rw * 0.62);
+    const bh = Math.round(26 * s);
+    const bx = Math.round(x + w / 2 - bw / 2);
+    const by = Math.round(y + h - bh - 10 * s);
+    const over = hit(st.mouseX, st.mouseY, bx, by, bw, bh);
+    const lift = over ? k : 0;
+    if (!this.ui.flat(ctx, 'button', bx, by - 4 * k - lift, bw, bh + 4 * k, k)) this.panel(ctx, bx, by, bw, bh, 8);
+    this.ink(ctx, `Don't learn ${fresh.name}`, bx + bw / 2, by - lift + (bh - 3 * k) / 2 + 4 * s, 10, over ? FLAT_INK.accent : FLAT_INK.text, 'center', bw - 12 * s);
+    this.learnRects.push({ x: bx, y: by - k, w: bw, h: bh + k, index: 2 });
+  }
+
   private drawMoveTip(ctx: CanvasRenderingContext2D, def: MoveDef, right: number, bottom: number): void {
     const s = this.view.baseScale;
     const lines = describeMove(def);
@@ -1253,6 +1338,7 @@ export function describeMove(def: MoveDef): string[] {
     if (parts.length) out.push(`${parts.join(', ')}${def.stages.chance < 1 ? ` (${Math.round(def.stages.chance * 100)}%)` : ''}`);
   }
   if (def.leap) out.push('The user leaps and slams down on the target');
+  else if (isContact(def)) out.push('The user lunges in and strikes, shoving the target back');
   if (def.signature) out.push('Signature move');
   return out.filter(Boolean);
 }

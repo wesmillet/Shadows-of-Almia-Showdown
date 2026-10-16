@@ -11,7 +11,7 @@ import numpy as np
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design3 as D
-import paint3, cliffs, castle, stamps, content3, towns3, collide, export3, wang, tiled
+import paint3, cliffs, castle, stamps, content3, towns3, collide, export3, wang, tiled, decor3
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NAME = 'almia3'
@@ -168,11 +168,14 @@ def main():
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
         pav[gy - 1:gy + 6, gx - half - 1:gx + half + 2] = F.color('Slab Floor')
-    # the crystal's terrace in the middle of the plain
+    # the crystal's arena in the middle of the plain: the last two trainers fight it out here,
+    # a paved field with the crystal in its centre circle, on a terrace of darker slabs
     cx, cy = D.CRYSTAL
-    terrace = D.ellipse(cx + 0.5, cy + 0.5, 8, 6) < 1
+    fx0, fy0, fx1, fy1 = D.FINAL_ARENA
+    terrace = (D.ellipse(cx + 0.5, cy + 0.5, 14, 9.5) < 1)
+    terrace[fy0 - 2:fy1 + 2, fx0 - 2:fx1 + 2] = True
     pav[terrace] = F.color('Slab Floor')
-    pav[D.ellipse(cx + 0.5, cy + 0.5, 4.5, 3.4) < 1] = F.color('Mid Slab Floor')
+    pav[fy0:fy1, fx0:fx1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
     # one fountain on a paved pad east of the battlefield
     fountains = [(216, 158)]
@@ -245,10 +248,16 @@ def main():
         if banner: yard.put(rr.choice(banner), x, y, clear=0, shadow=False)
     for x in range(bx0 + 3, bx1 - 2, 7):
         if bench: yard.put(bench[0], x, by1 + 3, clear=0, shadow=False)
-    for (x, y) in [(191, 161), (207, 161), (cx - 7, cy - 1), (cx + 8, cy - 1), (cx - 7, cy + 3), (cx + 8, cy + 3)]:
+    for (x, y) in [(191, 161), (207, 161)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
     placer.free &= yard.free
+    log('decor')
+    n_arena = decor3.arena(placer)
+    n_sign, n_lamp, n_flower = decor3.roads(d, placer)
+    water_plants = decor3.lakes(d)
+    objects += water_plants
+    log(f'  arena {n_arena}, signs {n_sign}, lamps {n_lamp}, verge plants {n_flower}, water plants {len(water_plants)}')
     log('woods')
     clearing = (D.noise(91, 9) > 0.8) & np.isin(d.biome, [D.MEADOW, D.FOREST, D.AUTUMN, D.SNOW])
     px, py, prx, pry = D.PLAIN
@@ -318,6 +327,7 @@ def main():
             'center': {'x': D.CRYSTAL[0] + 0.5, 'y': D.CRYSTAL[1] + 0.5}, 'outposts': outposts, 'spawns': spawns,
             'towns': towns, 'npcs': npcs,
             'arena': {'x0': bx0, 'y0': by0, 'x1': bx1 + 1, 'y1': by1 + 1},
+            'finalArena': {'x0': D.FINAL_ARENA[0], 'y0': D.FINAL_ARENA[1], 'x1': D.FINAL_ARENA[2], 'y1': D.FINAL_ARENA[3]},
             'lake': {'x': D.TIDE_LAKE[0] + 0.5, 'y': D.TIDE_LAKE[1] + 0.5, 'rx': D.TIDE_LAKE[2], 'ry': D.TIDE_LAKE[3]},
             'credits': 'The Fan-tasy Tileset (Premium) and its expansions'}
     base = os.path.join(ROOT, 'assets', 'maps', NAME)

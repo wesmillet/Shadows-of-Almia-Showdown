@@ -182,8 +182,21 @@ inward from the edges at 0.7 tiles a second, slow enough to walk ahead of. In th
 sleepers take Bad Dreams damage every second, wild Pokémon get a purple
 aura and cannot be caught. Full Heal (or three seconds back in the light)
 wakes them. When the last safe circle closes, Darkrai appears at the
-crystal and hunts the remaining trainers with Dark Void rings and Dark
-Pulse lines.
+crystal at level 100 and hunts the remaining trainers with Dark Void rings
+and Dark Pulse lines.
+
+**The final showdown.** The Shadow Crystal stands in the centre circle of a
+paved battlefield on the plain, ringed by ruined pillars, purple banners and
+crystal clusters. When only two trainers are left, both are called there:
+after a five-second warning (and once any battle between them is over) they
+are brought to either end, their teams are fully restored, and they battle
+one-on-one. The winner takes the match.
+
+**Roads** wind across the island instead of running in straight lines: each
+leg bends gently between its waypoints and the corners are rounded, while
+every road still meets its town, gate or stairs head on. Signposts stand
+where roads set out, lamp posts line the way, flowers, mushrooms and logs sit
+on the verges, and the lakes have lily pads, lotus flowers and cattails.
 
 URL flags for testing: `?seed=<text>` fixes the island, `?party=0025,0387`
 skips the title and roll with that party. `window.showdown` exposes the

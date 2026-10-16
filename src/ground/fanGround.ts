@@ -114,6 +114,7 @@ export class FanGround implements GroundRenderer {
     this.features = {
       npcs: (map.npcs as NonNullable<GroundRenderer['features']>['npcs']) ?? [],
       arena: map.arena as NonNullable<GroundRenderer['features']>['arena'],
+      finalArena: (map as { finalArena?: { x0: number; y0: number; x1: number; y1: number } }).finalArena,
       towns: (map as { towns?: Array<{ name: string; x: number; y: number }> }).towns ?? [],
       lake: (map as { lake?: { x: number; y: number; rx: number; ry: number } }).lake,
     };

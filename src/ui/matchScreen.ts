@@ -1106,36 +1106,53 @@ export class MatchScreen implements Screen {
   protected drawGroundExtras(v: View): void {
     const ctx = v.ctx;
     const t = performance.now() / 1000;
-    // The champion's battlefield: painted lines, a centre circle and a box at each end.
-    const arena = this.match.ground.features?.arena;
-    if (arena) {
+    // The battlefields (the champion's in the castle, the final one round the crystal): painted
+    // lines, a centre circle and a box at each end of the long side.
+    const fields = [this.match.ground.features?.arena, this.match.ground.features?.finalArena];
+    for (const arena of fields) {
+      if (!arena) continue;
       const x0 = v.toScreenX(arena.x0 + 0.5);
       const y0 = v.toScreenY(arena.y0 + 0.5);
       const x1 = v.toScreenX(arena.x1 - 0.5);
       const y1 = v.toScreenY(arena.y1 - 0.5);
+      if (x1 < 0 || y1 < 0 || x0 > v.width || y0 > v.height) continue;
       const w = x1 - x0;
       const h = y1 - y0;
+      const mx = (x0 + x1) / 2;
       const my = (y0 + y1) / 2;
+      const wide = w > h;
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.lineWidth = Math.max(3, 5 * v.baseScale);
       ctx.strokeRect(x0, y0, w, h);
       ctx.beginPath();
-      ctx.moveTo(x0, my);
-      ctx.lineTo(x1, my);
+      if (wide) {
+        ctx.moveTo(mx, y0);
+        ctx.lineTo(mx, y1);
+      } else {
+        ctx.moveTo(x0, my);
+        ctx.lineTo(x1, my);
+      }
       ctx.stroke();
-      const r = Math.min(w, h) * 0.17;
+      const r = Math.min(w, h) * (arena === fields[1] ? 0.3 : 0.17);
       ctx.beginPath();
-      ctx.arc((x0 + x1) / 2, my, r, 0, Math.PI * 2);
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = 'rgba(214,72,72,0.35)';
+      ctx.fillStyle = arena === fields[1] ? 'rgba(150,80,230,0.3)' : 'rgba(214,72,72,0.35)';
       ctx.beginPath();
-      ctx.arc((x0 + x1) / 2, my, r, Math.PI, Math.PI * 2);
+      ctx.arc(mx, my, r, Math.PI, Math.PI * 2);
       ctx.fill();
-      const bw = w * 0.32;
-      const bh = h * 0.18;
-      ctx.strokeRect((x0 + x1) / 2 - bw / 2, y0, bw, bh);
-      ctx.strokeRect((x0 + x1) / 2 - bw / 2, y1 - bh, bw, bh);
+      if (wide) {
+        const bw = w * 0.16;
+        const bh = h * 0.36;
+        ctx.strokeRect(x0, my - bh / 2, bw, bh);
+        ctx.strokeRect(x1 - bw, my - bh / 2, bw, bh);
+      } else {
+        const bw = w * 0.32;
+        const bh = h * 0.18;
+        ctx.strokeRect(mx - bw / 2, y0, bw, bh);
+        ctx.strokeRect(mx - bw / 2, y1 - bh, bw, bh);
+      }
       ctx.restore();
     }
     // Outpost pads.

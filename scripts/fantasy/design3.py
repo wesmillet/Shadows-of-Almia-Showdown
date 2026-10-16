@@ -34,6 +34,7 @@ CASTLE_CUTS = []
 CASTLE_WALL = 3
 CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
+FINAL_ARENA = (150, 106, 171, 119)   # the last two's battlefield round the crystal (x0, y0, x1, y1, exclusive ends)
 PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
 TIDE_LAKE = (219, 98, 16, 9)        # Tide Lake (Lugia's): centre and radii
 
@@ -190,42 +191,84 @@ GATE_W = 5
 STAIR_SITES = [(84, 112)]
 
 ROADS = [
-    # the cross over the plain, and on east to the forest town
-    ('1', [(120, 112), (262, 112), (262, 128)]),
-    ('1', [(160, 84), (160, 166)]),
-    # west to the snow town, climbing the plateau (CLIMB: no flattening round this one)
-    ('1', [(120, 112), (84, 112)]),
+    # Roads follow the land rather than a grid: diagonal legs between waypoints, then a gentle
+    # wind and rounded corners (road_path). Each still ends square on its town, gate or stairs.
+    # east-west across the plain, on east to the forest town
+    ('1', [(84, 112), (118, 109), (160, 112), (203, 115), (238, 119), (262, 128)]),
+    # north-south through the crystal, from the north coast to the south of the plain
+    ('1', [(160, 30), (165, 58), (160, 86), (160, 112), (157, 140), (160, 160)]),
+    # climbing the plateau to the snow town (CLIMB: straight, no flattening round this one)
     ('1', [(84, 112), (84, 74), (70, 74)]),
-    # north to the coast
-    ('1', [(160, 84), (160, 30)]),
     # north-east to the autumn town
-    ('1', [(200, 112), (200, 82), (246, 82)]),
+    ('1', [(194, 114), (196, 99), (205, 85), (226, 79), (246, 82)]),   # round the west and north of Tide Lake
     # south-west to the desert town
-    ('1', [(160, 166), (136, 166), (136, 179), (124, 179)]),
-    # to the castle's north gate (from the plain and from the east road), brick through the gates
-    ('1', [(200, 112), (200, 140), (186, 140), (186, 148)]),
-    ('1', [(160, 140), (186, 140)]),
+    ('1', [(160, 150), (146, 164), (132, 175), (124, 179)]),
+    # to the castle's north gate, brick through the gates
+    ('1', [(186, 115), (193, 128), (186, 140), (186, 148)]),
+    ('1', [(158, 134), (172, 137), (186, 140)]),
     ('2', [(186, 146), (186, 158)]), ('2', [(199, 182), (199, 196)]),
 ]
 
 
+def road_path(pts, seed, wind=True):
+    """The centre line of a road through its waypoints, as dense float points.
+
+    Long dirt-road legs wind: each bends sideways by a sum of two slow waves whose envelope is
+    zero at both ends, so roads still meet towns, gates and stairs head on. Corners are then
+    rounded (Chaikin), keeping the first and last point exactly.
+    """
+    rng = np.random.default_rng(seed)
+    out = [(float(pts[0][0]), float(pts[0][1]))]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        dx, dy = bx - ax, by - ay
+        L = float(np.hypot(dx, dy))
+        if L < 1e-6: continue
+        nx, ny = -dy / L, dx / L
+        n = max(2, int(L * 2))
+        amp = min(6.0, L / 7) if (wind and L > 14) else 0.0
+        k1, k2 = max(1, round(L / 34)), max(2, round(L / 15))
+        p1, p2 = rng.uniform(0, 2 * np.pi, 2)
+        for i in range(1, n + 1):
+            t = i / n
+            env = np.sin(np.pi * t) ** 1.2
+            off = amp * env * (0.7 * np.sin(2 * np.pi * k1 * t / 2 + p1) + 0.3 * np.sin(2 * np.pi * k2 * t / 2 + p2))
+            out.append((ax + dx * t + nx * off, ay + dy * t + ny * off))
+    # round the corners: two Chaikin passes on the interior
+    for _ in range(2 if wind else 1):
+        if len(out) < 3: break
+        sm = [out[0]]
+        for (x0, y0), (x1, y1) in zip(out, out[1:]):
+            sm.append((0.75 * x0 + 0.25 * x1, 0.75 * y0 + 0.25 * y1))
+            sm.append((0.25 * x0 + 0.75 * x1, 0.25 * y0 + 0.75 * y1))
+        sm.append(out[-1])
+        out = sm
+    return out
+
+
 def paint_roads(d, roads=ROADS, w=3, out=None):
-    o = (w - 1) // 2
+    """Roads as a brush of radius ~w/2 swept along each road's winding centre line.
+    Brick ('2') approaches and the road that climbs to the snow town stay straight."""
     target = d.paths if out is None else out
-    for kind, pts in roads:
+    H_, W_ = target.shape
+    for idx, (kind, pts) in enumerate(roads):
         k = int(kind)
-        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
-            dx, dy = bx - ax, by - ay
-            n = max(abs(dx), abs(dy))
-            for i in range(n + 1):
-                x = ax + (np.sign(dx) * i if dx else 0)
-                y = ay + (np.sign(dy) * i if dy else 0)
-                target[y - o:y - o + w, x - o:x - o + w] = np.maximum(target[y - o:y - o + w, x - o:x - o + w], k)
+        wind = k == 1 and (70, 74) not in pts
+        line = road_path(pts, 500 + idx, wind)
+        rng = np.random.default_rng(900 + idx)
+        ph = rng.uniform(0, 2 * np.pi)
+        for j, (x, y) in enumerate(line):
+            # a little width variation along dirt roads
+            r = (w / 2) + (0.28 * np.sin(j * 0.045 + ph) if wind else 0.0)
+            x0, x1 = int(np.floor(x - r)), int(np.ceil(x + r))
+            y0, y1 = int(np.floor(y - r)), int(np.ceil(y + r))
+            for yy in range(max(0, y0), min(H_, y1 + 1)):
+                for xx in range(max(0, x0), min(W_, x1 + 1)):
+                    if (xx + 0.5 - x - 0.5) ** 2 + (yy + 0.5 - y - 0.5) ** 2 <= r * r:
+                        target[yy, xx] = max(target[yy, xx], k)
     if out is not None: return
     d.paths[~d.land] = 0
     d.paths[d.water] = 0
     d.paths[d.castle & ~ndimage.binary_erosion(d.castle, iterations=CASTLE_WALL)] = 0   # no road over the wall
-
 
 if __name__ == '__main__':
     d = Design()

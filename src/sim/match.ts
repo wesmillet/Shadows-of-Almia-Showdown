@@ -1052,6 +1052,7 @@ export class Match {
         if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < clear) continue;
         if (this.startSpots.some((s) => Math.hypot(tx + 0.5 - s.x, ty + 0.5 - s.y) < clear)) continue;
         if (this.ground.features?.arena && inArena(this.ground.features.arena, tx + 0.5, ty + 0.5, 3)) continue;
+        if (this.ground.features?.finalArena && inArena(this.ground.features.finalArena, tx + 0.5, ty + 0.5, 3)) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
         if (b !== 'water') {
@@ -1586,6 +1587,7 @@ export class Match {
     this.handleKnockouts();
     this.stepEvolutions(dt);
     this.checkElimination();
+    this.stepFinalShowdown(dt);
   }
 
   /** Party Pokémon past an evolution level start evolving; evolutions in progress tick on. */
@@ -1978,10 +1980,8 @@ export class Match {
   }
 
   private spawnDarkrai(): void {
-    // Darkrai stays a threat however far the survivors have levelled: five above the strongest.
-    let top = 0;
-    for (const t of this.allTrainers) if (t.alive) for (const m of t.party) if (!m.fainted) top = Math.max(top, m.level);
-    const d = this.makeMon('0491', Math.min(100, Math.max(CONFIG.battle.bossLevel, top + 5)), null, this.centerX, this.centerY - 0.6);
+    // When the darkness has closed on the crystal, Darkrai comes out at level 100.
+    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY - 0.6);
     d.boss = true;
     d.wild = false;
     d.maxHp = d.hp = d.stats.hp * CONFIG.battle.bossHpMultiplier;
@@ -2310,6 +2310,60 @@ export class Match {
   }
 
   /** The battle is over: the winner's party comes back out round its trainer. */
+  /** The final showdown: seconds until the last two are called to the crystal's arena (null until there are two). */
+  private finalCountdown: number | null = null;
+  finalStarted = false;
+
+  /**
+   * When only two trainers are left in the match, both are called to the battlefield round the
+   * Shadow Crystal: after a short warning they are brought there, their teams restored, and they
+   * battle one-on-one. The winner takes the match.
+   */
+  private stepFinalShowdown(dt: number): void {
+    const arena = this.ground.features?.finalArena;
+    if (!arena || this.finalStarted || this.outcome) return;
+    const left = this.allTrainers.filter((t) => t.alive && !t.challenger && !t.visitor);
+    if (left.length !== 2) return;
+    const [a, b] = left as [Trainer, Trainer];
+    if (this.finalCountdown === null) {
+      this.finalCountdown = 5;
+      this.battle.events.push({ type: 'notice', text: 'Final two! The Shadow Crystal calls you both to its arena', seconds: 4 });
+      return;
+    }
+    // Let a battle between the two (or anything else) finish first.
+    if (a.duelId || b.duelId) return;
+    this.finalCountdown -= dt;
+    if (this.finalCountdown > 0) return;
+    this.finalStarted = true;
+    if (this.controlled) this.releaseControl();
+    const cy = (arena.y0 + arena.y1) / 2;
+    const spots = [{ x: arena.x0 + 1, y: cy }, { x: arena.x1 - 1, y: cy }];
+    for (const [i, t] of [a, b].entries()) {
+      const s = spots[i] as { x: number; y: number };
+      t.x = t.px = s.x;
+      t.y = t.py = s.y;
+      t.aiTarget = null;
+      for (const m of t.party) {
+        if (m.captured) continue;
+        if (isRoaming(m)) m.behavior = 'guard';
+        m.recall = false;
+        m.fainted = false;
+        m.hp = m.maxHp;
+        this.battle.cureStatus(m);
+        m.drowsy = 0;
+        m.x = m.px = s.x;
+        m.y = m.py = s.y;
+      }
+    }
+    // No wild Pokémon in the way.
+    for (const w of this.wilds) if (!w.npc && inArena(arena, w.x, w.y, 2)) {
+      w.x = w.homeX = w.targetX = arena.x0 - 4;
+      w.y = w.homeY = w.targetY = arena.y0 - 4;
+    }
+    this.startDuel(a, b, spots[0], spots[1]);
+    this.battle.events.push({ type: 'notice', text: `Final showdown: ${a.name} vs ${b.name}! Both teams are restored`, seconds: 4 });
+  }
+
   private endDuel(d: Duel, winner: Trainer): void {
     if (d.state === 'over') return;
     d.state = 'over';

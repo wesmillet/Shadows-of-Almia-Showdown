@@ -39,8 +39,14 @@ def ground(d, seed=2):
     base = G.paint(cells)
     # dirt and light grass patches in the green lands
     patch = np.zeros_like(cells)
-    dirt = (noise(seed + 41, 4) > 1.3) & np.isin(d.biome, [MEADOW, FOREST]) & green
-    patch[ndimage.binary_opening(dirt, structure=np.ones((3, 3)))] = G.color('Dirt')
+    # a few small, rounded dirt clearings (big stepped ones read as blotches)
+    dirt = (ndimage.gaussian_filter(noise(seed + 41, 4), 1.5) > 1.15) & np.isin(d.biome, [MEADOW, FOREST]) & green
+    dirt = ndimage.binary_opening(dirt, structure=ndimage.generate_binary_structure(2, 1), iterations=2)
+    lbl, n = ndimage.label(dirt)
+    sizes = ndimage.sum(dirt, lbl, range(1, n + 1))
+    for i, sz in enumerate(sizes, 1):
+        if sz > 60: dirt[lbl == i] = False
+    patch[dirt] = G.color('Dirt')
     light = (noise(seed + 42, 5) > 1.0) & np.isin(d.biome, [MEADOW, CASTLE]) & green & (patch == 0)
     patch[ndimage.binary_opening(light, structure=np.ones((3, 3)))] = G.color('Light Grass')
     patch = clean(patch)

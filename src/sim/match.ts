@@ -1606,11 +1606,30 @@ export class Match {
     this.battle.castToward(m, slot, t.x, t.y);
   }
 
+  /**
+   * What an ordinary wild Pokémon could ever be hostile to: trainers' Pokémon and bosses (wild
+   * Pokémon leave each other alone). Built once a step, so hundreds of wilds looking for a target
+   * don't each walk every Pokémon on the island.
+   */
+  private wildTargets(): Mon[] {
+    if (this.wildTargetsAt !== this.time) {
+      this.wildTargetsAt = this.time;
+      this.wildTargetsList = [];
+      for (const t of this.allTrainers) if (t.alive) for (const m of t.party) if (!m.fainted && !m.stowed) this.wildTargetsList.push(m);
+      for (const w of this.wilds) if (w.boss && !w.fainted) this.wildTargetsList.push(w);
+      if (this.darkrai && !this.darkrai.fainted) this.wildTargetsList.push(this.darkrai);
+    }
+    return this.wildTargetsList;
+  }
+
+  private wildTargetsAt = -1;
+  private wildTargetsList: Mon[] = [];
+
   /** Hostile Pokémon pick their own targets: nearest enemy within `aggro`, then cast on cooldown. */
   private stepHostile(m: Mon, dt: number, aggro: number): boolean {
     if (!BattleSystem.active(m) || m.casting || incapable(m)) return false;
     if (m.target && (!BattleSystem.active(m.target) || Math.hypot(m.target.x - m.x, m.target.y - m.y) > aggro + 1.5)) m.target = null;
-    if (!m.target) m.target = this.battle.pickTarget(m, this.mons(), aggro);
+    if (!m.target) m.target = this.battle.pickTarget(m, m.boss || m.owner ? this.mons() : this.wildTargets(), aggro);
     const t = m.target;
     if (!t) return false;
     m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
@@ -2165,7 +2184,8 @@ export class Match {
         for (let tries = 0; tries < 6; tries++) {
           const tx = w.homeX + this.rng.range(-r, r);
           const ty = w.homeY + this.rng.range(-r, r);
-          if (this.ground.reachable(Math.floor(tx), Math.floor(ty))) {
+          // Only spots it can walk straight to, so it never stands pushing into a tree or a wall.
+          if (this.ground.reachable(Math.floor(tx), Math.floor(ty)) && canStand(this.ground, tx, ty, 0.3) && this.nav.clearLine(w.x, w.y, tx, ty)) {
             w.targetX = tx;
             w.targetY = ty;
             w.moving = true;
@@ -2181,15 +2201,23 @@ export class Match {
     const dy = w.targetY - w.y;
     const d = Math.hypot(dx, dy);
     const speed = CONFIG.wild.wanderSpeed * (w.status === 'paralysis' ? CONFIG.battle.paralysisSpeed : 1);
-    if (d < 0.05) {
+    // Close enough counts as there (a spot by a wall can be a hair out of reach for its body).
+    if (d < 0.3) {
       w.moving = false;
       w.anim.play('Idle');
       return;
     }
     const step = Math.min(d, speed * dt);
+    const before = d;
     const moved = moveAround(this.ground, w, (dx / d) * step, (dy / d) * step, 0.25, dt);
     w.dir = dirFromVector(dx, dy, w.dir);
-    if (moved < step * 0.2) {
+    // Not getting any closer (blocked, or circling the spot): stop here and pick somewhere else next time.
+    const closer = before - Math.hypot(w.targetX - w.x, w.targetY - w.y);
+    w.stuckT = closer < step * 0.2 ? (w.stuckT ?? 0) + dt : 0;
+    if (moved < step * 0.2 || (w.stuckT ?? 0) > 0.6) {
+      w.stuckT = 0;
+      w.targetX = w.x;
+      w.targetY = w.y;
       w.moving = false;
       w.anim.play('Idle');
     }
@@ -2897,7 +2925,11 @@ export class Match {
       for (const m of t.party) {
         if (m.captured || m.level >= best - 3) continue;
         const before = m.level;
-        while (m.level < best - 3) gainXp(m, xpToNext(m.level) - m.xp);
+        // Fainted Pokémon gain no XP (gainXp ignores them), so stand it back up first: the whole
+        // team is restored for the final anyway. (Before this, a fainted member below the bar
+        // looped forever and froze the game as the final two were called.)
+        m.fainted = false;
+        for (let guard = 0; guard < 120 && m.level < best - 3; guard++) gainXp(m, Math.max(1, xpToNext(m.level) - m.xp));
         this.learnOnLevelUp(m, before);
         // Evolve straight away (no animation): it walks into the arena in its new form.
         for (let k = 0; k < 3; k++) {

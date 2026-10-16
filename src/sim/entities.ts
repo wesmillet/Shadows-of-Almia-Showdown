@@ -70,6 +70,14 @@ export interface Mon {
   wanderPause: number;
   /** Roaming: current destination, and whether it has been told to come back. */
   roamTarget: { x: number; y: number } | null;
+  /** Seconds it has been trying to move without getting anywhere (stuck on something). */
+  stuckT?: number;
+  /** A target it couldn't reach, left alone for `chaseBlockT` seconds. */
+  chaseBlockId?: number;
+  chaseBlockT?: number;
+  /** Stepping round an obstacle (movement.ts moveAround). */
+  detourSide?: number;
+  detourT?: number;
   recall: boolean;
   /** Seconds since this Pokémon last took damage (info bars show after a hit). */
   sinceHit: number;

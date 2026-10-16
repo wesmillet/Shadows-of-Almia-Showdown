@@ -82,6 +82,7 @@ function nearestHostile(m: Mon, w: PartyWorld, range: number, from = { x: m.x, y
   for (const o of w.mons()) {
     if (o === m || !w.active(o) || !w.isEnemy(m, o)) continue;
     if (wildOnly && !o.wild) continue;
+    if (o.id === m.chaseBlockId && (m.chaseBlockT ?? 0) > 0) continue;
     const d = Math.hypot(o.x - from.x, o.y - from.y);
     if (d < bd) {
       bd = d;
@@ -144,7 +145,38 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, speed:
   }
   const moved = moveAround(w.ground, m, vx * dt, vy * dt, 0.22, dt);
   if (moved > 1e-4) m.dir = dirFromVector(vx, vy, m.dir);
+  // Trying to get somewhere and barely moving: stuck on something (see unstick).
+  if (d > stopAt + 0.3 && moved < speed * dt * 0.25) m.stuckT = (m.stuckT ?? 0) + dt;
+  else m.stuckT = 0;
   return moved;
+}
+
+/**
+ * Last resort for a member wedged against something it can't get round: a chase is given up
+ * (that target is left alone for a few seconds) and a member trying to follow hops back beside
+ * its trainer.
+ */
+function unstick(m: Mon, t: Trainer, w: PartyWorld, chasing: Mon | null): boolean {
+  if ((m.stuckT ?? 0) < 1.2) return false;
+  m.stuckT = 0;
+  m.detourT = 0;
+  if (chasing) {
+    m.chaseBlockId = chasing.id;
+    m.chaseBlockT = 5;
+    m.target = null;
+    return true;
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const x = t.x + Math.cos(a) * 0.9;
+    const y = t.y + Math.sin(a) * 0.9;
+    if (canStand(w.ground, x, y, 0.22)) {
+      m.x = m.px = x;
+      m.y = m.py = y;
+      return true;
+    }
+  }
+  return false;
 }
 
 function setWalking(m: Mon, walking: boolean): void {
@@ -167,6 +199,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
     }
     const distT = Math.hypot(t.x - m.x, t.y - m.y);
     const isLead = m === lead;
+    if (m.chaseBlockT) m.chaseBlockT = Math.max(0, m.chaseBlockT - dt);
 
     // ---- Roaming: alone on the map.
     if (isRoaming(m)) {
@@ -175,6 +208,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
         // Path back to the trainer; rejoin as a guard on arrival.
         const moved = steer(m, t, w, t.x, t.y, c.hurrySpeed, dt, 1.4);
         setWalking(m, moved > 1e-4);
+        unstick(m, t, w, null);
         if (distT < 2) {
           m.recall = false;
           m.behavior = 'guard';
@@ -190,6 +224,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
         if (dp > 2.2) {
           const moved = steer(m, t, w, prey.x, prey.y, c.chaseSpeed, dt, 2.0);
           setWalking(m, moved > 1e-4);
+          if (unstick(m, t, w, prey)) continue;
         } else {
           setWalking(m, false);
           m.dir = dirFromVector(prey.x - m.x, prey.y - m.y, m.dir);
@@ -251,6 +286,7 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
       if (dp > 2.4) {
         const moved = steer(m, t, w, chasing.x, chasing.y, c.chaseSpeed, dt, 2.2);
         setWalking(m, moved > 1e-4);
+        if (unstick(m, t, w, chasing)) continue;
       } else {
         setWalking(m, false);
         m.dir = dirFromVector(chasing.x - m.x, chasing.y - m.y, m.dir);
@@ -266,6 +302,8 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
       const speed = distT > leash + 1 ? c.hurrySpeed : c.followSpeed;
       const moved = steer(m, t, w, desiredX, desiredY, speed, dt, 0.25);
       setWalking(m, moved > 1e-4);
+      if (distT > 2) unstick(m, t, w, null);
+      else m.stuckT = 0;
       m.wanderPause = w.rng.range(c.pauseMin, c.pauseMax);
       m.wander = null;
       continue;

@@ -18,7 +18,10 @@ export class SpriteRegistry {
   private urgent: Array<() => Promise<void>> = [];
   private normal: Array<() => Promise<void>> = [];
   private active = 0;
+  private activeBg = 0;
   private static readonly LIMIT = 6;
+  /** Background loads at once: they decode sheets on the main thread, so only a couple at a time. */
+  private static readonly BG_LIMIT = 2;
 
   constructor(private readonly assets: Assets) {}
 
@@ -62,6 +65,7 @@ export class SpriteRegistry {
       this.sets.set(key, s);
     }
     const set = s;
+    if (urgent) set.urgent = true;
     if (set.state === 'idle') {
       set.state = 'queued';
       // First the Idle sheet and portrait (enough to draw it), then the rest of its core sheets.
@@ -85,11 +89,15 @@ export class SpriteRegistry {
 
   private pump(): void {
     while (this.active < SpriteRegistry.LIMIT) {
+      const bg = !this.urgent.length;
+      if (bg && this.activeBg >= SpriteRegistry.BG_LIMIT) return;
       const job = this.urgent.shift() ?? this.normal.shift();
       if (!job) return;
       this.active++;
+      if (bg) this.activeBg++;
       void job().catch((e) => console.warn('[showdown] sprite load failed', e)).finally(() => {
         this.active--;
+        if (bg) this.activeBg--;
         this.pump();
       });
     }
@@ -126,8 +134,8 @@ interface Sheet {
  * green = medium, blue = large, white = centre). AnimData's ShadowSize picks
  * how many rings to keep; the result is painted as one soft dark shape.
  */
-export function bakeShadow(img: HTMLImageElement, shadowSize: number): HTMLCanvasElement {
-  const px = imagePixels(img);
+export function bakeShadow(img: HTMLImageElement, shadowSize: number, pixels?: Uint8ClampedArray): HTMLCanvasElement {
+  const px = pixels ?? imagePixels(img);
   const c = document.createElement('canvas');
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
@@ -168,6 +176,8 @@ export class PokemonSprites {
   /** True once the AnimData and the Idle sheet are in (or known to be missing). */
   loaded = false;
   job: (() => Promise<void>) | null = null;
+  /** Something wants it drawn now: its Idle sheet decodes straight away instead of in idle time. */
+  urgent = false;
   readonly ready: Promise<void>;
   private markReady!: () => void;
 
@@ -192,7 +202,7 @@ export class PokemonSprites {
         }
       } else warnOnce(`pokemon/${this.dex}#missing`, `no sprite folder for pokemon/${this.dex} (drawing placeholders)`);
       await Promise.all([
-        this.ensureSheet('Idle'),
+        this.ensureSheet('Idle', this.urgent),
         this.assets.loadImage(`portraits/${this.dex}/Normal.png`).then((img) => (this.portrait = img && this.palette?.portrait ? recolor(img, this.palette.portrait) : img)),
       ]);
     } finally {
@@ -206,8 +216,12 @@ export class PokemonSprites {
     await Promise.all(CORE_ACTIONS.filter((a) => a !== 'Idle' && this.data?.anims.has(a)).map((a) => this.ensureSheet(a)));
   }
 
-  /** Loads the Anim, Shadow and Offsets PNGs behind an action once. */
-  ensureSheet(action: string): Promise<void> {
+  /**
+   * Loads the Anim, Shadow and Offsets PNGs behind an action once. Reading their pixels (offsets,
+   * shadow, shiny recolour) is main-thread work, so a background load waits for idle time first
+   * and the match keeps a steady frame rate while the rest of the island's Pokémon load.
+   */
+  ensureSheet(action: string, now = false): Promise<void> {
     const def = this.data?.anims.get(action);
     if (!def) return Promise.resolve();
     const name = def.sheet;
@@ -218,15 +232,19 @@ export class PokemonSprites {
       this.assets.loadImage(`${base}-Anim.png`),
       this.assets.loadImage(`${base}-Shadow.png`),
       this.assets.loadImage(`${base}-Offsets.png`),
-    ]).then(([anim, shadow, offsets]) => {
+    ]).then(async ([anim, shadow, offsets]) => {
+      if (!now) await idleSlot();
       let table: OffsetTable | undefined;
       if (offsets && anim) {
         table = decodeOffsets(imagePixels(offsets), offsets.naturalWidth, offsets.naturalHeight, def.frameWidth, def.frameHeight);
       }
       this.sheets.set(name, {
         anim: anim && this.palette ? recolor(anim, this.palette.sprite) : anim,
-        shadow: shadow ? bakeShadow(shadow, this.data?.shadowSize ?? 1) : null,
-        ground: shadow ? { px: imagePixels(shadow), w: shadow.naturalWidth, h: shadow.naturalHeight } : null,
+        ...(() => {
+          if (!shadow) return { shadow: null, ground: null };
+          const spx = imagePixels(shadow);
+          return { shadow: bakeShadow(shadow, this.data?.shadowSize ?? 1, spx), ground: { px: spx, w: shadow.naturalWidth, h: shadow.naturalHeight } };
+        })(),
         offsets: table,
       });
     });
@@ -346,6 +364,12 @@ export class PokemonSprites {
     const ph = this.assets.placeholder(`#${this.dex}`, 40, 40);
     return { image: ph, sx: 0, sy: 0, w: 40, h: 40, placeholder: true };
   }
+}
+
+/** Resolves in the browser's idle time (or soon, if it never gets any). */
+function idleSlot(): Promise<void> {
+  const w = globalThis as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  return new Promise((res) => (w.requestIdleCallback ? w.requestIdleCallback(() => res(), { timeout: 1500 }) : setTimeout(res, 20)));
 }
 
 export type ShinyPalette = { sprite: Array<[number, number]>; portrait?: Array<[number, number]> };

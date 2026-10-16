@@ -11,7 +11,7 @@
  * Each happens once per match (the merchant and Celeste stay all match).
  */
 import { dirFromVector } from '../core/math';
-import { SPECIES } from './data';
+import { CONFIG, SPECIES } from './data';
 import type { Mon, Trainer } from './entities';
 import { activeParty } from './entities';
 import type { Match } from './match';
@@ -85,14 +85,18 @@ export class Visitors {
     const ace = m.makeTrainer('Ace Trainer Celeste', 'ace', false, as.x, as.y);
     m.npcs.push(ace);
     this.ace = { npc: ace, goal: null, wait: 0 };
-    // Hoopa, floating somewhere away from the start.
-    const hs = spot(45);
-    const h = m.makeMon('0720', 50, null, hs.x, hs.y);
-    h.npc = 'hoopa';
-    h.calm = 1e9;
-    h.busy = 1e9;
-    m.wilds.push(h);
-    this.hoopa = h;
+    // Hoopa, floating somewhere away from the start, in only some matches (hoopaChance;
+    // ?hoopa=1 in the address forces it for testing).
+    const forced = typeof location !== 'undefined' && new URLSearchParams(location.search).get('hoopa') === '1';
+    if (forced || rng.chance(CONFIG.visitors.hoopaChance)) {
+      const hs = spot(45);
+      const h = m.makeMon('0720', 50, null, hs.x, hs.y);
+      h.npc = 'hoopa';
+      h.calm = 1e9;
+      h.busy = 1e9;
+      m.wilds.push(h);
+      this.hoopa = h;
+    }
   }
 
   // ---------------------------------------------------------------- stepping

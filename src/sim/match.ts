@@ -339,14 +339,12 @@ export class Match {
 
   /** Adds an item to the right tab (bag, or gear for held items and TMs); returns false when it is full. */
   giveItem(t: Trainer, itemId: string, count = 1): boolean {
-    const def = ITEMS[itemId];
     const tab = isGear(itemId) ? t.held : t.items;
-    if (def?.stack) {
-      const slot = tab.find((s) => s?.id === itemId);
-      if (slot) {
-        slot.count += count;
-        return true;
-      }
+    // Every item stacks: more of one you already carry joins its slot.
+    const slot = tab.find((s) => s?.id === itemId);
+    if (slot) {
+      slot.count += count;
+      return true;
     }
     const free = tab.indexOf(null);
     if (free < 0) return false;
@@ -363,7 +361,6 @@ export class Match {
     return s;
   }
 
-  /** Equips a held item from the gear tab on the lead; the previous item returns to the tab. */
   /**
    * Mega Evolution (src/sim/mega.ts): the Pokémon holding its own Mega Stone glows and becomes
    * its Mega form for the rest of the match. Once a match per trainer.
@@ -382,6 +379,7 @@ export class Match {
     return '';
   }
 
+  /** Equips a held item from the gear tab on the lead; the previous item returns to the tab. */
   equip(t: Trainer, slot: number): string {
     const entry = t.held[slot];
     const def = entry ? ITEMS[entry.id] : undefined;

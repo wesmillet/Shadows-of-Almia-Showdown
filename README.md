@@ -88,7 +88,8 @@ works the same way (and a loss there is friendly).
   patches your team up; try again a minute later;
 - **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios or
   Rayquaza) comes through as a boss with triple HP. Legendaries never faint: worn down to their last HP
-  they join whoever's Pokémon did it, so a rival can steal yours. Once per match;
+  they join whoever's Pokémon did it, so a rival can steal yours. Hoopa only turns up in about one
+  match in seven (`visitors.hoopaChance`; add `?hoopa=1` to the address to force it). Once per match;
 - **Lugia** sleeps in **Tide Lake** (the new lake between the plain and the autumn wood): while you are at
   the lakeside the water may churn (spreading rings), then Lugia bursts out of the lake (Guardian Signs'
   own Lugia sheet, fx_135, in a column of spray), leaps ashore beside you and fights as a legendary. Once

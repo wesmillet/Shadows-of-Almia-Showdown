@@ -177,12 +177,12 @@
     "hoopaChance": 0.15
   },
   "shadowLugia": {
-    "_comment": "Once Tide Lake is inside the darkness, a Super Rod cast there draws Shadow Lugia (once a match): a long wait, then a hook window of biteWindow seconds. It fights at level, with hpMult times its HP and damageScale on its hits; its beam lasts beamSeconds and turns at beamTurnScale of the usual rate. Shadow Storm (a ring of dark gusts) every stormEvery[phase] seconds. Balls bounce off: under snagBelow of its HP a Snag Machine takes it; worn to nothing or winning the bout, it vanishes.",
+    "_comment": "Once Tide Lake is inside the darkness, a Super Rod cast there draws Shadow Lugia (once a match): a long wait, then a hook window of biteWindow seconds. It fights at level (a full-strength Lv 100), with hpMult times its HP like every legendary and damageScale on its hits; its beam lasts beamSeconds and turns at beamTurnScale of the usual rate. Shadow Storm (a ring of dark gusts) every stormEvery[phase] seconds. Balls bounce off: under snagBelow of its HP a Snag Machine takes it; worn to nothing or winning the bout, it vanishes.",
     "level": 100,
     "waitSeconds": [16, 28],
     "biteWindow": 0.5,
-    "hpMult": 1.5,
-    "damageScale": 0.45,
+    "hpMult": 3,
+    "damageScale": 1,
     "beamSeconds": 3,
     "beamTurnScale": 0.6,
     "stormEvery": [6.5, 5, 3.5],

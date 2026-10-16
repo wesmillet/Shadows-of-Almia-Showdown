@@ -422,17 +422,43 @@ export class Visitors {
     } else if (s.stage === 3 && !L.leap) {
       L.calm = 0;
       const bout = m.startLegendBout(L);
-      if (s.shadow) {
-        const snag = m.snagSlot(m.player) >= 0;
-        m.battle.events.push({
-          type: 'notice',
-          text: !bout ? 'Shadow Lugia prowls the shore...' : snag ? 'Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!' : 'Balls bounce off it, and you have no Snag Machine... survive if you can!',
-          seconds: 4,
-        });
+      if (s.shadow && !bout) {
+        // The player is busy (another battle, say): Shadow Lugia circles, untouchable, and waits.
+        L.calm = 1e9;
+        s.stage = 4;
+        s.t = 0;
+        m.battle.events.push({ type: 'notice', text: 'Shadow Lugia circles over the shore, waiting for you...', seconds: 3 });
+        return;
       }
+      this.shadowBoutNotice(s.shadow, bout);
       m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
       this.lugiaIntro = null;
+    } else if (s.stage === 4) {
+      // Waiting on the player: the bout starts the moment they are free; gone if they fall or take too long.
+      if (!m.player.alive || m.finalStarted || s.t > 30 || L.fainted || L.captured) {
+        m.wilds = m.wilds.filter((w) => w !== L);
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 12, tint: '#3a1458' });
+        m.battle.events.push({ type: 'notice', text: 'Shadow Lugia sank back into the black water...', seconds: 3 });
+        this.lugiaIntro = null;
+        return;
+      }
+      if (m.startLegendBout(L)) {
+        this.shadowBoutNotice(true, true);
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
+        this.lugiaIntro = null;
+      } else L.calm = 1e9;
     }
+  }
+
+  /** What the player hears as Shadow Lugia's bout starts. */
+  private shadowBoutNotice(shadow: boolean | undefined, bout: boolean): void {
+    if (!shadow || !bout) return;
+    const snag = this.m.snagSlot(this.m.player) >= 0;
+    this.m.battle.events.push({
+      type: 'notice',
+      text: snag ? 'Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!' : 'Balls bounce off it, and you have no Snag Machine... survive if you can!',
+      seconds: 4,
+    });
   }
 
   // ---------------------------------------------------------------- outcomes
@@ -449,7 +475,7 @@ export class Visitors {
     L.maxHp = Math.round(L.maxHp / 3);
     L.hp = Math.max(1, Math.round(L.maxHp * 0.5));
     L.target = null;
-    L.casting = null;
+    this.m.battle.interrupt(L);
     L.status = null;
     L.behavior = 'guard';
     m.wilds = m.wilds.filter((w) => w !== L);

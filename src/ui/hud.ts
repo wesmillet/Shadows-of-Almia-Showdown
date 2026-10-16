@@ -164,14 +164,16 @@ export class Hud {
     const s = v.baseScale;
     const cols = 6;
     const rows = Math.ceil(chest.slots.length / cols);
-    const slot = 44 * s;
     const gap = 6 * s;
+    // Clear of the bag (its slots and tabs take the bottom 120 px) and the top strips: big chests use smaller slots.
+    const room = v.height - 130 * s - 64 * s;
+    const slot = Math.max(28 * s, Math.min(44 * s, (room - (96 + 26) * s - (rows - 1) * gap) / rows));
     const gridW = cols * slot + (cols - 1) * gap;
     const w = Math.max(gridW + 48 * s, 380 * s);
     const h = (96 + 26) * s + rows * slot + (rows - 1) * gap;
     const x = v.width / 2 - w / 2;
-    // Below the trainer, so the open chest stays in view.
-    const y = Math.min(v.height / 2 + 56 * s, v.height - h - 12 * s);
+    // Below the trainer when it fits, so the open chest stays in view; never over the bag.
+    const y = Math.max(64 * s, Math.min(v.height / 2 + 56 * s, v.height - 130 * s - h));
     this.popupBox(ctx, x, y, w, h);
     this.label(ctx, `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`, x + w / 2, y + 28 * s, 15, '#ffd36b', 'center', '800', w - 28 * s);
     this.label(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', x + w / 2, y + 46 * s, 9.5, '#cfc6ea', 'center', '600', w - 28 * s);
@@ -195,7 +197,7 @@ export class Hud {
       if (i < 9) this.label(ctx, String(i + 1), sx + 6 * s, sy + 13 * s, 9, kit ? '#9f97bb' : '#b9b4cc', 'left', '600');
       const def = entry ? ITEMS[entry.id] : undefined;
       if (entry && def) {
-        this.icons.draw(ctx, def.id, sx + slot / 2, sy + slot / 2, 34 * s, def.tmType);
+        this.icons.draw(ctx, def.id, sx + slot / 2, sy + slot / 2, slot - 10 * s, def.tmType);
         if (entry.count > 1) this.countBadge(ctx, entry.count, sx, sy, slot);
         if (hover) hovered = `${def.name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
       }
@@ -391,8 +393,8 @@ export class Hud {
         : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'shard' ? (def.desc ?? '')
-        : def?.kind === 'styler' ? `${def.desc ?? ''} · Shift+number`
-        : 'Shift+number to use';
+        : def?.kind === 'styler' ? `${def.desc ?? ''} · its number key`
+        : 'Press its number key to use it';
       this.label(ctx, hint, tx, y + 42 * s, 11, '#cfc6ea', 'left', '600', w - (tx - x) - 14 * s);
     }
     if (st.teach) {
@@ -1076,7 +1078,7 @@ export class Hud {
     });
     this.label(ctx, 'G', tx + 2 * s, tabY + tabH / 2 + 4 * s, 9, '#ffffff', 'left', '700');
     // The Storm Mask at work: a tab over the bag's right end while anyone in the party is in the darkness.
-    const masked = [...p.items, ...p.held].some((e) => e?.id === 'storm-mask');
+    const masked = p.items.some((e) => e?.id === 'storm-mask') || p.held.some((e) => e?.id === 'storm-mask');
     if (masked && p.party.some((m) => m.inDark && !m.fainted && !m.stowed)) {
       const x = (CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 4;
       const text = `Storm Mask: your team stays awake ${x}x longer`;

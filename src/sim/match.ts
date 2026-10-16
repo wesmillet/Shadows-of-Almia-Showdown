@@ -252,14 +252,15 @@ export class Match {
     if (t.storage) return t.storage;
     // The player's chest is kept between games in this browser (src/chest.ts); a tester's first
     // chest starts stocked with the rare things (src/dev.ts).
-    const saved = t.isPlayer ? loadChest() : null;
-    const stock = t.isPlayer && !saved && isDev() ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
+    const dev = isDev();
+    const saved = t.isPlayer ? loadChest(dev) : null;
+    const stock = t.isPlayer && !saved && dev ? DEV_CHEST.filter(([id]) => ITEMS[id]) : [];
     const kept = (saved ?? []).filter((e) => ITEMS[e.id]);
     const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6, kept.length)).fill(null);
     stock.forEach(([id, count], i) => (box[i] = { id, count }));
     kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
     t.storage = box;
-    if (t.isPlayer) saveChest(box);
+    if (t.isPlayer) saveChest(box, isDev());
     return box;
   }
 
@@ -277,7 +278,7 @@ export class Match {
       box[free] = { id: entry.id, count: entry.count };
     }
     list[slot] = null;
-    if (t.isPlayer) saveChest(box);
+    if (t.isPlayer) saveChest(box, isDev());
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -289,7 +290,7 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
-    if (t.isPlayer) saveChest(box);
+    if (t.isPlayer) saveChest(box, isDev());
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -740,7 +741,7 @@ export class Match {
     const from = offer.from;
     const m = from.party.filter((x) => !x.captured)[index];
     if (!m) return '';
-    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
+    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}): hover a party card and click its X to release one, then pick again`;
     const slot = this.snagSlot(p);
     if (slot < 0) {
       this.snagOffer = null;
@@ -794,8 +795,8 @@ export class Match {
       const ev = stepThrow(th, dt);
       if (th.target) th.target.visual = targetVisual(th);
       if (ev === 'landed') {
-        const sh = this.shadowBoutFoe();
-        if (sh && th.thrower.isPlayer && Math.hypot(sh.x - th.x, sh.y - th.y) < 2) {
+        const sh = this.shadowBoutFoe() ?? this.wilds.find((w) => w.shadow && w.legend && !w.captured) ?? null;
+        if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2) {
           th.phase = 'done';
           this.battle.events.push({ type: 'scene-fx', id: 'fx_187', x: sh.x, y: sh.y, scale: 1.4, fps: 16, tint: '#8a3dff' });
           this.battle.events.push({ type: 'text', mon: sh, text: 'The ball bounced off!' });
@@ -838,7 +839,7 @@ export class Match {
         th.y = best.y + 0.05;
         best.flash = 0.06;
         best.anim.play('Hurt', { restart: true, loop: false });
-        best.casting = null;
+        this.battle.interrupt(best);
         best.moving = false;
         best.target = null;
         this.battle.events.push({ type: 'ball-hit', mon: best, x: th.x, y: th.y });
@@ -1272,7 +1273,7 @@ export class Match {
   drowsySeconds(m: Mon): number {
     const base = CONFIG.darkness.drowsySeconds;
     const owner = m.owner;
-    const masked = !!owner && [...owner.items, ...owner.held].some((e) => e?.id === 'storm-mask');
+    const masked = !!owner && (owner.items.some((e) => e?.id === 'storm-mask') || owner.held.some((e) => e?.id === 'storm-mask'));
     return masked ? base * ((CONFIG.darkness as { stormMaskMultiplier?: number }).stormMaskMultiplier ?? 1) : base;
   }
 
@@ -1666,7 +1667,9 @@ export class Match {
     }
     m.dir = dirFromVector(a.x - m.x, a.y - m.y, m.dir);
     m.anim.dir = m.dir;
-    return this.battle.castToward(m, slot, a.x, a.y) ? 'cast' : 'cooldown';
+    if (!this.battle.castToward(m, slot, a.x, a.y)) return 'cooldown';
+    m.manualCast = true;
+    return 'cast';
   }
 
   /** Dodge: the lead dashes the way the player is moving (or the trainer faces), briefly untouchable. */
@@ -1691,7 +1694,7 @@ export class Match {
     const speed = c.dashTiles / c.dashSeconds;
     m.dodge = { vx: (dx / n) * speed, vy: (dy / n) * speed, dash: c.dashSeconds, safe: c.safeSeconds };
     m.dodgeCd = c.cooldown;
-    m.casting = null;
+    this.battle.interrupt(m);
     m.dir = dirFromVector(dx, dy, m.dir);
     this.battle.events.push({ type: 'dodge-start', mon: m });
   }
@@ -1728,7 +1731,11 @@ export class Match {
     if (slot < 0) return;
     m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
     m.anim.dir = m.dir;
-    this.battle.castToward(m, slot, t.x, t.y);
+    // A beam from auto-battle keeps on its target (steerChannels), not the cursor.
+    if (this.battle.castToward(m, slot, t.x, t.y)) {
+      m.manualCast = false;
+      m.target = t;
+    }
   }
 
   /**
@@ -1740,7 +1747,7 @@ export class Match {
     for (const m of this.mons()) {
       const ch = m.channel;
       if (!ch) continue;
-      if (m === mine && this.aim) {
+      if (m === mine && this.aim && ch.manual) {
         ch.aimX = this.aim.x;
         ch.aimY = this.aim.y;
       } else if (m.target && BattleSystem.active(m.target)) {
@@ -1871,7 +1878,7 @@ export class Match {
     const fly = Match.mountOf(mon.dex)?.kind === 'fly';
     p.mount = { mon, fly };
     mon.stowed = true;
-    mon.casting = null;
+    this.battle.interrupt(mon);
     mon.target = null;
     mon.x = mon.px = p.x;
     mon.y = mon.py = p.y;
@@ -1936,7 +1943,7 @@ export class Match {
     m.stowed = false;
     m.recall = false;
     m.target = null;
-    m.casting = null;
+    this.battle.interrupt(m);
     if (this.lockTarget === m) this.lockTarget = null;
     if (!m.fainted) {
       m.x = m.px = p.x + 0.6;
@@ -1966,7 +1973,7 @@ export class Match {
     p.party.splice(index, 1);
     if (this.controlled === m) this.releaseControl();
     if (this.lockTarget === m) this.lockTarget = null;
-    m.casting = null;
+    this.battle.interrupt(m);
     m.target = null;
     this.battle.events.push({ type: 'extracted', mon: m, via: 'voucher' });
     return `${m.name} was extracted to your PC!`;
@@ -2301,7 +2308,7 @@ export class Match {
       m.styler = 0;
       m.calm = CONFIG.styler.calmSeconds;
       m.target = null;
-      m.casting = null;
+      this.battle.interrupt(m);
       m.aura = false;
       this.battle.events.push({ type: 'calmed', mon: m });
     }
@@ -2377,9 +2384,16 @@ export class Match {
     for (const ev of [...this.battle.events]) {
       if (ev.type === 'yield') {
         const host = ev.mon.owner?.legendBout ? ev.mon.owner : null;
-        if (host && ev.mon.shadow) {
-          // Shadow Lugia worn to nothing without a snag: it comes apart into the storm.
-          if (!ev.mon.captured) this.shadowVanishes(ev.mon, host);
+        if (ev.mon.shadow) {
+          // Shadow Lugia worn to nothing without a snag: it comes apart into the storm (in its bout or not).
+          if (ev.mon.captured) continue;
+          if (host) this.shadowVanishes(ev.mon, host);
+          else {
+            ev.mon.captured = true;
+            this.wilds = this.wilds.filter((w) => w !== ev.mon);
+            this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: ev.mon.x, y: ev.mon.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5 });
+            this.battle.events.push({ type: 'notice', text: `${ev.mon.name} dissolved into the storm...`, seconds: 3.5 });
+          }
           continue;
         }
         if (host) {
@@ -2708,7 +2722,7 @@ export class Match {
         m.stowed = true;
         // Back in the ball: stat changes wear off.
         m.stages = { atk: 0, def: 0, spe: 0 };
-        m.casting = null;
+        this.battle.interrupt(m);
         m.target = null;
         m.recall = false;
         m.moving = false;
@@ -2790,7 +2804,7 @@ export class Match {
     L.maxHp = L.stats.hp;
     L.hp = Math.max(1, Math.round(L.maxHp * 0.5));
     L.target = null;
-    L.casting = null;
+    this.battle.interrupt(L);
     L.channel = null;
     L.status = null;
     L.legendPhase = 0;
@@ -2813,7 +2827,7 @@ export class Match {
     const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
     L.captured = true;
     L.channel = null;
-    L.casting = null;
+    this.battle.interrupt(L);
     if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
     this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5 });
     this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm... you needed to snag it under 10% HP`, seconds: 4 });
@@ -2945,7 +2959,7 @@ export class Match {
     m.dir = dirFromVector(side.fx, side.fy, m.dir);
     m.anim.dir = m.dir;
     m.anim.play('Idle', { restart: true });
-    m.casting = null;
+    this.battle.interrupt(m);
     m.busy = 0.6;
     m.visual.scale = 0.15;
     m.visual.flash = 1;
@@ -3278,14 +3292,14 @@ export class Match {
           const ok = canStand(this.ground, x, y, 0.22);
           m.x = m.px = ok ? x : t.x;
           m.y = m.py = ok ? y : t.y;
-          m.casting = null;
+          this.battle.interrupt(m);
           m.visual.scale = 0.15;
           m.visual.flash = 1;
         }
       } else if (!m.stowed) {
         m.stowed = true;
         m.stages = { atk: 0, def: 0, spe: 0 };
-        m.casting = null;
+        this.battle.interrupt(m);
         m.target = null;
         m.moving = false;
       }
@@ -3342,7 +3356,7 @@ export class Match {
       m.hp = m.maxHp;
       this.battle.cureStatus(m);
       m.drowsy = 0;
-      m.casting = null;
+      this.battle.interrupt(m);
       m.target = null;
       m.anim.play('Idle', { restart: true });
       m.x = m.px = t.x;

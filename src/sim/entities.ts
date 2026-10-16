@@ -62,7 +62,9 @@ export interface Mon {
    * A channelled beam in progress (config battle.channel): seconds left, time to the next pulse,
    * the beam's current direction, and where its user wants it to point (steered each frame).
    */
-  channel?: { moveId: string; left: number; next: number; dirX: number; dirY: number; aimX: number; aimY: number } | null;
+  channel?: { moveId: string; left: number; next: number; dirX: number; dirY: number; aimX: number; aimY: number; manual?: boolean } | null;
+  /** The last move was aimed by the player's hand (a beam from it follows the cursor), not by auto-battle or AI. */
+  manualCast?: boolean;
   /** Current hostile this Pokémon is focused on (its own targeting). */
   target: Mon | null;
   /** True while shut inside a Poké Ball: cannot act or be targeted. */
@@ -107,6 +109,9 @@ export interface Mon {
   npc?: 'hoopa';
   /** A leap in progress (Lugia out of the lake): seconds in, total seconds, peak height in tiles, start and end points. */
   leap?: { t: number; dur: number; h: number; fx: number; fy: number; tx: number; ty: number; slam?: boolean } | null;
+  /** Moves used so far (counts casts), and the cast Life Orb last took its recoil for. */
+  castSeq?: number;
+  orbPaid?: number;
   /** Seconds until this Pokémon can dodge again. */
   dodgeCd?: number;
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */

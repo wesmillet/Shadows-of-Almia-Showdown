@@ -162,7 +162,7 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
   }
   if (rival) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival };
   // The last two: go and find the other one (after patching up if the team is in a bad way).
-  if (w.lastFoe && w.lastFoe.alive && hpFrac > CONFIG.trainers.huntHpFraction) {
+  if (w.lastFoe && w.lastFoe.alive && hpFrac > CONFIG.trainers.huntHpFraction && !(w.banned?.('last') ?? false)) {
     return { ai: 'engage', target: { x: w.lastFoe.x, y: w.lastFoe.y }, rival: null, key: 'last' };
   }
   if (inDark && Number.isFinite(w.darkRadius)) {

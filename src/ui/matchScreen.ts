@@ -916,6 +916,17 @@ export class MatchScreen implements Screen {
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind === 'snag') pick = h.index;
+      else if (h?.kind === 'release') {
+        // A full party can make room right here: the release X works while the offer is open.
+        if (this.hud.releaseArmed === h.index) {
+          this.hud.releaseArmed = -1;
+          this.say(this.match.release(h.index), 2);
+        } else {
+          this.hud.releaseArmed = h.index;
+          const m = this.match.player.party[h.index];
+          if (m) this.say(`Click "Release?" again to let ${m.name} go`, 2);
+        }
+      }
     }
     if (pick < 0) return;
     const msg = this.match.snag(pick);

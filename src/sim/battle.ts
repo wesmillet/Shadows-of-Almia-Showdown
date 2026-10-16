@@ -248,7 +248,10 @@ export class BattleSystem {
         tid = t.id;
       }
     }
-    return this.tryCast(attacker, slot, tx, ty, tid);
+    // An AI or auto cast: a beam from it is not steered by the cursor.
+    const ok = this.tryCast(attacker, slot, tx, ty, tid);
+    if (ok) attacker.manualCast = false;
+    return ok;
   }
 
   /**
@@ -279,6 +282,7 @@ export class BattleSystem {
     if (attacker.fainted || attacker.casting || attacker.channel || incapable(attacker)) return false;
     const m = move(id);
     const area = makeArea(m, attacker, targetX, targetY);
+    attacker.castSeq = (attacker.castSeq ?? 0) + 1;
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId: null };
     attacker.anim.play(m.anim, { restart: true, loop: false });
     this.events.push({ type: 'cast', attacker, move: m, area });
@@ -288,7 +292,7 @@ export class BattleSystem {
   /** Begins a cast if the move is ready and the mon can act. */
   tryCast(attacker: Mon, slot: number, targetX: number, targetY: number, targetId: number | null): boolean {
     const id = attacker.moves[slot];
-    if (!id || attacker.fainted || attacker.casting) return false;
+    if (!id || attacker.fainted || attacker.casting || attacker.channel) return false;
     if ((attacker.cooldowns[slot] ?? 0) > 0) return false;
     if (incapable(attacker)) return false;
     const m = move(id);
@@ -309,6 +313,7 @@ export class BattleSystem {
       this.events.push({ type: 'confused', mon: attacker });
     }
     const area = makeArea(m, attacker, targetX, targetY);
+    attacker.castSeq = (attacker.castSeq ?? 0) + 1;
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId };
     attacker.dir = dirFromVector(area.fx, area.fy, attacker.dir);
     attacker.anim.dir = attacker.dir;
@@ -390,7 +395,7 @@ export class BattleSystem {
           const d = Math.hypot(dx, dy) || 1;
           // Shadow Lugia's beam pours out longer and sweeps slower, toward its foe (Match.steerChannels).
           const left = mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamSeconds : c.seconds;
-          mon.channel = { moveId: m.id, left, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
+          mon.channel = { manual: !!mon.manualCast, moveId: m.id, left, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
           this.events.push({ type: 'channel-start', mon, move: m });
           this.stepChannel(mon, 0, candidates);
           return;
@@ -452,7 +457,7 @@ export class BattleSystem {
     const ch = mon.channel;
     if (!ch) return;
     const c = CONFIG.battle.channel;
-    if (mon.fainted || incapable(mon)) {
+    if (!BattleSystem.active(mon) || incapable(mon)) {
       this.endChannel(mon);
       return;
     }
@@ -494,6 +499,12 @@ export class BattleSystem {
     if (ch.left <= 0) this.endChannel(mon);
   }
 
+  /** Cuts off whatever a Pokémon is doing: its cast, and a channelled beam (with its end event). */
+  interrupt(mon: Mon): void {
+    if (mon.channel) this.endChannel(mon);
+    else mon.casting = null;
+  }
+
   private endChannel(mon: Mon): void {
     mon.channel = null;
     mon.casting = null;
@@ -510,7 +521,8 @@ export class BattleSystem {
       due.push(f);
       return false;
     });
-    for (const f of due) if (BattleSystem.active(f.target)) this.landHit(f.attacker, f.target, f.m);
+    // Only if it can still be hit and is still a foe (a snag, a calm or a change of sides in between spares it).
+    for (const f of due) if (BattleSystem.active(f.target) && this.isEnemy(f.attacker, f.target)) this.landHit(f.attacker, f.target, f.m);
   }
 
   /** One Pokémon struck by a move: damage, the hit event, status and stat changes. */
@@ -523,7 +535,9 @@ export class BattleSystem {
       target.flash = 0.06;
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
       if (attacker.owner) attacker.owner.stats.damage += r.damage;
-      if (attacker.heldItem === 'life-orb' && !attacker.fainted) {
+      // Life Orb's recoil comes once per move used, not per Pokémon hit or per pulse of a beam.
+      if (attacker.heldItem === 'life-orb' && !attacker.fainted && attacker.orbPaid !== attacker.castSeq) {
+        attacker.orbPaid = attacker.castSeq;
         const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
         this.applyDamage(attacker, recoil, null);
         this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'burn' });
@@ -572,14 +586,14 @@ export class BattleSystem {
     mon.status = status;
     if (status === 'sleep') {
       mon.statusTimer = this.rng.range(CONFIG.battle.sleepSeconds[0] ?? 3, CONFIG.battle.sleepSeconds[1] ?? 6);
-      mon.casting = null;
+      this.interrupt(mon);
       mon.moving = false;
       mon.anim.play('Sleep', { restart: true });
     } else if (status === 'burn' || status === 'poison') mon.statusTimer = 2;
     else if (status === 'freeze') {
       const [a, b] = CONFIG.battle.freezeSeconds ?? [2.5, 4];
       mon.statusTimer = this.rng.range(a ?? 2.5, b ?? 4);
-      mon.casting = null;
+      this.interrupt(mon);
       mon.moving = false;
     } else if (status === 'confusion') {
       const [a, b] = CONFIG.battle.confusionSeconds ?? [4, 6];
@@ -622,7 +636,7 @@ export class BattleSystem {
   faint(mon: Mon, by: Mon | null): void {
     if (mon.fainted) return;
     mon.fainted = true;
-    mon.casting = null;
+    this.interrupt(mon);
     mon.status = null;
     mon.moving = false;
     mon.flash = 0;

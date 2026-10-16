@@ -43,8 +43,8 @@ export const EXTRA_FX = {
   swirl: 'fx_144',
   /** Sparkle on the click of a successful catch. */
   click: 'fx_014',
-  /** White puff when the target bursts free. */
-  burst: 'fx_066',
+  /** White puff: a Pokémon bursting free of a ball, or dashing (dodge). */
+  burst: 'fx_001',
   /** Darkrai's Bad Dreams, looping on sleeping Pokémon. */
   dreams: 'fx_158',
   sleep: 'fx_015',

@@ -425,17 +425,21 @@ export class Hud {
   private drawMinimap(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
     const v = this.view;
     if (!this.minimap) this.minimap = this.buildMinimap(match);
-    const size = 156 * s;
-    const x = v.width - size - 16 * s;
+    // The island keeps its shape: one scale for both axes, so every marker lands where it is.
+    const g = match.ground;
+    const size = 184 * s;
+    const k = size / Math.max(g.cols, g.rows);
+    const mw = g.cols * k;
+    const mh = g.rows * k;
+    const x = v.width - mw - 16 * s;
     const y = 16 * s;
-    this.panel(ctx, x - 6 * s, y - 6 * s, size + 12 * s, size + 12 * s, 12, 'rgba(12,12,22,0.2)');
+    this.panel(ctx, x - 6 * s, y - 6 * s, mw + 12 * s, mh + 12 * s, 12, 'rgba(12,12,22,0.2)');
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(x, y, size, size, 8);
+    ctx.roundRect(x, y, mw, mh, 8);
     ctx.clip();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.minimap, x, y, size, size);
-    const k = size / match.ground.cols;
+    ctx.drawImage(this.minimap, x, y, mw, mh);
     // darkness
     if (Number.isFinite(st.darkRadius)) {
       const cx = x + match.centerX * k;
@@ -445,7 +449,7 @@ export class Hud {
       grad.addColorStop(0, 'rgba(20,4,36,0)');
       grad.addColorStop(1, 'rgba(20,4,36,0.86)');
       ctx.fillStyle = grad;
-      ctx.fillRect(x, y, size, size);
+      ctx.fillRect(x, y, mw, mh);
       ctx.strokeStyle = 'rgba(190,120,255,0.8)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();

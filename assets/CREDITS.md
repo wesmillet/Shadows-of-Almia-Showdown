@@ -1033,6 +1033,12 @@ license, sheets). The current artists per folder, resolved through
 - <@!228595807132057600>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
 - <@!228595807132057600>: Walk,Sleep,Hop
 
+### 0809 Melmetal
+- JHONY_REX: Idle,Walk,Sleep,Hurt,Attack,Punch,Rotate
+- <@!272761782269902848>: Charge,Shoot,Strike,Punch,Swing,Double,Hop
+- <@!229131140903075840>: Punch
+- <@!272761782269902848>: Sleep,Punch
+
 ### 0810 Grookey
 - <@!193530896211509248>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop
 - <@!702275233125630042>: Sleep,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
@@ -2510,6 +2516,11 @@ license, sheets). The current artists per folder, resolved through
 - <@!399615223083958283> (earlier version): Special1
 - <@!350050109741858829>: Normal,Special0
 - <@!350050109741858829>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
+
+### 0809 Melmetal
+- <@!350050109741858829>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
+- <@!350050109741858829>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
+- <@!350050109741858829>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
 
 ### 0810 Grookey
 - EZERART (earlier version): Normal

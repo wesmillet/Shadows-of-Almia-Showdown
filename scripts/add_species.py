@@ -22,7 +22,7 @@ spec.loader.exec_module(starters)
 rows = starters.rows
 
 # Evolutions with no level in the games (trades, beauty, ...).
-LEVEL_FALLBACK = {**starters.LEVEL_FALLBACK, '0230': 50, '0350': 30}
+LEVEL_FALLBACK = {**starters.LEVEL_FALLBACK, '0230': 50, '0350': 30, '0809': 40}
 # Regional or later-generation evolutions the default form never takes here.
 SKIP = starters.SKIP | {'0864', '0904'}  # Cursola (Galarian Corsola), Overqwil (Hisuian Qwilfish)
 

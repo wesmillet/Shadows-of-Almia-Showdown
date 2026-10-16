@@ -20732,6 +20732,12 @@
       "body": [
         14,
         19
+      ],
+      "evolves": [
+        {
+          "to": "0809",
+          "level": 40
+        }
       ]
     },
     {
@@ -24434,6 +24440,87 @@
           44,
           "thunder"
         ]
+      ]
+    },
+    {
+      "dex": "0809",
+      "name": "Melmetal",
+      "types": [
+        "steel"
+      ],
+      "stats": {
+        "hp": 135,
+        "atk": 143,
+        "def": 143,
+        "spa": 80,
+        "spd": 65,
+        "spe": 34
+      },
+      "tier": 0,
+      "heightM": 2.5,
+      "body": [
+        50,
+        32
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "metal-claw"
+        ],
+        [
+          11,
+          "iron-defense"
+        ],
+        [
+          14,
+          "bullet-punch"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "iron-head"
+        ],
+        [
+          26,
+          "thunder-punch"
+        ],
+        [
+          26,
+          "flash-cannon"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "iron-tail"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "heavy-slam"
+        ]
+      ],
+      "moves": [
+        "heavy-slam",
+        "iron-head",
+        "thunder-punch",
+        "flash-cannon"
       ]
     }
   ]

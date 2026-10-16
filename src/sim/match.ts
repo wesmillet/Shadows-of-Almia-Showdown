@@ -859,6 +859,7 @@ export class Match {
   /** Space beside a healer: the whole party is restored (once every 20 s). */
   healAtHealer(): string {
     const t = this.player;
+    if (t.duelId) return "The healer can't help mid-battle";
     if (this.time < t.outpostReady) return `The healer needs a moment (${Math.ceil(t.outpostReady - this.time)}s)`;
     const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
     if (!needs) return 'Your party is already in top shape';
@@ -906,6 +907,11 @@ export class Match {
       o.users = [];
       for (const t of this.allTrainers) {
         if (!t.alive || this.time < t.outpostReady) continue;
+        // No healing in the middle of a battle, even standing right by the healer.
+        if (t.duelId) {
+          t.healing = 0;
+          continue;
+        }
         if (t.isPlayer && this.ground.features?.npcs?.length) continue;
         if (Math.hypot(t.x - o.x, t.y - o.y) > CONFIG.outpost.radius) {
           if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;

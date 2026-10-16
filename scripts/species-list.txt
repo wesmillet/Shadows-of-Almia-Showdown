@@ -156,3 +156,4 @@
 0554  # Darumaka
 0555  # Darmanitan
 0208  # Steelix
+0809

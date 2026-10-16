@@ -1007,35 +1007,29 @@ export class Hud {
       const ready = cd <= 0 && !incapable(m);
       const hover = hit(st.mouseX, st.mouseY, x, y, bw, bh);
       if (hover) hoveredMove = def;
-      if (!this.ui.flat(ctx, ready && hover ? 'buttonDown' : 'button', x, y, bw, bh, k)) this.panel(ctx, x, y, bw, bh, 10);
-      // The face: inside the outline, above the shaded lip.
+      if (!this.ui.flat(ctx, 'button', x, y, bw, bh, k)) this.panel(ctx, x, y, bw, bh, 10);
+      // The button in its move's type colour: the face (inside the outline, above the lip) and a darker lip.
+      const col = typeColor(def.type);
       const fx = x + k;
       const fy = y + 5 * k;
       const fw = bw - 2 * k;
       const fh = bh - 5 * k - 4 * k;
-      if (!ready) {
-        const frac = cd > 0 ? Math.min(1, cd / def.cooldown) : 1;
-        ctx.fillStyle = 'rgba(40,24,12,0.45)';
+      ctx.fillStyle = !ready ? darken(col, 0.35) : hover ? lighten(col, 0.18) : col;
+      ctx.fillRect(fx, fy, fw, fh);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.fillRect(fx, fy, fw, k);
+      ctx.fillStyle = darken(col, ready ? 0.35 : 0.6);
+      ctx.fillRect(fx, y + bh - 4 * k, fw, 3 * k);
+      if (!ready && cd > 0) {
+        // The cooldown: a shade over the face that draws up as it recharges.
+        const frac = Math.min(1, cd / def.cooldown);
+        ctx.fillStyle = 'rgba(10,6,20,0.45)';
         ctx.fillRect(fx, fy, fw, Math.round(fh * frac));
-      } else if (hover) {
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillRect(fx, fy, fw, fh);
       }
       const midY = fy + fh / 2;
-      // Key and a dot of the move's type colour, then the name.
-      const keyText = MOVE_KEYS[i] ?? String(i + 1);
-      ctx.font = this.font(9, '700');
-      const kw = ctx.measureText(keyText).width;
-      const dot = 7 * s;
-      const kx = x + bw / 2 - (kw + dot + 4 * s) / 2;
-      ctx.fillStyle = typeColor(def.type);
-      ctx.fillRect(Math.round(kx), Math.round(midY - 12 * s), Math.round(dot), Math.round(dot));
-      ctx.strokeStyle = '#1a1028';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(Math.round(kx) + 0.5, Math.round(midY - 12 * s) + 0.5, Math.round(dot) - 1, Math.round(dot) - 1);
-      this.ink(ctx, keyText, kx + dot + 4 * s, midY - 5 * s, 9, FLAT_INK.accent);
-      this.ink(ctx, def.name, x + bw / 2, midY + 9 * s, 12, ready ? FLAT_INK.text : FLAT_INK.dim, 'center', bw - 4 * k);
-      if (!ready && cd > 0) this.ink(ctx, `${cd.toFixed(1)}s`, x + bw - 2 * k - 2 * s, fy + 10 * s, 8, '#b0302a', 'right');
+      this.label(ctx, MOVE_KEYS[i] ?? String(i + 1), x + bw / 2, midY - 5 * s, 9, ready ? '#ffffff' : '#c9c2d8', 'center', '800');
+      this.label(ctx, def.name, x + bw / 2, midY + 10 * s, 12, ready ? '#ffffff' : '#c9c2d8', 'center', '800', bw - 4 * k);
+      if (!ready && cd > 0) this.label(ctx, `${cd.toFixed(1)}s`, x + bw - 2 * k - 2 * s, fy + 11 * s, 8, '#ffe9a8', 'right', '800');
       this.moveRects.push({ x, y, w: bw, h: bh });
     }
     if (hoveredMove) this.drawMoveTip(ctx, hoveredMove, right, cy);

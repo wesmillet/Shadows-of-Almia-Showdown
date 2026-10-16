@@ -264,6 +264,21 @@ export class Match {
     const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, stock.length + 6, kept.length)).fill(null);
     stock.forEach(([id, count], i) => (box[i] = { id, count }));
     kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+    // Tester mode: every rare thing is always there, topped back up at the start of each match.
+    if (t.isPlayer && dev && saved) {
+      for (const [id, count] of DEV_CHEST) {
+        if (!ITEMS[id]) continue;
+        const have = box.find((e) => e?.id === id);
+        if (have) have.count = Math.max(have.count, count);
+        else {
+          const free = box.indexOf(null);
+          if (free >= 0) box[free] = { id, count };
+          else box.push({ id, count });
+        }
+      }
+      // And room to store things too.
+      while (box.filter((e) => !e).length < 6) box.push(null);
+    }
     t.storage = box;
     if (t.isPlayer) saveChest(box, isDev());
     return box;
@@ -459,8 +474,9 @@ export class Match {
     else contents.push(rollLoot(this.rng, 'rare'));
     const voucher = this.rng.chance(0.12);
     if (voucher) contents.push({ id: 'extraction-voucher', count: 1 });
-    // An Alpha of a line that can Mega Evolve also carries its Mega Stone.
-    const stone = alpha ? stoneFor(alpha.dex) : null;
+    // An Alpha of a line that can Mega Evolve sometimes carries its Mega Stone (alphaMegaStoneChance).
+    const stoneChance = (CONFIG.items as { alphaMegaStoneChance?: number }).alphaMegaStoneChance ?? 0.3;
+    const stone = alpha && this.rng.chance(stoneChance) ? stoneFor(alpha.dex) : null;
     if (stone) contents.push({ id: stone, count: 1 });
     this.placeBall(ballOfTier('rare'), contents, x, y);
     if (by?.isPlayer) {

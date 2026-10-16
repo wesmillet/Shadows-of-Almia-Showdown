@@ -36,7 +36,8 @@ describe('items and loot', () => {
         if (r.id === 'lucarionite') mine++;
       }
     }
-    expect(found).toBeGreaterThan(50);
+    // Rare now (about 1 in 56 rare rolls), but they do turn up, mostly for a Pokémon you have.
+    expect(found).toBeGreaterThan(25);
     expect(mine / found).toBeGreaterThan(0.5);
   });
 

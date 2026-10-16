@@ -61,7 +61,7 @@
         },
         {
           "id": "mega-stone",
-          "weight": 3
+          "weight": 1
         },
         {
           "id": "extraction-voucher",
@@ -212,7 +212,7 @@
         },
         {
           "id": "mega-stone",
-          "weight": 4
+          "weight": 1
         },
         {
           "id": "max-revive",

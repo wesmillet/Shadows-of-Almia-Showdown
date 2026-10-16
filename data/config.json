@@ -121,7 +121,9 @@
     "pickupRadius": 0.8,
     "playerReach": 1.4,
     "_storageComment": "Every town has a storage chest beside its healer. They share one store per trainer (storageSlots slots, each stacking any number of one item) that keeps items safe when you are wiped out.",
-    "storageSlots": 12
+    "storageSlots": 12,
+    "_alphaMegaStoneComment": "The chance an Alpha of a Mega-capable line drops its Mega Stone (item balls also hold one now and then, loot.json).",
+    "alphaMegaStoneChance": 0.3
   },
   "styler": {
     "_comment": "Capture Styler: hold C and draw loops round a wild Pokémon. It needs baseLoops + 1 per perLevel levels (+eliteLoops for elites, +bossLoops for land bosses, at most maxLoops). A full set calms it for calmSeconds: it stops fighting and every ball thrown at it counts catchMultiplier times. The line reaches maxRange tiles from the trainer; if the Pokémon runs through the line it breaks and one loop is lost.",

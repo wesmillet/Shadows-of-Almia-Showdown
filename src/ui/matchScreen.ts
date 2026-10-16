@@ -31,7 +31,7 @@ import { bestRod, canFish, FISHING, hookOrReel, startFishing } from '../sim/fish
 import { FxLibrary } from '../vfx/fxLibrary';
 import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
 import { drawSoftShadow } from '../render/world';
-import { panel, rgba, text, uiFont, type GameContext, type Screen } from './screens';
+import { INK, panel, rgba, text, uiFont, wrapText, type GameContext, type Screen } from './screens';
 
 /** Effects that sim events ask for by id (scene-fx), loaded with the rest. */
 const SCENE_FX = ['fx_135', 'fx_225', 'fx_226', 'fx_229', 'fx_081', 'fx_070', 'fx_067', 'fx_190', 'fx_215', 'fx_009', 'fx_017', 'fx_172', 'fx_201', 'fx_204', 'fx_239', 'fx_175', 'fx_093'];
@@ -1969,9 +1969,18 @@ export class MatchScreen implements Screen {
     const left = Math.max(0, Math.ceil(p.downUntil - this.match.time));
     h.fillStyle = 'rgba(8,4,18,0.62)';
     h.fillRect(0, 0, v.width, v.height);
-    text(v, 'WIPED OUT', v.width / 2, v.height / 2 - 40 * s, 40, { align: 'center', weight: '900', color: '#ff8fa3' });
-    text(v, `Respawning in ${left}s`, v.width / 2, v.height / 2, 22, { align: 'center', weight: '800', color: '#ffffff' });
-    text(v, 'Wild Pokémon took your whole party. You come back at an outpost with them healed; your items stayed where you fell.', v.width / 2, v.height / 2 + 30 * s, 13, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 80 * s });
+    // A cream card: the ribbon with WIPED OUT, the countdown and what happened.
+    const k = Math.max(2, Math.round(3 * s));
+    const pw = Math.min(v.width - 40 * s, 560 * s);
+    const ph = 150 * s;
+    const px = v.width / 2 - pw / 2;
+    const py = v.height / 2 - ph / 2;
+    panel(v, px, py, pw, ph);
+    const rw = 300 * s;
+    this.ui.flat(h, 'banner', v.width / 2 - rw / 2, py - 11 * k + 4 * s, rw, 22 * k, k);
+    text(v, 'WIPED OUT', v.width / 2, py + 4 * s + 2 * k + 14 * s, 30, { align: 'center', color: INK.bad, shadow: false });
+    text(v, `Respawning in ${left}s`, v.width / 2, py + 76 * s, 22, { align: 'center', color: INK.text, shadow: false });
+    wrapText(v, 'Wild Pokémon took your whole party. You come back at an outpost with them healed; your items stayed where you fell.', v.width / 2, py + 104 * s, 12, pw - 40 * s, 18 * s, 2, { align: 'center', color: INK.dim, shadow: false });
   }
 
   /** The battle banner (both trainers and their remaining Pokémon) and, after a knockout, the pick panel. */
@@ -2014,19 +2023,17 @@ export class MatchScreen implements Screen {
     const px = v.width / 2 - pw / 2;
     const py = v.height * 0.32;
     panel(v, px, py, pw, ph);
-    text(v, 'Choose your next Pokémon', v.width / 2, py + 28 * s, 16, { align: 'center', color: '#e9ddff' });
+    text(v, 'Choose your next Pokémon', v.width / 2, py + 30 * s, 16, { align: 'center', color: INK.text, shadow: false });
+    const k2 = Math.max(2, Math.round(2 * s));
     party.forEach((m, i) => {
       const ok = !m.fainted && !m.captured;
       const ry = py + 44 * s + i * rowH;
-      text(v, `${i + 1}`, px + 22 * s, ry + 20 * s, 14, { color: ok ? '#ffd36b' : '#5c5670' });
-      const bw = 90 * s;
-      text(v, `${m.name}  Lv ${m.level}`, px + 46 * s, ry + 20 * s, 14, { color: ok ? '#f4f1ff' : '#5c5670', maxWidth: pw - bw - 80 * s });
-      const bx = px + pw - bw - 20 * s;
-      h.fillStyle = '#2c2838';
-      h.fillRect(bx, ry + 11 * s, bw, 8 * s);
+      text(v, `${i + 1}`, px + 22 * s, ry + 20 * s, 14, { color: ok ? INK.accent : '#b8a890', shadow: false });
+      const bw = 96 * s;
+      text(v, `${m.name}  Lv ${m.level}`, px + 46 * s, ry + 20 * s, 14, { color: ok ? INK.text : '#b8a890', shadow: false, maxWidth: pw - bw - 80 * s });
+      const bx = px + pw - bw - 22 * s;
       const f = m.hp / m.maxHp;
-      h.fillStyle = !ok ? '#5c5670' : f > 0.5 ? '#5fe08a' : f > 0.2 ? '#ffd36b' : '#ff6b6b';
-      h.fillRect(bx, ry + 11 * s, bw * Math.max(0, f), 8 * s);
+      this.ui.flatBar(h, bx, ry + 6 * s, bw, k2, ok ? f : 0, f > 0.5 ? 'green' : f > 0.2 ? 'gold' : 'red');
     });
   }
 
@@ -2070,6 +2077,8 @@ export class MatchScreen implements Screen {
 
   private drawInfoBars(v: View, alpha: number): void {
     const p = this.match.player;
+    // A menu is open over the field (shop, chest, snag offer, a TM): no bars over it.
+    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.extractPick) return;
     const px = Math.max(2, Math.round(v.baseScale * 3));
     for (const m of this.match.mons()) {
       if (m.captured || m.visual.alpha < 0.5) continue;
@@ -2084,6 +2093,7 @@ export class MatchScreen implements Screen {
         const sx = Math.round(v.toScreenX(x));
         const top = Math.round(v.toScreenY(y)) - Math.max(0.5 * v.pxPerTile, (m.species.body[1] * drawScale(m.species) * v.spriteScale) * 0.95);
         const w = 16 * px;
+        if (this.hud.covers(sx - w / 2, top - 16 * px, w, 16 * px)) continue;
         if (m.hp < m.maxHp) this.ui.bar(v.hud, Math.round(sx - w / 2), Math.round(top - 9 * px), w, px, m.hp / m.maxHp);
         if (storm > 0) this.drawStormMeter(v, sx, Math.round(top - (m.hp < m.maxHp ? 13 : 9) * px), w, px, storm, m.status === 'sleep');
         continue;

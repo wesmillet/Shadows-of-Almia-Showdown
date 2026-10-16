@@ -18,16 +18,21 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { FxAnim, FxBeam, FxProjectile } from '../vfx/fxVisuals';
 import { VfxLayer } from '../vfx/visuals';
-import { button, hit, text, uiFont, type GameContext, type Screen } from './screens';
+import { button, hit, INK, strip, text, type GameContext, type Screen } from './screens';
 
 const DARKRAI = '0491';
 const CRESSELIA = '0488';
 /** Small Pokémon that wander in (all in the title's preload). */
 const SMALL = ['0025', '0387', '0133', '0393', '0390', '0447'];
-/** The camera zoom: the island's own art at twice the match scale. */
+/** The camera zoom: the island's own art at twice the match scale at 720p, a whole step more on big screens. */
 const ZOOM = 2;
-/** Where the scene plays, as fractions of the screen: below the logo, either side of the buttons. */
-const BAND = { y0: 0.48, y1: 0.94 };
+function titleZoom(baseScale: number): number {
+  return Math.max(ZOOM, Math.round(ZOOM * baseScale));
+}
+/** Where the scene plays, as fractions of the screen: between the logo and the buttons along the bottom. */
+const BAND = { y0: 0.55, y1: 0.74 };
+/** Darkrai is drawn larger than life here, the star of the title. */
+const DARKRAI_SCALE = 1.5;
 const SIDES = { left: [0.04, 0.4], right: [0.6, 0.96] } as const;
 type Side = keyof typeof SIDES;
 const FX = {
@@ -49,6 +54,8 @@ interface Actor {
   alpha: number;
   /** Height above the ground in tiles (Darkrai and Cresselia float). */
   hover: number;
+  /** Drawn this many times its usual size (Darkrai on the title). */
+  scale?: number;
   tx: number;
   ty: number;
   timer: number;
@@ -107,7 +114,7 @@ export class TitleScreen implements Screen {
     this.fx = new FxLibrary(assets);
     this.fx.preload(Object.values(FX));
     const v = ctx.view;
-    v.zoom = v.targetZoom = ZOOM;
+    v.zoom = v.targetZoom = titleZoom(v.baseScale);
     // Open grass on the crystal's plain, south-west of the terrace, with trees round it.
     this.cx = ground.cols / 2 - 20;
     this.cy = ground.rows / 2 + 11;
@@ -115,6 +122,7 @@ export class TitleScreen implements Screen {
     this.buildOpen();
     this.darkrai = this.actor(DARKRAI, this.cx, this.cy);
     this.darkrai.hover = 0.1;
+    this.darkrai.scale = DARKRAI_SCALE;
     this.cresselia = this.actor(CRESSELIA, this.cx, this.cy);
     this.cresselia.hover = 0.1;
   }
@@ -157,7 +165,29 @@ export class TitleScreen implements Screen {
     return null;
   }
 
-  /** Keeps a target x out of the middle of the screen, where the buttons are. */
+  /** The open spot nearest the middle of the scene (where Darkrai rises). */
+  private centreSpot(): { x: number; y: number } | null {
+    // Its feet just above Roll Starter, so the whole (tall) body stands clear of the logo.
+    const v = this.ctx.view;
+    const c = this.at(0.5, (this.buttonRect().y - 16 * v.baseScale) / v.height);
+    for (let r = 0; r <= 6; r += 0.5) {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+        const x = c.x + Math.cos(a) * r;
+        const y = c.y + Math.sin(a) * r * 0.5;
+        if (this.isOpen(x, y)) return { x, y };
+        if (r === 0) break;
+      }
+    }
+    return this.openSpot();
+  }
+
+  /** The highest (smallest) world y Darkrai's feet may take: a little above Roll Starter. */
+  private darkraiFloor(): number {
+    const v = this.ctx.view;
+    return this.at(0.5, (this.buttonRect().y - 40 * v.baseScale) / v.height).y;
+  }
+
+  /** Keeps a target x out of the middle of the screen (Darkrai squaring up to Cresselia keeps to its side). */
   private offCentre(x: number): number {
     const v = this.ctx.view;
     const f = 0.5 + ((x - this.cx) * v.pxPerTile) / v.width;
@@ -214,35 +244,43 @@ export class TitleScreen implements Screen {
 
   // ---------------------------------------------------------------- input
 
+  /**
+   * The menu along the bottom: Roll Starter, big and orange, over a row of the other four, so the
+   * middle of the screen is left to the scene.
+   */
   private buttonRect(): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 95 * s, y: v.height * 0.64, w: 190 * s, h: 50 * s };
+    const w = Math.round(250 * s);
+    const h = Math.round(56 * s);
+    return { x: Math.round(v.width / 2 - w / 2), y: Math.round(v.height - 182 * s), w, h };
+  }
+
+  /** The row of four under it: Demo Team, Move Gallery, My PC, Trainer. */
+  private rowRect(i: number): { x: number; y: number; w: number; h: number } {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const w = Math.round(168 * s);
+    const h = Math.round(52 * s);
+    const gap = Math.round(12 * s);
+    const total = 4 * w + 3 * gap;
+    return { x: Math.round(v.width / 2 - total / 2 + i * (w + gap)), y: Math.round(v.height - 112 * s), w, h };
   }
 
   private demoRect(): { x: number; y: number; w: number; h: number } {
-    const v = this.ctx.view;
-    const s = v.baseScale;
-    return { x: v.width / 2 - 95 * s, y: v.height * 0.64 + 62 * s, w: 190 * s, h: 40 * s };
+    return this.rowRect(0);
   }
 
   private galleryRect(): { x: number; y: number; w: number; h: number } {
-    const v = this.ctx.view;
-    const s = v.baseScale;
-    const d = this.demoRect();
-    return { x: d.x, y: d.y + d.h + 30 * s, w: d.w, h: 40 * s };
+    return this.rowRect(1);
   }
 
   private pcRect(): { x: number; y: number; w: number; h: number } {
-    const s = this.ctx.view.baseScale;
-    const g = this.galleryRect();
-    return { x: g.x, y: g.y + g.h + 10 * s, w: g.w, h: g.h };
+    return this.rowRect(2);
   }
 
   private characterRect(): { x: number; y: number; w: number; h: number } {
-    const s = this.ctx.view.baseScale;
-    const p = this.pcRect();
-    return { x: p.x, y: p.y + p.h + 10 * s, w: p.w, h: p.h };
+    return this.rowRect(3);
   }
 
   step(dt: number, input: Input): void {
@@ -397,10 +435,11 @@ export class TitleScreen implements Screen {
       case 'hidden': {
         dk.alpha = 0;
         if (this.dTimer > 0 || this.cState === 'leave' || this.cState === 'finale') break;
-        // Rise out of the shadows in a clearing, not right on top of anyone.
+        // Rise out of the shadows in the middle of the screen (between the logo and the buttons); with
+        // Cresselia about, on the side away from her instead.
         const side: Side | undefined = this.cresselia.alpha > 0 ? this.other(this.sideOf(this.cresselia)) : undefined;
-        let spot = this.openSpot(side);
-        for (let i = 0; i < 8 && spot && this.wilds.some((w) => Math.hypot(spot!.x - w.x, spot!.y - w.y) < 2.2); i++) spot = this.openSpot(side);
+        let spot = side ? this.openSpot(side) : this.centreSpot();
+        for (let i = 0; i < 8 && spot && side && this.wilds.some((w) => Math.hypot(spot!.x - w.x, spot!.y - w.y) < 2.2); i++) spot = this.openSpot(side);
         if (!spot) break;
         dk.x = dk.tx = spot.x;
         dk.y = dk.ty = spot.y;
@@ -447,8 +486,8 @@ export class TitleScreen implements Screen {
           break;
         }
         if (target) {
-          // Hang back two tiles on the outer side of the prey, never behind the buttons.
-          dk.tx = this.offCentre(target.x + (this.sideOf(target) === 'left' ? -2 : 2));
+          // Hang back two tiles on the inner side of the prey, toward the middle of the stage.
+          dk.tx = target.x + (this.sideOf(target) === 'left' ? 2 : -2);
           dk.ty = target.y;
         } else if (this.dTimer <= 0) {
           const p = this.openSpot();
@@ -458,6 +497,8 @@ export class TitleScreen implements Screen {
           }
           this.dTimer = 3;
         }
+        // Tall as it is here, it keeps its feet near the buttons' row so it never stands over the logo.
+        dk.ty = Math.max(dk.ty, this.darkraiFloor());
         this.glide(dk, 1.3, dt);
         break;
       }
@@ -512,7 +553,7 @@ export class TitleScreen implements Screen {
         dk.alpha = 1;
         // Square up on its own side of the screen, facing her across it.
         dk.tx = this.offCentre(dk.x);
-        dk.ty = dk.y;
+        dk.ty = Math.max(dk.y, this.darkraiFloor());
         this.glide(dk, 2, dt);
         this.face(dk, this.cresselia);
         break;
@@ -714,10 +755,10 @@ export class TitleScreen implements Screen {
     const ctx = v.ctx;
     const sx = Math.round(v.toScreenX(a.x));
     const sy = Math.round(v.toScreenY(a.y));
-    const s = v.spriteScale * drawScale(a.sp);
+    const s = v.spriteScale * drawScale(a.sp) * (a.scale ?? 1);
     const [gx, gy] = a.anim.ground();
     // One soft shadow on the ground; floaters keep theirs on the grass below them.
-    drawSoftShadow(v, sx + gx * s, sy + gy * s, Math.max(0.12, Math.min(1.4, bodyRadius(a.sp) * 0.7)), 0.26 * a.alpha);
+    drawSoftShadow(v, sx + gx * s, sy + gy * s, Math.max(0.12, Math.min(2, bodyRadius(a.sp) * 0.7 * (a.scale ?? 1))), 0.26 * a.alpha);
     const f = a.anim.current();
     ctx.save();
     ctx.globalAlpha = a.alpha;
@@ -784,7 +825,7 @@ export class TitleScreen implements Screen {
   render(): void {
     const v = this.ctx.view;
     const s = v.baseScale;
-    v.zoom = v.targetZoom = ZOOM;
+    v.zoom = v.targetZoom = titleZoom(v.baseScale);
     const sh = this.shake * this.shake * 0.12;
     v.snapTo(this.cx + (Math.random() - 0.5) * sh, this.cy + (Math.random() - 0.5) * sh);
     v.ctx.fillStyle = '#0b0a12';
@@ -834,32 +875,27 @@ export class TitleScreen implements Screen {
     grad.addColorStop(1, 'rgba(8,4,20,0)');
     h.fillStyle = grad;
     h.fillRect(0, 0, v.width, v.height * 0.55);
-    text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.3, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
-    text(v, 'SHOWDOWN', v.width / 2, v.height * 0.3 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
-    text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, v.height * 0.3 + 104 * s, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
+    text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.22, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
+    text(v, 'SHOWDOWN', v.width / 2, v.height * 0.22 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
+    text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, v.height * 0.22 + 104 * s, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
+    const mx = this.ctx.input.mouseX;
+    const my = this.ctx.input.mouseY;
     const b = this.buttonRect();
-    const hover = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
-    button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hover);
+    button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
+    const rows: Array<[string, { x: number; y: number; w: number; h: number }]> = [
+      ['Demo Team (D)', this.demoRect()],
+      ['Move Gallery (M)', this.galleryRect()],
+      [`My PC (P) · ${this.pcCount}`, this.pcRect()],
+      ['Trainer (C)', this.characterRect()],
+    ];
+    for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
+    // The demo team, shown while its button is hovered.
     const d = this.demoRect();
-    button(v, 'Demo Team (D)', d.x, d.y, d.w, d.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, d.x, d.y, d.w, d.h), '#4f7ad6');
-    text(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, d.y + d.h + 16 * s, 11, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
-    const g = this.galleryRect();
-    button(v, 'Move Gallery (M)', g.x, g.y, g.w, g.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, g.x, g.y, g.w, g.h), '#4f7ad6');
-    const pr = this.pcRect();
-    button(v, `My PC (P) · ${this.pcCount}`, pr.x, pr.y, pr.w, pr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, pr.x, pr.y, pr.w, pr.h), '#3f8f9f');
-    const tr = this.characterRect();
-    button(v, 'Trainer (C)', tr.x, tr.y, tr.w, tr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, tr.x, tr.y, tr.w, tr.h), '#8a6cff');
-    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up, fish · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler', v.width / 2, v.height - 18 * s, 12, { align: 'center', weight: '500', color: '#e9ddff', maxWidth: v.width - 40 * s });
-    // Build stamp, top right on a dark pill: which deploy this browser has loaded.
+    if (hit(mx, my, d.x, d.y, d.w, d.h)) strip(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, b.y - 40 * s, 11, INK.text);
+    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space dodge, talk, pick up, fish · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
+    // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
-    h.save();
-    h.font = uiFont(14 * s);
-    const sw = h.measureText(stamp).width + 20 * s;
-    h.fillStyle = 'rgba(8,4,20,0.75)';
-    h.beginPath();
-    h.roundRect(v.width - sw - 12 * s, 12 * s, sw, 28 * s, 14 * s);
-    h.fill();
-    h.restore();
-    text(v, stamp, v.width - 22 * s, 31 * s, 14, { align: 'right', weight: '600', color: '#ffe27a', shadow: false });
+    const sm = strip(v, stamp, 0, -9999, 11);
+    strip(v, stamp, v.width - 14 * s - sm.w / 2, 14 * s, 11, INK.accent);
   }
 }

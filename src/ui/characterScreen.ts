@@ -6,7 +6,7 @@
 import type { Input } from '../core/input';
 import { saveLook } from '../look';
 import type { RangerSprites } from '../sprites/rangerSprite';
-import { button, hit, panel, text, type GameContext, type Screen } from './screens';
+import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
@@ -41,9 +41,20 @@ export class CharacterScreen implements Screen {
     const v = this.ctx.view;
     const s = v.baseScale;
     const gap = 10 * s;
-    const cw = 104 * s;
-    const ch = 156 * s;
-    const cols = Math.max(1, Math.min(8, Math.floor((v.width - 60 * s + gap) / (cw + gap))));
+    // Every look fits between the heading and the Back button: the column count (and, if it must,
+    // the card size) is picked so the whole grid shows.
+    const n = Math.max(1, this.list.length);
+    const roomW = v.width - 60 * s;
+    const roomH = v.height - 116 * s - 80 * s;
+    let best = { cols: 1, f: 0 };
+    for (let cols = 4; cols <= 14; cols++) {
+      const rows = Math.ceil(n / cols);
+      const f = Math.min(1, (roomH - (rows - 1) * gap) / (rows * 156 * s), (roomW - (cols - 1) * gap) / (cols * 104 * s));
+      if (f > best.f + 0.001) best = { cols, f };
+    }
+    const cw = Math.floor(104 * s * best.f);
+    const ch = Math.floor(156 * s * best.f);
+    const cols = best.cols;
     const x0 = v.width / 2 - (cols * cw + (cols - 1) * gap) / 2;
     return { cols, cw, ch, x0, y0: 116 * s, gap };
   }
@@ -93,42 +104,38 @@ export class CharacterScreen implements Screen {
     const s = v.baseScale;
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);
-    h.fillStyle = '#100c1e';
-    h.fillRect(0, 0, v.width, v.height);
-    text(v, 'CHOOSE YOUR TRAINER', v.width / 2, 56 * s, 30, { align: 'center', color: '#e9ddff' });
-    text(v, 'Every look is free for now. When the game goes online these become unlockables.', v.width / 2, 84 * s, 13, { align: 'center', color: '#b9b4cc', maxWidth: v.width - 60 * s });
+    backdrop(v);
+    heading(v, 'CHOOSE YOUR TRAINER', 'Every look is free for now. When the game goes online these become unlockables.', 56 * s);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
+    const k = skinPx(v);
+    const k2 = skinPx2(v);
     this.list.forEach((c, i) => {
-      const r = this.rect(i);
+      const r0 = this.rect(i);
       const chosen = c === this.current;
-      const hover = hit(mx, my, r.x, r.y, r.w, r.h) || i === this.cursor;
-      panel(v, r.x, r.y, r.w, r.h, 12, chosen ? 'rgba(60,110,90,0.95)' : hover ? 'rgba(52,40,92,0.95)' : 'rgba(30,22,58,0.92)');
+      const hover = hit(mx, my, r0.x, r0.y, r0.w, r0.h) || i === this.cursor;
+      // A cream card that rises a pixel under the pointer; the one you wear is framed in orange.
+      const r = { ...r0, y: r0.y - (hover ? k : 0) };
+      if (!skinPiece(v, chosen ? 'orange' : 'cream', r.x, r.y, r.w, r.h, k)) panel(v, r.x, r.y, r.w, r.h, 12);
+      if (chosen) skinPiece(v, 'cream', r.x + 3 * k, r.y + 3 * k, r.w - 6 * k, r.h - 6 * k, k2);
       const sheet = this.rangers.preview(c);
       // Walking toward you when picked or pointed at, standing otherwise.
       const f = sheet.frame('down', this.t * 1.6 + i * 0.13, chosen || hover);
-      const k = Math.max(1, Math.floor((r.h * 0.7) / f.h));
+      const kk = Math.max(1, Math.floor((r.h * 0.66) / f.h));
       h.save();
       h.imageSmoothingEnabled = false;
-      const dw = f.w * k;
-      const dh = f.h * k;
-      const dx = r.x + r.w / 2 - dw / 2;
-      const dy = r.y + 12 * s + (r.h * 0.7 - dh);
+      const dw = f.w * kk;
+      const dh = f.h * kk;
+      const dx = Math.round(r.x + r.w / 2 - dw / 2);
+      const dy = Math.round(r.y + 12 * s + (r.h * 0.66 - dh));
       if (f.flip) {
         h.translate(dx + dw, dy);
         h.scale(-1, 1);
         h.drawImage(f.image, f.sx, f.sy, f.w, f.h, 0, 0, dw, dh);
       } else h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, dw, dh);
       h.restore();
-      if (chosen || hover) {
-        h.save();
-        h.strokeStyle = chosen ? '#7dffb0' : 'rgba(233,221,255,0.7)';
-        h.lineWidth = Math.max(2, 3 * s);
-        h.strokeRect(r.x + 4 * s, r.y + 4 * s, r.w - 8 * s, r.h - 8 * s);
-        h.restore();
-      }
-      text(v, CharacterScreen.label(c), r.x + r.w / 2, r.y + r.h - 26 * s, 13, { align: 'center', weight: '800', color: '#ffffff', maxWidth: r.w - 10 * s });
-      text(v, chosen ? 'Wearing' : 'Free', r.x + r.w / 2, r.y + r.h - 10 * s, 10, { align: 'center', color: chosen ? '#9ff3c8' : '#b9b4cc' });
+      text(v, CharacterScreen.label(c), r.x + r.w / 2, r.y + r.h - 30 * s, 13, { align: 'center', color: INK.text, shadow: false, maxWidth: r.w - 16 * s });
+      text(v, chosen ? 'Wearing' : 'Free', r.x + r.w / 2, r.y + r.h - 14 * s, 10, { align: 'center', color: chosen ? INK.good : INK.dim, shadow: false });
     });
     const b = this.backRect();
     button(v, 'Back', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');

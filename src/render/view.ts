@@ -1,5 +1,5 @@
 /**
- * The 16:9 canvas and the camera. World positions are in tiles; the ground
+ * The canvas (filling the whole window, any shape) and the camera. World positions are in tiles; the ground
  * scales continuously with the window (`pxPerTile`) while character sprites
  * use an integer multiple of 3x (`spriteScale`) so pixel art stays crisp.
  */
@@ -47,12 +47,9 @@ export class View {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const ww = window.innerWidth;
     const wh = window.innerHeight;
-    let cssW = ww;
-    let cssH = (ww * 9) / 16;
-    if (cssH > wh) {
-      cssH = wh;
-      cssW = (wh * 16) / 9;
-    }
+    // The canvas fills the window whatever its shape; the world just shows more or less of the island.
+    const cssW = ww;
+    const cssH = wh;
     this.width = Math.max(320, Math.round(cssW * dpr));
     this.height = Math.max(180, Math.round(cssH * dpr));
     for (const c of [this.sceneCanvas, this.lightCanvas, this.outputCanvas, this.hudCanvas]) {
@@ -71,9 +68,9 @@ export class View {
     this.lightCtx.globalCompositeOperation = 'lighter';
   }
 
-  /** HUD text scale: 1 at a 720 px tall canvas. */
+  /** HUD text scale: 1 at 1280x720, following the shorter way round so the HUD always fits. */
   get baseScale(): number {
-    return this.height / 720;
+    return Math.min(this.height / 720, this.width / 1280);
   }
 
   /** Everything in the world draws at one integer scale: 16 px tiles at 3x = 48 px, sprites at 3x. */

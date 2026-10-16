@@ -59,6 +59,9 @@ export const FLAT = {
   slotOrange: { file: 'FrameSlot03a', slice: [4, 4, 4, 4] },
   slotGrey: { file: 'FrameSlot01a', slice: [4, 4, 4, 4] },
   slotGhost: { file: 'FrameSlot02c', slice: [4, 4, 4, 4] },
+  orange: { file: 'Frame03a', slice: [4, 4, 4, 4] },
+  blue: { file: 'Frame02a', slice: [4, 4, 4, 4] },
+  grey: { file: 'Frame01a', slice: [4, 4, 4, 4] },
   barGold: { file: 'Bar11a', slice: [4, 3, 4, 3] },
   select: { file: 'Select01a_1', slice: [10, 10, 10, 10] },
 } as const;
@@ -66,7 +69,7 @@ export type FlatPiece = keyof typeof FLAT;
 /** The pack's bar fills (3 px tall strips): green, red, gold. */
 export const FLAT_FILLS = { green: 'BarFill01a', red: 'BarFill01c', gold: 'BarFill01e' } as const;
 /** Ink on the cream pieces. */
-export const FLAT_INK = { text: '#4a3424', dim: '#8a6a4a', accent: '#c2611a', storm: '#6a3fc8' };
+export const FLAT_INK = { text: '#4a3424', dim: '#8a6a4a', accent: '#c2611a', storm: '#6a3fc8', good: '#2e7d32', bad: '#b0302a', blue: '#1f5aa0' };
 
 export class PixelUi {
   private images = new Map<string, HTMLImageElement | null>();

@@ -14,7 +14,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import type { SpriteRegistry } from '../sprites/pokemonSprite';
 import { MatchScreen } from './matchScreen';
 import type { PixelUi } from './pixelUi';
-import { panel, text, type GameContext } from './screens';
+import { INK, panel, strip, text, type GameContext } from './screens';
 
 /** Seconds each move stays on screen in the slideshow. */
 const HOLD = 2.6;
@@ -166,20 +166,22 @@ export class MoveGallery extends MatchScreen {
     const w = Math.min(v.width - 32 * s, 640 * s);
     const x = v.width / 2 - w / 2;
     const y = 16 * s;
-    panel(v, x, y, w, 100 * s);
+    panel(v, x, y, w, 108 * s);
     const color = typeColor(mv.type);
-    text(v, mv.name, v.width / 2, y + 36 * s, 26, { align: 'center', color: '#f4f1ff', maxWidth: w - 40 * s });
-    // Type chip
+    text(v, mv.name, v.width / 2, y + 38 * s, 26, { align: 'center', color: INK.text, shadow: false, maxWidth: w - 40 * s });
+    // Type chip: the type's colour in a dark pixel rim.
     h.save();
     h.font = `${Math.round(14 * s)}px BoldPixels, sans-serif`;
     const label = mv.type.toUpperCase();
-    const cw = h.measureText(label).width + 16 * s;
+    const cw = Math.round(h.measureText(label).width + 18 * s);
+    const cx = Math.round(v.width / 2 - cw / 2);
+    const cy = Math.round(y + 48 * s);
+    h.fillStyle = '#2a1a10';
+    h.fillRect(cx, cy, cw, Math.round(20 * s));
     h.fillStyle = color;
-    h.beginPath();
-    h.roundRect(v.width / 2 - cw / 2, y + 46 * s, cw, 20 * s, 5 * s);
-    h.fill();
+    h.fillRect(cx + Math.round(s), cy + Math.round(s), cw - 2 * Math.round(s), Math.round(18 * s));
     h.restore();
-    text(v, label, v.width / 2, y + 61 * s, 11, { align: 'center', color: '#ffffff' });
+    text(v, label, v.width / 2, y + 63 * s, 11, { align: 'center', color: '#ffffff', shadowColor: 'rgba(20,10,4,0.7)' });
     const facts = [
       mv.category[0]?.toUpperCase() + mv.category.slice(1),
       mv.power > 0 ? `Power ${mv.power}` : 'No damage',
@@ -187,10 +189,10 @@ export class MoveGallery extends MatchScreen {
       `${mv.cooldown}s cooldown`,
     ];
     if (mv.status) facts.push(`${Math.round(mv.status.chance * 100)}% ${mv.status.kind}`);
-    text(v, facts.join('  ·  '), v.width / 2, y + 86 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: w - 40 * s });
+    text(v, facts.join('  ·  '), v.width / 2, y + 88 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: w - 40 * s });
     const caster = this.caster ? species(this.caster.dex).name : '';
     const where = `${this.index + 1} / ${this.list.length}${this.typeFilter ? `  (${this.typeFilter} only)` : ''}  ·  cast by ${caster}`;
-    text(v, where, v.width / 2, v.height - 44 * s, 13, { align: 'center', color: '#e9ddff', maxWidth: v.width - 40 * s });
-    text(v, `← → browse  ·  Space replay  ·  P ${this.auto ? 'pause' : 'play'}  ·  T type filter  ·  Esc back to title`, v.width / 2, v.height - 20 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 40 * s });
+    strip(v, where, v.width / 2, v.height - 76 * s, 12, INK.text);
+    strip(v, `← → browse  ·  Space replay  ·  P ${this.auto ? 'pause' : 'play'}  ·  T type filter  ·  Esc back to title`, v.width / 2, v.height - 42 * s, 11, INK.dim);
   }
 }

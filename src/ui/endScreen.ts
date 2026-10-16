@@ -7,7 +7,7 @@ import type { Input } from '../core/input';
 import type { Match } from '../sim/match';
 import type { Mon } from '../sim/entities';
 import { extractToPc, loadPc } from '../pc';
-import { button, hit, panel, text, wrapText, type GameContext, type Screen } from './screens';
+import { button, hit, INK, panel, skinPiece, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import type { MatchScreen } from './matchScreen';
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -54,9 +54,9 @@ export class EndScreen implements Screen {
     const s = v.baseScale;
     const pw = 520 * s;
     const px = v.width / 2 - pw / 2;
-    const y0 = v.height / 2 + 34 * s;
+    const y0 = v.height / 2 + 46 * s;
     const bw = (pw - 80 * s - 12 * s) / 2;
-    return this.match.player.party.map((_, i) => ({ x: px + 40 * s + (i % 2) * (bw + 12 * s), y: y0 + Math.floor(i / 2) * 40 * s, w: bw, h: 34 * s }));
+    return this.match.player.party.map((_, i) => ({ x: px + 40 * s + (i % 2) * (bw + 12 * s), y: y0 + Math.floor(i / 2) * 44 * s, w: bw, h: 38 * s }));
   }
 
   private extract(i: number): void {
@@ -109,8 +109,13 @@ export class EndScreen implements Screen {
     const py = v.height / 2 - ph / 2 - 20 * s;
     panel(v, px, py, pw, ph, 22, 'rgba(18,14,34,0.92)');
     const inner = pw - 80 * s;
-    text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 62 * s, 44, { align: 'center', weight: '900', color: win ? '#ffd36b' : '#ff8fa3', maxWidth: inner });
-    text(v, win ? 'Last trainer standing on the training grounds.' : 'Your whole party fainted in the night.', v.width / 2, py + 92 * s, 14, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: inner });
+    // The result on a ribbon across the card's top edge.
+    const k = skinPx(v);
+    const rw = Math.round(340 * s);
+    const rh = 22 * k;
+    skinPiece(v, 'banner', v.width / 2 - rw / 2, py - rh / 2 + 6 * s, rw, rh, k);
+    text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 6 * s + 2 * k + 15 * s, 36, { align: 'center', color: win ? INK.accent : INK.bad, shadow: false, maxWidth: rw - 24 * k });
+    text(v, win ? 'Last trainer standing on the training grounds.' : 'Your whole party fainted in the night.', v.width / 2, py + 82 * s, 14, { align: 'center', color: INK.dim, shadow: false, maxWidth: inner });
     const st = this.match.player.stats;
     const t = Math.floor(st.timeSurvived);
     const rows: Array<[string, string]> = [
@@ -121,8 +126,12 @@ export class EndScreen implements Screen {
     ];
     rows.forEach(([k, val], i) => {
       const y = py + 128 * s + i * 28 * s;
-      text(v, k, px + 50 * s, y, 15, { weight: '600', color: '#b9b4cc' });
-      text(v, val, px + pw - 50 * s, y, 15, { align: 'right', weight: '800', color: '#ffffff' });
+      text(v, k, px + 50 * s, y, 15, { color: INK.dim, shadow: false });
+      text(v, val, px + pw - 50 * s, y, 15, { align: 'right', color: INK.text, shadow: false });
+      if (i < rows.length - 1) {
+        h.fillStyle = 'rgba(138,106,74,0.25)';
+        h.fillRect(px + 50 * s, y + 9 * s, pw - 100 * s, Math.max(1, Math.round(s)));
+      }
     });
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
@@ -133,25 +142,25 @@ export class EndScreen implements Screen {
       const head = this.sent.length === 0
         ? (this.picks > 1 ? `Extract up to ${this.picks} Pokémon to your PC: 1 free + ${this.picks - 1} Extraction Voucher${this.picks > 2 ? 's' : ''} (1-6 or click)` : 'Extract one Pokémon to your PC (1-6 or click)')
         : `${this.sent.map((m) => m.name).join(', ')} sent! ${left} more with your voucher${left > 1 ? 's' : ''}`;
-      text(v, head, v.width / 2, py + 252 * s, 13, { align: 'center', weight: '700', color: '#9ff3ff', maxWidth: inner });
+      text(v, head, v.width / 2, py + 252 * s, 13, { align: 'center', color: INK.blue, shadow: false, maxWidth: inner });
       this.pickRects().forEach((r, i) => {
         const m = this.match.player.party[i] as Mon;
         const done = this.sent.includes(m);
         const label = `${i + 1}  ${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${done ? '  ✓ in PC' : ''}`;
-        button(v, label, r.x, r.y, r.w, r.h, !done && hit(mx, my, r.x, r.y, r.w, r.h), done ? '#3d5a4a' : m.shiny ? '#6fc8d8' : '#8a6cff');
+        button(v, label, r.x, r.y, r.w, r.h, !done && hit(mx, my, r.x, r.y, r.w, r.h), done ? '#44405a' : '#f4e6c8');
       });
-      button(v, this.sent.length ? 'Done' : 'Skip', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');
+      button(v, this.sent.length ? 'Done' : 'Skip', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
       return;
     }
     const party = this.match.player.party.map((m) => `${m.name} Lv ${m.level}${m.fainted ? ' (fainted)' : ''}`).join(', ') || '-';
-    text(v, 'Party', v.width / 2, py + 252 * s, 14, { align: 'center', weight: '600', color: '#b9b4cc' });
-    wrapText(v, party, v.width / 2, py + 274 * s, 13, inner, 20 * s, 2, { align: 'center', color: '#ffffff' });
+    text(v, 'Party', v.width / 2, py + 252 * s, 14, { align: 'center', color: INK.dim, shadow: false });
+    wrapText(v, party, v.width / 2, py + 274 * s, 13, inner, 20 * s, 2, { align: 'center', color: INK.text, shadow: false });
     if (this.sent.length) {
       const names = this.sent.map((m) => `${m.shiny ? 'Shiny ' : ''}${m.name}`).join(', ');
       const msg = this.saveFailed
         ? "Couldn't save to your PC (this browser blocks saving)"
         : `${names} ${this.sent.length > 1 ? 'were' : 'was'} sent to your PC (${loadPc().length} stored)`;
-      text(v, msg, v.width / 2, py + 330 * s, 14, { align: 'center', weight: '700', color: this.saveFailed ? '#ff8fa3' : '#9ff3ff', maxWidth: inner });
+      text(v, msg, v.width / 2, py + 330 * s, 14, { align: 'center', color: this.saveFailed ? INK.bad : INK.blue, shadow: false, maxWidth: inner });
     }
     button(v, 'Play again', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
   }

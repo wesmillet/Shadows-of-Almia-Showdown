@@ -9,7 +9,7 @@ import { easeOutCubic } from '../core/math';
 import { Rng } from '../core/rng';
 import { CONFIG, movesAt, move, species, SPAWNS, SPECIES, type SpeciesDef } from '../sim/data';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
-import { button, hit, panel, text, wrapText, type GameContext, type Screen } from './screens';
+import { backdrop, button, heading, hit, INK, panel, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
 
 export interface StarterTier {
@@ -162,15 +162,8 @@ export class RollScreen implements Screen {
     const s = v.baseScale;
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);
-    h.fillStyle = '#100c1e';
-    h.fillRect(0, 0, v.width, v.height);
-    const grad = h.createRadialGradient(v.width / 2, v.height / 2, 0, v.width / 2, v.height / 2, v.height);
-    grad.addColorStop(0, 'rgba(90,50,160,0.35)');
-    grad.addColorStop(1, 'rgba(10,6,24,0)');
-    h.fillStyle = grad;
-    h.fillRect(0, 0, v.width, v.height);
-    text(v, 'STARTER ROLL', v.width / 2, 52 * s, 32, { align: 'center', color: '#e9ddff' });
-    text(v, this.done ? 'Pick your starter' : 'Rolling…', v.width / 2, 82 * s, 14, { align: 'center', color: '#b9b4cc' });
+    backdrop(v);
+    heading(v, 'STARTER ROLL', this.done ? 'Pick your starter' : 'Rolling…', 52 * s);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     this.reels.forEach((r, i) => {
@@ -178,7 +171,7 @@ export class RollScreen implements Screen {
       const spinning = r.spin > 0;
       h.save();
       h.beginPath();
-      h.roundRect(c.x, c.y, c.w, c.h, 18 * s);
+      h.rect(c.x, c.y, c.w, c.h);
       h.clip();
       if (spinning) {
         // The reel slides cards up through the window and settles on the pick.
@@ -193,7 +186,7 @@ export class RollScreen implements Screen {
       if (!spinning) this.drawReveal(r, c);
       const b = this.pickRect(i);
       const hover = this.done && (hit(mx, my, b.x, b.y, b.w, b.h) || hit(mx, my, c.x, c.y, c.w, c.h));
-      button(v, this.done ? `${i + 1}  ${r.pick.def.name}` : 'Rolling…', b.x, b.y, b.w, b.h, hover, this.done ? '#8a6cff' : '#44405a');
+      button(v, this.done ? `${i + 1}  ${r.pick.def.name}` : 'Rolling…', b.x, b.y, b.w, b.h, hover, this.done ? undefined : '#44405a');
     });
     // The odds, each in its tier colour.
     const odds = [{ t: { color: '#9f97bb' } as StarterTier, label: 'Odds per reel:' }, ...STARTER_TIERS.map((t) => ({ t, label: `${t.name} ${t.weight}%` }))];
@@ -207,10 +200,10 @@ export class RollScreen implements Screen {
       text(v, o.label, ox, v.height - 40 * s, 12, { color: o.t.color });
       ox += (widths[i] ?? 0) + gap;
     });
-    text(v, 'Click a card or press 1-3', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#9f97bb' });
+    text(v, 'Click a card or press 1-3', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6' });
     if (this.onReroll) {
       const rr = this.rerollRect();
-      button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#4f7ad6');
+      button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#f4e6c8');
     }
   }
 
@@ -226,15 +219,11 @@ export class RollScreen implements Screen {
     h.strokeStyle = r.pick.tier.color;
     h.lineWidth = (3 + rank) * s;
     h.globalAlpha = Math.min(1, 0.35 + k + pulse);
-    h.beginPath();
-    h.roundRect(c.x - 4 * s, c.y - 4 * s, c.w + 8 * s, c.h + 8 * s, 20 * s);
-    h.stroke();
+    h.strokeRect(c.x - 4 * s, c.y - 4 * s, c.w + 8 * s, c.h + 8 * s);
     if (k > 0) {
       h.globalAlpha = k * 0.5;
       h.fillStyle = r.pick.tier.color;
-      h.beginPath();
-      h.roundRect(c.x, c.y, c.w, c.h, 18 * s);
-      h.fill();
+      h.fillRect(c.x, c.y, c.w, c.h);
     }
     h.restore();
   }
@@ -247,13 +236,23 @@ export class RollScreen implements Screen {
     const cx = x + w / 2;
     const inner = w - 36 * s;
     panel(v, x, y, w, h, 18, dim ? 'rgba(20,16,36,0.85)' : 'rgba(30,22,58,0.95)');
+    // The tier as a chip in its colour across the top.
+    const k = skinPx(v);
+    const chipH = Math.round(24 * s);
+    const chipX = Math.round(x + 4 * k);
+    const chipY = Math.round(y + 4 * k);
+    const tierW = Math.round(w - 8 * k);
+    ctx.globalAlpha = dim ? 0.6 : 1;
+    ctx.fillStyle = '#2a1a10';
+    ctx.fillRect(chipX, chipY, tierW, chipH);
     ctx.fillStyle = card.tier.color;
-    ctx.globalAlpha = dim ? 0.55 : 1;
-    ctx.fillRect(x + 14 * s, y + 12 * s, w - 28 * s, 6 * s);
+    ctx.fillRect(chipX + k / 1.5, chipY + k / 1.5, tierW - (2 * k) / 1.5, chipH - (2 * k) / 1.5);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(chipX + k / 1.5, chipY + k / 1.5, tierW - (2 * k) / 1.5, Math.max(1, Math.round(k / 1.5)));
     ctx.globalAlpha = 1;
-    text(v, card.tier.name.toUpperCase(), cx, y + 40 * s, 13, { align: 'center', color: card.tier.color, maxWidth: inner });
+    text(v, card.tier.name.toUpperCase(), cx, chipY + chipH / 2 + 5 * s, 13, { align: 'center', color: '#ffffff', shadowColor: 'rgba(20,10,4,0.75)', maxWidth: inner });
     if (card.anim && !card.anim.sprites.loaded) {
-      text(v, '?', cx, y + 136 * s, 48, { align: 'center', color: 'rgba(205,191,255,0.35)' });
+      text(v, '?', cx, y + 136 * s, 48, { align: 'center', color: 'rgba(138,106,74,0.4)', shadow: false });
     } else if (card.anim) {
       // The sprite fills a fixed box whatever its size in the Pokédex, so small starters read as well as big ones.
       const f = card.anim.current();
@@ -270,7 +269,7 @@ export class RollScreen implements Screen {
       ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(cx - (f.w * sc) / 2), Math.round(sy - (f.h * sc) / 2), f.w * sc, f.h * sc);
       ctx.restore();
     }
-    text(v, card.def.name, cx, y + 200 * s, 24, { align: 'center', maxWidth: inner });
+    text(v, card.def.name, cx, y + 200 * s, 24, { align: 'center', color: INK.text, shadow: false, maxWidth: inner });
     // Type chips, centred.
     const chipW = Math.min(76 * s, (inner - 8 * s) / 2);
     const types = card.def.types;
@@ -278,18 +277,18 @@ export class RollScreen implements Screen {
     types.forEach((t, i) => {
       const bx = cx - tw / 2 + i * (chipW + 8 * s);
       const by = y + 214 * s;
+      ctx.fillStyle = '#2a1a10';
+      ctx.fillRect(Math.round(bx), Math.round(by), Math.round(chipW), Math.round(22 * s));
       ctx.fillStyle = typeColor(t);
-      ctx.beginPath();
-      ctx.roundRect(bx, by, chipW, 22 * s, 6 * s);
-      ctx.fill();
-      text(v, t.toUpperCase(), bx + chipW / 2, by + 16 * s, 11, { align: 'center', color: '#ffffff', maxWidth: chipW - 8 * s });
+      ctx.fillRect(Math.round(bx + s), Math.round(by + s), Math.round(chipW - 2 * s), Math.round(20 * s));
+      text(v, t.toUpperCase(), bx + chipW / 2, by + 16 * s, 11, { align: 'center', color: '#ffffff', shadowColor: 'rgba(20,10,4,0.7)', maxWidth: chipW - 8 * s });
     });
     const st = card.def.stats;
-    text(v, `HP ${st.hp}  ATK ${st.atk}  DEF ${st.def}`, cx, y + 264 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: inner });
-    text(v, `SPA ${st.spa}  SPD ${st.spd}  SPE ${st.spe}`, cx, y + 282 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: inner });
+    text(v, `HP ${st.hp}  ATK ${st.atk}  DEF ${st.def}`, cx, y + 264 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: inner });
+    text(v, `SPA ${st.spa}  SPD ${st.spd}  SPE ${st.spe}`, cx, y + 282 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: inner });
     const moves = movesAt(card.def, CONFIG.player.level).map((id) => move(id).name);
-    wrapText(v, `Moves: ${moves.join(', ')}`, cx, y + 312 * s, 12, inner, 18 * s, 2, { align: 'center', color: '#bfe3ff' });
-    wrapText(v, evolutionLine(card.def), cx, y + 358 * s, 12, inner, 18 * s, 2, { align: 'center', color: '#ffe27a' });
+    wrapText(v, `Moves: ${moves.join(', ')}`, cx, y + 312 * s, 12, inner, 18 * s, 2, { align: 'center', color: INK.blue, shadow: false });
+    wrapText(v, evolutionLine(card.def), cx, y + 358 * s, 12, inner, 18 * s, 2, { align: 'center', color: INK.gold, shadow: false });
   }
 }
 

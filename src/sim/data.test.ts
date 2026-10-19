@@ -63,7 +63,7 @@ describe('species data', () => {
         if (part.mode) expect(['beam', 'stream', 'status']).toContain(part.mode);
         if (part.facing) expect(['right', 'up', 'down', 'none']).toContain(part.facing);
         if (part.lift !== undefined) expect(part.lift).toBeGreaterThanOrEqual(0);
-        if (part.anchor === 'projectile' || part.anchor === 'sky') expect((FX_MANIFEST[part.id]?.frames ?? 0) <= 8, `${m.id}: projectile ${part.id} should be a short loop`).toBe(true);
+        if (part.anchor === 'projectile' || part.anchor === 'sky') expect((FX_MANIFEST[part.id]?.frames ?? 0) - (part.loopFrom ?? 0) <= 8, `${m.id}: projectile ${part.id} should be a short loop (or spin up, then loop a few frames)`).toBe(true);
       }
     }
     // Bolts travel from the user to the target as a sideways lightning beam: no upright sky-strike sheet plays on the target.

@@ -179,8 +179,8 @@
     "radius": 1.8
   },
   "visitors": {
-    "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address to force it).",
-    "hoopaChance": 0.15
+    "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address to force it). Set to 1 (every match) for testing; the normal value is 0.15.",
+    "hoopaChance": 1
   },
   "shadowLugia": {
     "_comment": "Once Tide Lake is inside the darkness, a Super Rod cast there draws Shadow Lugia (once a match): a long wait, then a hook window of biteWindow seconds. It fights at level (a full-strength Lv 100), with hpMult times its HP like every legendary and damageScale on its hits; its beam lasts beamSeconds and turns at beamTurnScale of the usual rate. Shadow Storm (a ring of dark gusts) every stormEvery[phase] seconds. Balls bounce off: under snagBelow of its HP a Snag Machine takes it; worn to nothing or winning the bout, it vanishes.",

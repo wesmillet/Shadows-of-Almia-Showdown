@@ -1344,6 +1344,43 @@ export class Match {
     return masked ? ((CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120) : base;
   }
 
+  /** How long a trainer lasts in the storm: trainerToleranceScale times their Pokémon (a Storm Mask stretches both). */
+  trainerStormSeconds(t: Trainer): number {
+    const c = CONFIG.darkness as { stormMaskSeconds?: number; trainerToleranceScale?: number };
+    const masked = t.items.some((e) => e?.id === 'storm-mask') || t.held.some((e) => e?.id === 'storm-mask');
+    return (masked ? (c.stormMaskSeconds ?? 120) : CONFIG.darkness.drowsySeconds) * (c.trainerToleranceScale ?? 2);
+  }
+
+  /**
+   * Trainers in the storm: exposure builds while they stand in it and drains twice as fast out of
+   * it. Full, the trainer collapses: wiped out (back at an outpost, bag dropped, their Pokémon back
+   * in their balls), or out of the match once the final showdown has begun.
+   */
+  private stepTrainerStorm(dt: number): void {
+    for (const t of this.allTrainers) {
+      if (!t.alive || t.downUntil !== undefined || t.visitor || t.hidden || t.challenger) continue;
+      if (t.duelId) continue;
+      if (this.isDark(t.x, t.y)) {
+        t.stormT = (t.stormT ?? 0) + dt;
+        if (t.stormT >= this.trainerStormSeconds(t)) this.collapseInStorm(t);
+      } else if (t.stormT) t.stormT = Math.max(0, t.stormT - dt * 2);
+    }
+  }
+
+  private collapseInStorm(t: Trainer): void {
+    t.stormT = 0;
+    if (t.isPlayer && this.controlled) this.releaseControl();
+    for (const m of t.party) {
+      if (m.captured) continue;
+      this.battle.interrupt(m);
+      m.target = null;
+      m.stowed = true;
+    }
+    this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'The storm overwhelms you and you collapse!' : `${t.name} collapsed in the storm`, seconds: 3 });
+    if (this.finalStarted || this.outcome) this.eliminate(t);
+    else this.down(t);
+  }
+
   /** The species each land's wild Pokémon were drawn from this match (for checks and tests). */
   spawnRotation: Record<string, string[]> = {};
 
@@ -2201,6 +2238,7 @@ export class Match {
     this.stepOutposts(dt);
     this.stepThrows(dt);
     this.stepDarkness(dt);
+    this.stepTrainerStorm(dt);
     this.stepDarkraiPortal(dt);
     if (this.darkrai) this.stepDarkrai(this.darkrai, dt);
     this.battle.stepFlights(dt);
@@ -2423,7 +2461,10 @@ export class Match {
     // Catch mode spares every weak wild Pokémon; otherwise only the one picked as the ball's target.
     if (attacker.behavior !== 'catch' && (target !== this.lockTarget || !this.lockPicked)) return false;
     if (target.hp >= target.maxHp * 0.25) return false;
-    if (this.sparedNotice !== target) {
+    // Say so only for one your team is actually fighting near you: this check runs for every wild
+    // Pokémon on the map (target picking), so a weak one far off must not raise the alert.
+    const engaged = attacker.target === target || target.target?.owner === p || (target === this.lockTarget && this.lockPicked);
+    if (this.sparedNotice !== target && engaged && Math.hypot(target.x - p.x, target.y - p.y) < 10) {
       this.sparedNotice = target;
       this.battle.events.push({ type: 'notice', text: `${target.name} is weak: your team holds back. Throw a ball (F)!`, seconds: 2.4 });
     }

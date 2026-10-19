@@ -2086,6 +2086,16 @@ export class MatchScreen implements Screen {
     // A menu is open over the field (shop, chest, snag offer, a TM): no bars over it.
     if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.extractPick) return;
     const px = Math.max(2, Math.round(v.baseScale * 3));
+    // Your own storm meter over your head while you stand in the storm (you last twice as long as your Pokémon).
+    if (p.alive && p.downUntil === undefined && (p.stormT ?? 0) > 0) {
+      const frac = Math.min(1, (p.stormT ?? 0) / this.match.trainerStormSeconds(p));
+      const x = p.px + (p.x - p.px) * alpha;
+      const y = p.py + (p.y - p.py) * alpha;
+      const sx = Math.round(v.toScreenX(x));
+      const top = Math.round(v.toScreenY(y) - 2.15 * v.pxPerTile);
+      const w = 20 * px;
+      if (!this.hud.covers(sx - w / 2, top - 8 * px, w, 10 * px)) this.drawStormMeter(v, sx, top, w, px, frac, false);
+    }
     for (const m of this.match.mons()) {
       if (m.captured || m.visual.alpha < 0.5) continue;
       if (m.owner === p) {

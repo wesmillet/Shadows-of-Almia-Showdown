@@ -1358,6 +1358,22 @@ export class MatchScreen implements Screen {
     if (!carrier) return;
     const sheet = this.fx.sheet(carrier.id);
     const c = carrier;
+    if (c.sweep && sheet && c.anchor === 'projectile') {
+      // One carrier crosses the whole reach along the aim (Twister): each Pokémon hit gets its
+      // impact as the carrier passes it, in step with the damage (battle.impactDelay).
+      const len = reach || 3.4 * R();
+      const end = { x: area.ox + area.fx * len, y: area.oy + area.fy * len };
+      const speed = c.speed ?? 11;
+      this.addVfx(new FxProjectile(sheet, {
+        from, to: end, lift: c.lift ?? fromLift, scale: c.scale ?? 2, fps: c.fps ?? 15, tint: c.tint, facing: c.facing,
+        speed, loopFrom: c.loopFrom, grounded: c.grounded, sway: c.sway, fadeOut: c.fadeOut,
+      }), c);
+      for (const h of hits) {
+        const d = Math.hypot(h.x - from.x, h.y - from.y) / speed;
+        for (const p of impacts) playAt({ ...p, delay: (p.delay ?? 0) + d + (c.delay ?? 0) }, { x: h.x, y: h.y, mon: h }, true);
+      }
+      return;
+    }
     for (const t of targets) {
       if (!sheet) {
         for (const p of impacts) playAt(p, t, true);
@@ -2092,9 +2108,10 @@ export class MatchScreen implements Screen {
         drawInfoBar(this.ui, v.hud, px, sx, top, 'Hoopa (Space to talk)', m.level, 1, v.baseScale, '#ffcf8a');
         continue;
       }
-      const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.landBoss ? `${m.name} ♛` : m.alpha ? `Alpha ${m.name}` : m.elite ? `Elite ${m.name}` : m.name;
+      // Land bosses and the stronger wilds go by their plain names (their level tells the story).
+      const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.alpha ? `Alpha ${m.name}` : m.name;
       const label = m.shiny ? `Shiny ${base}` : base;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : m.elite ? '#ffd36b' : '#fff', m.alpha ? this.alphaBadge : null);
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : '#fff', m.alpha ? this.alphaBadge : null);
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

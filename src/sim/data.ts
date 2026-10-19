@@ -109,6 +109,19 @@ export interface FxPart {
   arc?: number;
   /** Sky drops: how high above the target the fall starts, in tiles (default 6). */
   height?: number;
+  /**
+   * Projectiles: one carrier sweeps the whole length of a line move (a twister crossing the
+   * field) instead of one per Pokémon hit; each one hit gets its impact as it passes.
+   */
+  sweep?: boolean;
+  /** Projectiles: play the frames once, then loop from this frame (spin up, then spin). */
+  loopFrom?: number;
+  /** Projectiles: stands on the ground as it travels (a twister) instead of flying at body height. */
+  grounded?: boolean;
+  /** Projectiles: side-to-side sway in tiles. */
+  sway?: number;
+  /** Projectiles: seconds it lingers and fades at the end of its path. */
+  fadeOut?: number;
 }
 
 export interface MoveDef {

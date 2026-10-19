@@ -279,25 +279,32 @@ export class FanGround implements GroundRenderer {
   }
 
   private buildDecor(): void {
+    // The market stands: the objects a vendor stands at (standX inside it, its foot on standY).
+    const vendors = ((this.map.npcs as Array<{ role?: string; standX?: number; standY?: number }> | undefined) ?? []).filter((n) => n.role === 'vendor' && n.standX !== undefined && n.standY !== undefined);
+    const isStand = (x: number, y: number, w: number, h: number) =>
+      vendors.some((n) => (n.standX as number) * 16 >= x && (n.standX as number) * 16 <= x + w && Math.abs(y + h - (n.standY as number) * 16) <= 2);
     for (const [s, sx, sy, w, h, x, y, sort] of this.map.objects) {
       const img = this.sheets[s];
       if (!img) continue;
+      // A market stand gets a taller canopy, so its vendor stands under the roof instead of in front of it.
+      const tall = isStand(x, y, w, h) ? raisedStand(img, sx, sy, w, h, STAND_RAISE) : null;
+      const fh = tall ? h + STAND_RAISE : h;
       this.decor.push({
         kind: 'prop',
         x: (x + w / 2) / 16,
         y: (y + h) / 16,
-        image: img,
-        srcX: sx,
-        srcY: sy,
+        image: tall ?? img,
+        srcX: tall ? 0 : sx,
+        srcY: tall ? 0 : sy,
         frameW: w,
-        frameH: h,
+        frameH: fh,
         frames: 1,
         fps: 0,
         anchorX: w / 2,
-        anchorY: h,
+        anchorY: fh,
         blockRadius: 0,
         sortY: sort,
-        extent: Math.ceil(Math.max(w, h) / 16) + 1,
+        extent: Math.ceil(Math.max(w, fh) / 16) + 1,
       });
     }
     this.decor.sort((a, b) => (a.sortY ?? a.y) - (b.sortY ?? b.y));
@@ -377,5 +384,53 @@ function decodeRle(rle: number[], n: number): Int32Array {
     if (v) out.fill(v, p, p + k);
     p += k;
   }
+  return out;
+}
+
+/** How many pixels higher a market stand's canopy sits (its posts grow to match). */
+const STAND_RAISE = 17;
+
+/**
+ * A market stand redrawn with its canopy `raise` pixels higher: the stand is cut at the last
+ * row under the canopy where only its two posts show (nothing in the middle), the canopy above
+ * is lifted, and that posts-only row is repeated to fill the gap. Null if the art has no such
+ * row, or there is no canvas (the test runner); the stand is then drawn as it is.
+ */
+function raisedStand(img: CanvasImageSource, sx: number, sy: number, w: number, h: number, raise: number): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+  const src = document.createElement('canvas');
+  src.width = w;
+  src.height = h;
+  const sctx = src.getContext('2d', { willReadFrequently: true });
+  if (!sctx) return null;
+  sctx.drawImage(img, sx, sy, w, h, 0, 0, w, h);
+  let data: Uint8ClampedArray;
+  try {
+    data = sctx.getImageData(0, 0, w, h).data;
+  } catch {
+    return null;
+  }
+  const x0 = Math.floor(w * 0.2);
+  const x1 = Math.ceil(w * 0.8);
+  const clear = (y: number) => {
+    for (let x = x0; x < x1; x++) if ((data[(y * w + x) * 4 + 3] ?? 0) > 20) return false;
+    return true;
+  };
+  // The last clear row of the first clear run below the canopy (just above the counter).
+  let cut = -1;
+  for (let y = Math.floor(h * 0.4); y < Math.floor(h * 0.9); y++) {
+    if (clear(y)) cut = y;
+    else if (cut >= 0) break;
+  }
+  if (cut < 0) return null;
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h + raise;
+  const ctx = out.getContext('2d');
+  if (!ctx) return null;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, w, cut, 0, 0, w, cut);
+  for (let k = 0; k < raise; k++) ctx.drawImage(src, 0, cut, w, 1, 0, cut + k, w, 1);
+  ctx.drawImage(src, 0, cut, w, h - cut, 0, cut + raise, w, h - cut);
   return out;
 }

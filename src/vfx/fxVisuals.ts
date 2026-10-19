@@ -149,6 +149,14 @@ export interface FxProjectileOptions {
   arc?: number;
   /** Height at the start, in tiles (a fall from the sky); `lift` is the height at the end. */
   fromLift?: number;
+  /** Play the frames once, then keep looping from this frame on (a twister that spins up, then spins). */
+  loopFrom?: number;
+  /** Stands on the ground: the art's bottom edge on the path instead of its middle at `lift`. */
+  grounded?: boolean;
+  /** Side-to-side sway as it travels, in tiles. */
+  sway?: number;
+  /** Seconds it lingers and fades out at the end of its path. */
+  fadeOut?: number;
   onHit?: () => void;
 }
 
@@ -198,22 +206,35 @@ export class FxProjectile implements MoveVisual {
     const pp = this.o.fromLift !== undefined ? p * p : p;
     this.lift = start + (end - start) * pp + (this.o.arc ?? 0) * 4 * p * (1 - p);
     this.y = this.wy + 0.02;
+    if (this.o.sway) this.x += Math.sin(this.t * 13) * this.o.sway;
     if (p >= 1 && !this.hit) {
       this.hit = true;
       this.o.onHit?.();
-      return false;
     }
-    return true;
+    // Done at the end of the path, or after lingering there for fadeOut seconds.
+    return this.t < this.dur + (this.o.fadeOut ?? 0);
+  }
+
+  /** The frame to show: looping, or once through and then looping from loopFrom. */
+  private frame(): number {
+    const n = this.sheet.frames;
+    const i = Math.floor(this.t * this.fps);
+    const from = this.o.loopFrom;
+    if (from === undefined || from >= n) return i % n;
+    return i < n ? i : from + ((i - n) % (n - from));
   }
 
   draw(view: View): void {
     const ctx = view.ctx;
-    const f = Math.floor(this.t * this.fps) % this.sheet.frames;
+    const f = this.frame();
     const w = this.sheet.fw * (this.scale * view.zoom);
     const h = this.sheet.fh * (this.scale * view.zoom);
+    const fade = this.o.fadeOut && this.t > this.dur ? Math.max(0, 1 - (this.t - this.dur) / this.o.fadeOut) : 1;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.translate(Math.round(view.toScreenX(this.x)), Math.round(view.toScreenY(this.wy) - this.lift * view.pxPerTile));
+    ctx.globalAlpha *= fade;
+    const up = this.o.grounded ? h / 2 - 0.12 * view.pxPerTile : this.lift * view.pxPerTile;
+    ctx.translate(Math.round(view.toScreenX(this.x)), Math.round(view.toScreenY(this.wy) - up));
     if (this.spin) ctx.rotate(this.rot);
     ctx.drawImage(this.source, f * this.sheet.fw, 0, this.sheet.fw, this.sheet.fh, -Math.floor(w / 2), -Math.floor(h / 2), w, h);
     ctx.restore();

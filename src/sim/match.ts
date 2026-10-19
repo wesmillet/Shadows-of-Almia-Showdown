@@ -1948,6 +1948,20 @@ export class Match {
   }
 
   /** The nearest point a trainer can stand on, searching outward from (x, y). */
+  /** Open, reachable ground beside an outpost for a trainer to stand on (null if none within a few tiles). */
+  private outpostSpot(o: { x: number; y: number }): { x: number; y: number } | null {
+    const ok = (x: number, y: number) => canStand(this.ground, x, y, CONFIG.player.radius) && this.ground.reachable(Math.floor(x), Math.floor(y));
+    if (ok(o.x + 1.2, o.y + 1.2)) return { x: o.x + 1.2, y: o.y + 1.2 };
+    for (let r = 1; r <= 5; r += 0.5) {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+        const x = o.x + Math.cos(a) * r;
+        const y = o.y + Math.sin(a) * r;
+        if (ok(x, y)) return { x, y };
+      }
+    }
+    return null;
+  }
+
   private nearestStand(x: number, y: number): { x: number; y: number } {
     for (let r = 0.5; r < 20; r += 0.5) {
       for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
@@ -3454,7 +3468,14 @@ export class Match {
   private respawn(t: Trainer): void {
     t.downUntil = undefined;
     t.lastKo = undefined;
-    const spots = this.outposts.map((o) => ({ x: o.x + 1.2, y: o.y + 1.2 })).filter((s) => !this.isDark(s.x, s.y) && canStand(this.ground, s.x, s.y, CONFIG.player.radius));
+    // Every outpost out of the dark counts: you come back on open ground beside it (the spot just
+    // past its corner when it is clear, else the nearest clear spot round it). Checking only that one
+    // corner spot used to rule out three of the five outposts, so everyone came back at the castle
+    // or Sunreach.
+    const spots = this.outposts
+      .filter((o) => !this.isDark(o.x, o.y))
+      .map((o) => this.outpostSpot(o))
+      .filter((s): s is { x: number; y: number } => !!s && !this.isDark(s.x, s.y));
     spots.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
     const at = spots[0] ?? { x: t.x, y: t.y };
     t.x = t.px = at.x;

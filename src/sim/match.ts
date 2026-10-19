@@ -161,6 +161,7 @@ export class Match {
     this.startSpots = this.pickStartSpots(1 + CONFIG.trainers.count);
     const spawn = this.startSpots[0] as { x: number; y: number };
     this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
+    this.giveStartingKit(this.player);
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, this.player, spawn.x, spawn.y));
     this.placeParty(this.player);
     this.spawnWilds();
@@ -182,7 +183,7 @@ export class Match {
       for (let k = 0; k < CONFIG.trainers.partySize; k++) {
         t.party.push(this.makeMon(pool[k % pool.length] as string, CONFIG.trainers.level, t, spot.x, spot.y));
       }
-      t.items[0] = { id: 'potion', count: 1 };
+      this.giveStartingKit(t);
       t.aiTimer = this.rng.range(0.5, 2);
       t.roamTimer = CONFIG.party.aiRoamEverySeconds * this.rng.range(0.6, 1.2);
       this.placeParty(t);
@@ -1376,6 +1377,12 @@ export class Match {
     });
   }
 
+  /** The bag every trainer starts a match with (config items.startingKit: three Poké Balls and a Potion). */
+  private giveStartingKit(t: Trainer): void {
+    const kit = ((CONFIG.items as unknown as { startingKit?: Array<[string, number]> }).startingKit ?? []);
+    for (const [id, count] of kit) if (ITEMS[id]) this.giveItem(t, id, count);
+  }
+
   makeTrainer(name: string, role: string, isPlayer: boolean, x: number, y: number): Trainer {
     return {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
@@ -1471,7 +1478,9 @@ export class Match {
         // easing to none at the coast, so the outer lands stay gentle for fresh teams.
         // Round every starting point the land stays at its base levels, so a fresh team can train there.
         const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
-        const calm = Math.min(1, Math.max(0, (nearStart - 20) / 25));
+        // (No bonus within 25 tiles of a start, the full bonus from 70: a gentle ramp, so a start that
+        // happens to sit nearer the crystal is not ringed by much stronger wilds.)
+        const calm = Math.min(1, Math.max(0, (nearStart - 25) / 45));
         // Round the crystal the bonus is spread a little, so the middle holds levels from the 30s to about 60.
         const w = CONFIG.wild;
         const spread = this.rng.range(w.centerLevelSpread[0] ?? 0.75, w.centerLevelSpread[1] ?? 1.1);
@@ -1480,7 +1489,7 @@ export class Match {
         const toCenter = Math.hypot(spot.x - this.centerX, spot.y - this.centerY);
         const alpha = nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
         // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
-        const elite = !alpha && nearStart > 22 && this.rng.chance(w.eliteChance ?? 0);
+        const elite = !alpha && nearStart > 35 && this.rng.chance(w.eliteChance ?? 0);
         if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
         if (alpha) {
           // A cut above the wilds around it: alphaLevelBonus over the local level, at most alphaLevelMax.
@@ -1562,14 +1571,21 @@ export class Match {
         for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!inLand.has(`${tx + dx},${ty + dy}`)) return false;
         return true;
       };
-      const apart = (p: { x: number; y: number }) => placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= 12);
+      // Well apart from the other bosses, and never near where a trainer starts.
+      const starts = [...this.startSpots, { x: this.player.x, y: this.player.y }];
+      const apart = (p: { x: number; y: number }) =>
+        placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= 12) && starts.every((s) => Math.hypot(p.x - s.x, p.y - s.y) >= 45);
       // The deepest ring that still leaves room to choose from, then any spot in the land.
       let pool: Array<{ x: number; y: number }> = [];
       for (const r of [3, 2, 1, 0]) {
         pool = spots.filter((p) => inside(p, r) && apart(p));
         if (pool.length >= 8) break;
       }
-      if (!pool.length) pool = spots;
+      // Nowhere that far from every start: the spot farthest from them.
+      if (!pool.length) {
+        const far = (p: { x: number; y: number }) => Math.min(...starts.map((s) => Math.hypot(p.x - s.x, p.y - s.y)));
+        pool = [spots.reduce((a, b) => (far(b) > far(a) ? b : a))];
+      }
       const best = this.rng.pick(pool);
       placed.push(best);
       const mon = this.makeMon(b.dex, b.level, null, best.x, best.y);

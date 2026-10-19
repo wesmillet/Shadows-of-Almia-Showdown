@@ -8,15 +8,14 @@
  * Every tile the map uses is packed into one atlas; layers are run-length
  * encoded atlas indices (+1). The tile layers and decals are baked into 8x8
  * tile chunks at 1x. A chunk with animated tiles is baked once per distinct
- * animation state it shows and cached (a few states per chunk), so the layer
- * order stays exact.
+ * animation state it shows, so the layer order stays exact; those frames share
+ * one capped cache (chunkCanvas) so memory stays flat over a long match.
  */
 import type { View } from '../render/view';
 import type { Assets } from '../sprites/assets';
 import type { Biome, DecorItem, GroundRenderer } from './types';
 
 const CHUNK = 8;
-const STATE_CACHE = 24;
 /** Biome codes in the file's biome grid. */
 export const BIOME_CODES: Biome[] = ['water', 'meadow', 'forest', 'shore', 'snow', 'desert', 'autumn', 'castle'];
 const MINIMAP: Record<string, string> = {
@@ -80,7 +79,6 @@ interface Chunk {
   anim: Array<[number, number, number, number]>;
   /** Decals touching this chunk, per stack index. */
   decals: Map<number, Decal[]>;
-  states: Map<string, HTMLCanvasElement>;
 }
 
 export class FanGround implements GroundRenderer {
@@ -193,7 +191,7 @@ export class FanGround implements GroundRenderer {
             }
           }
         });
-        this.chunks.push({ still: null, anim, decals: new Map(), states: new Map() });
+        this.chunks.push({ still: null, anim, decals: new Map() });
       }
     }
     this.map.stack.forEach((item, li) => {
@@ -224,14 +222,24 @@ export class FanGround implements GroundRenderer {
     return a.frames[a.frames.length - 1] as number;
   }
 
-  /** All layers of chunk `i` at 1x, animated tiles shown at time `ms`. */
-  private bake(i: number, ms: number): HTMLCanvasElement {
+  /**
+   * All layers of chunk `i` at 1x, animated tiles shown at time `ms`, into `into` (a frame evicted
+   * from the cache, reused) or a new canvas. Null if the browser will not give a canvas (out of
+   * canvas memory): that chunk is skipped this frame instead of breaking the draw.
+   */
+  private bake(i: number, ms: number, into?: HTMLCanvasElement): HTMLCanvasElement | null {
     const cc = i % this.chunkCols;
     const cr = Math.floor(i / this.chunkCols);
-    const c = document.createElement('canvas');
-    c.width = CHUNK * 16;
-    c.height = CHUNK * 16;
-    const ctx = c.getContext('2d')!;
+    const c = into ?? document.createElement('canvas');
+    if (!into) {
+      c.width = CHUNK * 16;
+      c.height = CHUNK * 16;
+    }
+    const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, c.width, c.height);
     ctx.imageSmoothingEnabled = false;
     const ac = this.map.atlas.columns;
     const chunk = this.chunks[i] as Chunk;
@@ -262,19 +270,38 @@ export class FanGround implements GroundRenderer {
     return c;
   }
 
+  /**
+   * Baked animation frames of every chunk, least recently drawn first. One shared cache with a cap
+   * (frameCap: enough for every chunk on screen through its whole cycle) whose evicted canvases are
+   * reused for new frames, so memory stays flat however much of the island is explored. (Keeping
+   * frames per chunk grew without bound over a match, past what browsers allow for canvases, and
+   * chunks then drew blank.)
+   */
+  private frames = new Map<string, HTMLCanvasElement>();
+  private frameCap = 480;
+
   private chunkCanvas(i: number): HTMLCanvasElement | null {
     const c = this.chunks[i];
     if (!c) return null;
     if (c.still) return c.still;
     const ms = this.time * 1000;
-    let key = '';
+    let key = `${i}|`;
     for (const a of c.anim) key += this.frameOf(a[3], ms) + ',';
-    let canvas = c.states.get(key);
-    if (!canvas) {
-      canvas = this.bake(i, ms);
-      if (c.states.size >= STATE_CACHE) c.states.delete(c.states.keys().next().value as string);
-      c.states.set(key, canvas);
+    const hit = this.frames.get(key);
+    if (hit) {
+      // Most recently drawn goes to the back of the queue.
+      this.frames.delete(key);
+      this.frames.set(key, hit);
+      return hit;
     }
+    let reuse: HTMLCanvasElement | undefined;
+    if (this.frames.size >= this.frameCap) {
+      const oldest = this.frames.keys().next().value as string;
+      reuse = this.frames.get(oldest);
+      this.frames.delete(oldest);
+    }
+    const canvas = this.bake(i, ms, reuse);
+    if (canvas) this.frames.set(key, canvas);
     return canvas;
   }
 
@@ -356,6 +383,9 @@ export class FanGround implements GroundRenderer {
     const y0 = Math.max(0, Math.floor(vis.y0));
     const x1 = Math.min(this.cols - 1, Math.ceil(vis.x1));
     const y1 = Math.min(this.rows - 1, Math.ceil(vis.y1));
+    // The frame cache holds every chunk on screen through its whole animation cycle (16 states at most).
+    const onScreen = (Math.floor(y1 / CHUNK) - Math.floor(y0 / CHUNK) + 1) * (Math.floor(x1 / CHUNK) - Math.floor(x0 / CHUNK) + 1);
+    this.frameCap = Math.max(480, onScreen * 18);
     // Chunk edges snap to whole screen pixels from both ends, so a fractional zoom leaves no seams.
     for (let cr = Math.floor(y0 / CHUNK); cr <= Math.floor(y1 / CHUNK); cr++) {
       for (let cc = Math.floor(x0 / CHUNK); cc <= Math.floor(x1 / CHUNK); cc++) {

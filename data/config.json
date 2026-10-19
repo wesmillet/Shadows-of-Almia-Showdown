@@ -121,6 +121,8 @@
   },
   "items": {
     "inventorySize": 6,
+    "_startingKitComment": "What every trainer (you and every rival) carries at the start of a match.",
+    "startingKit": [["poke-ball", 3], ["potion", 1]],
     "groundItems": 120,
     "pickupRadius": 0.8,
     "playerReach": 1.4,

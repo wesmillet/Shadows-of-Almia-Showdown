@@ -298,6 +298,11 @@ license, sheets). The current artists per folder, resolved through
 ### 0211 Qwilfish
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Withdraw,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0215 Sneasel
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,MultiScratch,Twirl,Swing,Double,Rotate,Hop
+- <@!702275233125630042>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!217653022094786560>: Pose,Pull,DeepBreath,Nod
+
 ### 0216 Teddiursa
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,MultiScratch,Shoot,Appeal,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 - <@!356635814668664832>: EventSleep,Float,Laying
@@ -713,6 +718,9 @@ license, sheets). The current artists per folder, resolved through
 ### 0460 Abomasnow
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0461 Weavile
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,SpAttack,Swing,Double,Rotate,Hop,QuickStrike
+
 ### 0466 Electivire
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,QuickStrike,Shoot,Rumble,Emit,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -855,6 +863,13 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Jab,RearUp,Swing,Double,Rotate,Hop
 - <@!544245909639397378>: Sleep
 
+### 0613 Cubchoo
+- <@!237286997645983744>: Walk,Attack,Shoot,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,Cringe
+- <@!237286997645983744>: Cringe
+
+### 0614 Beartic
+- <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,MultiStrike,Twirl,Swing,Double,Rotate,Hop
+
 ### 0633 Deino
 - JHONY_REX: Idle,Walk,Attack
 - <@!237286997645983744>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop,QuickStrike
@@ -948,6 +963,9 @@ license, sheets). The current artists per folder, resolved through
 
 ### 0706 Goodra
 - <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop
+
+### 0712 Bergmite
+- <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,Emit,Swing,Double,Rotate,Hop
 
 ### 0713 Avalugg
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,Emit,Swing,Double,Rotate,Hop
@@ -1103,6 +1121,15 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Punch,Swing,Double,Rotate,Hop
 - <@!544245909639397378>: Idle,Attack,Charge,Double,Rotate,Hop
 
+### 0872 Snom
+- <@!702275233125630042>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop
+- <@!215638650434617345>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop
+
+### 0873 Frosmoth
+- JHONY_REX: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop
+- <@!330751862590406656>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop
+- <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop
+
 ### 0885 Dreepy
 - JHONY_REX: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack
 - <@!330751862590406656>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop
@@ -1113,6 +1140,15 @@ license, sheets). The current artists per folder, resolved through
 
 ### 0887 Dragapult
 - <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
+
+### 0888 Zacian
+- <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,RearUp,Swing,Double,Rotate,Hop
+- <@!544245909639397378>: RearUp,Rotate
+
+### 0889 Zamazenta
+- FERMRACK: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Twirl,Swing,Double,Rotate,Hop,QuickStrike
+- <@!272761782269902848>: Walk,Sleep,Hurt,Attack,Charge,Shoot,Twirl,Swing,Double,Hop,QuickStrike
+- <@!272761782269902848>: Idle,Rotate
 
 ### 0906 Sprigatito
 - <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
@@ -1581,6 +1617,14 @@ license, sheets). The current artists per folder, resolved through
 ### 0211 Qwilfish
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!255219192901402624>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0215 Sneasel
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^,Pain,Pain^
+- <@!702275233125630042> (earlier version): Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^
+- <@!702275233125630042> (earlier version): Normal,Normal^,Pain,Pain^,Angry,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous^,Shouting,Shouting^,Sigh,Sigh^,Special0,Special0^,Stunned,Stunned^,Surprised,Surprised^,Worried,Worried^
+- <@!237286997645983744> (earlier version): Dizzy,Dizzy^,Inspired,Inspired^,Surprised,Surprised^
+- <@!593113130213572610> (earlier version): Angry^,Crying,Happy,Happy^,Joyous,Joyous^,Sad,Stunned^,Teary-Eyed
+- <@!411407718839222272>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Shouting,Surprised,Stunned,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special0,Worried^,Determined^,Special0^
 
 ### 0216 Teddiursa
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
@@ -2150,6 +2194,12 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!220580080194289664>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
+### 0461 Weavile
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Pain,Surprised,Angry
+- <@!702275233125630042>: Special0
+- <@!772726854188400641>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Shouting,Stunned,Teary-Eyed,Dizzy,Worried,Determined,Special3
+- <@!576876006636519434>: Special0
+
 ### 0466 Electivire
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!237286997645983744>: Determined,Happy,Normal
@@ -2326,6 +2376,15 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Normal,Normal^
 - <@!544245909639397378>: Normal,Sad,Joyous,Normal^,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^
 
+### 0613 Cubchoo
+- <@!343474614820667392> (earlier version): Happy,Normal
+- <@!343474614820667392> (earlier version): Happy,Normal,Happy^,Normal^
+- <@!350050109741858829>: Normal,Normal^,Happy,Happy^
+
+### 0614 Beartic
+- MUCRUSH (earlier version): Normal
+- <@!861005464682889266>: Normal
+
 ### 0633 Deino
 - MUCRUSH: Normal
 - <@!330751862590406656>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Pain,Sad,Shouting,Sigh,Special0,Special1,Stunned,Surprised,Teary-Eyed,Worried
@@ -2432,6 +2491,10 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Normal
 - <@!544245909639397378>: Normal
 - <@!544245909639397378>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0712 Bergmite
+- <@!150809243816165377>: Normal
+- <@!770438729575563284>: Happy
 
 ### 0713 Avalugg
 - <@!150809243816165377>: Normal
@@ -2600,6 +2663,15 @@ license, sheets). The current artists per folder, resolved through
 - EZERART (earlier version): Normal,Happy,Pain
 - <@!350050109741858829>: Normal,Happy,Pain
 
+### 0872 Snom
+- <@!702275233125630042> (earlier version): Normal,Happy,Pain,Angry,Worried,Sad,Crying,Shouting,Teary-Eyed,Determined,Joyous,Inspired,Surprised,Dizzy,Sigh,Stunned
+- <@!402702516866908160>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+- <@!215638650434617345>: Sad,Pain,Angry,Teary-Eyed,Dizzy,Worried,Special0
+
+### 0873 Frosmoth
+- <@!237286997645983744> (earlier version): Normal
+- <@!356635814668664832>: Normal,Sad,Joyous,Normal^,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^
+
 ### 0885 Dreepy
 - <@!237286997645983744> (earlier version): Normal
 - <@!237286997645983744> (earlier version): Normal
@@ -2615,6 +2687,14 @@ license, sheets). The current artists per folder, resolved through
 ### 0887 Dragapult
 - EZERART (earlier version): Normal
 - <@!356635814668664832>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
+
+### 0888 Zacian
+- <@!356635814668664832>: Normal,Normal^
+- <@!229131140903075840>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special3,Worried^,Determined^,Special3^
+- <@!229131140903075840>: Determined^
+
+### 0889 Zamazenta
+- <@!350050109741858829>: Normal,Normal^
 
 ### 0906 Sprigatito
 - <@!356635814668664832>: Normal

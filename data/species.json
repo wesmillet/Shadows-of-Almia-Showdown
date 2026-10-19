@@ -22383,6 +22383,7 @@
         "spe": 110
       },
       "heightM": 2.3,
+      "bodyPx": 62,
       "megaOf": "0381",
       "stone": "latiosite",
       "body": [
@@ -24607,6 +24608,671 @@
         "iron-head",
         "thunder-punch",
         "flash-cannon"
+      ]
+    },
+    {
+      "dex": "0888",
+      "name": "Zacian",
+      "types": [
+        "fairy"
+      ],
+      "stats": {
+        "hp": 92,
+        "atk": 120,
+        "def": 115,
+        "spa": 80,
+        "spd": 115,
+        "spe": 138
+      },
+      "tier": 0,
+      "moves": [
+        "play-rough",
+        "iron-head",
+        "close-combat",
+        "slash"
+      ],
+      "heightM": 2.8,
+      "body": [
+        31,
+        38
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "fairy-wind"
+        ],
+        [
+          11,
+          "charm"
+        ],
+        [
+          14,
+          "disarming-voice"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "play-rough"
+        ],
+        [
+          26,
+          "iron-head"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          36,
+          "close-combat"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ]
+    },
+    {
+      "dex": "0889",
+      "name": "Zamazenta",
+      "types": [
+        "fighting"
+      ],
+      "stats": {
+        "hp": 92,
+        "atk": 120,
+        "def": 115,
+        "spa": 80,
+        "spd": 115,
+        "spe": 138
+      },
+      "tier": 0,
+      "moves": [
+        "close-combat",
+        "iron-head",
+        "crunch",
+        "brick-break"
+      ],
+      "heightM": 2.9,
+      "body": [
+        27,
+        40
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "karate-chop"
+        ],
+        [
+          11,
+          "bulk-up"
+        ],
+        [
+          14,
+          "low-kick"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "double-kick"
+        ],
+        [
+          26,
+          "iron-head"
+        ],
+        [
+          26,
+          "crunch"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "brick-break"
+        ],
+        [
+          38,
+          "body-slam"
+        ],
+        [
+          44,
+          "close-combat"
+        ]
+      ]
+    },
+    {
+      "dex": "0872",
+      "name": "Snom",
+      "types": [
+        "ice",
+        "bug"
+      ],
+      "stats": {
+        "hp": 30,
+        "atk": 25,
+        "def": 35,
+        "spa": 45,
+        "spd": 30,
+        "spe": 20
+      },
+      "tier": 0,
+      "moves": [
+        "signal-beam",
+        "ice-beam",
+        "bug-buzz",
+        "blizzard"
+      ],
+      "heightM": 0.3,
+      "evolves": [
+        {
+          "to": "0873",
+          "level": 30
+        }
+      ],
+      "body": [
+        15,
+        17
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          9,
+          "struggle-bug"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          28,
+          "signal-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "bug-buzz"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
+      ]
+    },
+    {
+      "dex": "0873",
+      "name": "Frosmoth",
+      "types": [
+        "ice",
+        "bug"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 65,
+        "def": 60,
+        "spa": 125,
+        "spd": 90,
+        "spe": 65
+      },
+      "tier": 0,
+      "moves": [
+        "signal-beam",
+        "ice-beam",
+        "bug-buzz",
+        "blizzard"
+      ],
+      "heightM": 1.3,
+      "body": [
+        39,
+        27
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "powder-snow"
+        ],
+        [
+          9,
+          "struggle-bug"
+        ],
+        [
+          14,
+          "icy-wind"
+        ],
+        [
+          22,
+          "aurora-beam"
+        ],
+        [
+          28,
+          "signal-beam"
+        ],
+        [
+          32,
+          "ice-beam"
+        ],
+        [
+          38,
+          "bug-buzz"
+        ],
+        [
+          44,
+          "blizzard"
+        ]
+      ]
+    },
+    {
+      "dex": "0613",
+      "name": "Cubchoo",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 70,
+        "def": 40,
+        "spa": 60,
+        "spd": 40,
+        "spe": 40
+      },
+      "tier": 0,
+      "moves": [
+        "slash",
+        "icicle-crash",
+        "ice-beam",
+        "body-slam"
+      ],
+      "heightM": 0.5,
+      "evolves": [
+        {
+          "to": "0614",
+          "level": 37
+        }
+      ],
+      "body": [
+        19,
+        22
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          36,
+          "ice-beam"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ]
+    },
+    {
+      "dex": "0614",
+      "name": "Beartic",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 95,
+        "atk": 130,
+        "def": 80,
+        "spa": 70,
+        "spd": 80,
+        "spe": 50
+      },
+      "tier": 0,
+      "moves": [
+        "avalanche",
+        "slash",
+        "icicle-crash",
+        "body-slam"
+      ],
+      "heightM": 2.6,
+      "body": [
+        34,
+        30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ]
+    },
+    {
+      "dex": "0712",
+      "name": "Bergmite",
+      "types": [
+        "ice"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 69,
+        "def": 85,
+        "spa": 32,
+        "spd": 35,
+        "spe": 28
+      },
+      "tier": 0,
+      "moves": [
+        "avalanche",
+        "slash",
+        "icicle-crash",
+        "body-slam"
+      ],
+      "heightM": 1.0,
+      "evolves": [
+        {
+          "to": "0713",
+          "level": 37
+        }
+      ],
+      "body": [
+        17,
+        19
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "ice-shard"
+        ],
+        [
+          14,
+          "ice-fang"
+        ],
+        [
+          18,
+          "headbutt"
+        ],
+        [
+          22,
+          "avalanche"
+        ],
+        [
+          28,
+          "slash"
+        ],
+        [
+          32,
+          "icicle-crash"
+        ],
+        [
+          38,
+          "body-slam"
+        ]
+      ]
+    },
+    {
+      "dex": "0215",
+      "name": "Sneasel",
+      "types": [
+        "dark",
+        "ice"
+      ],
+      "stats": {
+        "hp": 55,
+        "atk": 95,
+        "def": 55,
+        "spa": 35,
+        "spd": 75,
+        "spe": 115
+      },
+      "tier": 0,
+      "moves": [
+        "night-slash",
+        "avalanche",
+        "crunch",
+        "icicle-crash"
+      ],
+      "heightM": 0.9,
+      "evolves": [
+        {
+          "to": "0461",
+          "level": 36
+        }
+      ],
+      "body": [
+        26,
+        26
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          32,
+          "crunch"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ]
+      ]
+    },
+    {
+      "dex": "0461",
+      "name": "Weavile",
+      "types": [
+        "dark",
+        "ice"
+      ],
+      "stats": {
+        "hp": 70,
+        "atk": 120,
+        "def": 65,
+        "spa": 45,
+        "spd": 85,
+        "spe": 125
+      },
+      "tier": 0,
+      "moves": [
+        "night-slash",
+        "avalanche",
+        "crunch",
+        "icicle-crash"
+      ],
+      "heightM": 1.1,
+      "body": [
+        27,
+        30
+      ],
+      "learnset": [
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "bite"
+        ],
+        [
+          9,
+          "ice-shard"
+        ],
+        [
+          11,
+          "scary-face"
+        ],
+        [
+          14,
+          "feint-attack"
+        ],
+        [
+          18,
+          "ice-fang"
+        ],
+        [
+          22,
+          "night-slash"
+        ],
+        [
+          28,
+          "avalanche"
+        ],
+        [
+          32,
+          "crunch"
+        ],
+        [
+          38,
+          "icicle-crash"
+        ]
       ]
     }
   ]

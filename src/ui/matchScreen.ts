@@ -512,6 +512,17 @@ export class MatchScreen implements Screen {
       if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
       return;
     }
+    // A legendary in its bout with you can be caught with a ball.
+    const legend = m.legendBoutFoe();
+    if (legend) {
+      const slot = m.ballSlot(p, this.selectedItem);
+      if (slot < 0) return this.say('No Poké Balls in the bag', 1);
+      this.selectedItem = slot;
+      p.dir = dirFromVector(legend.x - p.x, legend.y - p.y, p.dir);
+      if (m.throwBall(p, slot, { x: legend.x, y: legend.y })) this.say(`Go, ${ITEMS[p.items[slot]?.id ?? '']?.name ?? 'Poké Ball'}!`, 0.8);
+      if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
+      return;
+    }
     if (p.duelId) return this.say("You can't catch another trainer's Pokémon", 1.4);
     const t = m.lockTarget;
     if (!t || t.fainted || t.captured || !m.wilds.includes(t)) {

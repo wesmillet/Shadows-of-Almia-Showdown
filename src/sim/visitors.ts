@@ -32,7 +32,7 @@ const ACE_TEAM = ['0445', '0448', '0130'];
 const SHINY_PRIZES = ['0448-shiny', '0445-shiny', '0149-shiny', '0248-shiny', '0130-shiny'];
 const POWER_PRIZES = ['0376', '0373', '0706', '0887', '0149', '0248', '1007', '1008'];
 /** What can come through Hoopa's portal. */
-const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243'];
+const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243', '1007', '1008', '0888', '0889'];
 const LUGIA = '0249';
 /** Shadow Lugia: SpriteCollab's own Shadow form of Lugia (sprite/0249/0001). */
 const SHADOW_LUGIA = '0249-shadow';
@@ -275,7 +275,9 @@ export class Visitors {
     if (!po.out && po.t >= 1.6) {
       const m = this.m;
       const top = Math.max(1, ...m.player.party.map((x) => x.level));
-      const lvl = Math.min(100, Math.max(25, top + 6));
+      // Well above your team: your best level + portalLevelOver, never below portalLevelMin.
+      const v = CONFIG.visitors as { portalLevelOver?: number; portalLevelMin?: number };
+      const lvl = Math.min(100, Math.max(v.portalLevelMin ?? 60, top + (v.portalLevelOver ?? 20)));
       const L = m.makeMon(po.dex, lvl, null, po.x, po.y);
       this.makeLegend(L);
       L.visual.scale = 0.15;

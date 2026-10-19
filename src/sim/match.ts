@@ -523,6 +523,9 @@ export class Match {
     if (m.heldItem !== form.stone) return `${m.name} needs to hold its ${ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'}`;
     if (!canMega(t, m)) return `${m.name} can't Mega Evolve right now`;
     t.megaUsed = true;
+    // Its Mega form's walk and attack sheets load during the glow, so it never slides along in its idle pose.
+    const megaSprites = this.sprites.get(form.dex, !!m.shiny);
+    void megaSprites.ready.then(() => Promise.all(['Walk', 'Attack', 'Shoot'].map((a) => megaSprites.ensureSheet(a, true))));
     m.evolving = { to: form.dex, t: 0, swapped: false, mega: true };
     m.busy = Math.max(m.busy, 1.2);
     this.battle.events.push({ type: 'mega-start', mon: m });
@@ -861,7 +864,9 @@ export class Match {
         }
         let best: Mon | null = null;
         let bd = 1.4;
-        for (const w of this.wilds) {
+        // A legendary in its bout with the player (Hoopa's, Lugia) can be caught like a wild one.
+        const boutLegend = this.legendBoutFoe();
+        for (const w of boutLegend ? [...this.wilds, boutLegend] : this.wilds) {
           if (!BattleSystem.active(w)) continue;
           const d = Math.hypot(w.x - th.x, w.y - th.y);
           if (d < bd) {
@@ -888,6 +893,8 @@ export class Match {
         });
         // Calmed by the Capture Styler: much easier to catch.
         if ((best.calm ?? 0) > 0) th.modifier *= CONFIG.styler.catchMultiplier;
+        // A legendary is harder to hold than an ordinary Pokémon (wear it down first).
+        if (best.legend) th.modifier *= CONFIG.visitors.legendCatchScale ?? 0.5;
         th.roll = rollCatch(this.rng, best, th.modifier);
         th.phase = 'hit';
         th.phaseT = 0;
@@ -912,6 +919,10 @@ export class Match {
         this.battle.events.push({ type: 'ball-burst', mon: w, x: th.x, y: th.y });
       } else if (ev === 'done') {
         w.visual = { scale: 1, alpha: 1, flash: 0 };
+        if (th.roll?.caught && w.owner?.legendBout) {
+          this.catchBoutLegend(w, w.owner, th.thrower);
+          continue;
+        }
         if (th.roll?.caught) {
           this.wilds.splice(this.wilds.indexOf(w), 1);
           w.captured = false;
@@ -2610,6 +2621,8 @@ export class Match {
         if (this.time >= t.downUntil) this.respawn(t);
         continue;
       }
+      // A legendary's host waits while a ball holds its legendary (the catch may still fail).
+      if (t.legendBout && this.throws.some((th) => th.target && t.party.includes(th.target))) continue;
       // Out only when nothing is left standing; members out roaming still count.
       if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) {
         if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.outcome) this.down(t);
@@ -2911,6 +2924,46 @@ export class Match {
     return true;
   }
 
+  /** The legendary the player is battling one-on-one (Hoopa's, Lugia), if it can be caught with a ball (not Shadow Lugia). */
+  legendBoutFoe(): Mon | null {
+    const d = this.playerDuel;
+    if (!d) return null;
+    const side = d.a.trainer === this.player ? d.b : d.a;
+    const L = side.trainer.legendBout ? side.mon : null;
+    return L && !L.shadow && !L.fainted ? L : null;
+  }
+
+  /** A ball caught the legendary in its bout: it joins the thrower at its normal HP and the bout ends. */
+  private catchBoutLegend(L: Mon, host: Trainer, by: Trainer): void {
+    const d = this.duels.find((x) => x.a.trainer === host || x.b.trainer === host) ?? null;
+    host.party = host.party.filter((x) => x !== L);
+    if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
+    const frac = L.hp / L.maxHp;
+    L.duelId = undefined;
+    L.captured = false;
+    L.legend = false;
+    L.landBoss = false;
+    L.wild = false;
+    L.owner = by;
+    L.maxHp = L.stats.hp;
+    // At least 30% of its HP: it has just been caught, not knocked out.
+    L.hp = Math.max(1, Math.round(L.maxHp * Math.max(0.3, frac)));
+    L.target = null;
+    this.battle.interrupt(L);
+    L.status = null;
+    L.legendPhase = 0;
+    L.stages = { atk: 0, def: 0, spe: 0 };
+    L.behavior = 'guard';
+    L.anim.play('Idle', { restart: true });
+    by.party.push(L);
+    by.stats.catches++;
+    if (by.duelId) L.stowed = true;
+    this.battle.events.push({ type: 'caught', mon: L, by });
+    if (d) this.endDuel(d, by);
+    this.endLegendBout(host);
+    this.battle.events.push({ type: 'notice', text: `You caught ${L.name}!`, seconds: 3 });
+  }
+
   /** Shadow Lugia's foe in its bout (the player's Pokémon out), or null when it is not in one. */
   shadowBoutFoe(): Mon | null {
     const d = this.playerDuel;
@@ -3178,7 +3231,8 @@ export class Match {
     }
     for (const s of sides) {
       const m = s.mon;
-      if (!m || m.fainted) continue;
+      // Inside a ball (a legendary being caught): it does nothing until the ball opens or clicks.
+      if (!m || m.fainted || m.captured) continue;
       const foe = (s === d.a ? d.b : d.a).mon;
       if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
       else if (s.trainer.legendBout) this.stepLegendMon(m, foe, dt);

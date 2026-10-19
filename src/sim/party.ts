@@ -259,7 +259,12 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
     }
 
     // ---- Formation members.
-    const off = formationOffset(slot, t.dir);
+    // Its spot sits just outside the room it keeps round its trainer (separation), so a big body is
+    // not pulled into a spot it is pushed out of at the same time (Mega Latios shuddered back and forth).
+    const raw = formationOffset(slot, t.dir);
+    const room = CONFIG.party.separation + hitPad(m.species) + 0.15;
+    const rawLen = Math.hypot(raw.x, raw.y);
+    const off = rawLen > 1e-4 && rawLen < room ? { x: (raw.x * room) / rawLen, y: (raw.y * room) / rawLen } : raw;
     slot++;
     const desiredX = t.x + off.x;
     const desiredY = t.y + off.y;

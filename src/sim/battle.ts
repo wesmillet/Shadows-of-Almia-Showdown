@@ -598,6 +598,10 @@ export class BattleSystem {
   }
 
   isEnemy(a: Mon, b: Mon): boolean {
+    // Hoopa (a visitor) never fights, and only a Pokémon the player is steering can hit it:
+    // doing so unbinds it into Hoopa Unbound (Visitors.hoopaStruck).
+    if (b.npc === 'hoopa') return !!a.steered && !!a.owner?.isPlayer;
+    if (a.npc === 'hoopa') return false;
     // A Pokémon calmed by the Capture Styler is nobody's enemy until it wears off.
     if ((a.calm ?? 0) > 0 || (b.calm ?? 0) > 0) return false;
     // A one-on-one battle is sealed off: its two Pokémon fight only each other.

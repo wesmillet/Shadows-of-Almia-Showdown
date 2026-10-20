@@ -25274,6 +25274,149 @@
           "icicle-crash"
         ]
       ]
+    },
+    {
+      "dex": "0720-unbound",
+      "name": "Hoopa Unbound",
+      "types": [
+        "psychic",
+        "dark"
+      ],
+      "stats": {
+        "hp": 80,
+        "atk": 160,
+        "def": 60,
+        "spa": 170,
+        "spd": 130,
+        "spe": 80
+      },
+      "tier": 0,
+      "moves": [
+        "hyperspace-hole",
+        "dark-pulse",
+        "crunch",
+        "psychic"
+      ],
+      "heightM": 6.5,
+      "learnset": [
+        [
+          1,
+          "hyperspace-hole"
+        ],
+        [
+          1,
+          "tackle"
+        ],
+        [
+          1,
+          "growl"
+        ],
+        [
+          5,
+          "confusion"
+        ],
+        [
+          9,
+          "night-shade"
+        ],
+        [
+          11,
+          "calm-mind"
+        ],
+        [
+          14,
+          "psybeam"
+        ],
+        [
+          18,
+          "hex"
+        ],
+        [
+          26,
+          "dark-pulse"
+        ],
+        [
+          32,
+          "psychic"
+        ],
+        [
+          38,
+          "shadow-ball"
+        ],
+        [
+          1,
+          "crunch"
+        ]
+      ],
+      "body": [
+        59,
+        60
+      ]
+    },
+    {
+      "dex": "0150-shadow",
+      "name": "Shadow Mewtwo",
+      "types": [
+        "psychic"
+      ],
+      "stats": {
+        "hp": 106,
+        "atk": 110,
+        "def": 90,
+        "spa": 154,
+        "spd": 90,
+        "spe": 130
+      },
+      "tier": 0,
+      "moves": [
+        "psychic",
+        "shadow-ball",
+        "aura-sphere",
+        "ice-beam"
+      ],
+      "heightM": 2.0,
+      "learnset": [
+        [
+          1,
+          "confusion"
+        ],
+        [
+          1,
+          "psycho-cut"
+        ],
+        [
+          8,
+          "psybeam"
+        ],
+        [
+          16,
+          "calm-mind"
+        ],
+        [
+          24,
+          "zen-headbutt"
+        ],
+        [
+          32,
+          "shadow-ball"
+        ],
+        [
+          40,
+          "aura-sphere"
+        ],
+        [
+          48,
+          "ice-beam"
+        ],
+        [
+          56,
+          "psychic"
+        ]
+      ],
+      "body": [
+        31,
+        30
+      ]
     }
   ]
 }

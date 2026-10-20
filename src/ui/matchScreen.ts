@@ -1845,8 +1845,9 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /** Hoopa's ring: a gold hoop standing on the ground, opening, swirling dark inside, then closing. */
-  private drawPortal(v: View, po: { x: number; y: number; t: number }): void {
+  /** Hoopa's ring: a gold hoop standing on the ground, opening, swirling dark inside, then closing. In the storm it is black and red. */
+  private drawPortal(v: View, po: { x: number; y: number; t: number; shadow?: boolean }): void {
+    const dark = !!po.shadow;
     const ctx = v.ctx;
     const open = Math.min(1, po.t / 0.6) * Math.min(1, Math.max(0, (4 - po.t) / 0.6));
     if (open <= 0) return;
@@ -1856,15 +1857,15 @@ export class MatchScreen implements Screen {
     const ry = 1.3 * v.pxPerTile * open;
     ctx.save();
     const g = ctx.createRadialGradient(x, y, 0, x, y, ry);
-    g.addColorStop(0, 'rgba(255,240,200,0.95)');
-    g.addColorStop(0.35, 'rgba(160,90,230,0.85)');
-    g.addColorStop(1, 'rgba(40,10,70,0.9)');
+    g.addColorStop(0, dark ? 'rgba(255,90,90,0.9)' : 'rgba(255,240,200,0.95)');
+    g.addColorStop(0.35, dark ? 'rgba(70,10,60,0.92)' : 'rgba(160,90,230,0.85)');
+    g.addColorStop(1, dark ? 'rgba(8,2,14,0.95)' : 'rgba(40,10,70,0.9)');
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
     // Swirl
-    ctx.strokeStyle = 'rgba(255,230,160,0.6)';
+    ctx.strokeStyle = dark ? 'rgba(190,60,255,0.65)' : 'rgba(255,230,160,0.6)';
     ctx.lineWidth = 2 * v.baseScale;
     for (let i = 0; i < 3; i++) {
       ctx.beginPath();
@@ -1872,12 +1873,12 @@ export class MatchScreen implements Screen {
       ctx.stroke();
     }
     // The hoop itself
-    ctx.strokeStyle = '#ffcf4a';
+    ctx.strokeStyle = dark ? '#2a0f3a' : '#ffcf4a';
     ctx.lineWidth = 6 * v.baseScale;
     ctx.beginPath();
     ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.strokeStyle = '#9a6a10';
+    ctx.strokeStyle = dark ? '#c03a2b' : '#9a6a10';
     ctx.lineWidth = 2 * v.baseScale;
     ctx.stroke();
     ctx.restore();

@@ -14,6 +14,7 @@
 import { isDev } from '../dev';
 import { dirFromVector } from '../core/math';
 import { CONFIG, SPECIES } from './data';
+import type { BattleEvent } from './battle';
 import type { Mon, Trainer } from './entities';
 import { activeParty } from './entities';
 import type { Match } from './match';
@@ -36,6 +37,10 @@ const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243', '1007', '1
 const LUGIA = '0249';
 /** Shadow Lugia: SpriteCollab's own Shadow form of Lugia (sprite/0249/0001). */
 const SHADOW_LUGIA = '0249-shadow';
+/** Hoopa's true form, if a Pokémon you steer hits it. */
+const HOOPA_UNBOUND = '0720-unbound';
+/** What Hoopa calls out of the storm when you talk to it inside the darkness. */
+const SHADOW_MEWTWO = '0150-shadow';
 
 type Walker = { npc: Trainer; goal: { x: number; y: number } | null; wait: number };
 
@@ -46,6 +51,8 @@ export interface Portal {
   t: number;
   dex: string;
   out: Mon | null;
+  /** Opened inside the storm: a shadow legendary comes through (Shadow Mewtwo). */
+  shadow?: boolean;
 }
 
 export class Visitors {
@@ -100,6 +107,8 @@ export class Visitors {
       h.npc = 'hoopa';
       h.calm = 1e9;
       h.busy = 1e9;
+      // Never worn down: the first hit from a Pokémon you steer unbinds it instead (hoopaStruck).
+      h.maxHp = h.hp = 99999;
       m.wilds.push(h);
       this.hoopa = h;
     }
@@ -260,11 +269,14 @@ export class Visitors {
         break;
       }
     }
+    // Asked inside the storm, Hoopa reaches into the darkness instead: Shadow Mewtwo comes through.
+    const storm = m.isDark(p.x, p.y) && SPECIES.has(SHADOW_MEWTWO);
     const pool = PORTAL_LEGENDS.filter((d) => SPECIES.has(d));
-    const dex = pool[m.rng.int(0, pool.length - 1)] as string;
-    this.portal = { x: at.x, y: at.y, t: 0, dex, out: null };
+    const dex = storm ? SHADOW_MEWTWO : (pool[m.rng.int(0, pool.length - 1)] as string);
+    this.portal = { x: at.x, y: at.y, t: 0, dex, out: null, shadow: storm };
     h.anim.play('Charge', { restart: true });
-    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: '#ffcf4a' });
+    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#ffcf4a', shake: storm ? 0.5 : 0 });
+    if (storm) return 'Hoopa: "Out here in the storm? Let\'s see what the dark is hiding!" A black ring tears open...';
     return 'Hoopa: "Ta-da! Want to see something AMAZING?" A ring portal opens!';
   }
 
@@ -278,8 +290,10 @@ export class Visitors {
       // Well above your team: your best level + portalLevelOver, never below portalLevelMin.
       const v = CONFIG.visitors as { portalLevelOver?: number; portalLevelMin?: number };
       const lvl = Math.min(100, Math.max(v.portalLevelMin ?? 60, top + (v.portalLevelOver ?? 20)));
-      const L = m.makeMon(po.dex, lvl, null, po.x, po.y);
+      const sl = CONFIG.shadowLugia;
+      const L = m.makeMon(po.dex, po.shadow ? sl.level : lvl, null, po.x, po.y);
       this.makeLegend(L);
+      if (po.shadow) this.makeShadow(L);
       L.visual.scale = 0.15;
       L.visual.flash = 1;
       m.wilds.push(L);
@@ -287,7 +301,11 @@ export class Visitors {
       // It challenges the player to a one-on-one bout (a trainer-style battle); if they can't fight
       // right now it stays out as a wild boss anyone can wear down.
       const bout = m.startLegendBout(L);
-      m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
+      if (po.shadow) {
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.6, ground: true, fps: 12, tint: '#3a1458', shake: 0.6 });
+        m.battle.events.push({ type: 'notice', text: bout ? `${L.name} tears out of the dark portal and attacks!` : `${L.name} tears out of the dark portal!`, seconds: 3.5 });
+        this.shadowBoutNotice(true, bout);
+      } else m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
     }
     if (po.out && po.out.visual.scale < 1) po.out.visual.scale = Math.min(1, po.out.visual.scale + dt * 1.5);
     if (po.out && po.out.visual.flash > 0) po.out.visual.flash = Math.max(0, po.out.visual.flash - dt * 1.5);
@@ -295,6 +313,46 @@ export class Visitors {
       if (po.out) po.out.visual.flash = 0;
       this.portal = null;
     }
+  }
+
+  /**
+   * A shadow legendary (Shadow Lugia, Shadow Mewtwo): config shadowLugia's HP multiplier, Shadow
+   * Storm on a timer, balls bounce off, and only a Snag Machine under snagBelow HP takes it.
+   */
+  private makeShadow(L: Mon): void {
+    const sl = CONFIG.shadowLugia;
+    L.shadow = true;
+    L.maxHp = L.hp = Math.round(L.stats.hp * sl.hpMult);
+    L.shadowStormT = (sl.stormEvery[0] as number) * 0.6;
+  }
+
+  /**
+   * A Pokémon the player steers hit Hoopa (match.ts calls this with the step's battle events; only
+   * a steered Pokémon can hit it, battle.ts isEnemy): it unbinds into Hoopa Unbound at level 100
+   * and battles the player one-on-one. Once a match, and Hoopa is gone afterwards.
+   */
+  hoopaStruck(events: readonly BattleEvent[]): void {
+    const h = this.hoopa;
+    if (!h || this.hoopaUsed || !SPECIES.has(HOOPA_UNBOUND)) return;
+    const hit = events.find((e) => e.type === 'hit' && e.target === h);
+    if (!hit) return;
+    const m = this.m;
+    this.hoopaUsed = true;
+    this.portal = null;
+    m.wilds = m.wilds.filter((w) => w !== h);
+    this.hoopa = null;
+    const L = m.makeMon(HOOPA_UNBOUND, 100, null, h.x, h.y);
+    this.makeLegend(L);
+    L.dir = h.dir;
+    L.visual.scale = 0.3;
+    L.visual.flash = 1;
+    m.wilds.push(L);
+    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: L.x, y: L.y, scale: 4.2, ground: true, tint: '#c03a2b', shake: 0.8 });
+    m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 12, tint: '#5a1f8f' });
+    m.battle.events.push({ type: 'notice', text: 'Hoopa: "That HURT! Fine... no more holding back!" Hoopa is unbound!', seconds: 3.5 });
+    const bout = m.startLegendBout(L);
+    if (!bout) L.visual.scale = 1;
+    m.battle.events.push({ type: 'notice', text: bout ? 'Hoopa Unbound (Lv 100) battles you! Wear it down or catch it' : 'Hoopa Unbound (Lv 100) is loose!', seconds: 3.5 });
   }
 
   /** A legendary boss: triple HP, angry at anyone near, and it yields instead of fainting. */
@@ -549,4 +607,4 @@ export class Visitors {
 }
 
 /** Every species a visitor can bring into a match (main.ts preloads their sprites). */
-export const VISITOR_DEXES = ['0720', LUGIA, ...PORTAL_LEGENDS, ...ACE_TEAM, ...SHINY_PRIZES, ...POWER_PRIZES];
+export const VISITOR_DEXES = ['0720', HOOPA_UNBOUND, SHADOW_MEWTWO, LUGIA, ...PORTAL_LEGENDS, ...ACE_TEAM, ...SHINY_PRIZES, ...POWER_PRIZES];

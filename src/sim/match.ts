@@ -1856,7 +1856,7 @@ export class Match {
     this.autoTimer -= dt;
     if (this.autoTimer > 0) return;
     this.autoTimer = 0.45;
-    const t = this.battle.pickTarget(m, [...this.mons()].filter((c) => !this.sparing(m, c)), 5.5);
+    const t = this.battle.pickTarget(m, [...this.mons()].filter((c) => !this.sparing(m, c) && c.npc !== 'hoopa'), 5.5);
     if (!t) return;
     const slot = this.battle.chooseMove(m, t);
     if (slot < 0) return;
@@ -2263,6 +2263,8 @@ export class Match {
     }
     this.handleKnockouts();
     this.stepEvolutions(dt);
+    // A steered Pokémon hit Hoopa this step: it unbinds and fights (visitors.ts).
+    this.visitors.hoopaStruck(this.battle.events);
     this.checkElimination();
     // The last two are no longer pulled to the crystal's arena: they find each other on the map.
     if (CONFIG.duel.finalShowdown) this.stepFinalShowdown(dt);
@@ -2725,7 +2727,7 @@ export class Match {
     const c = CONFIG.darkness;
     for (const m of this.mons()) {
       // Darkrai, and Shadow Lugia (even after it joins someone), are the storm's own.
-      if (m.boss || m.shadow) continue;
+      if (m.boss || m.shadow || m.npc) continue;
       const dark = this.isDark(m.x, m.y);
       m.inDark = dark;
       if (m.wild) m.aura = dark;

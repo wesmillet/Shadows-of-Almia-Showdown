@@ -222,6 +222,9 @@ license, sheets). The current artists per folder, resolved through
 ### 0149-shiny Dragonite (shiny)
 - <@!157796074457661440>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Emit,Withdraw,Swing,Double,Rotate,Hop,Special0
 
+### 0150-shadow Mewtwo (shadow)
+- <@!157796074457661440>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Punch,Appeal,SpAttack,Swing,Double,Rotate,Hop,Hover
+
 ### 0151 Mew
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 - <@!702275233125630042>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
@@ -974,6 +977,11 @@ license, sheets). The current artists per folder, resolved through
 ### 0720 Hoopa
 - <@!224476380790915072>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
 
+### 0720-unbound Hoopa (unbound)
+- <@!237286997645983744>: Walk,Attack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,Cringe
+- <@!237286997645983744>: Cringe,Special0,Special1,Special2
+- <@!237286997645983744>: Idle,Walk,Sleep,Hurt,Attack,Charge,Swing,Double,Rotate,Hop,Cringe,Special0,Special1,Special2
+
 ### 0722 Rowlet
 - <@!378654902181691392>: Walk,Attack,Strike,Shoot,Dance,Shake,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,Faint,HitGround
 - <@!356635814668664832>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Shake,Swing,Double,Rotate,Hop,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
@@ -1514,6 +1522,9 @@ license, sheets). The current artists per folder, resolved through
 - <@!237286997645983744> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!237286997645983744> (earlier version): Special0
 - <@!141718238336778241>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
+
+### 0150-shadow Mewtwo (shadow)
+- <@!157796074457661440>: Normal,Normal^
 
 ### 0151 Mew
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -2501,6 +2512,12 @@ license, sheets). The current artists per folder, resolved through
 
 ### 0720 Hoopa
 - <@!224476380790915072>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0720-unbound Hoopa (unbound)
+- <@!593113130213572610> (earlier version): Normal
+- <@!655868413251551235>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!350050109741858829>: Normal
+- <@!350050109741858829>: Normal,Crying
 
 ### 0722 Rowlet
 - <@!356635814668664832>: Normal,Happy,Pain,Angry,Worried,Sad,Crying,Shouting,Teary-Eyed,Determined,Joyous,Inspired,Surprised,Dizzy,Special0,Sigh,Stunned

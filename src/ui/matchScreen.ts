@@ -314,6 +314,8 @@ export class MatchScreen implements Screen {
     // a battle, 1-6 picks who goes next.
     if (duelSide?.awaitingPick) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.pickNext(i);
+      // A legendary can still be caught while you choose who goes out next.
+      if (input.pressed('KeyF') && (this.match.legendBoutFoe() || this.match.shadowBoutFoe())) this.throwAtTarget();
       return;
     }
     for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.onItemSlot(i);
@@ -330,7 +332,7 @@ export class MatchScreen implements Screen {
       const msg = this.match.toggleRide();
       if (msg) this.say(msg, 1.8);
     }
-    // Throwing: point at a wild Pokémon and press F.
+    // Throwing: point at a wild Pokémon (or face a legendary in its bout) and press F.
     if (input.pressed('KeyF')) this.throwAtTarget();
     void v;
   }
@@ -508,18 +510,21 @@ export class MatchScreen implements Screen {
       const slot = m.ballSlot(p, this.selectedItem);
       if (slot < 0) return this.say('No Poké Balls in the bag', 1);
       p.dir = dirFromVector(shadow.x - p.x, shadow.y - p.y, p.dir);
-      m.throwBall(p, slot, { x: shadow.x, y: shadow.y });
+      m.throwBall(p, slot, { x: shadow.x, y: shadow.y }, shadow);
       if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
       return;
     }
     // A legendary in its bout with you can be caught with a ball.
     const legend = m.legendBoutFoe();
     if (legend) {
+      // One ball at a time: while it is inside a ball a second one would only miss.
+      if (m.throws.some((th) => th.thrower === p && th.phase !== 'done')) return this.say('Wait for the ball to settle', 0.8);
       const slot = m.ballSlot(p, this.selectedItem);
       if (slot < 0) return this.say('No Poké Balls in the bag', 1);
       this.selectedItem = slot;
       p.dir = dirFromVector(legend.x - p.x, legend.y - p.y, p.dir);
-      if (m.throwBall(p, slot, { x: legend.x, y: legend.y })) this.say(`Go, ${ITEMS[p.items[slot]?.id ?? '']?.name ?? 'Poké Ball'}!`, 0.8);
+      // The ball follows it in flight: a legendary strafes, and a ball aimed at where it was would miss.
+      if (m.throwBall(p, slot, { x: legend.x, y: legend.y }, legend)) this.say(`Go, ${ITEMS[p.items[slot]?.id ?? '']?.name ?? 'Poké Ball'}!`, 0.8);
       if (!p.items[slot]) this.selectedItem = m.ballSlot(p);
       return;
     }
@@ -540,10 +545,12 @@ export class MatchScreen implements Screen {
 
   /** Corner brackets round the throw target: green in range, red out of range. */
   private drawThrowTarget(v: View): void {
-    const t = this.match.lockTarget;
-    if (!t || t.fainted || t.captured || !this.match.wilds.includes(t)) return;
+    // In a legendary bout the ball goes to the legendary (any distance); otherwise the locked wild.
+    const legend = this.match.legendBoutFoe();
+    const t = legend ?? this.match.lockTarget;
+    if (!t || t.fainted || t.captured || (!legend && !this.match.wilds.includes(t))) return;
     const p = this.match.player;
-    const inRange = Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.catch.throwRange;
+    const inRange = !!legend || Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.catch.throwRange;
     const ctx = v.ctx;
     const sx = v.toScreenX(t.x);
     const sy = v.toScreenY(t.y);

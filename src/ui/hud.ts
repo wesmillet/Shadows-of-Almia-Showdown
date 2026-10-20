@@ -1036,6 +1036,11 @@ export class Hud {
     if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
     if (!match.playerDuel) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
     if (canMega(match.player, m)) chip('Mega Evolve · M', FLAT_INK.storm, 'rgba(190,120,255,0.95)');
+    // A legendary in its bout can be caught: say so, with the balls left.
+    if (match.legendBoutFoe()) {
+      const balls = match.player.items.reduce((n, e) => n + (e && ITEMS[e.id]?.kind === 'ball' ? e.count : 0), 0);
+      chip(balls > 0 ? `Throw a ball · F (${balls})` : 'No Poké Balls left', balls > 0 ? FLAT_INK.text : FLAT_INK.dim, balls > 0 ? 'rgba(255,207,74,0.9)' : undefined);
+    }
     let hoveredMove: MoveDef | null = null;
     for (let i = 0; i < 2; i++) {
       const x = bx(i);

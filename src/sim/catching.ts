@@ -111,6 +111,8 @@ export interface Throw {
   roll: CatchRoll | null;
   /** Wobbles completed so far. */
   wobblesDone: number;
+  /** A Pokémon the ball follows in flight (a legendary in its bout), so it lands where it is now. */
+  homing?: { x: number; y: number } | null;
 }
 
 export function newThrow(thrower: Trainer, from: { x: number; y: number }, to: { x: number; y: number }, ballId: string): Throw {
@@ -137,6 +139,10 @@ export function stepThrow(th: Throw, dt: number): ThrowPhase | 'landed' | null {
   if (th.phase === 'done') return null;
   if (th.phase === 'flying') {
     th.t += dt;
+    if (th.homing) {
+      th.targetX = th.homing.x;
+      th.targetY = th.homing.y;
+    }
     const p = Math.min(1, th.t / th.flight);
     th.x = th.startX + (th.targetX - th.startX) * p;
     th.y = th.startY + (th.targetY - th.startY) * p;

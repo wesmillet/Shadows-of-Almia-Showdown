@@ -836,7 +836,8 @@ export class Match {
   }
 
   /** Throws the ball in `slot` toward a point; the ball is spent either way. */
-  throwBall(t: Trainer, slot: number, to: { x: number; y: number }): boolean {
+  /** `follow`: a Pokémon the ball homes in on while it flies (a legendary in its bout dodges about). */
+  throwBall(t: Trainer, slot: number, to: { x: number; y: number }, follow: Mon | null = null): boolean {
     const entry = t.items[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
     if (!entry || !def || def.kind !== 'ball') return false;
@@ -845,7 +846,9 @@ export class Match {
       return false;
     }
     this.takeItem(t, slot);
-    this.throws.push(newThrow(t, { x: t.x, y: t.y }, to, def.id));
+    const th = newThrow(t, { x: t.x, y: t.y }, to, def.id);
+    th.homing = follow;
+    this.throws.push(th);
     return true;
   }
 
@@ -2664,6 +2667,9 @@ export class Match {
       }
       // A legendary's host waits while a ball holds its legendary (the catch may still fail).
       if (t.legendBout && this.throws.some((th) => th.target && t.party.includes(th.target))) continue;
+      // Losing a legendary bout is friendly: endDuel patches the team up on the next step. (Before
+      // this, the knockout was counted here first and the player was eliminated from the match.)
+      if (t.duelId !== undefined && this.duels.some((d) => d.id === t.duelId && d.state !== 'over' && (d.a.trainer.legendBout || d.b.trainer.legendBout))) continue;
       // Out only when nothing is left standing; members out roaming still count.
       if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) {
         if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.outcome) this.down(t);

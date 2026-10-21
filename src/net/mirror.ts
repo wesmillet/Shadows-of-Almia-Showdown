@@ -192,7 +192,10 @@ export class MirrorMatch {
     const decoded: unknown[] = [];
     for (const e of events) {
       const d = this.dec.decodeEvent(e, (id) => move(id));
-      if (d) decoded.push(d);
+      if (!d) continue;
+      decoded.push(d);
+      // A knockout: its Faint animation plays out here before it is gone (as offline).
+      if (d.type === 'faint' && d.mon && !this.match.battle.fainting.some((f) => f.mon === d.mon)) this.match.battle.fainting.push({ mon: d.mon as unknown as Mon, t: 1.1 });
     }
     this.match.battle.events.push(...(decoded as typeof this.match.battle.events));
   }
@@ -290,11 +293,13 @@ export class MirrorMatch {
       for (const key of Object.keys(g.to)) o[key] = (g.from[key] ?? 0) + ((g.to[key] ?? 0) - (g.from[key] ?? 0)) * k;
       if (k >= 1) this.glides.delete(o);
     }
+    const fainting = new Set(m.battle.fainting.map((f) => f.mon));
     for (const mon of m.renderMons()) {
-      if (!mon.anim) continue;
+      if (!mon.anim || fainting.has(mon)) continue;
       mon.anim.dir = mon.dir;
       if (mon.status !== 'freeze') mon.anim.update(dt);
     }
+    m.battle.stepFainting(dt);
     // Cooldowns run down between updates, so the move buttons count smoothly.
     for (const mon of m.player.party) for (let i = 0; i < mon.cooldowns.length; i++) mon.cooldowns[i] = Math.max(0, (mon.cooldowns[i] ?? 0) - dt);
     this.stepMotes(dt);

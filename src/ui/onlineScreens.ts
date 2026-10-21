@@ -326,7 +326,7 @@ export class OnlineEndScreen implements Screen {
         button(v, `${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${m.taken ? '  ✓' : ''}`, r.x, r.y, r.w, r.h, !m.taken && hit(mx, my, r.x, r.y, r.w, r.h), m.taken ? '#44405a' : '#f4e6c8');
       });
     } else if (this.net.me.signedIn) {
-      text(v, win ? 'Saving your win...' : 'Your stats were saved.', v.width / 2, py + 140 * s, 14, { align: 'center', color: INK.text, shadow: false });
+      text(v, win ? (this.note ? 'Your win and stats are saved.' : 'Saving your win...') : 'Your stats were saved.', v.width / 2, py + 140 * s, 14, { align: 'center', color: INK.text, shadow: false });
     }
     if (this.note) text(v, this.note, v.width / 2, py + ph - 110 * s, 14, { align: 'center', color: INK.good, shadow: false });
     const d = this.doneRect();

@@ -243,7 +243,8 @@ export class Room {
     const results: RoomResult[] = [];
     for (const [key, p] of this.players) {
       const t = p.seat.trainer;
-      const outcome = p.seat.outcome ?? (t.alive ? 'win' : 'loss');
+      // Only the last trainer standing wins; leaving before the end is a loss.
+      const outcome = p.seat.outcome ?? (this.match.over && t.alive ? 'win' : 'loss');
       if (!p.ended) p.peer?.send({ t: 'end', outcome, place: this.placeOf(p) });
       results.push({
         key, name: t.name, outcome, place: this.placeOf(p), stats: { ...t.stats },

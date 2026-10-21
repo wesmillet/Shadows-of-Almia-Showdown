@@ -30,6 +30,8 @@ export interface Challenge {
   arena: Arena;
   state: 'idle' | 'battle' | 'won';
   foe: Trainer | null;
+  /** The player battling him (online, whoever took the challenge). */
+  human?: Trainer | null;
   /** Match time from which the challenger accepts again (after a lost bout). */
   readyAt: number;
 }

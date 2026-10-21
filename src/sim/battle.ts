@@ -43,7 +43,7 @@ export type BattleEvent =
   | { type: 'faint'; mon: Mon; by: Mon | null }
   | { type: 'wake'; mon: Mon }
   | { type: 'text'; mon: Mon; text: string }
-  | { type: 'notice'; text: string; seconds?: number }
+  | { type: 'notice'; text: string; seconds?: number; /** Online: the one player (trainer id) it is for; everyone when absent. */ to?: number }
   | { type: 'downed'; trainer: Trainer; seconds: number }
   | { type: 'mega-start'; mon: Mon }
   | { type: 'fish'; stage: 'cast' | 'land' | 'bite'; x: number; y: number }

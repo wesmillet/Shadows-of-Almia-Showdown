@@ -145,6 +145,15 @@ export class FanGround implements GroundRenderer {
     for (const item of map.stack) this.layers.push(item.kind === 'tiles' && item.rle ? decodeRle(item.rle, n) : null);
   }
 
+  /**
+   * The map without any pictures, for the game server: walkability, biomes, stairs, features and
+   * spawn points only (nothing is baked or drawn). Objects are decorative (blockRadius 0), so
+   * collision is identical to the drawn map.
+   */
+  static headless(map: FanMapFile): FanGround {
+    return new FanGround(map, null as unknown as CanvasImageSource, []);
+  }
+
   static async load(assets: Assets, name: string, onProgress?: (p: number) => void): Promise<FanGround | null> {
     const map = await assets.json<FanMapFile>(`maps/${name}.json`);
     if (!map || map.version !== 3) return null;

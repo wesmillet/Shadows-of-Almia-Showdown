@@ -6,7 +6,8 @@
  * missing asset.
  */
 /** Asset URLs follow Vite's base path (/ in dev, the repository path on GitHub Pages). */
-export const ASSET_ROOT = `${import.meta.env.BASE_URL}assets/`;
+// (On the game server there is no Vite: import.meta.env is undefined and assets are read from disk, server/nodeAssets.ts.)
+export const ASSET_ROOT = `${import.meta.env?.BASE_URL ?? '/'}assets/`;
 
 const warned = new Set<string>();
 

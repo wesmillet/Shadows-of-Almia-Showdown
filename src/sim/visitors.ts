@@ -51,6 +51,8 @@ export interface Portal {
   t: number;
   dex: string;
   out: Mon | null;
+  /** The player who asked Hoopa (the legendary battles them). */
+  by?: Trainer | null;
   /** Opened inside the storm: a shadow legendary comes through (Shadow Mewtwo). */
   shadow?: boolean;
 }
@@ -67,7 +69,9 @@ export class Visitors {
   portal: Portal | null = null;
   lugiaDone = false;
   /** Lugia's entrance in progress: the lake churns, Lugia bursts out (Guardian Signs' Lugia sheet), then leaps ashore. */
-  lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number; shadow?: boolean } | null = null;
+  lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number; shadow?: boolean; by?: Trainer | null } | null = null;
+  /** The player battling Celeste. */
+  aceHuman: Trainer | null = null;
 
   constructor(private readonly m: Match) {
     const rng = m.rng;
@@ -120,11 +124,30 @@ export class Visitors {
   private announced = new Set<string>();
 
   private announce(key: string, x: number, y: number, text: string): void {
-    if (this.announced.has(key)) return;
-    const p = this.m.player;
-    if (Math.hypot(x - p.x, y - p.y) > 14) return;
-    this.announced.add(key);
-    this.m.battle.events.push({ type: 'notice', text, seconds: 3.2 });
+    // Once for each player, the first time they come near.
+    for (const seat of this.m.seats) {
+      const p = seat.trainer;
+      const k = `${key}:${p.id}`;
+      if (this.announced.has(k) || !p.alive || Math.hypot(x - p.x, y - p.y) > 14) continue;
+      this.announced.add(k);
+      this.m.noticeFor(p, text, 3.2);
+    }
+  }
+
+  /** The human nearest a point (any player online; you offline). */
+  private nearestHuman(x: number, y: number): Trainer {
+    let best = this.m.player;
+    let bd = Infinity;
+    for (const seat of this.m.seats) {
+      const t = seat.trainer;
+      if (!t.alive) continue;
+      const d = Math.hypot(t.x - x, t.y - y);
+      if (d < bd) {
+        bd = d;
+        best = t;
+      }
+    }
+    return best;
   }
 
   step(dt: number): void {
@@ -135,23 +158,26 @@ export class Visitors {
     if (this.merchant) this.walk(this.merchant, dt, 2.0);
     if (this.ace && this.aceState === 'idle') this.walk(this.ace, dt, 2.4);
     if (this.aceFoe) {
-      // Her battle team holds its ground, facing the player.
+      // Her battle team holds its ground, facing the player she battles.
       const f = this.aceFoe;
+      const h = this.aceHuman ?? m.player;
       f.moving = false;
-      f.dir = dirFromVector(m.player.x - f.x, m.player.y - f.y, f.dir);
+      f.dir = dirFromVector(h.x - f.x, h.y - f.y, f.dir);
     }
     this.stepHoopa(dt);
-    this.stepPortal(dt);
-    this.stepLugia(dt);
+    // The portal's legendary and Lugia's entrance belong to the player who brought them.
+    m.withSeat(this.portal?.by ?? null, () => this.stepPortal(dt));
+    m.withSeat(this.lugiaIntro?.by ?? null, () => this.stepLugia(dt));
   }
 
   /** Walks a visitor between far-apart points on the island; they stop for anyone standing close. */
   private walk(w: Walker, dt: number, speed: number): void {
     const m = this.m;
     const n = w.npc;
-    if (Math.hypot(m.player.x - n.x, m.player.y - n.y) < 3) {
+    const h = this.nearestHuman(n.x, n.y);
+    if (Math.hypot(h.x - n.x, h.y - n.y) < 3) {
       n.moving = false;
-      n.dir = dirFromVector(m.player.x - n.x, m.player.y - n.y, n.dir);
+      n.dir = dirFromVector(h.x - n.x, h.y - n.y, n.dir);
       return;
     }
     if (w.wait > 0) {
@@ -246,6 +272,7 @@ export class Visitors {
     m.trainers.push(foe);
     m.npcs = m.npcs.filter((n) => n !== a.npc);
     this.aceFoe = foe;
+    this.aceHuman = m.player;
     this.aceState = 'battle';
     m.startDuel(m.player, foe);
     return `Celeste: "Let's see if you're worth my best!" (Lv ${lvl})`;
@@ -273,7 +300,7 @@ export class Visitors {
     const storm = m.isDark(p.x, p.y) && SPECIES.has(SHADOW_MEWTWO);
     const pool = PORTAL_LEGENDS.filter((d) => SPECIES.has(d));
     const dex = storm ? SHADOW_MEWTWO : (pool[m.rng.int(0, pool.length - 1)] as string);
-    this.portal = { x: at.x, y: at.y, t: 0, dex, out: null, shadow: storm };
+    this.portal = { x: at.x, y: at.y, t: 0, dex, out: null, shadow: storm, by: p };
     h.anim.play('Charge', { restart: true });
     m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#ffcf4a', shake: storm ? 0.5 : 0 });
     if (storm) return 'Hoopa: "Out here in the storm? Let\'s see what the dark is hiding!" A black ring tears open...';
@@ -335,7 +362,11 @@ export class Visitors {
     const h = this.hoopa;
     if (!h || this.hoopaUsed || !SPECIES.has(HOOPA_UNBOUND)) return;
     const hit = events.find((e) => e.type === 'hit' && e.target === h);
-    if (!hit) return;
+    if (!hit || hit.type !== 'hit') return;
+    this.m.withSeat(hit.attacker.owner, () => this.unbind(h));
+  }
+
+  private unbind(h: Mon): void {
     const m = this.m;
     this.hoopaUsed = true;
     this.portal = null;
@@ -447,7 +478,7 @@ export class Visitors {
     L.busy = 5;
     L.leap = { t: 0, dur: 99, h: 0, fx: from.x, fy: from.y, tx: from.x, ty: from.y };
     m.wilds.push(L);
-    this.lugiaIntro = { t: 0, L, from, to, stage: 0, shadow };
+    this.lugiaIntro = { t: 0, L, from, to, stage: 0, shadow, by: p };
     m.battle.events.push({ type: 'notice', text: shadow ? 'You hooked it... the black lake heaves!' : 'Something huge took the bait... Tide Lake churns!', seconds: 2.5 });
     return true;
   }
@@ -543,16 +574,20 @@ export class Visitors {
       // No room: it flies off, leaving the trainer a voucher to remember it by.
       L.captured = true;
       if (t.isPlayer) m.giveItem(t, 'extraction-voucher', 1);
-      m.battle.events.push({ type: 'notice', text: t.isPlayer ? `${L.name} wanted to join, but your party is full. It leaves you an Extraction Voucher` : `${L.name} flew off`, seconds: 3.5 });
+      m.noticeFor(t, t.isPlayer ? `${L.name} wanted to join, but your party is full. It leaves you an Extraction Voucher` : `${L.name} flew off`, 3.5);
       return;
     }
     t.party.push(L);
     if (t.duelId) L.stowed = true;
-    m.battle.events.push({ type: 'notice', text: t.isPlayer ? `${L.name} acknowledges your strength and joins your team!` : `${L.name} joined ${t.name}'s team!`, seconds: 3.5 });
+    m.noticeFor(t, t.isPlayer ? `${L.name} acknowledges your strength and joins your team!` : `${L.name} joined ${t.name}'s team!`, 3.5);
   }
 
   /** After each step: Celeste's battle won or lost. */
   check(): void {
+    this.m.withSeat(this.aceHuman, () => this.checkAce());
+  }
+
+  private checkAce(): void {
     const m = this.m;
     const foe = this.aceFoe;
     if (!foe || this.aceState !== 'battle') return;

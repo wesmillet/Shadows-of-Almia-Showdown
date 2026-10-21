@@ -9,7 +9,7 @@ import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
-import { BattleSystem } from './battle';
+import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, hitPad, move, movesAt, movesLearnedBetween, moveSpeed, species, statsAtLevel } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
@@ -26,6 +26,7 @@ import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
+import { newSeat, type MatchOutcome, type Seat } from './seat';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -44,7 +45,7 @@ export interface MatchDeps {
   sprites: SpriteRegistry;
 }
 
-export type MatchOutcome = null | 'win' | 'loss';
+export type { MatchOutcome } from './seat';
 
 let nextId = 1;
 
@@ -108,7 +109,15 @@ export class Match {
   readonly sprites: SpriteRegistry;
   readonly battle: BattleSystem;
   time = 0;
-  player: Trainer;
+  /** Every human in the match (one offline); `seat` is the one being stepped or acting now. */
+  seats: Seat[] = [];
+  seat!: Seat;
+  /** The current seat's trainer (offline: you). */
+  get player(): Trainer {
+    return this.seat.trainer;
+  }
+  /** True once the match is over for everyone (the last trainer standing, or no humans left). */
+  over = false;
   trainers: Trainer[] = [];
   wilds: Mon[] = [];
   items: GroundItem[] = [];
@@ -122,13 +131,23 @@ export class Match {
   routes = new Map<number, { points: Array<{ x: number; y: number }>; index: number; wait: number }>();
   throws: Throw[] = [];
   /** Moves the player's Pokémon want to learn with four moves already known (answered with 1-4 or Esc). */
-  pendingLearn: Array<{ mon: Mon; moveId: string }> = [];
+  get pendingLearn(): Array<{ mon: Mon; moveId: string }> {
+    return this.seat.pendingLearn;
+  }
+  set pendingLearn(v: Array<{ mon: Mon; moveId: string }>) {
+    this.seat.pendingLearn = v;
+  }
   /** One-on-one trainer battles in progress (and just finished ones for endSeconds). */
   duels: Duel[] = [];
   /** Crystal Shard clearings: circles the darkness leaves alone while `t` > 0. */
   lightZones: Array<{ x: number; y: number; r: number; t: number }> = [];
   darkrai: Mon | null = null;
-  outcome: MatchOutcome = null;
+  get outcome(): MatchOutcome {
+    return this.seat.outcome;
+  }
+  set outcome(v: MatchOutcome) {
+    this.seat.outcome = v;
+  }
   readonly darkness: DarknessState = newDarkness();
   /** Safe radius of the darkness in tiles (Infinity until the first pulse). */
   get darkRadius(): number {
@@ -140,15 +159,29 @@ export class Match {
   readonly centerX: number;
   readonly centerY: number;
   /** Movement intent the screen feeds in each step (player only). */
-  moveX = 0;
-  moveY = 0;
+  get moveX(): number {
+    return this.seat.moveX;
+  }
+  set moveX(v: number) {
+    this.seat.moveX = v;
+  }
+  get moveY(): number {
+    return this.seat.moveY;
+  }
+  set moveY(v: number) {
+    this.seat.moveY = v;
+  }
 
   /** Player party size limit (demo teams may start above the normal cap). */
   readonly partyCap: number;
   /** Routes around cliffs, water and buildings (ladders and bridges are the only crossings). */
   readonly nav: Nav;
 
-  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number } = {}) {
+  /**
+   * `humans`: the players in seats (default: one, "You", with `starterDexes`); `rivals`: how many
+   * computer trainers fill the rest (default config trainers.count). The game server passes both.
+   */
+  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[] }>; rivals?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
     this.nav = new Nav(this.ground);
@@ -158,14 +191,20 @@ export class Match {
     this.centerX = this.ground.cols / 2;
     this.centerY = this.ground.rows / 2;
     // Everyone starts somewhere new each match, spread round the coast.
-    this.startSpots = this.pickStartSpots(1 + CONFIG.trainers.count);
-    const spawn = this.startSpots[0] as { x: number; y: number };
-    this.player = this.makeTrainer('You', 'player', true, spawn.x, spawn.y);
-    this.giveStartingKit(this.player);
-    for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, this.player, spawn.x, spawn.y));
-    this.placeParty(this.player);
+    const humans = opts.humans ?? [{ name: 'You', starters: starterDexes }];
+    const rivals = opts.rivals ?? CONFIG.trainers.count;
+    this.startSpots = this.pickStartSpots(humans.length + rivals);
+    for (const [i, h] of humans.entries()) {
+      const spawn = this.startSpots[i] ?? this.edgeSpawn(this.startSpots);
+      const t = this.makeTrainer(h.name, 'player', true, spawn.x, spawn.y);
+      this.giveStartingKit(t);
+      for (const dex of h.starters) t.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, t, spawn.x, spawn.y));
+      this.placeParty(t);
+      this.seats.push(newSeat(t));
+    }
+    this.seat = this.seats[0] as Seat;
     this.spawnWilds();
-    this.spawnTrainers();
+    this.spawnTrainers(humans.length, rivals);
     this.placeOutposts();
     this.scatterItems();
     this.visitors = new Visitors(this);
@@ -174,10 +213,10 @@ export class Match {
   /** The merchant, Ace Trainer Celeste, Hoopa and Lugia (visitors.ts). */
   visitors!: Visitors;
 
-  private spawnTrainers(): void {
-    for (let i = 0; i < CONFIG.trainers.count; i++) {
+  private spawnTrainers(humans: number, count: number): void {
+    for (let i = 0; i < count; i++) {
       const [name, role] = AI_NAMES[i % AI_NAMES.length] as [string, string];
-      const spot = this.startSpots[i + 1] ?? this.edgeSpawn(this.startSpots);
+      const spot = this.startSpots[i + humans] ?? this.edgeSpawn(this.startSpots);
       const t = this.makeTrainer(name, role, false, spot.x, spot.y);
       const pool = this.rng.shuffle([...SPAWNS.trainerPool]);
       for (let k = 0; k < CONFIG.trainers.partySize; k++) {
@@ -386,6 +425,7 @@ export class Match {
     this.trainers.push(foe);
     this.npcs = this.npcs.filter((n) => n !== c.npc);
     c.foe = foe;
+    c.human = this.player;
     c.state = 'battle';
     // A one-on-one bout across the battlefield: the champion at the north end, the player at the south end.
     const midX = (c.arena.x0 + c.arena.x1) / 2;
@@ -400,7 +440,8 @@ export class Match {
     t.x = t.px = (c.arena.x0 + c.arena.x1) / 2;
     t.y = t.py = c.arena.y0 + 1;
     t.moving = false;
-    t.dir = dirFromVector(this.player.x - t.x, this.player.y - t.y, t.dir);
+    const h = c.human ?? this.player;
+    t.dir = dirFromVector(h.x - t.x, h.y - t.y, t.dir);
   }
 
   /** The outposts the island generator laid trails to, each with a member of staff on patrol. */
@@ -590,6 +631,11 @@ export class Match {
    * for their weaker one by themselves.
    */
   learnOnLevelUp(m: Mon, fromLevel: number): void {
+    // A human's Pokémon asks its own trainer (their seat's move-learn card).
+    this.withSeat(m.owner, () => this.learnMoves(m, fromLevel));
+  }
+
+  private learnMoves(m: Mon, fromLevel: number): void {
     const asked: string[] = [];
     for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
       if (m.moves.includes(id) || !MOVES.has(id)) continue;
@@ -782,7 +828,12 @@ export class Match {
   }
 
   /** After beating a trainer with a Snag Machine in the bag: whose Pokémon the player may take one of. */
-  snagOffer: { from: Trainer } | null = null;
+  get snagOffer(): { from: Trainer } | null {
+    return this.seat.snagOffer;
+  }
+  set snagOffer(v: { from: Trainer } | null) {
+    this.seat.snagOffer = v;
+  }
 
   /** The bag slot of a Snag Machine, or -1. */
   snagSlot(t: Trainer): number {
@@ -853,7 +904,28 @@ export class Match {
   }
 
   private stepThrows(dt: number): void {
+    // Each ball is judged as its thrower's (their legendary bout, their notices).
+    const home = this.seat;
     for (const th of this.throws) {
+      this.seat = this.seatOf(th.thrower) ?? home;
+      const from = this.battle.events.length;
+      try {
+        this.stepOneThrow(th, dt);
+      } finally {
+        if (this.seats.length > 1 && th.thrower.isPlayer) {
+          for (let i = from; i < this.battle.events.length; i++) {
+            const e = this.battle.events[i] as { type: string; to?: number };
+            if (e.type === 'notice' && e.to === undefined) e.to = th.thrower.id;
+          }
+        }
+      }
+    }
+    this.seat = home;
+    this.throws = this.throws.filter((th) => th.phase !== 'done');
+  }
+
+  private stepOneThrow(th: Throw, dt: number): void {
+    {
       const ev = stepThrow(th, dt);
       if (th.target) th.target.visual = targetVisual(th);
       if (ev === 'landed') {
@@ -863,7 +935,7 @@ export class Match {
           this.battle.events.push({ type: 'scene-fx', id: 'fx_187', x: sh.x, y: sh.y, scale: 1.4, fps: 16, tint: '#8a3dff' });
           this.battle.events.push({ type: 'text', mon: sh, text: 'The ball bounced off!' });
           this.battle.events.push({ type: 'notice', text: 'Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine', seconds: 2.6 });
-          continue;
+          return;
         }
         let best: Mon | null = null;
         let bd = 1.4;
@@ -880,12 +952,12 @@ export class Match {
         if (!best) {
           th.phase = 'done';
           this.battle.events.push({ type: 'notice', text: 'The ball missed', seconds: 1 });
-          continue;
+          return;
         }
         if (best.aura) {
           th.phase = 'done';
           this.battle.events.push({ type: 'text', mon: best, text: 'The darkness repels the ball!' });
-          continue;
+          return;
         }
         // Hit: the target reels, then gets pulled into the ball. The ball's rule is judged where it lands.
         th.target = best;
@@ -909,9 +981,9 @@ export class Match {
         best.moving = false;
         best.target = null;
         this.battle.events.push({ type: 'ball-hit', mon: best, x: th.x, y: th.y });
-        continue;
+        return;
       }
-      if (!th.target) continue;
+      if (!th.target) return;
       const w = th.target;
       if (ev === 'absorb') {
         w.captured = true; // inside the ball: no acting, no targeting, AI suspended
@@ -924,7 +996,7 @@ export class Match {
         w.visual = { scale: 1, alpha: 1, flash: 0 };
         if (th.roll?.caught && w.owner?.legendBout) {
           this.catchBoutLegend(w, w.owner, th.thrower);
-          continue;
+          return;
         }
         if (th.roll?.caught) {
           this.wilds.splice(this.wilds.indexOf(w), 1);
@@ -959,7 +1031,6 @@ export class Match {
         }
       }
     }
-    this.throws = this.throws.filter((th) => th.phase !== 'done');
   }
 
   /** The ground ball nearest the player within reach, if any. */
@@ -1092,7 +1163,7 @@ export class Match {
             m.x = t.x;
             m.y = t.y;
           }
-          this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'Party fully healed!' : `${t.name} healed at the outpost`, seconds: 1.5 });
+          this.noticeFor(t, t.isPlayer ? 'Party fully healed!' : `${t.name} healed at the outpost`, 1.5);
         }
       }
       // The beacon broadcasts whoever is healing to every trainer.
@@ -1371,6 +1442,10 @@ export class Match {
   }
 
   private collapseInStorm(t: Trainer): void {
+    this.withSeat(t, () => this.collapse(t));
+  }
+
+  private collapse(t: Trainer): void {
     t.stormT = 0;
     if (t.isPlayer && this.controlled) this.releaseControl();
     for (const m of t.party) {
@@ -1380,7 +1455,7 @@ export class Match {
       m.stowed = true;
     }
     this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'The storm overwhelms you and you collapse!' : `${t.name} collapsed in the storm`, seconds: 3 });
-    if (this.finalStarted || this.outcome) this.eliminate(t);
+    if (this.finalStarted || this.over) this.eliminate(t);
     else this.down(t);
   }
 
@@ -1647,7 +1722,47 @@ export class Match {
   }
 
   get allTrainers(): Trainer[] {
-    return [this.player, ...this.trainers];
+    return [...this.seats.map((s) => s.trainer), ...this.trainers];
+  }
+
+  /** The seat of a human trainer (null for computer trainers). */
+  seatOf(t: Trainer | null | undefined): Seat | null {
+    return t ? this.seats.find((s) => s.trainer === t) ?? null : null;
+  }
+
+  /**
+   * Runs `fn` as `t`'s seat (match.player, controlled, aim... are theirs while it runs) and tags
+   * any notice it raises for that player alone. A computer trainer just runs `fn`.
+   */
+  withSeat<T>(t: Trainer | Seat | null | undefined, fn: () => T): T {
+    const seat = t && 'trainer' in t ? t : this.seatOf(t as Trainer | null);
+    if (!seat || seat === this.seat) return this.tagNotices(seat, fn);
+    const prev = this.seat;
+    this.seat = seat;
+    try {
+      return this.tagNotices(seat, fn);
+    } finally {
+      this.seat = prev;
+    }
+  }
+
+  /** A notice about trainer `t`: theirs alone when they are a human online, everyone's otherwise. */
+  noticeFor(t: Trainer, text: string, seconds: number): void {
+    const to = t.isPlayer && this.seats.length > 1 ? t.id : undefined;
+    this.battle.events.push({ type: 'notice', text, seconds, ...(to !== undefined ? { to } : {}) } as BattleEvent);
+  }
+
+  /** Notices raised while `fn` runs go to `seat`'s player only (the server routes them; offline it makes no difference). */
+  private tagNotices<T>(seat: Seat | null, fn: () => T): T {
+    const from = this.battle.events.length;
+    const r = fn();
+    if (seat && this.seats.length > 1) {
+      for (let i = from; i < this.battle.events.length; i++) {
+        const ev = this.battle.events[i] as { type: string; to?: number };
+        if (ev.type === 'notice' && ev.to === undefined) ev.to = seat.trainer.id;
+      }
+    }
+    return r;
   }
 
   /** Every active Pokémon on the field. */
@@ -1679,10 +1794,25 @@ export class Match {
   }
 
   /** Where the player is aiming (the cursor on the field, in tiles), or null to fire the way the trainer faces. */
-  aim: { x: number; y: number } | null = null;
+  get aim(): { x: number; y: number } | null {
+    return this.seat.aim;
+  }
+  set aim(v: { x: number; y: number } | null) {
+    this.seat.aim = v;
+  }
   /** Auto-battle: the lead picks its own moves and targets while the player steers (R toggles). */
-  auto = true;
-  private autoTimer = 0;
+  get auto(): boolean {
+    return this.seat.auto;
+  }
+  set auto(v: boolean) {
+    this.seat.auto = v;
+  }
+  private get autoTimer(): number {
+    return this.seat.autoTimer;
+  }
+  private set autoTimer(v: number) {
+    this.seat.autoTimer = v;
+  }
 
   /**
    * Aim assist: the enemy nearest the cursor, if one is within 1.6 tiles of it. Moves then go
@@ -1711,8 +1841,18 @@ export class Match {
    * pointing at it; a pick (a click works on any wild on screen) holds until that Pokémon faints, is caught, or
    * gets about a screen away; the marker is green when a throw can reach it and red when not.
    */
-  lockTarget: Mon | null = null;
-  private lockPicked = false;
+  get lockTarget(): Mon | null {
+    return this.seat.lockTarget;
+  }
+  set lockTarget(v: Mon | null) {
+    this.seat.lockTarget = v;
+  }
+  private get lockPicked(): boolean {
+    return this.seat.lockPicked;
+  }
+  private set lockPicked(v: boolean) {
+    this.seat.lockPicked = v;
+  }
   static readonly LOCK_RANGE = 9;
   /** A wild picked by hand (a click) stays the target out to about a screen away. */
   static readonly PICK_RANGE = 24;
@@ -1990,11 +2130,26 @@ export class Match {
    * The movement keys steer it, its moves fire the way it faces, and the trainer follows a few
    * steps behind. Null in trainer mode.
    */
-  controlled: Mon | null = null;
+  get controlled(): Mon | null {
+    return this.seat.controlled;
+  }
+  set controlled(v: Mon | null) {
+    this.seat.controlled = v;
+  }
   /** The player's line in the water, if fishing (src/sim/fishing.ts). */
-  fishing: FishingState | null = null;
+  get fishing(): FishingState | null {
+    return this.seat.fishing;
+  }
+  set fishing(v: FishingState | null) {
+    this.seat.fishing = v;
+  }
   /** Set when the steered Pokémon faints: control passes to the next one out (until this time). */
-  private handoffUntil = 0;
+  private get handoffUntil(): number {
+    return this.seat.handoffUntil;
+  }
+  private set handoffUntil(v: number) {
+    this.seat.handoffUntil = v;
+  }
 
   /** Takes control of a party Pokémon out on the field (Pokémon mode). */
   takeControl(m: Mon): boolean {
@@ -2177,11 +2332,19 @@ export class Match {
     return true;
   }
 
-  step(dt: number, input: Input): void {
-    if (this.outcome) return;
+  /**
+   * One simulation step. `input` (offline) feeds the movement keys of seat 0; the game server sets
+   * each seat's moveX/moveY itself and passes nothing.
+   */
+  step(dt: number, input?: Input): void {
+    if (this.over) return;
     if (this.battle.hitStop > 0) {
-      this.battle.hitStop -= dt;
-      return;
+      // Hit-stop freezes the world for a beat on a heavy hit: offline only (online it would freeze everyone).
+      if (this.seats.length > 1) this.battle.hitStop = 0;
+      else {
+        this.battle.hitStop -= dt;
+        return;
+      }
     }
     this.time += dt;
     this.ground.update(dt);
@@ -2195,15 +2358,28 @@ export class Match {
       t.px = t.x;
       t.py = t.y;
     }
-    const axis = input.moveAxis();
-    this.moveX = axis.x;
-    this.moveY = axis.y;
-    this.stepPlayer(dt);
-    stepFishing(this, dt);
+    if (input) {
+      const axis = input.moveAxis();
+      const s0 = this.seats[0] as Seat;
+      s0.moveX = axis.x;
+      s0.moveY = axis.y;
+    }
+    for (const seat of this.seats) {
+      if (!seat.trainer.alive || seat.outcome) continue;
+      this.withSeat(seat, () => {
+        this.stepPlayer(dt);
+        stepFishing(this, dt);
+      });
+    }
     this.visitors.step(dt);
     this.stepDodges(dt);
-    this.stepLock();
-    this.stepAutoLead(dt);
+    for (const seat of this.seats) {
+      if (!seat.trainer.alive || seat.outcome) continue;
+      this.withSeat(seat, () => {
+        this.stepLock();
+        this.stepAutoLead(dt);
+      });
+    }
     for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil === undefined) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     const pw = this.partyWorld();
@@ -2475,7 +2651,12 @@ export class Match {
     }
     return true;
   }
-  private sparedNotice: Mon | null = null;
+  private get sparedNotice(): Mon | null {
+    return this.seat.sparedNotice;
+  }
+  private set sparedNotice(v: Mon | null) {
+    this.seat.sparedNotice = v;
+  }
 
   /** A party member attacks on its own timer (the player's 1-4 casts bypass this). */
   private autoAttack(m: Mon, target: Mon, range: number): void {
@@ -2598,12 +2779,15 @@ export class Match {
           host.party = host.party.filter((x) => x !== ev.mon);
           if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
           ev.mon.duelId = undefined;
-          const by = ev.by?.owner === this.player ? ev.by : lead(this.player) ?? this.player.party.find((x) => !x.fainted) ?? null;
-          ev.mon.owner = null;
-          ev.mon.wild = true;
-          this.visitors.legendYields(ev.mon, by);
-          if (d) this.endDuel(d, this.player);
-          this.endLegendBout(host);
+          const human = d ? (d.a.trainer === host ? d.b.trainer : d.a.trainer) : this.player;
+          this.withSeat(human, () => {
+            const by = ev.by?.owner === this.player ? ev.by : lead(this.player) ?? this.player.party.find((x) => !x.fainted) ?? null;
+            ev.mon.owner = null;
+            ev.mon.wild = true;
+            this.visitors.legendYields(ev.mon, by);
+            if (d) this.endDuel(d, this.player);
+            this.endLegendBout(host);
+          });
           continue;
         }
         this.visitors.legendYields(ev.mon, ev.by);
@@ -2633,6 +2817,10 @@ export class Match {
 
   /** A lost bout with the challenger: he withdraws, the player's team is patched up at the castle. */
   private loseChallenge(c: Challenge): void {
+    this.withSeat(c.human ?? null, () => this.loseChallengeAs(c));
+  }
+
+  private loseChallengeAs(c: Challenge): void {
     const foe = c.foe;
     if (foe) {
       foe.alive = false;
@@ -2660,7 +2848,7 @@ export class Match {
     // Celeste's bout is friendly: settled before anyone could be knocked out of the match by it.
     this.visitors.check();
     const ch = this.challenge;
-    const pl = this.player;
+    const pl = ch?.human ?? this.player;
     if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
     for (const t of this.allTrainers) {
       if (t.alive && t.downUntil !== undefined) {
@@ -2674,18 +2862,25 @@ export class Match {
       if (t.duelId !== undefined && this.duels.some((d) => d.id === t.duelId && d.state !== 'over' && (d.a.trainer.legendBout || d.b.trainer.legendBout))) continue;
       // Out only when nothing is left standing; members out roaming still count.
       if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) {
-        if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.outcome) this.down(t);
+        if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.over) this.down(t);
         else this.eliminate(t);
       }
     }
     const c = this.challenge;
-    if (c?.state === 'battle' && c.foe && !c.foe.alive) {
+    if (c?.state === 'battle' && c.foe && !c.foe.alive) this.withSeat(c.human ?? null, () => this.winChallenge(c));
+    this.settleOutcome();
+  }
+
+  /** The challenger is beaten: his reward goes to the player who fought him. */
+  private winChallenge(c: Challenge): void {
+    {
       c.state = 'won';
       const r = SHOPS.challenger.reward;
       this.player.money += r.money;
       const spill: InventorySlot[] = [];
       for (const [id, n] of r.items) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
-      if (spill.length) this.placeBall('cherish', spill, c.foe.x, c.foe.y + 1);
+      const foe = c.foe as Trainer;
+      if (spill.length) this.placeBall('cherish', spill, foe.x, foe.y + 1);
       // The champion's trophy: a shiny Pokémon at your best level.
       const pool = CHAMPION_SHINIES.filter((d) => SPECIES.has(d) && SpriteRegistry.hasShiny(d));
       let prize = '';
@@ -2698,9 +2893,19 @@ export class Match {
       } else if (pool.length) prize = ' (no room in your party for his shiny Pokémon)';
       this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money}, his items${prize}`, seconds: 4 });
     }
+  }
+
+  /** Each human's result, and whether the match is over for everyone. */
+  private settleOutcome(): void {
     const rivals = this.trainers.filter((t) => !t.challenger && !t.visitor);
-    if (!this.player.alive) this.outcome = 'loss';
-    else if (rivals.length > 0 && rivals.every((t) => !t.alive)) this.outcome = 'win';
+    // Each human is out the moment they are eliminated; the last trainer standing wins. Offline the
+    // match ends with you; online it runs on until one trainer is left (or no humans are).
+    for (const seat of this.seats) if (!seat.outcome && !seat.trainer.alive) seat.outcome = 'loss';
+    const standing = [...this.seats.map((x) => x.trainer), ...rivals].filter((t) => t.alive);
+    if (standing.length <= 1 && this.seats.length + rivals.length > 1) {
+      for (const seat of this.seats) if (!seat.outcome) seat.outcome = seat.trainer.alive ? 'win' : 'loss';
+    }
+    if (this.seats.every((x) => x.outcome)) this.over = true;
   }
 
   private stepDarkness(dt: number): void {
@@ -2934,7 +3139,10 @@ export class Match {
     this.battle.events.push({ type: 'duel-start', duel });
     if (a.isPlayer || b.isPlayer) {
       const foe = a.isPlayer ? b : a;
-      if (!foe.legendBout) this.battle.events.push({ type: 'notice', text: `${foe.name} wants to battle!`, seconds: 2.2 });
+      if (!foe.legendBout) {
+        if (a.isPlayer) this.noticeFor(a, `${b.name} wants to battle!`, 2.2);
+        if (b.isPlayer) this.noticeFor(b, `${a.name} wants to battle!`, 2.2);
+      }
     }
     return duel;
   }
@@ -3283,8 +3491,8 @@ export class Match {
       // Inside a ball (a legendary being caught): it does nothing until the ball opens or clicks.
       if (!m || m.fainted || m.captured) continue;
       const foe = (s === d.a ? d.b : d.a).mon;
-      if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
-      else if (s.trainer.legendBout) this.stepLegendMon(m, foe, dt);
+      if (s.trainer.isPlayer) this.withSeat(s.trainer, () => this.stepDuelPlayerMon(m, dt));
+      else if (s.trainer.legendBout) this.withSeat((s === d.a ? d.b : d.a).trainer, () => this.stepLegendMon(m, foe, dt));
       else this.stepDuelAiMon(m, foe, dt);
       // The battle stays in its ring.
       const r = Math.hypot(m.x - d.cx, m.y - d.cy);
@@ -3392,7 +3600,7 @@ export class Match {
    */
   private stepFinalShowdown(dt: number): void {
     const arena = this.ground.features?.finalArena;
-    if (!arena || this.finalStarted || this.outcome) return;
+    if (!arena || this.finalStarted || this.over) return;
     const left = this.allTrainers.filter((t) => t.alive && !t.challenger && !t.visitor);
     if (left.length !== 2) return;
     const [a, b] = left as [Trainer, Trainer];
@@ -3487,12 +3695,18 @@ export class Match {
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
     // Beat a trainer while carrying a Snag Machine: pick one of their Pokémon to take.
     const loser = d.a.trainer === winner ? d.b.trainer : d.a.trainer;
-    if (winner === this.player && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured)) {
-      this.snagOffer = { from: loser };
-      this.battle.events.push({ type: 'notice', text: `Snag Machine ready: take one of ${loser.name}'s Pokémon (1-6), Esc to keep it`, seconds: 3 });
+    if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured)) {
+      this.withSeat(winner, () => {
+        this.snagOffer = { from: loser };
+        this.battle.events.push({ type: 'notice', text: `Snag Machine ready: take one of ${loser.name}'s Pokémon (1-6), Esc to keep it`, seconds: 3 });
+      });
     }
-    if (winner.legendBout) {
-      // Lost a legend bout: it is friendly. The legend leaves and the team is patched up.
+    if (winner.legendBout) this.withSeat(loser, () => this.loseLegendBout(winner));
+  }
+
+  /** Lost a legend bout: it is friendly. The legend leaves and the team is patched up. */
+  private loseLegendBout(winner: Trainer): void {
+    {
       const p = this.player;
       const shadow = winner.party.some((x) => x.shadow);
       for (const m of winner.party) m.captured = true;

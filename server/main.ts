@@ -14,7 +14,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMsg, ServerMsg } from '../src/net/protocol';
-import { starterChoices } from '../src/sim/starters';
+import { starterChoices, unlockedFromPc } from '../src/sim/starters';
 import { Chat } from './chat';
 import { Lobby, type Queued } from './lobby';
 import { Room, STEP, type Peer, type RoomHooks, type RoomResult } from './room';
@@ -47,6 +47,8 @@ interface Conn extends Peer {
   accountId: number | null;
   guest: boolean;
   rollSeed: number | null;
+  /** The starters this player's roll was drawn from (their PC's unlocks). */
+  rollPool: string[];
   room: Room | null;
   msgs: number;
 }
@@ -118,11 +120,13 @@ function onMessage(c: Conn, raw: string): void {
     case 'roll':
       if (c.room) return;
       c.rollSeed = randomInt(1, 2 ** 31);
-      c.send({ t: 'roll', seed: c.rollSeed });
+      // A signed-in player's pool grows with their PC; a guest rolls from the starting pool.
+      c.rollPool = c.accountId === null ? [] : unlockedFromPc(accounts.pcDexes(c.accountId));
+      c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
       return;
     case 'queue': {
       if (c.room || c.rollSeed === null) return;
-      const choices = starterChoices(c.rollSeed);
+      const choices = starterChoices(c.rollSeed, c.rollPool);
       const pick = typeof msg.pick === 'number' && Number.isInteger(msg.pick) ? choices[msg.pick] : undefined;
       if (!pick) return c.send({ t: 'error', text: 'Pick one of the starters you rolled' });
       lobby.join({ peer: c, starter: pick }, Date.now());
@@ -198,7 +202,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   // The same player connecting twice (a second tab): the older connection goes.
   conns.get(key)?.ws.close(4000, 'Opened in another tab');
   const c: Conn = {
-    ws, key, name: who.name, look: who.look, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, room: null, msgs: 0,
+    ws, key, name: who.name, look: who.look, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
     send(msg: ServerMsg) {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
     },

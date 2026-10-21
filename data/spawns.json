@@ -316,6 +316,8 @@
       "level": 36
     }
   ],
+  "_starterBaseComment": "A new player rolls from these tiers only; every Pokémon kept in the PC adds the first form of its line to the pool (src/sim/starters.ts).",
+  "starterBaseTiers": ["common", "uncommon"],
   "starterTiers": [
     {
       "id": "common",

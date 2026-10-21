@@ -21,7 +21,8 @@ import { loadLook, lookHooks, saveLook } from './look';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
-import { starterChoices } from './sim/starters';
+import { starterChoices, unlockedFromPc } from './sim/starters';
+import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen } from './ui/onlineScreens';
 import { ChatPanel } from './ui/overlay';
 import type { PcEntry } from './pc';
@@ -219,10 +220,11 @@ async function boot(): Promise<void> {
       if (m.t !== 'roll') return;
       off();
       const rollSeed = m.seed;
+      const pool = m.pool ?? [];
       game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => {
-        net.send({ t: 'queue', pick: starterChoices(rollSeed).indexOf(dex) });
+        net.send({ t: 'queue', pick: starterChoices(rollSeed, pool).indexOf(dex) });
         game.setScreen(new LobbyScreen(game, net, showOnline, (start) => void startOnline(start)));
-      }, null));
+      }, null, pool));
     });
     net.send({ t: 'roll' });
   };
@@ -259,7 +261,9 @@ async function boot(): Promise<void> {
 
   const showRoll = (): void => {
     // A fresh roll every time, even on a fixed ?seed island.
-    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll));
+    // The pool grows with this browser's PC (offline) like an account's does online.
+    const pool = unlockedFromPc(loadPc().map((e) => e.dex));
+    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll, pool));
   };
 
   const showTitle = async (regenerate: boolean): Promise<void> => {

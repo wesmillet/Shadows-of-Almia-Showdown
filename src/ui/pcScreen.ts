@@ -1,13 +1,15 @@
 /**
  * The PC, laid out like a Gen 5 PC box: every Pokémon extracted so far (src/pc.ts) sits in a 6x5
- * box of slots as its Black/White box icon (assets/pc-icons, scripts/pc-icons.py), 30 to a box.
+ * box of slots, drawn with its own in-game sprite (standing, facing you), 30 to a box: one art
+ * style for every species, form, shiny and Shadow Pokémon. The hovered one plays its idle animation.
  * The box name has arrows to page through boxes (or A/D, arrow keys); hovering a slot hops its
  * icon and shows the Pokémon on the side panel. Esc or Back returns.
  */
 import type { Input } from '../core/input';
 import { loadPc, type PcEntry } from '../pc';
 import type { Assets } from '../sprites/assets';
-import type { SpriteRegistry } from '../sprites/pokemonSprite';
+import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
+import { SPECIES } from '../sim/data';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 const COLS = 6;
@@ -20,8 +22,6 @@ export class PcScreen implements Screen {
   private readonly list: PcEntry[];
   private box = 0;
   private t = 0;
-  /** Box icons by dex (null: none for that species, the portrait stands in). */
-  private readonly icons = new Map<string, HTMLImageElement | null>();
   private hover = -1;
 
   constructor(
@@ -35,20 +35,24 @@ export class PcScreen implements Screen {
   ) {
     // Oldest first, like filling a box.
     this.list = list ?? loadPc();
-    for (const e of this.list) this.icon(e.dex);
+    void this.sprites.preload(this.list.map((e) => e.dex), undefined, true);
   }
 
   private get boxes(): number {
     return Math.max(1, Math.ceil(this.list.length / PER_BOX));
   }
 
-  private icon(dex: string): HTMLImageElement | null {
-    const key = dex.split('-')[0] as string;
-    if (!this.icons.has(key)) {
-      this.icons.set(key, null);
-      void this.assets.loadImage(`pc-icons/${key}.png`).then((img) => this.icons.set(key, img));
+  /** Each Pokémon's idle animation (by PC entry), made on first draw. */
+  private anims = new Map<string, AnimPlayer>();
+
+  private anim(e: PcEntry): AnimPlayer {
+    let a = this.anims.get(e.uid);
+    if (!a) {
+      a = new AnimPlayer(this.sprites.get(e.dex, !!e.shiny));
+      a.dir = 0;
+      this.anims.set(e.uid, a);
     }
-    return this.icons.get(key) ?? null;
+    return a;
   }
 
   private layout(): { box: Rect; slot: number; gx: number; gy: number; side: Rect; title: Rect; left: Rect; right: Rect } {
@@ -80,6 +84,9 @@ export class PcScreen implements Screen {
 
   step(dt: number, input: Input): void {
     this.t += dt;
+    // Only the one pointed at moves; the rest stand still, like a box.
+    const hov = this.list[this.hover];
+    if (hov) this.anim(hov).update(dt);
     const L = this.layout();
     const b = this.backRect();
     for (const c of input.takeClicks()) {
@@ -160,27 +167,34 @@ export class PcScreen implements Screen {
     button(v, 'Back', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#f4e6c8');
   }
 
-  /** A box icon, scaled up by a whole number so its pixels stay square; the portrait if there is no icon. */
+  /**
+   * The Pokémon's own sprite, standing and facing out of the box. Its body (measured from the idle
+   * frames, species.json `body`) fills the slot at a whole-number scale so pixels stay square (or a
+   * clean half for the very big ones), centred on the body rather than the frame.
+   */
   private drawIcon(e: PcEntry, cx: number, cy: number, room: number): void {
     const h = this.ctx.view.hud;
-    // Shadow Lugia has no Gen 5 box icon: its own Shadow portrait stands in.
-    const img = e.shadow ? null : this.icon(e.dex);
+    const a = this.anim(e);
+    const f = a.current();
+    if (f.placeholder) return;
+    const [bw, bh] = (SPECIES.get(e.dex)?.body as [number, number] | undefined) ?? [f.w * 0.6, f.h * 0.6];
+    const want = (room * 0.86) / Math.max(bw, bh, 1);
+    // Twice the art size or more: whole steps (square pixels). Below that a whole step would leave
+    // some Pokémon half the size of their neighbours, so the scale is exact.
+    const k = want >= 2 ? Math.floor(want) : want;
+    const [gx, gy] = a.ground();
+    // The frame's ground point, placed so the body sits in the middle of the slot.
+    const groundX = cx;
+    const groundY = cy + (bh * k) / 2;
+    const dx = Math.round(groundX - (f.w / 2 + gx) * k);
+    const dy = Math.round(groundY - (f.h / 2 + gy) * k);
     h.save();
     h.imageSmoothingEnabled = false;
-    if (img) {
-      const k = Math.max(1, Math.floor(room / Math.max(img.width, img.height)));
-      const w = img.width * k;
-      const hh = img.height * k;
-      h.drawImage(img, Math.round(cx - w / 2), Math.round(cy - hh / 2), w, hh);
-    } else {
-      const f = this.sprites.get(e.dex, !!e.shiny).portraitSource();
-      const ps = room * 0.8;
-      if (e.shadow) {
-        h.shadowColor = 'rgba(150,60,255,0.9)';
-        h.shadowBlur = 8 * this.ctx.view.baseScale;
-      }
-      h.drawImage(f.image, f.sx, f.sy, f.w, f.h, cx - ps / 2, cy - ps / 2, ps, ps);
+    if (e.shadow) {
+      h.shadowColor = 'rgba(150,60,255,0.9)';
+      h.shadowBlur = 8 * this.ctx.view.baseScale;
     }
+    h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     h.restore();
   }
 

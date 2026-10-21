@@ -153,6 +153,12 @@ export class Accounts {
     this.db.prepare('UPDATE profiles SET chest = ? WHERE user_id = ?').run(JSON.stringify(list), userId);
   }
 
+  /** The species in a player's PC (for their starter pool). */
+  pcDexes(userId: number): string[] {
+    const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex FROM pc WHERE user_id = ?").all(userId) as Array<{ dex: string }>;
+    return rows.map((r) => r.dex).filter((d) => typeof d === 'string');
+  }
+
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
   addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher', matchId: string): void {
     const entry = {

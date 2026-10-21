@@ -38,7 +38,7 @@ export interface RosterEntry {
 export type ServerMsg =
   | { t: 'hello'; name: string; guest: boolean; server: 'live' | 'demo' | 'dev'; build: string }
   /** The starter roll: the browser animates the reels from this seed (src/sim/starters.ts) and the server knows what it offered. */
-  | { t: 'roll'; seed: number }
+  | { t: 'roll'; seed: number; pool: string[] }
   | { t: 'lobby'; players: string[]; startsIn: number | null; size: number }
   | { t: 'start'; matchId: string; seed: number; you: number; roster: RosterEntry[] }
   /** State patch and the events since the last one. */

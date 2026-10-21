@@ -67,6 +67,8 @@ export interface PartyWorld {
   rng: Rng;
   /** All active Pokémon on the field (for separation, threats, hunting). */
   mons: () => Iterable<Mon>;
+  /** Pokémon within about `r` tiles of a point (a superset is fine); falls back to mons(). */
+  near?: (x: number, y: number, r: number) => Iterable<Mon>;
   isEnemy: (a: Mon, b: Mon) => boolean;
   active: (m: Mon) => boolean;
   /** Point inside a hostile telegraph? (passive members dodge) */
@@ -82,7 +84,7 @@ export interface PartyWorld {
 function nearestHostile(m: Mon, w: PartyWorld, range: number, from = { x: m.x, y: m.y }, wildOnly = false): Mon | null {
   let best: Mon | null = null;
   let bd = range;
-  for (const o of w.mons()) {
+  for (const o of w.near ? w.near(from.x, from.y, range) : w.mons()) {
     if (o === m || !w.active(o) || !w.isEnemy(m, o)) continue;
     if (wildOnly && !o.wild) continue;
     if (o.id === m.chaseBlockId && (m.chaseBlockT ?? 0) > 0) continue;
@@ -112,7 +114,7 @@ function separation(m: Mon, t: Trainer, w: PartyWorld): { x: number; y: number }
   };
   for (const o of t.party) if (o !== m && w.active(o) && !isRoaming(o)) push(o.x, o.y, 1, hitPad(o.species));
   push(t.x, t.y, 1.4);
-  for (const o of w.mons()) if (o.owner !== t && w.active(o)) push(o.x, o.y, 0.6, hitPad(o.species));
+  for (const o of w.near ? w.near(m.x, m.y, 5) : w.mons()) if (o.owner !== t && w.active(o)) push(o.x, o.y, 0.6, hitPad(o.species));
   return { x: sx, y: sy };
 }
 

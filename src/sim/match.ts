@@ -2080,7 +2080,8 @@ export class Match {
   private stepHostile(m: Mon, dt: number, aggro: number): boolean {
     if (!BattleSystem.active(m) || m.casting || incapable(m)) return false;
     if (m.target && (!BattleSystem.active(m.target) || Math.hypot(m.target.x - m.x, m.target.y - m.y) > aggro + 1.5)) m.target = null;
-    if (!m.target) m.target = this.battle.pickTarget(m, m.boss || m.owner ? this.mons() : this.wildTargets(), aggro);
+    // Only Pokémon in the squares round it can be in range (the grid, rebuilt each step).
+    if (!m.target) m.target = this.battle.pickTarget(m, this.grid.size ? this.nearMons(m.x, m.y, aggro) : m.boss || m.owner ? this.mons() : this.wildTargets(), aggro);
     const t = m.target;
     if (!t) return false;
     m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
@@ -2088,7 +2089,7 @@ export class Match {
     if (m.busy <= 0) {
       m.busy = this.rng.range(0.7, 1.6);
       const slot = this.battle.chooseMove(m, t);
-      if (slot >= 0 && Math.hypot(t.x - m.x, t.y - m.y) < 4) this.battle.castAt(m, slot, this.mons(), 4);
+      if (slot >= 0 && Math.hypot(t.x - m.x, t.y - m.y) < 4) this.battle.castAt(m, slot, this.grid.size ? this.nearMons(m.x, m.y, 6) : this.mons(), 4);
     }
     return true;
   }
@@ -2411,6 +2412,7 @@ export class Match {
     }
     for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil === undefined) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
+    this.buildGrid();
     const pw = this.partyWorld();
     for (const t of this.allTrainers) {
       if (!t.alive) continue;
@@ -2642,6 +2644,7 @@ export class Match {
       ground: this.ground,
       rng: this.rng,
       mons: () => this.mons(),
+      near: (x, y, r) => this.nearMons(x, y, r),
       isEnemy: (a, b) => this.battle.isEnemy(a, b) && !this.sparing(a, b),
       active: (m) => BattleSystem.active(m),
       inHostileTelegraph: (m) => this.inHostileTelegraph(m),
@@ -2652,8 +2655,42 @@ export class Match {
     };
   }
 
+  /** Pokémon on the field by 8-tile square, rebuilt each step: nearby searches skip the rest of the island. */
+  private grid = new Map<number, Mon[]>();
+  /** Pokémon casting a move this step (the only ones whose telegraphs matter). */
+  private casters: Mon[] = [];
+  private static readonly CELL = 8;
+
+  private buildGrid(): void {
+    this.grid.clear();
+    this.casters.length = 0;
+    const C = Match.CELL;
+    for (const m of this.mons()) {
+      const k = Math.floor(m.y / C) * 4096 + Math.floor(m.x / C);
+      let b = this.grid.get(k);
+      if (!b) this.grid.set(k, (b = []));
+      b.push(m);
+      if (m.casting) this.casters.push(m);
+    }
+  }
+
+  /** The Pokémon in the squares within `r` tiles of a point (a superset of those within r). */
+  *nearMons(x: number, y: number, r: number): Generator<Mon> {
+    const C = Match.CELL;
+    const x0 = Math.floor((x - r - 1) / C);
+    const x1 = Math.floor((x + r + 1) / C);
+    const y0 = Math.floor((y - r - 1) / C);
+    const y1 = Math.floor((y + r + 1) / C);
+    for (let cy = y0; cy <= y1; cy++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const b = this.grid.get(cy * 4096 + cx);
+        if (b) yield* b;
+      }
+    }
+  }
+
   private inHostileTelegraph(m: Mon): boolean {
-    for (const o of this.mons()) {
+    for (const o of this.casters) {
       if (!o.casting || o === m || !this.battle.isEnemy(o, m)) continue;
       const def = move(o.casting.moveId);
       if (areaContains(makeArea(def, o, o.casting.targetX, o.casting.targetY), m.x, m.y, hitPad(m.species))) return true;

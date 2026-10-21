@@ -1,0 +1,39 @@
+# The LIVE game server (the domain players use). Deployed by hand or from GitHub
+# (Actions -> "Game server" -> Run workflow -> live), never automatically.
+#   fly deploy --config fly.toml
+app = "almia-showdown"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  SERVER_KIND = "live"
+  LOBBY_WAIT = "60"
+  MATCH_SIZE = "8"
+  RARE_CHEST = "0"
+  # Set to the domain once it is connected, e.g. https://lastlight.gg (Google sign-in needs it).
+  # PUBLIC_URL = "https://example.gg"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Matches run in memory: the live server stays up.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[mounts]
+  source = "almia_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"

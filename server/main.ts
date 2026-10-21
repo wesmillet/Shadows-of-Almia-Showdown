@@ -78,6 +78,7 @@ const accountOf = (key: string): number | null => (key.startsWith('u') ? Number(
 
 const roomHooks: RoomHooks = {
   rareChest: process.env.RARE_CHEST ? process.env.RARE_CHEST === '1' : KIND !== 'live',
+  cluster: KIND !== 'live' && process.env.DEV_CLUSTER === '1',
   chestLoad: (key) => {
     const id = accountOf(key);
     return id === null ? [] : accounts.loadChest(id);

@@ -1,0 +1,38 @@
+# The DEMO game server: every push to main lands here first (GitHub Actions), so new changes can be
+# tried before they reach players. Its accounts and saves are separate from the live server's, and
+# the rare-item chest is on. It sleeps when nobody is connected (the first visit wakes it in a few seconds).
+#   fly deploy --config fly.demo.toml
+app = "almia-showdown-demo"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  SERVER_KIND = "demo"
+  LOBBY_WAIT = "20"
+  MATCH_SIZE = "8"
+  RARE_CHEST = "1"
+  # PUBLIC_URL = "https://demo.example.gg"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[mounts]
+  source = "almia_demo_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

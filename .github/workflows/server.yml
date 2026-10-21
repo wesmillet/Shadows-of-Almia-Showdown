@@ -1,0 +1,46 @@
+# The game server on Fly.io.
+#   - Every push to main: tests, then deploys to the DEMO server.
+#   - Actions -> "Game server" -> Run workflow -> target "live": deploys the same code to the LIVE server.
+# Needs the repository secret FLY_API_TOKEN (fly tokens create deploy -x 999999h); without it the
+# deploy steps are skipped, so pushes keep working before the servers exist.
+name: Game server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which server to deploy
+        type: choice
+        options: [demo, live]
+        default: demo
+
+concurrency:
+  group: fly-${{ github.event.inputs.target || 'demo' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      TARGET: ${{ github.event.inputs.target || 'demo' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+      - name: Set up flyctl
+        if: env.FLY_API_TOKEN != ''
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        if: env.FLY_API_TOKEN != ''
+        run: |
+          CONFIG=fly.demo.toml
+          if [ "$TARGET" = "live" ]; then CONFIG=fly.toml; fi
+          flyctl deploy --config "$CONFIG" --remote-only --build-arg BUILD_ID=${GITHUB_SHA::7}

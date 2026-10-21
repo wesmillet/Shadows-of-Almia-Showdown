@@ -59,6 +59,8 @@ export interface RoomResult {
 export interface RoomHooks {
   /** The rare-item chest for players (demo server: on; live: off). */
   rareChest: boolean;
+  /** Testing only: players start next to each other. */
+  cluster?: boolean;
   chestLoad(key: string): InventorySlot[] | null;
   chestSave(key: string, box: Array<InventorySlot | null>): void;
   /** A Pokémon a player sent home mid-match with an Extraction Voucher. */
@@ -86,6 +88,15 @@ export class Room {
     this.id = `m${seed.toString(36)}`;
     this.match = createMatch(world, entries, size, seed);
     this.match.rareChest = hooks.rareChest;
+    // Testing (DEV_CLUSTER=1, never on the live server): every player starts beside the first.
+    if (hooks.cluster && this.match.seats.length > 1) {
+      const first = (this.match.seats[0] as Seat).trainer;
+      this.match.seats.slice(1).forEach((s, i) => {
+        s.trainer.x = s.trainer.px = first.x + 3 + i;
+        s.trainer.y = s.trainer.py = first.y + 1;
+        this.match.placeParty(s.trainer);
+      });
+    }
     this.match.chestStore = {
       load: (t) => {
         const key = this.keyOf(t);
@@ -207,7 +218,8 @@ export class Room {
     const evs = this.events;
     this.events = [];
     for (const p of this.players.values()) {
-      if (!p.peer || p.ended) continue;
+      // Eliminated players keep watching until they leave.
+      if (!p.peer) continue;
       const root = p.view.build();
       const patch = p.enc.encode(root, p.view.visible);
       const me = p.seat.trainer.id;

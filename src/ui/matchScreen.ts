@@ -3,6 +3,7 @@
  * VFX, numbers and hit-stop, draws the world through the lighting
  * pass and the HUD on top.
  */
+import type { Connection } from '../net/connection';
 import { isDev, rareChest } from '../dev';
 import type { Input } from '../core/input';
 import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
@@ -107,6 +108,11 @@ export class MatchScreen implements Screen {
 
   private endTimer = -1;
   protected readonly icons: ItemIcons;
+  /**
+   * Online (src/net/mirror.ts): the match is the server's, so Space and throwing things away go
+   * there as commands, and extractions are saved by the server, not this browser.
+   */
+  online: { cmd: Connection['cmd'] } | null = null;
 
   constructor(
     protected readonly ctx: GameContext,
@@ -405,6 +411,20 @@ export class MatchScreen implements Screen {
 
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
   private interact(): boolean {
+    if (this.online) {
+      // Shops and chests open here; anything else in reach is the server's to do. Nothing in reach: a dodge.
+      const svc = this.match.nearService();
+      if (!this.match.fishing && !this.match.visitors.near() && (svc?.kind === 'shop' || svc?.kind === 'chest')) {
+        if (svc.kind === 'shop') this.shopOpen = svc.shop;
+        else this.chestOpen = svc.index;
+        return true;
+      }
+      if (this.match.fishing || this.match.visitors.near() || svc || this.match.nearestItem() || canFish(this.match)) {
+        this.online.cmd('interact');
+        return true;
+      }
+      return false;
+    }
     // Fishing: Space hooks a bite (or reels in early).
     if (this.match.fishing) {
       const msg = hookOrReel(this.match);
@@ -1003,6 +1023,7 @@ export class MatchScreen implements Screen {
     const list = this.gearTab ? p.held : p.items;
     const e = list[index];
     if (!e) return;
+    if (this.online) this.online.cmd('discard', this.gearTab ? 'held' : 'items', index);
     list[index] = null;
     if (!this.gearTab && this.selectedItem === index) this.selectedItem = -1;
     this.say(`Threw away ${ITEMS[e.id]?.name ?? e.id}${e.count > 1 ? ` ×${e.count}` : ''}`, 1.2);
@@ -1110,8 +1131,8 @@ export class MatchScreen implements Screen {
         if (ev.shake) this.shake = Math.max(this.shake, ev.shake);
         break;
       case 'extracted': {
-        // Into the PC for keeps (this browser's storage): a beam of light takes it away.
-        const saved = extractToPc(ev.mon, ev.via);
+        // Into the PC for keeps (this browser's storage, or the server's online): a beam of light takes it away.
+        const saved = this.online ? true : extractToPc(ev.mon, ev.via);
         this.playFx('fx_093', { x: ev.mon.x, y: ev.mon.y, lift: 2.4, scale: 1.4, fps: 10, tint: '#bff6ff' });
         this.floaters.add(ev.mon.x, ev.mon.y - 0.8, saved ? `${ev.mon.name} → PC` : 'PC unavailable', '#9ff3ff', 16);
         if (!saved) this.say("Couldn't reach your PC (this browser blocks saving)", 2.4);

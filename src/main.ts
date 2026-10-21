@@ -17,7 +17,14 @@ import { setUiSkin, text, type GameContext, type Screen } from './ui/screens';
 import { TitleScreen } from './ui/titleScreen';
 import { PcScreen } from './ui/pcScreen';
 import { CharacterScreen } from './ui/characterScreen';
-import { loadLook } from './look';
+import { loadLook, lookHooks, saveLook } from './look';
+import { Connection, serverBase } from './net/connection';
+import { MirrorMatch } from './net/mirror';
+import type { ServerMsg } from './net/protocol';
+import { starterChoices } from './sim/starters';
+import { LobbyScreen, OnlineEndScreen, OnlineScreen } from './ui/onlineScreens';
+import { ChatPanel } from './ui/overlay';
+import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
@@ -178,6 +185,78 @@ async function boot(): Promise<void> {
     game.setScreen(screen);
   };
 
+  // ---------------------------------------------------------------- online
+
+  /** The game server, when this build has one (not on GitHub Pages). */
+  const base = serverBase();
+  const net = base ? new Connection(base) : null;
+  if (net) {
+    net.look = loadLook();
+    void net.open().then(async () => {
+      const me = await net.refreshMe();
+      // Signed in: the account's look is the one to wear.
+      if (me.signedIn && typeof me.look === 'string' && me.look !== loadLook()) {
+        lookHooks.saved = null;
+        saveLook(me.look);
+        void rangers.setRole('player', me.look);
+      }
+      lookHooks.saved = (c) => {
+        net.look = c;
+        if (net.me.signedIn) void net.api('/api/look', { look: c });
+      };
+    });
+  }
+
+  const showOnline = (): void => {
+    if (!net) return;
+    game.setScreen(new OnlineScreen(game, net, findMatch, () => void showTitle(false)));
+  };
+
+  /** The server rolls the starters (it must know what was offered); this browser spins the reels. */
+  const findMatch = (): void => {
+    if (!net) return;
+    const off = net.on((m) => {
+      if (m.t !== 'roll') return;
+      off();
+      const rollSeed = m.seed;
+      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => {
+        net.send({ t: 'queue', pick: starterChoices(rollSeed).indexOf(dex) });
+        game.setScreen(new LobbyScreen(game, net, showOnline, (start) => void startOnline(start)));
+      }, null));
+    });
+    net.send({ t: 'roll' });
+  };
+
+  const startOnline = async (start: Extract<ServerMsg, { t: 'start' }>): Promise<void> => {
+    if (!net) return;
+    game.setScreen(loadingScreen(() => 'Heading out'));
+    const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(start.seed), sprites }, net, start.you, start.roster, rangers);
+    await mirror.ready;
+    const chat = new ChatPanel(net, { compact: true, collapsed: true });
+    debug.showdown.match = mirror.match;
+    const screen: MatchScreen = new MatchScreen(game, mirror.match, rangers, assets, ui, () => {
+      const end = mirror.ended ?? { outcome: mirror.match.outcome ?? 'loss', place: 0 };
+      chat.dispose();
+      game.setScreen(new OnlineEndScreen(game, net, screen, end.outcome, end.place, () => {
+        mirror.dispose();
+        net.send({ t: 'leave' });
+        showOnline();
+      }));
+    });
+    screen.online = { cmd: net.cmd.bind(net) };
+    mirror.onReply = (text, seconds) => screen.say(text, seconds);
+    debug.showdown.screen = screen;
+    game.setScreen(screen);
+  };
+
+  const showPc = async (): Promise<void> => {
+    if (net?.me.signedIn) {
+      const r = await net.api<{ pc: PcEntry[] }>('/api/pc');
+      if (r.pc) return game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false), r.pc, 'kept on the server'));
+    }
+    game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false)));
+  };
+
   const showRoll = (): void => {
     // A fresh roll every time, even on a fixed ?seed island.
     game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll));
@@ -193,7 +272,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false))), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))));
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => void showPc(), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))), net ? showOnline : null);
     debug.showdown.screen = title;
     game.setScreen(title);
   };

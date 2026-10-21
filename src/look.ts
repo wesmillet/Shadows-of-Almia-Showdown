@@ -12,7 +12,11 @@ export function loadLook(): string | null {
   }
 }
 
+/** Called after the look changes (main.ts saves it to the signed-in account too). */
+export const lookHooks: { saved: ((character: string) => void) | null } = { saved: null };
+
 export function saveLook(character: string): void {
+  lookHooks.saved?.(character);
   try {
     localStorage.setItem(KEY, character);
   } catch {

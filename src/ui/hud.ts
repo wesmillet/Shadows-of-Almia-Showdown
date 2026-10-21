@@ -519,7 +519,7 @@ export class Hud {
    * the phase and your money.
    */
   private drawCounter(ctx: CanvasRenderingContext2D, match: Match, st: HudState, s: number): void {
-    const remaining = [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger && !t.visitor).length;
+    const remaining = match.radar.length ? match.radar.filter((d) => d.alive).length : [match.player, ...match.trainers].filter((t) => t.alive && !t.challenger && !t.visitor).length;
     const k = this.px;
     const t = Math.floor(match.time);
     const mm = String(Math.floor(t / 60)).padStart(2, '0');
@@ -757,9 +757,14 @@ export class Hud {
         ctx.restore();
       }
     }
-    for (const t of match.trainers) {
-      if (!t.alive || t.visitor) continue;
-      pin(t.x, t.y, '#ff5c5c', 3);
+    if (match.radar.length) {
+      // Online: everyone still in, other players in blue.
+      for (const d of match.radar) if (d.alive && d.id !== match.player.id) pin(d.x, d.y, d.human ? '#5cc8ff' : '#ff5c5c', 3);
+    } else {
+      for (const t of match.trainers) {
+        if (!t.alive || t.visitor) continue;
+        pin(t.x, t.y, '#ff5c5c', 3);
+      }
     }
     if (match.darkrai && !match.darkrai.fainted) pin(match.darkrai.x, match.darkrai.y, '#2a1838', 3.4);
     // You: a white arrow the way you face, with a soft pulse round it.

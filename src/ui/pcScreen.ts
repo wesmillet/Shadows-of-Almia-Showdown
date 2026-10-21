@@ -29,9 +29,12 @@ export class PcScreen implements Screen {
     private readonly sprites: SpriteRegistry,
     private readonly assets: Assets,
     private readonly onBack: () => void,
+    /** Online: the PC on the server (signed in); offline, this browser's. */
+    list?: PcEntry[],
+    private readonly where = 'kept in this browser',
   ) {
     // Oldest first, like filling a box.
-    this.list = loadPc();
+    this.list = list ?? loadPc();
     for (const e of this.list) this.icon(e.dex);
   }
 
@@ -106,7 +109,7 @@ export class PcScreen implements Screen {
     h.clearRect(0, 0, v.width, v.height);
     backdrop(v);
     heading(v, 'MY PC', this.list.length
-      ? `${this.list.length} Pokémon extracted · kept in this browser · A/D or the arrows change box · Esc back`
+      ? `${this.list.length} Pokémon extracted · ${this.where} · A/D or the arrows change box · Esc back`
       : 'Nothing here yet. Win a match (you pick one Pokémon to extract) or use an Extraction Voucher.', 56 * s);
     const L = this.layout();
     this.drawWallpaper(L.box);

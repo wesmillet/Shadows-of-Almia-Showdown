@@ -116,6 +116,11 @@ export class Match {
   get player(): Trainer {
     return this.seat.trainer;
   }
+  /**
+   * Online: every trainer still in the match, as dots for the minimap and the trainers-left count
+   * (the mirror only has the trainers near you). Empty offline, where match.trainers is everyone.
+   */
+  radar: Array<{ id: number; x: number; y: number; alive: boolean; human: boolean; name: string }> = [];
   /** True once the match is over for everyone (the last trainer standing, or no humans left). */
   over = false;
   trainers: Trainer[] = [];
@@ -181,7 +186,10 @@ export class Match {
    * `humans`: the players in seats (default: one, "You", with `starterDexes`); `rivals`: how many
    * computer trainers fill the rest (default config trainers.count). The game server passes both.
    */
-  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[] }>; rivals?: number } = {}) {
+  /** An online match's copy in the browser (src/net/mirror.ts): filled from the server, never stepped. */
+  readonly mirror: boolean;
+
+  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[] }>; rivals?: number; mirror?: boolean } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
     this.nav = new Nav(this.ground);
@@ -191,6 +199,14 @@ export class Match {
     this.centerX = this.ground.cols / 2;
     this.centerY = this.ground.rows / 2;
     // Everyone starts somewhere new each match, spread round the coast.
+    this.mirror = !!opts.mirror;
+    if (this.mirror) {
+      // Nothing is spawned: everything arrives from the server.
+      this.seats.push(newSeat(this.makeTrainer('You', 'player', true, this.centerX, this.centerY)));
+      this.seat = this.seats[0] as Seat;
+      this.visitors = new Visitors(this);
+      return;
+    }
     const humans = opts.humans ?? [{ name: 'You', starters: starterDexes }];
     const rivals = opts.rivals ?? CONFIG.trainers.count;
     this.startSpots = this.pickStartSpots(humans.length + rivals);
@@ -292,16 +308,29 @@ export class Match {
     CHEST_SPOTS.set(g, this.chests.map((c) => ({ ...c })));
   }
 
+  /**
+   * Where players' chests are kept between games: this browser offline (src/chest.ts); the game
+   * server swaps in the player's account.
+   */
+  chestStore: { load(t: Trainer): InventorySlot[] | null; save(t: Trainer, box: Array<InventorySlot | null>): void } = {
+    load: (t) => (t.isPlayer ? loadChest() : null),
+    save: (t, box) => {
+      if (t.isPlayer) saveChest(box);
+    },
+  };
+  /** The rare-item chest (src/dev.ts) for players this match; the game server decides it per server. */
+  rareChest = rareChest();
+
   /** A trainer's chest store (created empty on first use). */
   storageOf(t: Trainer): Array<InventorySlot | null> {
     if (t.storage) return t.storage;
-    // The player's chest is kept between games in this browser (src/chest.ts).
-    const kept = (t.isPlayer ? loadChest() ?? [] : []).filter((e) => ITEMS[e.id]);
+    // The player's chest is kept between games (chestStore).
+    const kept = (this.chestStore.load(t) ?? []).filter((e) => ITEMS[e.id]);
     const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, kept.length)).fill(null);
     kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
     // The rare-item chest (src/dev.ts): every rare thing is there, topped back up at the start of
     // each match, beside whatever the player stored themselves.
-    if (t.isPlayer && rareChest()) {
+    if (t.isPlayer && this.rareChest) {
       for (const [id, count] of DEV_CHEST) {
         if (!ITEMS[id]) continue;
         const have = box.find((e) => e?.id === id);
@@ -316,7 +345,7 @@ export class Match {
       while (box.filter((e) => !e).length < 6) box.push(null);
     }
     t.storage = box;
-    if (t.isPlayer) saveChest(box);
+    this.chestStore.save(t, box);
     return box;
   }
 
@@ -334,7 +363,7 @@ export class Match {
       box[free] = { id: entry.id, count: entry.count };
     }
     list[slot] = null;
-    if (t.isPlayer) saveChest(box);
+    this.chestStore.save(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -346,7 +375,7 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
-    if (t.isPlayer) saveChest(box);
+    this.chestStore.save(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }

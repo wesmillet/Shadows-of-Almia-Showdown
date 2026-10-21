@@ -3,14 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Shadows of Almia Showdown: a Pokémon battle royale demo with PMD SpriteCollab sprites and Pokémon Ranger overworld NPCs on painted terrain.",
+  "description": "Shadows of Almia Showdown: a Pok\u00e9mon battle royale demo with PMD SpriteCollab sprites and Pok\u00e9mon Ranger overworld NPCs on painted terrain.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "fetch-sprites": "python3 scripts/fetch-sprites.py --list scripts/species-list.txt"
+    "fetch-sprites": "python3 scripts/fetch-sprites.py --list scripts/species-list.txt",
+    "server": "node --disable-warning=ExperimentalWarning --import tsx server/main.ts",
+    "build:server": "esbuild server/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-server/main.js --packages=external --define:import.meta.env=undefined --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "build:client": "tsc --noEmit && BASE_PATH=/ vite build"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

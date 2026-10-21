@@ -74,6 +74,7 @@ export class Visitors {
   aceHuman: Trainer | null = null;
 
   constructor(private readonly m: Match) {
+    if (m.mirror) return;
     const rng = m.rng;
     const spot = (minFromPlayer = 30) => {
       for (let i = 0; i < 200; i++) {

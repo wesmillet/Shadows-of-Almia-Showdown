@@ -11,9 +11,17 @@ export class Input {
   rightDown = false;
   private clicks: Array<{ x: number; y: number; button: number }> = [];
 
+  /** True for a text box the player is typing in. */
+  static typing(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  }
+
   constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys.
+      if (Input.typing(e.target)) return;
       this.held.add(e.code);
       this.pressedThisStep.add(e.code);
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();

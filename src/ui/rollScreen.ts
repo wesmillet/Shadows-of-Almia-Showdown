@@ -7,26 +7,14 @@
 import type { Input } from '../core/input';
 import { easeOutCubic } from '../core/math';
 import { Rng } from '../core/rng';
-import { CONFIG, movesAt, move, species, SPAWNS, SPECIES, type SpeciesDef } from '../sim/data';
+import { CONFIG, movesAt, move, species, SPECIES, type SpeciesDef } from '../sim/data';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
 
-export interface StarterTier {
-  id: string;
-  name: string;
-  weight: number;
-  color: string;
-  dex: string[];
-}
+import { REEL_CARDS, rollChoice, rollStarter, STARTER_CHOICES, STARTER_TIERS, type StarterTier } from '../sim/starters';
 
-export const STARTER_TIERS = (SPAWNS as unknown as { starterTiers: StarterTier[] }).starterTiers;
-
-/** Rolls a tier by weight, then a Pokémon in it. */
-export function rollStarter(rng: Rng): { tier: StarterTier; dex: string } {
-  const tier = rng.weighted(STARTER_TIERS, (t) => t.weight);
-  return { tier, dex: rng.pick(tier.dex) };
-}
+export { rollStarter, STARTER_TIERS, type StarterTier };
 
 interface Card {
   def: SpeciesDef;
@@ -46,12 +34,12 @@ interface Reel {
 }
 
 /** How many starters are offered. */
-const CHOICES = 3;
+const CHOICES = STARTER_CHOICES;
 /** Seconds the first reel spins; each next one runs a little longer. */
 const SPIN = 2.0;
 const STAGGER = 0.55;
 /** Cards on each reel (the last is the result). */
-const REEL = 12;
+const REEL = REEL_CARDS;
 
 export class RollScreen implements Screen {
   private readonly reels: Reel[] = [];
@@ -68,13 +56,9 @@ export class RollScreen implements Screen {
     const rng = new Rng(seed);
     const taken = new Set<string>();
     for (let r = 0; r < CHOICES; r++) {
-      // Three different Pokémon (the same tier can come up twice).
-      // Every reel rolls its own tier at the full odds; a repeat Pokémon is re-drawn from the
-      // same tier, so the tier odds of each reel stay exactly as listed.
-      let res = rollStarter(rng);
-      const fresh = res.tier.dex.filter((d) => !taken.has(d));
-      if (taken.has(res.dex) && fresh.length) res = { tier: res.tier, dex: rng.pick(fresh) };
-      taken.add(res.dex);
+      // Three different Pokémon (the same tier can come up twice): src/sim/starters.ts, which the
+      // game server also uses to know what a seed offered.
+      const res = rollChoice(rng, taken);
       const cards: Card[] = [];
       for (let i = 0; i < REEL - 1; i++) {
         const o = rollStarter(rng);

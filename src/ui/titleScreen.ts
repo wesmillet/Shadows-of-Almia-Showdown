@@ -109,6 +109,8 @@ export class TitleScreen implements Screen {
     private readonly onGallery: () => void,
     private readonly onPc: () => void = () => {},
     private readonly onCharacter: () => void = () => {},
+    /** Online play, when this build has a game server (O). */
+    private readonly onOnline: (() => void) | null = null,
   ) {
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
@@ -253,7 +255,15 @@ export class TitleScreen implements Screen {
     const s = v.baseScale;
     const w = Math.round(250 * s);
     const h = Math.round(56 * s);
-    return { x: Math.round(v.width / 2 - w / 2), y: Math.round(v.height - 182 * s), w, h };
+    // With online play the solo roll moves right and Play Online takes the left.
+    const shift = this.onOnline ? Math.round(131 * s) : 0;
+    return { x: Math.round(v.width / 2 - w / 2) + shift, y: Math.round(v.height - 182 * s), w, h };
+  }
+
+  /** Play Online, left of the solo roll (only when there is a game server). */
+  private onlineRect(): { x: number; y: number; w: number; h: number } {
+    const b = this.buttonRect();
+    return { x: b.x - b.w - Math.round(12 * this.ctx.view.baseScale), y: b.y, w: b.w, h: b.h };
   }
 
   /** The row of four under it: Demo Team, Move Gallery, My PC, Trainer. */
@@ -288,8 +298,11 @@ export class TitleScreen implements Screen {
     this.stepScene(dt);
     const b = this.buttonRect();
     const d = this.demoRect();
+    const on = this.onOnline;
+    const o = this.onlineRect();
     for (const c of input.takeClicks()) {
-      if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
+      if (on && hit(c.x, c.y, o.x, o.y, o.w, o.h)) this.leave(on);
+      else if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
       else if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) this.leave(this.onDemo);
       else {
         const g = this.galleryRect();
@@ -307,6 +320,7 @@ export class TitleScreen implements Screen {
     if (input.pressed('KeyC')) this.leave(this.onCharacter);
     if (input.pressed('Enter') || input.pressed('Space')) this.leave(this.onStart);
     if (input.pressed('KeyD')) this.leave(this.onDemo);
+    if (on && input.pressed('KeyO')) this.leave(on);
   }
 
   /** The other screens set their own zoom; the title hands the camera back at 1. */
@@ -881,7 +895,11 @@ export class TitleScreen implements Screen {
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const b = this.buttonRect();
-    button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
+    if (this.onOnline) {
+      const o = this.onlineRect();
+      button(v, 'Play Online (O)', o.x, o.y, o.w, o.h, hit(mx, my, o.x, o.y, o.w, o.h));
+      button(v, 'Solo: Roll Starter', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#f4e6c8');
+    } else button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
     const rows: Array<[string, { x: number; y: number; w: number; h: number }]> = [
       ['Demo Team (D)', this.demoRect()],
       ['Move Gallery (M)', this.galleryRect()],

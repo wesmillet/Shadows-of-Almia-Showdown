@@ -7,26 +7,14 @@
 import type { Input } from '../core/input';
 import { easeOutCubic } from '../core/math';
 import { Rng } from '../core/rng';
-import { CONFIG, movesAt, move, species, SPAWNS, SPECIES, type SpeciesDef } from '../sim/data';
+import { CONFIG, movesAt, move, species, SPECIES, type SpeciesDef } from '../sim/data';
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
 
-export interface StarterTier {
-  id: string;
-  name: string;
-  weight: number;
-  color: string;
-  dex: string[];
-}
+import { poolSize, poolTiers, REEL_CARDS, rollChoice, rollStarter, STARTER_CHOICES, STARTER_TIERS, type StarterTier } from '../sim/starters';
 
-export const STARTER_TIERS = (SPAWNS as unknown as { starterTiers: StarterTier[] }).starterTiers;
-
-/** Rolls a tier by weight, then a Pokémon in it. */
-export function rollStarter(rng: Rng): { tier: StarterTier; dex: string } {
-  const tier = rng.weighted(STARTER_TIERS, (t) => t.weight);
-  return { tier, dex: rng.pick(tier.dex) };
-}
+export { rollStarter, STARTER_TIERS, type StarterTier };
 
 interface Card {
   def: SpeciesDef;
@@ -46,15 +34,16 @@ interface Reel {
 }
 
 /** How many starters are offered. */
-const CHOICES = 3;
+const CHOICES = STARTER_CHOICES;
 /** Seconds the first reel spins; each next one runs a little longer. */
 const SPIN = 2.0;
 const STAGGER = 0.55;
 /** Cards on each reel (the last is the result). */
-const REEL = 12;
+const REEL = REEL_CARDS;
 
 export class RollScreen implements Screen {
   private readonly reels: Reel[] = [];
+  private readonly tiers: StarterTier[];
   private t = 0;
 
   constructor(
@@ -64,20 +53,20 @@ export class RollScreen implements Screen {
     private readonly onConfirm: (dex: string) => void,
     /** Rolls a fresh set of three (the Reroll button or R); for testing while the PC starters are planned. */
     private readonly onReroll: (() => void) | null = null,
+    /** Starters this player has unlocked through their PC (src/sim/starters.ts). */
+    private readonly unlocked: readonly string[] = [],
   ) {
     const rng = new Rng(seed);
+    const tiers = poolTiers(unlocked);
+    this.tiers = tiers;
     const taken = new Set<string>();
     for (let r = 0; r < CHOICES; r++) {
-      // Three different Pokémon (the same tier can come up twice).
-      // Every reel rolls its own tier at the full odds; a repeat Pokémon is re-drawn from the
-      // same tier, so the tier odds of each reel stay exactly as listed.
-      let res = rollStarter(rng);
-      const fresh = res.tier.dex.filter((d) => !taken.has(d));
-      if (taken.has(res.dex) && fresh.length) res = { tier: res.tier, dex: rng.pick(fresh) };
-      taken.add(res.dex);
+      // Three different Pokémon (the same tier can come up twice): src/sim/starters.ts, which the
+      // game server also uses to know what a seed offered.
+      const res = rollChoice(rng, taken, tiers);
       const cards: Card[] = [];
       for (let i = 0; i < REEL - 1; i++) {
-        const o = rollStarter(rng);
+        const o = rollStarter(rng, tiers);
         cards.push({ def: species(o.dex), tier: o.tier, anim: null });
       }
       const pick: Card = { def: species(res.dex), tier: res.tier, anim: null };
@@ -188,8 +177,9 @@ export class RollScreen implements Screen {
       const hover = this.done && (hit(mx, my, b.x, b.y, b.w, b.h) || hit(mx, my, c.x, c.y, c.w, c.h));
       button(v, this.done ? `${i + 1}  ${r.pick.def.name}` : 'Rolling…', b.x, b.y, b.w, b.h, hover, this.done ? undefined : '#44405a');
     });
-    // The odds, each in its tier colour.
-    const odds = [{ t: { color: '#9f97bb' } as StarterTier, label: 'Odds per reel:' }, ...STARTER_TIERS.map((t) => ({ t, label: `${t.name} ${t.weight}%` }))];
+    // The odds of this player's pool, each in its tier colour (tiers they have nothing in yet are left out).
+    const total = this.tiers.reduce((n, t) => n + t.weight, 0) || 1;
+    const odds = [{ t: { color: '#9f97bb' } as StarterTier, label: 'Odds per reel:' }, ...this.tiers.map((t) => ({ t, label: `${t.name} ${Math.round((t.weight / total) * 100)}%` }))];
     h.save();
     h.font = `${Math.round(12 * s * 1.3)}px BoldPixels, sans-serif`;
     const gap = 18 * s;
@@ -200,7 +190,8 @@ export class RollScreen implements Screen {
       text(v, o.label, ox, v.height - 40 * s, 12, { color: o.t.color });
       ox += (widths[i] ?? 0) + gap;
     });
-    text(v, 'Click a card or press 1-3', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6' });
+    const all = STARTER_TIERS.reduce((n, t) => n + t.dex.length, 0);
+    text(v, `Click a card or press 1-3 · ${poolSize(this.unlocked)} starters in your pool: every Pokémon you keep in your PC adds its line (${all}+ to find)`, v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6', maxWidth: v.width - 30 * s });
     if (this.onReroll) {
       const rr = this.rerollRect();
       button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#f4e6c8');
@@ -212,7 +203,7 @@ export class RollScreen implements Screen {
     const v = this.ctx.view;
     const s = v.baseScale;
     const h = v.hud;
-    const rank = STARTER_TIERS.indexOf(r.pick.tier);
+    const rank = STARTER_TIERS.findIndex((t) => t.id === r.pick.tier.id);
     const k = Math.max(0, 1 - r.since / (0.6 + rank * 0.25));
     const pulse = rank >= 3 ? 0.35 + 0.25 * Math.sin(this.t * 4) : 0;
     h.save();

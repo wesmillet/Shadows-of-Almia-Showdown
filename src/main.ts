@@ -18,6 +18,8 @@ import { TitleScreen } from './ui/titleScreen';
 import { PcScreen } from './ui/pcScreen';
 import { CharacterScreen } from './ui/characterScreen';
 import { loadLook } from './look';
+import { unlockedFromPc } from './sim/starters';
+import { loadPc } from './pc';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
 import type { GroundRenderer } from './ground/types';
@@ -180,7 +182,9 @@ async function boot(): Promise<void> {
 
   const showRoll = (): void => {
     // A fresh roll every time, even on a fixed ?seed island.
-    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll));
+    // The pool grows with this browser's PC: every Pokémon kept there adds its line's first form.
+    const pool = unlockedFromPc(loadPc().map((e) => e.dex));
+    game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll, pool));
   };
 
   const showTitle = async (regenerate: boolean): Promise<void> => {

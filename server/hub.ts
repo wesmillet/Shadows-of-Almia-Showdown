@@ -16,8 +16,10 @@ import { Matchmaker, type Lineup } from './matchmaker';
 import { newCode, PrivateLobby } from './privateLobby';
 import { rateMatch, tierOf, PLACEMENT_GAMES, type Entrant } from './rating';
 import { deleteReplay, ReplayRecorder } from './replays';
+import type { EndReport, RoomHandle } from './roomHandle';
 import type { Events } from './events';
-import { Room, type Peer, type RoomHooks, type RoomMode, type RoomResult } from './room';
+import { Room, type Peer, type RoomHooks, type RoomMode, type RoomOptions } from './room';
+import type { Human } from './world';
 import type { World } from './world';
 
 /** Seconds a party or private lobby has to pick starters. */
@@ -33,9 +35,9 @@ export interface Client extends Peer {
   /** The starters this player's roll was drawn from (their PC's unlocks). */
   rollPool: string[];
   /** The match they are playing in. */
-  room: Room | null;
+  room: RoomHandle | null;
   /** The match they are watching. */
-  watching: Room | null;
+  watching: RoomHandle | null;
   party: Party | null;
   /** Parties that invited them (by party id). */
   invites: Set<string>;
@@ -66,6 +68,19 @@ class PickSession {
   }
 }
 
+/** A new match: who plays, and how. */
+export interface RoomSpec {
+  entries: Array<Human & { peer: Peer }>;
+  size: number;
+  seed: number;
+  opts: Omit<RoomOptions, 'recorder'>;
+  /** Where its replay goes (null: not recorded). */
+  replayDir: string | null;
+}
+
+/** Makes a match: in this thread (the default), or in a worker (server/remoteRoom.ts). */
+export type RoomFactory = (spec: RoomSpec, hooks: RoomHooks, onEnd: (room: RoomHandle, report: EndReport) => void) => RoomHandle;
+
 export interface HubOptions {
   world: World;
   accounts: Accounts;
@@ -78,13 +93,26 @@ export interface HubOptions {
   replayBytes: number;
   log: (...a: unknown[]) => void;
   /** Every match's end (metrics). */
-  onMatchEnd?: (room: Room) => void;
-  onMatchStart?: (room: Room) => void;
+  onMatchEnd?: (room: RoomHandle, report: EndReport) => void;
+  onMatchStart?: (room: RoomHandle) => void;
+  /** Where matches run (default: this thread). */
+  makeRoom?: RoomFactory;
+}
+
+/** Matches in this thread (the checks use it; the server prefers workers). */
+export function localRoom(world: World): RoomFactory {
+  return (spec, hooks, onEnd) => {
+    const dir = spec.replayDir;
+    return new Room(world, spec.entries, spec.size, spec.seed, hooks, onEnd, {
+      ...spec.opts,
+      recorder: dir ? (r) => new ReplayRecorder(dir, r.id, spec.seed, spec.opts.mode, r.roster, r.match, r.ids) : undefined,
+    });
+  };
 }
 
 export class Hub {
   readonly clients = new Map<string, Client>();
-  readonly rooms = new Set<Room>();
+  readonly rooms = new Set<RoomHandle>();
   private readonly privates = new Map<string, PrivateLobby>();
   private readonly parties = new Map<string, Party>();
   private sessions = new Set<PickSession>();
@@ -528,14 +556,15 @@ export class Hub {
     }
     const seed = randomInt(1, 2 ** 31);
     const size = rules.size ?? this.o.size;
-    const dir = this.o.replayDir;
     // Events boost casual and ranked matches; private ones keep their own rules.
     const ev = this.events;
     const boosts = mode !== 'private' && ev ? { shinyBoost: ev.boost('shiny'), storm: ev.storm() } : {};
-    const room = new Room(this.o.world, live.map((q) => ({ name: q.peer.name, starter: q.starter, team: q.team, peer: q.peer })), size, seed, this.o.hooks, (r, res) => this.endRoom(r, res), {
-      mode, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts,
-      recorder: dir ? (r) => new ReplayRecorder(dir, r.id, seed, mode, r.roster, r.match, r.ids) : undefined,
-    });
+    const make = this.o.makeRoom ?? localRoom(this.o.world);
+    const spec: RoomSpec = {
+      entries: live.map((q) => ({ name: q.peer.name, starter: q.starter, team: q.team, peer: q.peer })), size, seed,
+      opts: { mode, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts }, replayDir: this.o.replayDir,
+    };
+    const room = make(spec, this.o.hooks, (r, report) => this.endRoom(r, report));
     this.rooms.add(room);
     this.o.onMatchStart?.(room);
     for (const q of live) {
@@ -546,10 +575,12 @@ export class Hub {
       c.watching = null;
       this.presenceChanged(c);
     }
-    this.o.log(`Match ${room.id} (${mode}): ${live.length} player(s)${live.some((x) => x.team !== undefined) ? ' in squads' : ''}, ${room.match.trainers.filter((t) => !t.visitor && !t.challenger).length} computer trainer(s)`);
+    const bots = rules.bots === false ? 0 : Math.max(0, size - live.length);
+    this.o.log(`Match ${room.id} (${mode}): ${live.length} player(s)${live.some((x) => x.team !== undefined) ? ' in squads' : ''}, ${bots} computer trainer(s)`);
   }
 
-  private endRoom(room: Room, results: RoomResult[]): void {
+  private endRoom(room: RoomHandle, report: EndReport): void {
+    const results = report.results;
     this.rooms.delete(room);
     for (const c of this.clients.values()) {
       if (c.room === room) c.room = null;
@@ -557,30 +588,30 @@ export class Hub {
       if (c.private) c.private.broadcast();
       this.presenceChanged(c);
     }
-    for (const f of room.flagsOf()) this.o.accounts.addFlags(f.key, f.name, room.id, f.flags);
-    this.o.onMatchEnd?.(room);
-    if (room.aborted) {
+    for (const f of report.flags) this.o.accounts.addFlags(f.key, f.name, room.id, new Map(f.flags));
+    this.o.onMatchEnd?.(room, report);
+    if (report.aborted) {
       // Called off (a shutdown): nothing is counted, for anyone.
-      this.o.log(`Match ${room.id} called off: ${room.aborted}`);
-      void this.saveReplay(room, results);
+      this.o.log(`Match ${room.id} called off: ${report.aborted}`);
+      void this.saveReplay(room, report);
       return;
     }
-    const deltas = room.mode === 'ranked' ? this.rate(room, results) : new Map<string, number>();
+    const deltas = room.mode === 'ranked' ? this.rate(report) : new Map<string, number>();
     const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length, room.mode === 'private' ? 1 : (this.events?.boost('xp') ?? 1));
     for (const [key, p] of progress) this.clients.get(key)?.send({ t: 'progress', ...p });
     this.o.log(`Match ${room.id} over: ${results.map((r) => `${r.name} #${r.place}`).join(', ')}`);
-    void this.saveReplay(room, results);
+    void this.saveReplay(room, report);
   }
 
   /** Ranked: everyone's new rating (and each player is told theirs). */
-  private rate(room: Room, results: RoomResult[]): Map<string, number> {
+  private rate(report: EndReport): Map<string, number> {
     const acc = this.o.accounts;
     const entrants: Entrant[] = [];
-    for (const r of results) {
+    for (const r of report.results) {
       if (!r.key.startsWith('u')) continue;
       entrants.push({ key: r.key, rating: acc.rating(Number(r.key.slice(1))).r, place: r.place, team: r.team });
     }
-    const after = rateMatch(entrants, [...room.botPlaces.values()]);
+    const after = rateMatch(entrants, report.botPlaces);
     const deltas = new Map<string, number>();
     for (const e of entrants) {
       const id = Number(e.key.slice(1));
@@ -593,20 +624,13 @@ export class Hub {
     return deltas;
   }
 
-  private async saveReplay(room: Room, results: RoomResult[]): Promise<void> {
-    const rec = room.recorder;
+  private async saveReplay(room: RoomHandle, report: EndReport): Promise<void> {
     const dir = this.o.replayDir;
-    if (!rec || !dir) return;
     try {
-      const bytes = await rec.close();
-      const byTrainer = new Map(results.map((r) => [r.name, r]));
-      const players = room.roster.map((e) => {
-        const r = e.human ? byTrainer.get(e.name) : undefined;
-        const bot = room.match.trainers.find((t) => t.id === e.trainerId);
-        return { name: e.name, human: e.human, key: r?.key, place: r?.place ?? (bot ? room.botPlaces.get(bot) ?? 0 : 0) };
-      });
-      const winner = players.filter((p) => p.place === 1).map((p) => p.name).join(' & ') || null;
-      this.o.accounts.addReplay({ id: room.id, mode: room.mode, startedAt: room.startedAt, seconds: room.match.time, players, winner, bytes });
+      const r = await report.replay;
+      if (!r || !dir) return;
+      const winner = r.players.filter((p) => p.place === 1).map((p) => p.name).join(' & ') || null;
+      this.o.accounts.addReplay({ id: room.id, mode: room.mode, startedAt: room.startedAt, seconds: r.seconds, players: r.players, winner, bytes: r.bytes });
       for (const id of this.o.accounts.replaysOver(this.o.replayBytes)) {
         deleteReplay(dir, id);
         this.o.accounts.dropReplay(id);
@@ -619,8 +643,8 @@ export class Hub {
   // ---------------------------------------------------------------- spectating
 
   /** The match most worth watching: the most players still in (and watched), never a private one. */
-  featured(): Room | null {
-    let best: Room | null = null;
+  featured(): RoomHandle | null {
+    let best: RoomHandle | null = null;
     let score = -1;
     for (const r of this.rooms) {
       if (r.mode === 'private' || r.closed) continue;
@@ -635,8 +659,8 @@ export class Hub {
 
   private spectate(c: Client, msg: Extract<ClientMsg, { t: 'spectate' }>): void {
     if (c.room && c.room.playing(c.key)) return;
-    let room: Room | null = null;
-    let follow: number | undefined;
+    let room: RoomHandle | null = null;
+    let follow: number | { teamOf: string } | undefined;
     if (typeof msg.name === 'string') {
       const f = [...this.clients.values()].find((x) => x.name.toLowerCase() === String(msg.name).toLowerCase());
       if (!f?.room) return c.send({ t: 'notice', text: `${msg.name} is not in a match` });
@@ -644,23 +668,17 @@ export class Hub {
       const lobbyMates = !!c.private && c.private === f.private;
       if (!friends && !lobbyMates) return c.send({ t: 'notice', text: 'You can watch your friends' });
       room = f.room;
-      follow = room.trainerOf(f.key)?.id;
+      follow = room.trainerIdOf(f.key);
     } else if (typeof msg.matchId === 'string') {
       room = [...this.rooms].find((r) => r.id === msg.matchId) ?? null;
       // A private match: only for the players who were in it (watching the rest after being knocked out).
       if (room && room.mode === 'private' && !room.has(c.key)) room = null;
-      if (room?.has(c.key)) follow = room.trainerOf(c.key)?.team !== undefined ? this.teammateOf(room, c.key) : undefined;
+      if (room?.has(c.key)) follow = { teamOf: c.key };
     } else if (msg.featured) room = this.featured();
     if (!room) return c.send({ t: 'spectateEnd', text: 'No match to watch right now' });
     c.watching?.unspectate(c.key);
     c.watching = room.spectate(c, follow) ? room : null;
     this.presenceChanged(c);
-  }
-
-  /** A teammate still standing (so a knocked-out squad member watches their squad). */
-  private teammateOf(room: Room, key: string): number | undefined {
-    const me = room.trainerOf(key);
-    return room.match.allTrainers.find((t) => t !== me && t.alive && t.team !== undefined && t.team === me?.team)?.id;
   }
 
   // ---------------------------------------------------------------- presence

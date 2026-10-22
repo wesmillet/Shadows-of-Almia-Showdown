@@ -18,6 +18,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { cleanName, isClean } from './moderation';
+import { pcFields } from './pcFields';
 import { DEFAULT_RATING, decay, PLACEMENT_GAMES, seasonAt, seasonReset, tierOf, type Rating } from './rating';
 import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
@@ -280,13 +281,8 @@ export class Accounts {
     this.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(userId, JSON.stringify(entry), Date.now());
   }
 
-  /** What a Pokémon in a match goes home as (a Mega as its base form). */
-  static pcFields(m: Mon): { dex: string; name: string; level: number; shiny: boolean; alpha: boolean; legend: boolean; shadow: boolean; moves: string[]; heldItem: string | null } {
-    return {
-      dex: m.megaFrom?.dex ?? m.dex, name: (m.megaFrom?.name ?? m.name).replace(/^Shadow /, ''), level: m.level, shiny: !!m.shiny, alpha: !!m.alpha,
-      legend: !!m.legend, shadow: !!m.shadow, moves: [...m.moves], heldItem: m.heldItem ?? null,
-    };
-  }
+  /** What a Pokémon in a match goes home as (server/pcFields.ts). */
+  static pcFields = pcFields;
 
   /**
    * A finished match: stats for every signed-in player, and extraction picks for winners (and

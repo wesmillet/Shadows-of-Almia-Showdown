@@ -28,6 +28,8 @@ type Obj = Record<string, unknown>;
 
 /** Fields that glide between updates. */
 const SMOOTH = ['x', 'y', 'z'] as const;
+/** Movement frames per message (20 messages a second; the server applies every frame in order). */
+const SEND_FRAMES = 3;
 /** How close to the reticle an opponent must be drawn to count as the one aimed at (as the offline aim snap). */
 const AIM_PICK = 1.6;
 
@@ -384,7 +386,7 @@ export class MirrorMatch {
       this.hist.set(f[0], { x: av.x as number, y: av.y as number });
       if (this.hist.size > 400) this.hist.delete(this.hist.keys().next().value as number);
     }
-    if (this.outbox.length >= 3) {
+    if (this.outbox.length >= SEND_FRAMES) {
       this.net.send({ t: 'in', f: this.outbox, ax: Math.round(aim.x * 100) / 100, ay: Math.round(aim.y * 100) / 100 });
       this.outbox = [];
     }

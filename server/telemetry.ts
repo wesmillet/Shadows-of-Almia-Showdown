@@ -125,6 +125,13 @@ export class Metrics {
     if (ms > this.steps.max) this.steps.max = ms;
   }
 
+  /** Steps timed elsewhere (a match worker's last second). */
+  addSteps(n: number, total: number, max: number): void {
+    this.steps.n += n;
+    this.steps.total += total;
+    if (max > this.steps.max) this.steps.max = max;
+  }
+
   lag(ms: number): void {
     if (ms > this.lagMax) this.lagMax = ms;
   }

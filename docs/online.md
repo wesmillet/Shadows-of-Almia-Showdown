@@ -23,9 +23,11 @@ the domain, and (optionally) Google for "Sign in with Google".
   is kept.
 - **Seats** (`src/sim/seat.ts`): a match holds up to eight humans; computer trainers fill the rest.
 - **Instant movement**: the browser walks your trainer (or the Pokémon you steer) the moment you
-  press a key and numbers each step's keys; the server applies them one per step and says which it
-  used last, and the browser replays the rest on top of the server's position (client-side
-  prediction). Measured at 300 ms round trip, corrections stay under a hundredth of a tile.
+  press a key and numbers each step's keys; the server applies every one of them, in order, one per
+  step, and says which it used last, and the browser replays the rest on top of the server's
+  position (client-side prediction). A late frame makes the server wait a step rather than guess,
+  so its path is always the one the browser predicted. Measured at 300 ms round trip, corrections
+  stay under a thousandth of a tile.
 - **Fair hits on a slow connection**: a cast names the opponent under your reticle as your screen
   shows it; the server aims at where that opponent really is, if it is close enough to your aim.
 - **Compression**: updates are compressed (about 2 KB/s per player on the wire).
@@ -81,6 +83,7 @@ private one) to be a second player. Useful settings (environment variables):
 | `SEASON_START`, `SEASON_DAYS` | When ranked season 1 starts (ISO date) and how long seasons last |
 | `REPLAYS=0`, `REPLAY_MB=400` | Turn recording off; how much disk replays may use |
 | `SIM_LATENCY_MS=100` | Testing: pretend every message takes this long each way (never on live) |
+| `ROOM_WORKERS=4` | At most this many match worker threads (default: from memory; 0: matches in the main thread) |
 | `DATA_DIR=...` | Where the database file goes (default `.data/`) |
 
 `npx tsx server/bots.ts 3 60` connects three fake players to a running server and plays for a
@@ -203,11 +206,20 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
 
 ## Capacity and cost
 
+Each match runs in its own worker thread (`server/remoteRoom.ts`, `server/roomWorker.ts`), with one
+loaded and waiting so a new match starts at once. Building a match's island takes a few hundred
+milliseconds; in a thread of its own that never stalls anyone else (measured: the worst gap between
+a playing match's updates while six others started went from about a second to 73 ms), the server
+uses every CPU core, and a match that fails takes nobody else with it. A worker costs about 60 MB,
+so the number of workers follows the machine's memory (`ROOM_WORKERS` overrides it; 0 runs matches
+in the main thread). Past that, matches share the least busy worker.
+
 A match costs about 1.5 ms of CPU per simulation step (60 a second), about 9% of a CPU core, and
-each player about 15-20 KB/s. The live config (`shared-cpu-2x`, 1 GB, about $10-12 a month) runs a
-couple of matches comfortably; for more, `fly scale vm performance-1x` (about $30 a month) runs
-around eight at once. The demo server sleeps when unused and costs little. Everything runs on one
-machine (the lobby and matches are in memory, and SQLite has one writer), so scale up, not out.
+each player about 2 KB/s on the wire. The live config (`shared-cpu-2x`, 1 GB, about $10-12 a month)
+runs about six matches; `fly scale vm shared-cpu-4x --vm-memory 2048` (about $25 a month) runs
+around fifteen, and `performance-4x` more. The Server tab and the alerts say when it is time. The
+demo server sleeps when unused and costs little. Everything runs on one machine (the lobby is in
+memory, and SQLite has one writer), so scale up, not out.
 
 ## Safety notes
 

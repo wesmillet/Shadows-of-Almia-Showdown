@@ -12,7 +12,7 @@
     "test": "vitest run",
     "fetch-sprites": "python3 scripts/fetch-sprites.py --list scripts/species-list.txt",
     "server": "node --disable-warning=ExperimentalWarning --import tsx server/main.ts",
-    "build:server": "esbuild server/main.ts server/admin.ts --bundle --platform=node --format=esm --target=node22 --outdir=dist-server --packages=external --define:import.meta.env=undefined --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "build:server": "esbuild server/main.ts server/admin.ts server/roomWorker.ts --bundle --platform=node --format=esm --target=node22 --outdir=dist-server --packages=external --define:import.meta.env=undefined --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "build:client": "tsc --noEmit && BASE_PATH=/ vite build",
     "admin": "node --disable-warning=ExperimentalWarning --import tsx server/admin.ts"
   },

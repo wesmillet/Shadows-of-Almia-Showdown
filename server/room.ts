@@ -13,8 +13,9 @@ import type { Seat } from '../src/sim/seat';
 import type { ClientMsg, RosterEntry, ServerMsg } from '../src/net/protocol';
 import { IdTable, SyncEncoder } from '../src/net/sync';
 import { newSeat } from '../src/sim/seat';
-import { Accounts } from './accounts';
+import { pcFields, type PcFields } from './pcFields';
 import { runCommand } from './commands';
+import type { EndReport, Follow, ReplaySummary, RoomHandle } from './roomHandle';
 import { RECORD_EVERY, type ReplayRecorder } from './replays';
 import { PlayerView } from './view';
 import { createMatch, type Human, type MatchRules, type World } from './world';
@@ -93,7 +94,7 @@ export interface RoomResult {
   team?: number;
   stats: { catches: number; knockouts: number; damage: number; timeSurvived: number };
   /** The player's Pokémon at the end (what an extraction can keep). */
-  party: Array<ReturnType<typeof Accounts.pcFields>>;
+  party: PcFields[];
   /** Extraction Vouchers still in the bag (each is one more Pokémon to keep). */
   vouchers: number;
 }
@@ -106,13 +107,13 @@ export interface RoomHooks {
   cluster?: boolean;
   chestLoad(key: string): InventorySlot[] | null;
   chestSave(key: string, box: Array<InventorySlot | null>): void;
-  /** A Pokémon a player sent home mid-match with an Extraction Voucher. */
-  extracted(key: string, mon: Mon, matchId: string): void;
+  /** A Pokémon a player sent home mid-match with an Extraction Voucher (what its PC entry keeps). */
+  extracted(key: string, mon: PcFields, matchId: string): void;
   /** A player's flags passed FLAG_REPORT this match. */
   flagged?(key: string, name: string, matchId: string, summary: string): void;
 }
 
-export class Room {
+export class Room implements RoomHandle {
   readonly id: string;
   readonly match: Match;
   readonly ids = new IdTable();
@@ -135,7 +136,7 @@ export class Room {
     size: number,
     readonly seed: number,
     private readonly hooks: RoomHooks,
-    private readonly onEnd: (room: Room, results: RoomResult[]) => void,
+    private readonly onEnd: (room: Room, report: EndReport) => void,
     opts: RoomOptions = { mode: 'casual' },
   ) {
     this.id = `m${seed.toString(36)}`;
@@ -196,6 +197,34 @@ export class Room {
     return [...this.players].filter(([, p]) => p.flags.size).map(([key, p]) => ({ key, name: p.seat.trainer.name, flags: p.flags }));
   }
 
+  get time(): number {
+    return this.match.time;
+  }
+
+  get botCount(): number {
+    return this.match.trainers.filter((t) => !t.visitor && !t.challenger).length;
+  }
+
+  trainerIdOf(key: string): number | undefined {
+    return this.trainerOf(key)?.id;
+  }
+
+  /** A squad mate still standing (a knocked-out player watches their squad first). */
+  private teammateOf(key: string): number | undefined {
+    const me = this.trainerOf(key);
+    return this.match.allTrainers.find((t) => t !== me && t.alive && t.team !== undefined && t.team === me?.team)?.id;
+  }
+
+  /** Every player's key. */
+  playerKeys(): string[] {
+    return [...this.players.keys()];
+  }
+
+  /** Who is watching. */
+  watcherKeys(): string[] {
+    return [...this.watchers.keys()];
+  }
+
   /** Humans still connected and playing. */
   get humansIn(): number {
     return [...this.players.values()].filter((p) => p.peer && !p.ended).length;
@@ -213,9 +242,10 @@ export class Room {
     return this.match.allTrainers.filter((t) => t.alive && !t.visitor && !t.challenger && !t.legendBout && !t.hidden);
   }
 
-  /** Starts watching (following a trainer, or the first human still in). */
-  spectate(peer: Peer, followId?: number): boolean {
+  /** Starts watching (following a trainer, a player's squad mate, or the first human still in). */
+  spectate(peer: Peer, follow?: Follow): boolean {
     if (this.closed) return false;
+    const followId = typeof follow === 'object' ? this.teammateOf(follow.teamOf) : follow;
     const list = this.followable();
     const t = list.find((x) => x.id === followId) ?? list.find((x) => x.isPlayer) ?? list[0];
     if (!t) return false;
@@ -376,7 +406,7 @@ export class Room {
       const text = runCommand(this.match, p.seat, msg.c, msg.a, (kind, detail) => this.flag(key, kind, detail));
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
-        if (ev.type === 'extracted' && ev.via === 'voucher') this.hooks.extracted(key, ev.mon, this.id);
+        if (ev.type === 'extracted' && ev.via === 'voucher') this.hooks.extracted(key, pcFields(ev.mon), this.id);
       }
       if (text) p.peer?.send({ t: 'reply', n: msg.n, text, seconds: 1.8 });
       return;
@@ -497,13 +527,33 @@ export class Room {
       if (!p.ended && !this.aborted) p.peer?.send({ t: 'end', outcome, place });
       results.push({
         key, name: t.name, outcome, place, team: t.team, stats: { ...t.stats },
-        party: t.party.filter((x) => !x.captured).map((x) => Accounts.pcFields(x)),
+        party: t.party.filter((x) => !x.captured).map((x) => pcFields(x)),
         vouchers: t.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0),
       });
     }
     const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';
     this.releaseWatchers(this.aborted ?? `The match is over: ${winner} won`);
-    this.onEnd(this, results);
+    this.onEnd(this, {
+      results,
+      botPlaces: [...this.botPlaces.values()],
+      flags: this.flagsOf().map((f) => ({ key: f.key, name: f.name, flags: [...f.flags].map(([k, v]): [string, { n: number; detail: string }] => [k, { n: v.n, detail: v.detail }]) })),
+      aborted: this.aborted,
+      replay: this.finishReplay(results),
+    });
+  }
+
+  /** Finishes the recording; who was in it and where they placed. */
+  private async finishReplay(results: RoomResult[]): Promise<ReplaySummary | null> {
+    const rec = this.recorder;
+    if (!rec) return null;
+    const bytes = await rec.close();
+    const byName = new Map(results.map((r) => [r.name, r]));
+    const players = this.roster.map((e) => {
+      const r = e.human ? byName.get(e.name) : undefined;
+      const bot = this.match.trainers.find((t) => t.id === e.trainerId);
+      return { name: e.name, human: e.human, key: r?.key, place: r?.place ?? (bot ? (this.botPlaces.get(bot) ?? 0) : 0) };
+    });
+    return { bytes, seconds: this.match.time, players };
   }
 }
 
@@ -520,20 +570,27 @@ function unitAxis(x: unknown, y: unknown): [number, number] {
   return [ax, ay];
 }
 
-/** At most this many steps are walked on held keys while the browser's next ones are late (about 0.1 s). */
-const MAX_AHEAD = 6;
+/** Past this many frames waiting, idle ones (no key held) are dropped to cut the delay. */
+const CUSHION = 4;
 
 /**
- * This step's keys for a seat: the next numbered frame. With none waiting (a late packet) the last
- * keys are held for up to MAX_AHEAD steps, and that many frames are skipped when they arrive, so the
- * trainer covers the same ground the browser walked it; past that it waits for the browser.
+ * This step's keys for a seat: the next numbered frame, in order, every one of them, so the server
+ * walks exactly the path the browser predicted (src/net/mirror.ts) and never has to correct it.
+ *
+ * When the next frame is late, the trainer waits a step rather than guess: the frames that arrive
+ * later are still applied one by one, a step behind, and that small queue then absorbs the next
+ * bit of network jitter. If the queue grows past CUSHION, frames with no key held are dropped: a
+ * trainer standing still moves nowhere either way, so nothing has to be corrected.
  */
 function takeFrame(seat: Seat): void {
-  while (seat.ahead > 0 && seat.inputs.length) {
-    const f = seat.inputs.shift() as [number, number, number];
-    seat.ack = f[0];
-    seat.held = [f[1], f[2]];
-    seat.ahead--;
+  if (seat.inputs.length > CUSHION) {
+    for (let i = 0; i < seat.inputs.length - 1 && seat.inputs.length > CUSHION; ) {
+      const f = seat.inputs[i] as [number, number, number];
+      if (f[1] === 0 && f[2] === 0) {
+        seat.inputs.splice(i, 1);
+        seat.ack = Math.max(seat.ack, f[0]);
+      } else i++;
+    }
   }
   const f = seat.inputs.shift();
   if (f) {
@@ -543,13 +600,6 @@ function takeFrame(seat: Seat): void {
     seat.held = [f[1], f[2]];
     return;
   }
-  const [hx, hy] = seat.held;
-  if ((hx || hy) && seat.ahead < MAX_AHEAD) {
-    seat.moveX = hx;
-    seat.moveY = hy;
-    seat.ahead++;
-  } else {
-    seat.moveX = 0;
-    seat.moveY = 0;
-  }
+  seat.moveX = 0;
+  seat.moveY = 0;
 }

@@ -22,13 +22,14 @@ import { replayDir, replayFile } from './replays';
 import { notFoundPage, profilePage } from './profilePage';
 import { ModApi } from './modApi';
 import { MOD_PAGE } from './modPage';
-import { STEP, type RoomHooks } from './room';
+import { Room, STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
 import { Accounts, clientIp } from './accounts';
 import { Alerts, ErrorLog, Metrics } from './telemetry';
 import { Backups } from './backup';
 import { s3FromEnv } from './s3';
 import { Events } from './events';
+import { WorkerPool } from './remoteRoom';
 import { timingSafeEqual } from 'node:crypto';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -88,7 +89,7 @@ const roomHooks: RoomHooks = {
   },
   extracted: (key, mon, matchId) => {
     const id = accountOf(key);
-    if (id !== null) accounts.addToPc(id, Accounts.pcFields(mon), 'voucher', matchId);
+    if (id !== null) accounts.addToPc(id, mon, 'voucher', matchId);
   },
   flagged: (key, name, matchId, summary) => {
     log(`Flagged ${name} (${key}) in ${matchId}: ${summary}`);
@@ -98,7 +99,7 @@ const roomHooks: RoomHooks = {
 
 const REPLAYS = process.env.REPLAYS !== '0';
 const REPLAY_DIR = REPLAYS ? replayDir(DATA) : null;
-const metrics = new Metrics(() => {
+const metrics: Metrics = new Metrics(() => {
   const st = hub.stats();
   return {
     players: st.players, rooms: st.rooms, queued: st.queued.casual + st.queued.ranked, watching: st.watching, errors: errors.total,
@@ -106,12 +107,29 @@ const metrics = new Metrics(() => {
   };
 });
 let replayBytes = 0;
-const hub = new Hub({
+/** Matches run in worker threads (ROOM_WORKERS of them; 0 runs them in this thread). */
+const WORKERS = process.env.ROOM_WORKERS !== undefined ? Number(process.env.ROOM_WORKERS) : WorkerPool.defaultSize();
+const pool: WorkerPool | null = WORKERS > 0
+  ? new WorkerPool(WORKERS, {
+    assets: ASSETS, hooks: roomHooks, log,
+    deliver: (key, data) => (hub.clients.get(key) as Conn | undefined)?.sendRaw(data),
+    onError: (message, stack, context) => {
+      const e = new Error(message);
+      e.stack = stack;
+      log(`Match ${String(context.match ?? '')} failed:`, message);
+      errors.record('match', e, context);
+      alerts.send(`crash:${String(context.match ?? message)}`, `Match ${String(context.match ?? '?')} crashed and was called off: ${message}`);
+    },
+    onStats: (n, total, max) => metrics.addSteps(n, total, max),
+  })
+  : null;
+const hub: Hub = new Hub({
+  makeRoom: pool?.factory(),
   world, accounts, size: SIZE, wait: { casual: WAIT, ranked: RANKED_WAIT }, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
-  onMatchEnd: (r) => {
-    if (r.aborted) metrics.counters.matchesAborted++;
+  onMatchEnd: (_r, report) => {
+    if (report.aborted) metrics.counters.matchesAborted++;
     else metrics.counters.matchesEnded++;
   },
 });
@@ -140,7 +158,7 @@ function fileSize(f: string): number {
   }
 }
 const modApi = new ModApi(accounts, {
-  matches: () => [...hub.rooms].map((r) => ({ id: r.id, mode: r.mode, time: r.match.time, players: r.roster.filter((x) => x.human).map((x) => x.name), watchers: r.watcherCount })),
+  matches: () => [...hub.rooms].map((r) => ({ id: r.id, mode: r.mode, time: r.time, players: r.roster.filter((x) => x.human).map((x) => x.name), watchers: r.watcherCount })),
   online: () => hub.clients.size,
   kick: (userId, reason) => {
     const c = hub.clients.get(`u${userId}`) as Conn | undefined;
@@ -151,7 +169,7 @@ const modApi = new ModApi(accounts, {
   removeChat: (id) => chat.remove(id),
   announce: (text) => chat.announce(text),
   server: () => ({
-    kind: KIND, build: BUILD, startedAt: metrics.started, draining: hub.draining, samples: metrics.samples, counters: metrics.counters,
+    kind: KIND, build: BUILD, startedAt: metrics.started, draining: hub.draining, samples: metrics.samples, counters: metrics.counters, workers: pool?.status() ?? null,
     errors: errors.recent(60), backups: { last: backups.last, lastError: backups.lastError, s3: s3 ? s3.bucket : null, local: backups.list().slice(0, 10) },
   }),
   drain: (on) => hub.drain(on),
@@ -163,6 +181,8 @@ const modApi = new ModApi(accounts, {
 interface Conn extends Client {
   ws: WebSocket;
   msgs: number;
+  /** A message already turned into JSON (from a match worker). */
+  sendRaw(data: string): void;
 }
 
 function onMessage(c: Conn, raw: string): void {
@@ -343,8 +363,10 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     ws, key, name: who.name, look: who.look, title: who.title, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
     watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '',
     send(msg: ServerMsg) {
+      this.sendRaw(JSON.stringify(msg));
+    },
+    sendRaw(data: string) {
       if (ws.readyState !== ws.OPEN) return;
-      const data = JSON.stringify(msg);
       metrics.sent(data.length);
       if (LAG) setTimeout(() => ws.readyState === ws.OPEN && ws.send(data), LAG);
       else ws.send(data);
@@ -381,12 +403,14 @@ setInterval(() => {
     acc -= STEP;
     const t0 = performance.now();
     for (const r of hub.rooms) {
+      // Matches in workers keep their own clocks; this thread steps its own.
+      if (!(r instanceof Room)) continue;
       try {
         r.step();
       } catch (e) {
         // One match failing: recorded, called off for its players (nothing lost), the rest go on.
         log(`Match ${r.id} crashed:`, e);
-        errors.record('match', e, { match: r.id, time: r.match.time });
+        errors.record('match', e, { match: r.id, time: r.time });
         alerts.send(`crash:${r.id}`, `Match ${r.id} crashed and was called off: ${e instanceof Error ? e.message : e}`);
         try {
           r.abort('Something went wrong in this match, so it was called off. Nothing was lost. Sorry!');
@@ -448,6 +472,7 @@ async function shutdown(signal: string): Promise<void> {
   // Replays finishing, messages going out.
   await new Promise((r) => setTimeout(r, 1500));
   await backups.run();
+  await pool?.stop();
   for (const c of hub.clients.values()) (c as Conn).ws.close(1012, 'Server restarting');
   try {
     accounts.db.close();

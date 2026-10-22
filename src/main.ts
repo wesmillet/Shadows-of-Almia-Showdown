@@ -26,6 +26,7 @@ import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
+import { canWear, lookRequirement } from './net/progression';
 import { ChatPanel } from './ui/overlay';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
@@ -210,6 +211,20 @@ async function boot(): Promise<void> {
         net.look = c;
         if (net.me.signedIn) void net.api('/api/look', { look: c });
       };
+      // A shared link: ?replay=<match> plays a replay, ?profile=<name> opens a trainer's profile.
+      const rp = params.get('replay');
+      const pf = params.get('profile');
+      if (rp && /^m[a-z0-9]{1,16}$/.test(rp)) void startReplay(rp);
+      else if (pf) {
+        showOnline();
+        void profileDialog(net, pf.slice(0, 32), (id) => void startReplay(id));
+      }
+      // A look worn before looks were earned (or on another account): back to a free one.
+      const worn = loadLook();
+      if (worn && lookLock(worn)) {
+        saveLook('civ_00');
+        void rangers.setRole('player', 'civ_00');
+      }
     });
   }
 
@@ -218,6 +233,17 @@ async function boot(): Promise<void> {
   let watchingId: string | null = null;
   const toaster = net ? new Toaster(net) : null;
   if (net) debug.showdown.net = net;
+
+  /** With a game server, looks are earned (src/net/progression.ts); why one is locked, or null. */
+  const lookLock = (look: string): string | null => {
+    if (!net) return null;
+    const req = lookRequirement(look);
+    if (!req) return null;
+    const me = net.me;
+    if (canWear(look, me.signedIn ? (me.progress?.level ?? 1) : 0, me.achievements ?? [])) return null;
+    if (!me.signedIn) return 'Sign in';
+    return req.level !== undefined ? `Level ${req.level}` : (req.achievement?.name ?? 'Locked');
+  };
 
   const showOnline = (message = ''): void => {
     if (!net) return;
@@ -269,11 +295,11 @@ async function boot(): Promise<void> {
       if (net) void replaysDialog(net, (r) => void startReplay(r.id));
     },
     leaderboards: () => {
-      if (net) void leaderboardDialog(net, (name) => void profileDialog(net, name));
+      if (net) void leaderboardDialog(net, (name) => void profileDialog(net, name, (id) => void startReplay(id)));
     },
     watchFriend: (name) => net?.send({ t: 'spectate', name }),
     profile: (name) => {
-      if (net) void profileDialog(net, name);
+      if (net) void profileDialog(net, name, (id) => void startReplay(id));
     },
   };
 
@@ -305,6 +331,7 @@ async function boot(): Promise<void> {
     playingId = start.matchId;
     watchingId = null;
     net.rated = null;
+    net.progress = null;
     game.setScreen(loadingScreen(() => 'Heading out'));
     const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(start.seed), sprites }, net, start.you, start.roster, rangers);
     await mirror.ready;
@@ -419,7 +446,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => void showPc(), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false))), net ? showOnline : null);
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => void showPc(), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false), lookLock)), net ? () => showOnline() : null);
     debug.showdown.screen = title;
     game.setScreen(title);
   };

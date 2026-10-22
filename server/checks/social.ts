@@ -78,9 +78,11 @@ class Player {
   }
 }
 
+const codes = new Map<string, string[]>();
 async function account(name: string): Promise<Player> {
   const r = await api('', '/api/register', { username: name, password: `Sturdy-${tag}-Passphrase-42` });
   if (r.status !== 200) throw new Error(`register ${name}: ${JSON.stringify(r.json)}`);
+  codes.set(name, r.json.recovery as string[]);
   return new Player(name, r.cookie);
 }
 
@@ -187,10 +189,23 @@ G.send({ t: 'leave' });
 await back;
 check(true, 'after the match, everyone is back in the lobby');
 
-// ---------------------------------------------------------------- the party's match ends; replays
+// ---------------------------------------------------------------- the party's match ends; progress; replays
+const aProgress = A.wait('progress', () => true, 20);
 A.send({ t: 'leave' });
 M.send({ t: 'leave' });
-await new Promise((r) => setTimeout(r, 2500));
+const prog = await aProgress;
+const gained = prog.xp.reduce((n, x) => n + x.xp, 0);
+check(gained > 0 && prog.xp[0]?.what === 'Played a match', `a finished match earns XP (+${gained}: ${prog.xp.map((x) => x.what).join(', ')})`);
+check(prog.achievements.some((a) => a.id === 'first_match'), 'and the first achievement');
+const meA = (await api(A.cookie, '/api/me')).json as { progress: { xp: number; level: number }; achievements: string[] };
+check(meA.progress.xp === gained && meA.achievements.includes('first_match'), `kept on the account (level ${meA.progress.level})`);
+check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === 403, 'a Ranger look is locked at level 1');
+check((await api(A.cookie, '/api/look', { look: 'civ_04' })).json.ok, 'a townsfolk look is free');
+check((await api(A.cookie, '/api/title', { title: 'Master Ranger' })).status === 400, 'titles must be earned');
+const bMe = (await api(B.cookie, '/api/me')).json as { progress: { xp: number } };
+const gMe = (await api('', '/api/me')).json as { signedIn: boolean };
+check(bMe.progress.xp > 0 && !gMe.signedIn, 'ranked earns XP too; private matches add none to anyone');
+await new Promise((r) => setTimeout(r, 1500));
 const list = (await api('', '/api/replays')).json.replays as Array<{ id: string; mode: string }>;
 check(list.some((r) => r.id === as.matchId) && list.some((r) => r.id === rs.matchId), `public replays listed (${list.length})`);
 check(!list.some((r) => r.id === ps.matchId), 'private matches are not in the public list');
@@ -203,6 +218,23 @@ const textBody = raw[0] === 0x1f ? gunzipSync(raw).toString('utf8') : raw.toStri
 const lines = textBody.trim().split('\n').map((l) => JSON.parse(l) as Record<string, unknown>);
 check(lines[0]?.matchId === as.matchId && lines[1]?.k === 1, `replay: header, keyframe, ${lines.length - 1} updates`);
 check((await fetch(`${BASE}/api/replay/m..%2Fetc`)).status === 404, 'replay paths are checked');
+
+// ---------------------------------------------------------------- recovery codes, passwords, the profile page
+const mc = codes.get(M.name) ?? [];
+check(mc.length === 8 && mc.every((c) => /^[0-9A-F]{5}-[0-9A-F]{5}$/.test(c)), 'signing up gives eight recovery codes');
+check((await api('', '/api/recover', { username: M.name, code: 'AAAAA-BBBBB', password: 'Brand-New-Lantern-77' })).status === 401, 'a wrong code does nothing');
+const rec = await api('', '/api/recover', { username: M.name, code: (mc[0] as string).toLowerCase().replace('-', ' '), password: 'Brand-New-Lantern-77' });
+check(rec.json.ok && rec.json.codesLeft === 7, 'a recovery code sets a new password (typed any which way)');
+check((await api('', '/api/login', { username: M.name, password: `Sturdy-${tag}-Passphrase-42` })).status === 401, 'the old password stops working');
+check((await api(M.cookie, '/api/me')).json.signedIn === false, 'and every old session is signed out');
+check((await api('', '/api/recover', { username: M.name, code: mc[0], password: 'Another-Lantern-88' })).status === 401, 'each code works once');
+const ch = await api(rec.cookie, '/api/password', { current: 'Brand-New-Lantern-77', password: 'Third-Lantern-Pass-99' });
+check(ch.json.ok, 'changing the password needs the current one');
+const page = await fetch(`${BASE}/u/${encodeURIComponent(A.name)}`);
+const html = await page.text();
+check(page.status === 200 && html.includes(A.name) && html.includes('First Steps') && html.includes('Trainer level'), 'the public profile page');
+check((await fetch(`${BASE}/u/NoSuchTrainer9`)).status === 404, 'no page for nobody');
+check(!(await fetch(`${BASE}/u/%3Cscript%3E`).then((r) => r.text())).includes('<script>'), 'names are escaped');
 
 for (const p of [A, M, B, G]) p.ws.close();
 console.log(failed ? 'SOME CHECKS FAILED' : 'all social checks passed');

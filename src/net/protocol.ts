@@ -91,6 +91,8 @@ export interface RosterEntry {
   look?: unknown;
   /** Squad number, when the match has squads. */
   team?: number;
+  /** The title a player wears (src/net/progression.ts). */
+  title?: string;
 }
 
 export type ServerMsg =
@@ -108,6 +110,8 @@ export type ServerMsg =
   | { t: 'spectateEnd'; text: string }
   /** You are out of the queue (a party member left it, or the party broke up). */
   | { t: 'unqueued'; text: string }
+  /** What a match did for your progress: XP line by line, levels, achievements earned. */
+  | { t: 'progress'; xp: Array<{ what: string; xp: number }>; before: { level: number; into: number; next: number }; after: { level: number; into: number; next: number }; achievements: Array<{ id: string; name: string; desc: string; title?: string; look?: string }> }
   /** A ranked match's effect on your rating. */
   | { t: 'rated'; before: number; after: number; tier: { id: string; name: string; color: string } | null; placementLeft: number }
   /** A short message for whatever screen is up (a friend request, an invite, a party change). */

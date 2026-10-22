@@ -517,7 +517,8 @@ export class Hub {
       this.presenceChanged(c);
     }
     const deltas = room.mode === 'ranked' ? this.rate(room, results) : new Map<string, number>();
-    this.o.accounts.recordMatch(room.id, results, room.mode, deltas);
+    const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length);
+    for (const [key, p] of progress) this.clients.get(key)?.send({ t: 'progress', ...p });
     this.o.log(`Match ${room.id} over: ${results.map((r) => `${r.name} #${r.place}`).join(', ')}`);
     void this.saveReplay(room, results);
   }

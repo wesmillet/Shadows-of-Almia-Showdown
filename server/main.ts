@@ -17,6 +17,7 @@ import type { ClientMsg, ServerMsg } from '../src/net/protocol';
 import { Chat } from './chat';
 import { Hub, type Client } from './hub';
 import { replayDir, replayFile } from './replays';
+import { notFoundPage, profilePage } from './profilePage';
 import { STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
 import { Accounts } from './accounts';
@@ -130,6 +131,14 @@ const http = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, ...hub.stats() }));
     return;
   }
+  if (url.startsWith('/u/') && req.method === 'GET') {
+    // A trainer's public profile page (to share outside the game).
+    const name = decodeURIComponent(url.slice(3).split(/[?#]/)[0] ?? '').slice(0, 32);
+    const u = accounts.db.prepare('SELECT * FROM users WHERE username = ?').get(name) as Parameters<Accounts['publicProfile']>[0] | undefined;
+    const html = u && !u.banned ? profilePage(accounts.publicProfile(u), ASSETS) : notFoundPage(name);
+    res.writeHead(u && !u.banned ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline' 'self'; img-src 'self'" }).end(html);
+    return;
+  }
   if (url.startsWith('/api/replay/') && req.method === 'GET') {
     // A replay file: gzipped JSON lines, which the browser unpacks on the way in.
     const id = decodeURIComponent(url.slice('/api/replay/'.length).split('?')[0] ?? '');
@@ -178,7 +187,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     old.ws.close(4000, 'Opened in another tab');
   }
   const c: Conn = {
-    ws, key, name: who.name, look: who.look, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
+    ws, key, name: who.name, look: who.look, title: who.title, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
     watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '',
     send(msg: ServerMsg) {
       if (ws.readyState !== ws.OPEN) return;

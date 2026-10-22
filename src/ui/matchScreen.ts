@@ -2074,6 +2074,9 @@ export class MatchScreen implements Screen {
     balls(me.trainer, x + w * 0.22);
     text(v, 'VS', v.width / 2, y + 28 * s, 18, { align: 'center', color: '#c2611a', shadow: false });
     text(v, foe.trainer.name, x + w * 0.78, y + 19 * s, 14, { align: 'center', color: '#b0302a', maxWidth: w * 0.36, shadow: false });
+    // Online, a player's title rides along under their name.
+    const foeTitle = (foe.trainer as Trainer & { title?: string }).title;
+    if (foeTitle) text(v, foeTitle, x + w * 0.78, y + 31 * s, 9, { align: 'center', color: '#8a6a4a', maxWidth: w * 0.36, shadow: false });
     balls(foe.trainer, x + w * 0.78);
     if (!me.awaitingPick) return;
     // Choose the next Pokémon.

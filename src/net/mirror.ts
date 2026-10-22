@@ -62,6 +62,7 @@ export class MirrorMatch {
   /** The avatar's position (and facing) as the server last sent it. */
   private auth: { o: Obj; x: number; y: number; dir: unknown } | null = null;
   private human = new Set<number>();
+  private titles = new Map<number, string>();
   readonly roster: RosterEntry[];
   private looks = new Map<number, string>();
   private unsub: () => void;
@@ -96,6 +97,7 @@ export class MirrorMatch {
     for (const r of roster) {
       if (r.human) this.human.add(r.trainerId);
       if (r.human && typeof r.look === 'string') this.looks.set(r.trainerId, r.look);
+      if (r.title) this.titles.set(r.trainerId, r.title);
     }
     this.dec = this.decoder();
     this.installCommands();
@@ -168,6 +170,8 @@ export class MirrorMatch {
 
   /** Other players get their own look; until it loads they borrow a rival's. */
   private dressTrainer(t: Trainer): void {
+    const title = this.titles.get(t.id);
+    if (title) (t as Trainer & { title?: string }).title = title;
     if (t.id === this.you && !this.observe) {
       t.isPlayer = true;
       t.role = 'player';

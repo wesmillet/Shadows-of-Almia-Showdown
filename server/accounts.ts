@@ -19,6 +19,7 @@ import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { cleanName, isClean } from './moderation';
 import { DEFAULT_RATING, decay, PLACEMENT_GAMES, seasonAt, seasonReset, tierOf, type Rating } from './rating';
+import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -31,6 +32,15 @@ export interface Identity {
   name: string;
   accountId: number | null;
   look?: unknown;
+  title?: string;
+}
+
+/** What a finished match did for a player's progress (sent to them for the end screen). */
+export interface Progress {
+  xp: Array<{ what: string; xp: number }>;
+  before: { level: number; into: number; next: number };
+  after: { level: number; into: number; next: number };
+  achievements: Array<Pick<Achievement, 'id' | 'name' | 'desc' | 'title' | 'look'>>;
 }
 
 export interface UserRow {
@@ -57,6 +67,23 @@ interface RatingRow {
 }
 
 const MAX_FRIENDS = 200;
+const RECOVERY_CODES = 8;
+/** Recovery codes are typed by hand: case, spaces and dashes do not matter. */
+const normCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+export interface PublicProfile {
+  name: string;
+  joined: number;
+  look: unknown;
+  stats: Stats;
+  recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; ratingDelta: number | null; xp: number | null; replay: boolean }>;
+  pc: number;
+  ranked: ReturnType<Accounts['rankedCard']>;
+  online: boolean;
+  progress: { xp: number; level: number; into: number; next: number };
+  title: string | null;
+  achievements: Array<{ id: string; at: number }>;
+}
 
 export interface FriendEntry {
   name: string;
@@ -141,13 +168,19 @@ export class Accounts {
       );
       CREATE TABLE IF NOT EXISTS replay_players (replay_id TEXT NOT NULL REFERENCES replays(id) ON DELETE CASCADE, user_id INTEGER NOT NULL, PRIMARY KEY (replay_id, user_id));
       CREATE INDEX IF NOT EXISTS replay_players_user ON replay_players(user_id);
+      CREATE TABLE IF NOT EXISTS achievements (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, id)
+      );
+      CREATE TABLE IF NOT EXISTS recovery (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_hash TEXT NOT NULL, used_at INTEGER, PRIMARY KEY (user_id, code_hash)
+      );
       CREATE TABLE IF NOT EXISTS reports (
         id INTEGER PRIMARY KEY, reporter_id INTEGER, reporter_key TEXT NOT NULL, target TEXT NOT NULL, reason TEXT NOT NULL,
         chat_id INTEGER, at INTEGER NOT NULL, resolved INTEGER NOT NULL DEFAULT 0
       );
     `);
     // Columns added after the first release (older databases get them here).
-    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"]] as const) {
+    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }
@@ -166,14 +199,16 @@ export class Accounts {
     const user = this.userFromRequest(req);
     if (user && !user.banned) {
       const prof = this.profile(user.id);
-      return { key: `u${user.id}`, name: user.username, accountId: user.id, look: prof.look ?? undefined };
+      const look = typeof prof.look === 'string' && this.canWear(user.id, prof.look) ? prof.look : undefined;
+      return { key: `u${user.id}`, name: user.username, accountId: user.id, look, title: this.title(user.id) ?? undefined };
     }
     const url = new URL(req.url ?? '/', 'http://x');
     const g = url.searchParams.get('guest') ?? '';
     const key = /^[A-Za-z0-9_-]{16,64}$/.test(g) ? g : randomBytes(12).toString('base64url');
     const n = parseInt(createHash('sha256').update(key).digest('hex').slice(0, 6), 16) % 10000;
     const look = url.searchParams.get('look');
-    return { key: `g${key}`, name: `Guest${String(n).padStart(4, '0')}`, accountId: null, look: look && /^[A-Za-z0-9_-]{1,48}$/.test(look) ? look : undefined };
+    // Guests wear the free looks only (the rest are unlocked by playing signed in).
+    return { key: `g${key}`, name: `Guest${String(n).padStart(4, '0')}`, accountId: null, look: look && /^[A-Za-z0-9_-]{1,48}$/.test(look) && isFreeLook(look) ? look : undefined };
   }
 
   userFromRequest(req: IncomingMessage): UserRow | null {
@@ -236,9 +271,10 @@ export class Accounts {
    * vouchers). Private matches (custom rules, friends only) keep nothing: they would be too easy to
    * farm. `ratingDeltas` is filled in for ranked matches.
    */
-  recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map()): void {
+  recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map(), field = 8): Map<string, Progress> {
+    const progress = new Map<string, Progress>();
     this.db.prepare('INSERT OR IGNORE INTO matches (id, ended_at, summary, mode) VALUES (?, ?, ?, ?)').run(matchId, Date.now(), JSON.stringify(results.map((r) => ({ name: r.name, place: r.place, outcome: r.outcome, team: r.team }))), mode);
-    if (mode === 'private') return;
+    if (mode === 'private') return progress;
     for (const r of results) {
       if (!r.key.startsWith('u')) continue;
       const userId = Number(r.key.slice(1));
@@ -254,7 +290,88 @@ export class Accounts {
       s.damage += Math.round(r.stats.damage);
       s.bestPlace = s.bestPlace === null ? r.place : Math.min(s.bestPlace, r.place);
       this.db.prepare('UPDATE profiles SET stats = ? WHERE user_id = ?').run(JSON.stringify(s), userId);
+      // XP, levels and achievements.
+      const facts: MatchFacts = {
+        mode, place: r.place, field, outcome: r.outcome, squad: r.team !== undefined && r.outcome === 'win', stats: r.stats,
+        party: r.party.map((m) => ({ dex: m.dex, level: m.level, shiny: m.shiny, alpha: m.alpha, legend: m.legend, shadow: m.shadow })),
+      };
+      const lines = matchXp(facts);
+      const gained = lines.reduce((n, x) => n + x.xp, 0);
+      const xpBefore = this.xp(userId);
+      this.db.prepare('UPDATE profiles SET xp = xp + ? WHERE user_id = ?').run(gained, userId);
+      this.db.prepare('UPDATE match_players SET xp = ? WHERE match_id = ? AND user_id = ?').run(gained, matchId, userId);
+      progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: this.checkAchievements(userId, facts) });
     }
+    return progress;
+  }
+
+  xp(userId: number): number {
+    return (this.db.prepare('SELECT xp FROM profiles WHERE user_id = ?').get(userId) as { xp: number } | undefined)?.xp ?? 0;
+  }
+
+  earned(userId: number): string[] {
+    return (this.db.prepare('SELECT id FROM achievements WHERE user_id = ?').all(userId) as Array<{ id: string }>).map((r) => r.id);
+  }
+
+  title(userId: number): string | null {
+    const t = (this.db.prepare('SELECT title FROM profiles WHERE user_id = ?').get(userId) as { title: string | null } | undefined)?.title ?? null;
+    return t && titlesFor(this.earned(userId)).includes(t) ? t : null;
+  }
+
+  canWear(userId: number, look: string): boolean {
+    return canWear(look, levelOf(this.xp(userId)).level, this.earned(userId));
+  }
+
+  /** Awards any achievements newly earned (after a match, or `match` null after an extraction). */
+  checkAchievements(userId: number, match: MatchFacts | null): Progress['achievements'] {
+    const have = new Set(this.earned(userId));
+    const st = this.profile(userId).stats;
+    const card = this.rankedCard(userId);
+    const ctx = {
+      match, life: { matches: st.matches, wins: st.wins, catches: st.catches, knockouts: st.knockouts, damage: st.damage },
+      level: levelOf(this.xp(userId)).level, tier: card.tier?.id ?? null, rankedWins: card.wins,
+      pc: (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(userId) as { n: number }).n,
+    };
+    const out: Progress['achievements'] = [];
+    for (const a of ACHIEVEMENTS) {
+      if (have.has(a.id) || !a.check(ctx)) continue;
+      this.db.prepare('INSERT OR IGNORE INTO achievements (user_id, id, at) VALUES (?, ?, ?)').run(userId, a.id, Date.now());
+      out.push({ id: a.id, name: a.name, desc: a.desc, title: a.title, look: a.look });
+    }
+    return out;
+  }
+
+  /** Everything a trainer's profile shows anyone (in the game and at /u/<name>). */
+  publicProfile(u: UserRow, prof = this.profile(u.id)): PublicProfile {
+    const recent = (this.db.prepare(`SELECT m.match_id, m.place, m.outcome, m.rating_delta, m.xp, x.ended_at, x.mode, (SELECT 1 FROM replays r WHERE r.id = m.match_id) AS replay
+      FROM match_players m JOIN matches x ON x.id = m.match_id WHERE m.user_id = ? ORDER BY x.ended_at DESC LIMIT 12`).all(u.id) as Array<Record<string, unknown>>)
+      .map((r) => ({ match: String(r.match_id), place: Number(r.place), outcome: String(r.outcome), mode: String(r.mode), at: Number(r.ended_at), ratingDelta: r.rating_delta === null ? null : Math.round(Number(r.rating_delta)), xp: r.xp === null ? null : Number(r.xp), replay: !!r.replay }));
+    const pcCount = (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(u.id) as { n: number }).n;
+    const ach = this.db.prepare('SELECT id, at FROM achievements WHERE user_id = ? ORDER BY at').all(u.id) as Array<{ id: string; at: number }>;
+    const xp = this.xp(u.id);
+    return {
+      name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, ranked: this.rankedCard(u.id), online: this.presence(u.id).online,
+      progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ach,
+    };
+  }
+
+  // ---------------------------------------------------------------- recovery codes
+
+  /** Fresh recovery codes (the old ones stop working). Shown once; only their hashes are kept. */
+  newRecoveryCodes(userId: number): string[] {
+    const codes = Array.from({ length: RECOVERY_CODES }, () => {
+      const b = randomBytes(5).toString('hex').toUpperCase();
+      return `${b.slice(0, 5)}-${b.slice(5)}`;
+    });
+    this.db.prepare('DELETE FROM recovery WHERE user_id = ?').run(userId);
+    for (const c of codes) this.db.prepare('INSERT INTO recovery (user_id, code_hash) VALUES (?, ?)').run(userId, sha256(normCode(c)));
+    return codes;
+  }
+
+  /** Uses one recovery code to set a new password. */
+  private useRecoveryCode(userId: number, code: string): boolean {
+    const r = this.db.prepare('UPDATE recovery SET used_at = ? WHERE user_id = ? AND code_hash = ? AND used_at IS NULL').run(Date.now(), userId, sha256(normCode(code)));
+    return Number(r.changes) === 1;
   }
 
   // ---------------------------------------------------------------- ranked
@@ -390,10 +507,15 @@ export class Accounts {
       if (req.method === 'GET' && path === '/api/me') {
         if (!me) return send(200, { signedIn: false, google: !!this.google });
         const prof = this.profile(me.id);
-        return send(200, { signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub }, look: prof.look, stats: prof.stats });
+        const earned = this.earned(me.id);
+        return send(200, {
+          signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: prof.look, stats: prof.stats,
+          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
+        });
       }
       if (req.method === 'POST' && path === '/api/register') return this.register(req, res, send);
       if (req.method === 'POST' && path === '/api/login') return this.login(req, res, send);
+      if (req.method === 'POST' && path === '/api/recover') return this.recover(req, send);
       if (req.method === 'POST' && path === '/api/logout') {
         const token = parseCookies(req.headers.cookie)[COOKIE];
         if (token) this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
@@ -417,9 +539,7 @@ export class Accounts {
         const u = this.db.prepare('SELECT * FROM users WHERE username = ?').get(name) as UserRow | undefined;
         if (!u || u.banned) return send(404, { error: 'No such player' });
         const prof = this.profile(u.id);
-        const recent = this.db.prepare('SELECT m.match_id, m.place, m.outcome, x.ended_at FROM match_players m JOIN matches x ON x.id = m.match_id WHERE m.user_id = ? ORDER BY x.ended_at DESC LIMIT 10').all(u.id);
-        const pcCount = (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(u.id) as { n: number }).n;
-        return send(200, { name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, ranked: this.rankedCard(u.id), online: this.presence(u.id).online });
+        return send(200, this.publicProfile(u, prof));
       }
       if (!me) return send(401, { error: 'Sign in first' });
       if (me.banned) return send(403, { error: 'This account is banned' });
@@ -461,12 +581,42 @@ export class Accounts {
         pick.taken = true;
         this.addToPc(me.id, pick, row.outcome === 'win' ? 'win' : 'voucher', String(b.match));
         this.db.prepare('UPDATE match_players SET picks_left = picks_left - 1, party = ? WHERE user_id = ? AND match_id = ?').run(JSON.stringify(party), me.id, String(b.match));
-        return send(200, { ok: true, name: pick.name });
+        return send(200, { ok: true, name: pick.name, achievements: this.checkAchievements(me.id, null) });
+      }
+      if (req.method === 'POST' && path === '/api/title') {
+        const b = await readJson(req);
+        const t = typeof b.title === 'string' ? b.title : '';
+        if (t && !titlesFor(this.earned(me.id)).includes(t)) return send(400, { error: 'Earn that title first' });
+        this.db.prepare('UPDATE profiles SET title = ? WHERE user_id = ?').run(t || null, me.id);
+        return send(200, { ok: true, title: t || null });
+      }
+      if (req.method === 'POST' && path === '/api/recovery/new') {
+        if (!me.pass_hash) return send(400, { error: 'Your account signs in with Google: Google handles its recovery' });
+        return send(200, { ok: true, recovery: this.newRecoveryCodes(me.id) });
+      }
+      if (req.method === 'POST' && path === '/api/password') {
+        const b = await readJson(req);
+        const cur = String(b.current ?? '');
+        const next = String(b.password ?? '');
+        if (!me.pass_hash) return send(400, { error: 'Your account signs in with Google' });
+        if (this.limited(`pw:${me.id}`, 8, 900_000)) return send(429, { error: 'Too many tries. Wait 15 minutes' });
+        if (!checkPassword(cur, me.pass_hash)) {
+          this.fail(`pw:${me.id}`);
+          return send(401, { error: 'Your current password is not right' });
+        }
+        const err = passwordProblem(next, me.username);
+        if (err) return send(400, { error: err });
+        this.db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(next), me.id);
+        // Every other browser signed in to this account is signed out.
+        const token = parseCookies(req.headers.cookie)[COOKIE] ?? '';
+        this.db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(me.id, sha256(token));
+        return send(200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/look') {
         const b = await readJson(req);
         const look = typeof b.look === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(b.look) ? b.look : null;
         if (!look) return send(400, { error: 'Pick a look' });
+        if (!this.canWear(me.id, look)) return send(403, { error: 'That look is not unlocked yet' });
         this.db.prepare('UPDATE profiles SET look = ? WHERE user_id = ?').run(JSON.stringify(look), me.id);
         return send(200, { ok: true });
       }
@@ -511,8 +661,8 @@ export class Accounts {
     const password = String(b.password ?? '');
     const err = this.checkUsername(username);
     if (err) return send(400, { error: err });
-    if (password.length < 8 || password.length > 200) return send(400, { error: 'Passwords need at least 8 characters' });
-    if (password.toLowerCase().includes(username.toLowerCase()) || /^(password|12345678|qwertyui|11111111)/i.test(password)) return send(400, { error: 'Pick a harder password' });
+    const perr = passwordProblem(password, username);
+    if (perr) return send(400, { error: perr });
     let id: number;
     try {
       id = Number(this.db.prepare('INSERT INTO users (username, pass_hash, created_at) VALUES (?, ?, ?)').run(username, hashPassword(password), Date.now()).lastInsertRowid);
@@ -521,7 +671,9 @@ export class Accounts {
     }
     this.fail(`reg:${ip}`);
     this.db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(id);
-    return send(200, { ok: true, username }, { 'Set-Cookie': this.cookie(req, this.newSession(id), SESSION_DAYS * 86400) });
+    // No email is kept, so these codes are how a forgotten password is reset: shown once, now.
+    const recovery = this.newRecoveryCodes(id);
+    return send(200, { ok: true, username, recovery }, { 'Set-Cookie': this.cookie(req, this.newSession(id), SESSION_DAYS * 86400) });
   }
 
   private async login(req: IncomingMessage, res: ServerResponse, send: (s: number, b: unknown, h?: Record<string, string | string[]>) => void): Promise<void> {
@@ -540,6 +692,32 @@ export class Accounts {
     }
     if (u.banned) return send(403, { error: 'This account is banned' });
     return send(200, { ok: true, username: u.username }, { 'Set-Cookie': this.cookie(req, this.newSession(u.id), SESSION_DAYS * 86400) });
+  }
+
+  /** A forgotten password: a recovery code sets a new one (and signs out everywhere else). */
+  private async recover(req: IncomingMessage, send: (s: number, b: unknown, h?: Record<string, string | string[]>) => void): Promise<void> {
+    const ip = clientIp(req);
+    const b = await readJson(req);
+    const username = String(b.username ?? '');
+    const code = String(b.code ?? '');
+    const password = String(b.password ?? '');
+    if (this.limited(`rec:${ip}`, 10, 3600_000) || this.limited(`recuser:${username.toLowerCase()}`, 5, 3600_000)) return send(429, { error: 'Too many tries. Try again in an hour' });
+    const u = this.db.prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
+    if (!u || !u.pass_hash || u.banned || !this.useRecoveryCode(u.id, code)) {
+      this.fail(`rec:${ip}`);
+      this.fail(`recuser:${username.toLowerCase()}`);
+      return send(401, { error: 'That name and code do not match' });
+    }
+    const err = passwordProblem(password, u.username);
+    if (err) {
+      // The code was good: give it back so they can try a better password.
+      this.db.prepare('UPDATE recovery SET used_at = NULL WHERE user_id = ? AND code_hash = ?').run(u.id, sha256(normCode(code)));
+      return send(400, { error: err });
+    }
+    this.db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(password), u.id);
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
+    const left = (this.db.prepare('SELECT COUNT(*) AS n FROM recovery WHERE user_id = ? AND used_at IS NULL').get(u.id) as { n: number }).n;
+    return send(200, { ok: true, username: u.username, codesLeft: left }, { 'Set-Cookie': this.cookie(req, this.newSession(u.id), SESSION_DAYS * 86400) });
   }
 
   // ---------------------------------------------------------------- Google
@@ -634,6 +812,13 @@ export class Accounts {
 }
 
 // ---------------------------------------------------------------- helpers
+
+/** Why a password will not do (null: it will). */
+export function passwordProblem(password: string, username: string): string | null {
+  if (password.length < 8 || password.length > 200) return 'Passwords need at least 8 characters';
+  if (password.toLowerCase().includes(username.toLowerCase()) || /^(password|12345678|qwertyui|11111111)/i.test(password)) return 'Pick a harder password';
+  return null;
+}
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);

@@ -42,6 +42,24 @@ the domain, and (optionally) Google for "Sign in with Google".
 | **Watching** | A friend's match, the featured match (most players), or the rest of your own after being knocked out (your squad first). Spectators are 4 seconds behind, so watching can not help a player. ←/→ switch whom the camera follows. |
 | **Replays** | Every match is recorded (`server/replays.ts`): what any trainer could see, nobody's bag, keyframed every 30 s for seeking, about 2 KB/s. Space pause, ←/→ 10 s, ↑/↓ speed, Q/E switch trainer. The oldest go once they pass `REPLAY_MB` (400). |
 
+## Progress (`src/net/progression.ts`)
+
+- **Trainer XP and levels**: every casual or ranked match a signed-in player finishes earns XP for
+  playing, for each trainer outlasted, for winning, knockouts, catches, damage and time survived
+  (ranked +25%). The end screen lists it line by line.
+- **Looks**: the townsfolk and the first Ranger are free; the other Rangers unlock with levels (2 to
+  25), and the two named trainers with achievements (Wren: win a match; Kit: reach Gold). The
+  server checks every look (`/api/look`), and guests wear free looks only.
+- **Achievements**: 25, from one match (10 knockouts, a shiny in your party at the end...) or totals
+  (100 catches, level 25, Master tier...). Several give a **title**, worn on your profile and shown
+  under your name in battles.
+- **Profiles**: in the game (click a name) and as a page to share: `/u/<name>` (level, title, rank,
+  stats, achievements, recent matches with links to their replays). `?replay=<match>` and
+  `?profile=<name>` links open the game straight there.
+- **Recovery codes**: no email is kept, so signing up shows eight one-time recovery codes; "Forgot
+  your password?" takes your name, a code and a new password (and signs out every old session).
+  New codes and a password change are on your own profile.
+
 ## Running it locally
 
 ```

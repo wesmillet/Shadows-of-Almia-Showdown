@@ -8,7 +8,7 @@ import type { Input } from '../core/input';
 import type { Connection } from '../net/connection';
 import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
-import { SocialPanel } from './socialPanel';
+import { recoverDialog, recoveryCodesDialog, SocialPanel } from './socialPanel';
 import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -170,7 +170,7 @@ export class OnlineScreen implements Screen {
 
   private async account(mode: 'signin' | 'register'): Promise<void> {
     this.busy = true;
-    const ok = await accountDialog(this.net, mode);
+    const ok = await accountDialog(this.net, mode, { recovery: (codes) => recoveryCodesDialog(codes), forgot: () => recoverDialog(this.net) });
     this.busy = false;
     if (ok) {
       this.message = `Welcome, ${this.net.me.user?.username}!`;
@@ -211,10 +211,21 @@ export class OnlineScreen implements Screen {
     panel(v, card.x, card.y, card.w, card.h, 18, 'rgba(18,14,34,0.9)');
     const cx = v.width / 2;
     if (me.signedIn && me.user) {
-      text(v, me.user.username, cx, card.y + 34 * s, 24, { align: 'center', color: INK.text, shadow: false });
+      const pr = me.progress;
+      text(v, `${me.user.username}${pr ? `  ·  Lv ${pr.level}` : ''}`, cx, card.y + 30 * s, 22, { align: 'center', color: INK.text, shadow: false });
+      if (me.title) text(v, me.title, cx, card.y + 12 * s, 11, { align: 'center', color: INK.accent, shadow: false });
+      if (pr && pr.next) {
+        // Progress to the next level, a thin bar along the card's top edge.
+        const bw = 220 * s;
+        const h = v.hud;
+        h.fillStyle = 'rgba(74,52,36,0.25)';
+        h.fillRect(cx - bw / 2, card.y + 40 * s, bw, 4 * s);
+        h.fillStyle = '#f2c24a';
+        h.fillRect(cx - bw / 2, card.y + 40 * s, (bw * pr.into) / pr.next, 4 * s);
+      }
       const rk = this.net.ranked;
       const rankLine = !rk ? '' : rk.tier ? `${rk.tier.name} · ${rk.rating}${rk.rank ? ` · #${rk.rank}` : ''} · season ${rk.season}` : rk.games ? `Ranked: ${rk.placementLeft} placement game${rk.placementLeft === 1 ? '' : 's'} left` : `Ranked season ${rk.season}: play 5 placement games for a tier`;
-      text(v, rankLine, cx, card.y + 58 * s, 14, { align: 'center', color: rk?.tier?.color ?? INK.accent, shadow: false });
+      text(v, rankLine, cx, card.y + 60 * s, 14, { align: 'center', color: rk?.tier?.color ?? INK.accent, shadow: false });
       const st = me.stats;
       text(v, st ? `${st.wins} wins · ${st.matches} matches · ${st.catches} catches` : '', cx, card.y + 80 * s, 12, { align: 'center', color: INK.dim, shadow: false });
       button(v, 'Sign out', r.signout.x, r.signout.y, r.signout.w, r.signout.h, over('signout'), '#f4e6c8');
@@ -561,6 +572,17 @@ export class OnlineEndScreen implements Screen {
     const win = this.outcome === 'win';
     text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 50 * s, 40, { align: 'center', color: win ? INK.accent : INK.bad, shadow: false });
     text(v, win ? (this.place === 1 && this.net.social.party ? 'Your squad is the last standing!' : 'Last trainer standing!') : `You placed #${this.place}`, v.width / 2, py + 86 * s, 16, { align: 'center', color: INK.dim, shadow: false });
+    const prog = this.net.progress;
+    if (prog && this.net.me.signedIn) {
+      const total = prog.xp.reduce((n, x) => n + x.xp, 0);
+      const up = prog.after.level > prog.before.level;
+      text(v, `+${total} XP${up ? `  ·  Level ${prog.after.level}!` : `  ·  Level ${prog.after.level}`}`, v.width / 2, py + 134 * s, 15, { align: 'center', color: up ? INK.accent : INK.text, shadow: false });
+      const lines = prog.xp.map((x) => `${x.what} +${x.xp}`).join('  ·  ');
+      wrapText(v, lines, v.width / 2, py + 152 * s, 11, pw - 60 * s, 14 * s, 2, { align: 'center', color: INK.dim, shadow: false });
+      prog.achievements.slice(0, 2).forEach((a, i) => {
+        text(v, `★ ${a.name}${a.title ? ` · new title: ${a.title}` : ''}${a.look ? ' · new look' : ''}`, v.width / 2, py + 186 * s + i * 18 * s, 13, { align: 'center', color: '#c2611a', shadow: false, maxWidth: pw - 40 * s });
+      });
+    }
     const rated = this.net.rated;
     if (rated) {
       const d = rated.after - rated.before;
@@ -572,14 +594,14 @@ export class OnlineEndScreen implements Screen {
     if (!this.net.me.signedIn) {
       wrapText(v, win ? 'You won as a guest, so nothing could be kept. Sign in next time to keep a Pokémon from every win.' : 'Sign in to keep your stats and the Pokémon you win.', v.width / 2, py + 140 * s, 14, pw - 80 * s, 20 * s, 3, { align: 'center', color: INK.text, shadow: false });
     } else if (this.info?.picks) {
-      text(v, `Keep ${this.info.picks > 1 ? `up to ${this.info.picks} Pokémon` : 'one Pokémon'}: it goes to your PC on the server`, v.width / 2, py + 130 * s, 14, { align: 'center', color: INK.blue, shadow: false, maxWidth: pw - 60 * s });
+      text(v, `Keep ${this.info.picks > 1 ? `up to ${this.info.picks} Pokémon` : 'one Pokémon'}: it goes to your PC on the server`, v.width / 2, py + 232 * s, 14, { align: 'center', color: INK.blue, shadow: false, maxWidth: pw - 60 * s });
       this.pickRects().forEach((r, i) => {
         const m = this.info?.party?.[i];
         if (!m) return;
         button(v, `${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${m.taken ? '  ✓' : ''}`, r.x, r.y, r.w, r.h, !m.taken && hit(mx, my, r.x, r.y, r.w, r.h), m.taken ? '#44405a' : '#f4e6c8');
       });
     } else if (this.net.me.signedIn) {
-      text(v, win ? (this.note ? 'Your win and stats are saved.' : 'Saving your win...') : 'Your stats were saved.', v.width / 2, py + 140 * s, 14, { align: 'center', color: INK.text, shadow: false });
+      text(v, win ? (this.note ? 'Your win and stats are saved.' : 'Saving your win...') : 'Your stats were saved.', v.width / 2, py + 232 * s, 14, { align: 'center', color: INK.text, shadow: false });
     }
     if (this.note) text(v, this.note, v.width / 2, py + ph - 110 * s, 14, { align: 'center', color: INK.good, shadow: false });
     const d = this.doneRect();

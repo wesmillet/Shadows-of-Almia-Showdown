@@ -14,9 +14,15 @@ const GUEST_KEY = 'almia.guest.v1';
 export interface Me {
   signedIn: boolean;
   google: boolean;
-  user?: { id: number; username: string; role: string; google: boolean };
+  user?: { id: number; username: string; role: string; google: boolean; password?: boolean };
   look?: string | null;
   stats?: { matches: number; wins: number; catches: number; knockouts: number; damage: number; bestPlace: number | null };
+  progress?: { xp: number; level: number; into: number; next: number };
+  title?: string | null;
+  /** Titles earned (to wear one). */
+  titles?: string[];
+  /** Achievement ids earned. */
+  achievements?: string[];
 }
 
 /** A ranked standing (server/accounts.ts rankedCard). */
@@ -88,6 +94,8 @@ export class Connection {
   privateLobby: PrivateState | null = null;
   /** The last ranked result (shown on the end screen). */
   rated: Extract<ServerMsg, { t: 'rated' }> | null = null;
+  /** The last match's XP, levels and achievements (shown on the end screen). */
+  progress: Extract<ServerMsg, { t: 'progress' }> | null = null;
   ranked: RankedCard | null = null;
 
   constructor(readonly base: string) {}
@@ -121,6 +129,10 @@ export class Connection {
         else if (msg.t === 'social') this.social = { friends: msg.friends, party: msg.party, invites: msg.invites };
         else if (msg.t === 'private') this.privateLobby = msg.lobby;
         else if (msg.t === 'rated') this.rated = msg;
+        else if (msg.t === 'progress') {
+          this.progress = msg;
+          void this.refreshMe();
+        }
         else if (msg.t === 'chat') {
           if (!this.chat.some((c) => c.id !== undefined && c.id === msg.id)) this.chat.push(msg);
           if (this.chat.length > 100) this.chat.shift();

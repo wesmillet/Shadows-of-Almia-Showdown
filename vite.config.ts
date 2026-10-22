@@ -58,6 +58,7 @@ export default defineConfig(({ command }) => ({
     proxy: {
       '/api': { target: `http://127.0.0.1:${process.env.GAME_SERVER_PORT ?? 8787}`, changeOrigin: false },
       '/health': { target: `http://127.0.0.1:${process.env.GAME_SERVER_PORT ?? 8787}` },
+      '/u/': { target: `http://127.0.0.1:${process.env.GAME_SERVER_PORT ?? 8787}` },
       '/ws': { target: `ws://127.0.0.1:${process.env.GAME_SERVER_PORT ?? 8787}`, ws: true },
     },
   },

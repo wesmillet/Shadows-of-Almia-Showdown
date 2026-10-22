@@ -56,6 +56,7 @@ export interface Peer {
   key: string;
   name: string;
   look?: unknown;
+  title?: string;
   send(msg: ServerMsg): void;
 }
 
@@ -153,7 +154,7 @@ export class Room {
     });
     const roster: RosterEntry[] = this.match.allTrainers.filter((t) => !t.visitor).map((t) => {
       const owner = [...this.players.values()].find((p) => p.seat.trainer === t);
-      return { trainerId: t.id, name: t.name, human: t.isPlayer, look: owner?.peer?.look, team: t.team };
+      return { trainerId: t.id, name: t.name, human: t.isPlayer, look: owner?.peer?.look, team: t.team, title: owner?.peer?.title };
     });
     this.roster = roster;
     for (const p of this.players.values()) p.peer?.send({ t: 'start', matchId: this.id, seed, you: p.seat.trainer.id, roster, mode: this.mode });

@@ -4,6 +4,7 @@
  */
 import type { Connection } from '../net/connection';
 import type { FriendEntry, ServerMsg } from '../net/protocol';
+import { ACHIEVEMENTS } from '../net/progression';
 import { el, overlayRoot } from './overlay';
 
 const ACTIVITY: Record<FriendEntry['activity'], [string, string]> = {
@@ -387,48 +388,239 @@ interface Profile {
   joined: number;
   stats: { matches: number; wins: number; catches: number; knockouts: number; damage: number; bestPlace: number | null };
   ranked?: { rating: number; tier: { name: string; color: string } | null; placementLeft: number; games: number; wins: number; peak: number; rank: number | null; season: number };
-  recent: Array<{ match_id: string; place: number; outcome: string; ended_at: number }>;
+  recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; ratingDelta: number | null; xp: number | null; replay: boolean }>;
   pc: number;
   online: boolean;
+  progress: { xp: number; level: number; into: number; next: number };
+  title: string | null;
+  achievements: Array<{ id: string; at: number }>;
 }
 
-/** A trainer's public profile: ranked standing, lifetime stats, recent matches. */
-export function profileDialog(net: Connection, name: string): Promise<void> {
+/**
+ * A trainer's profile: level, title, ranked standing, stats, achievements, recent matches (with
+ * their replays). Your own also has your account tools: the title you wear, a link to share,
+ * changing your password, and new recovery codes.
+ */
+export function profileDialog(net: Connection, name: string, onReplay?: (matchId: string) => void): Promise<void> {
   return modal((box, close) => {
     box.append(el('h2', '', name), el('div', 'almia-note', 'Loading...'));
     void net.api<Profile>(`/api/profile/${encodeURIComponent(name)}`).then((p) => {
-      box.replaceChildren(el('h2', '', p.name ?? name));
+      box.replaceChildren();
+      const body = el('div');
+      body.style.cssText = 'overflow-y:auto;flex:1;min-height:0';
+      const head = el('div');
+      head.append(el('h2', '', p.name ?? name));
+      box.append(head, body);
       if (p.error) {
-        box.append(el('div', 'almia-note', p.error));
+        body.append(el('div', 'almia-note', p.error));
       } else {
-        box.append(el('div', 'almia-note', `${p.online ? 'Online now' : 'Offline'} · trainer since ${new Date(p.joined).toLocaleDateString()} · ${p.pc} Pokémon in their PC`));
+        const mine = net.me.user?.username === p.name;
+        if (p.title) {
+          const t = el('div', '', p.title);
+          t.style.color = '#c2611a';
+          head.append(t);
+        }
+        const pr = p.progress;
+        const lvl = el('div', '', `Trainer level ${pr.level}`);
+        lvl.style.marginTop = '4px';
+        const bar = el('div');
+        bar.style.cssText = 'height:8px;border:2px solid #4a3424;background:#e9dcc2;max-width:260px;margin:4px 0';
+        const fill = el('div');
+        fill.style.cssText = `height:100%;background:#f2c24a;width:${pr.next ? Math.round((pr.into / pr.next) * 100) : 100}%`;
+        bar.append(fill);
+        body.append(lvl, bar, el('div', 'almia-note', `${pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level + 1} · ` : ''}${p.online ? 'Online now · ' : ''}trainer since ${new Date(p.joined).toLocaleDateString()} · ${p.pc} Pokémon in their PC`));
         const r = p.ranked;
         if (r) {
           const line = el('div', '', r.tier ? `${r.tier.name} · ${r.rating}${r.rank ? ` · #${r.rank}` : ''}` : r.games ? `Ranked: ${r.placementLeft} placement game${r.placementLeft === 1 ? '' : 's'} left` : 'No ranked games this season');
           if (r.tier) line.style.color = r.tier.color;
-          line.style.fontSize = '20px';
+          line.style.fontSize = '19px';
           line.style.margin = '8px 0 2px';
-          box.append(line, el('div', 'almia-note', `Season ${r.season} · ${r.wins} wins in ${r.games} ranked · peak ${r.peak}`));
+          body.append(line, el('div', 'almia-note', `Season ${r.season} · ${r.wins} wins in ${r.games} ranked · peak ${r.peak}`));
         }
-        const s = p.stats;
+        const st = p.stats;
         const t = el('table', 'almia-board');
-        t.innerHTML = '<tr><th>Matches</th><th>Wins</th><th>Best place</th><th>Catches</th><th>Knockouts</th></tr>';
+        t.innerHTML = '<tr><th>Matches</th><th>Wins</th><th>Best</th><th>Catches</th><th>Knockouts</th></tr>';
         const tr = el('tr');
-        for (const v of [s.matches, s.wins, s.bestPlace ?? '-', s.catches, s.knockouts]) tr.append(el('td', '', String(v)));
+        for (const v of [st.matches, st.wins, st.bestPlace ?? '-', st.catches, st.knockouts]) tr.append(el('td', '', String(v)));
         t.append(tr);
-        box.append(t);
-        if (p.recent?.length) {
-          box.append(el('h3', '', 'Recent matches'));
-          for (const m of p.recent.slice(0, 6)) box.append(el('div', 'almia-note', `${m.outcome === 'win' ? 'Won' : `#${m.place}`} · ${new Date(m.ended_at).toLocaleString()}`));
+        body.append(t);
+        // Achievements: earned ones bright, the rest faint with what they take.
+        const have = new Set(p.achievements.map((a) => a.id));
+        body.append(el('h3', '', `Achievements · ${have.size}/${ACHIEVEMENTS.length}`));
+        const grid = el('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px';
+        for (const a of ACHIEVEMENTS) {
+          const b = el('div');
+          b.style.cssText = `border:2px solid #4a3424;background:#fffaf0;padding:5px 6px;font-size:12px;${have.has(a.id) ? '' : 'opacity:0.4'}`;
+          b.title = `${a.desc}${a.title ? ` · title: ${a.title}` : ''}${a.look ? ' · unlocks a look' : ''}`;
+          const n = el('div', '', a.name);
+          n.style.color = have.has(a.id) ? '#c2611a' : '#4a3424';
+          b.append(n, el('div', 'almia-note', a.desc));
+          grid.append(b);
         }
+        body.append(grid);
+        if (p.recent?.length) {
+          body.append(el('h3', '', 'Recent matches'));
+          for (const m of p.recent.slice(0, 8)) {
+            const row = el('div', 'almia-row');
+            const what = m.outcome === 'win' ? 'Won' : `#${m.place}`;
+            const extra = [m.mode === 'ranked' ? `Ranked${m.ratingDelta !== null ? ` ${m.ratingDelta >= 0 ? '+' : ''}${m.ratingDelta}` : ''}` : 'Casual', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
+            const nm = el('span', 'nm', `${what} · ${extra}`);
+            nm.append(el('span', 'sub', new Date(m.at).toLocaleString()));
+            row.append(nm);
+            if (m.replay && onReplay) {
+              const w = el('button', 'almia-small alt', 'Replay');
+              w.onclick = () => {
+                close();
+                onReplay(m.match);
+              };
+              row.append(w);
+            }
+            body.append(row);
+          }
+        }
+        if (mine) body.append(accountTools(net, p, () => close()));
       }
       const row = el('div', 'row');
+      const link = el('button', 'almia-btn alt', 'Copy profile link');
+      link.onclick = () => void navigator.clipboard?.writeText(`${net.base}/u/${encodeURIComponent(p.name ?? name)}`).then(() => (link.textContent = 'Link copied'));
       const done = el('button', 'almia-btn alt', 'Close');
       done.onclick = close;
-      row.append(done);
+      row.append(link, done);
       box.append(row);
     });
   });
+}
+
+/** Your own profile: the title you wear, password and recovery codes. */
+function accountTools(net: Connection, p: Profile, close: () => void): HTMLElement {
+  const wrap = el('div');
+  wrap.append(el('h3', '', 'Your account'));
+  const titles = net.me.titles ?? [];
+  const row = el('div', 'almia-row');
+  row.append(el('span', 'nm', 'Title you wear'));
+  const sel = el('select');
+  for (const t of ['', ...titles]) {
+    const o = el('option', '', t || (titles.length ? 'None' : 'Earn titles with achievements'));
+    o.value = t;
+    if ((p.title ?? '') === t) o.selected = true;
+    sel.append(o);
+  }
+  sel.disabled = !titles.length;
+  const note = el('div', 'almia-note', '');
+  sel.onchange = async () => {
+    const r = await net.api<{ ok?: boolean }>('/api/title', { title: sel.value });
+    note.textContent = r.ok ? (sel.value ? `You now wear "${sel.value}"` : 'No title') : (r.error ?? 'Could not change it');
+    void net.refreshMe();
+  };
+  row.append(sel);
+  wrap.append(row);
+  if (net.me.user?.password) {
+    const actions = el('div', 'almia-tabs');
+    const pw = el('button', 'almia-small alt', 'Change password');
+    pw.onclick = () => {
+      close();
+      void changePasswordDialog(net);
+    };
+    const codes = el('button', 'almia-small alt', 'New recovery codes');
+    codes.onclick = async () => {
+      const r = await net.api<{ recovery?: string[] }>('/api/recovery/new', {});
+      close();
+      if (r.recovery) void recoveryCodesDialog(r.recovery, true);
+    };
+    actions.append(pw, codes);
+    wrap.append(actions);
+  }
+  wrap.append(note);
+  return wrap;
+}
+
+/** Shows recovery codes once (after signing up, or new ones). */
+export function recoveryCodesDialog(codes: string[], replaced = false): Promise<void> {
+  return modal((box, close) => {
+    box.append(
+      el('h2', '', 'Your recovery codes'),
+      el('p', '', `We keep no email, so these are how you get back in if you forget your password. Each works once. Save them somewhere safe now: they will not be shown again.${replaced ? ' Your old codes no longer work.' : ''}`),
+    );
+    const list = el('div');
+    list.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:20px;letter-spacing:2px;margin:6px 0 10px';
+    for (const c of codes) list.append(el('div', '', c));
+    const row = el('div', 'row');
+    const copy = el('button', 'almia-btn alt', 'Copy');
+    copy.onclick = () => void navigator.clipboard?.writeText(codes.join('\n')).then(() => (copy.textContent = 'Copied'));
+    const ok = el('button', 'almia-btn', "I've saved them");
+    ok.onclick = close;
+    row.append(copy, ok);
+    box.append(list, row);
+  }, false);
+}
+
+function changePasswordDialog(net: Connection): Promise<void> {
+  return modal((box, close) => {
+    box.append(el('h2', '', 'Change password'));
+    const cur = el('input');
+    cur.type = 'password';
+    cur.autocomplete = 'current-password';
+    const next = el('input');
+    next.type = 'password';
+    next.autocomplete = 'new-password';
+    const err = el('div', 'err');
+    const go = el('button', 'almia-btn', 'Change it');
+    const cancel = el('button', 'almia-btn alt', 'Cancel');
+    cancel.onclick = close;
+    go.onclick = async () => {
+      go.disabled = true;
+      const r = await net.api<{ ok?: boolean }>('/api/password', { current: cur.value, password: next.value });
+      go.disabled = false;
+      if (r.ok) {
+        err.style.color = '#2e7d32';
+        err.textContent = 'Changed. Other browsers signed in as you were signed out.';
+        window.setTimeout(close, 1400);
+      } else err.textContent = r.error ?? 'That did not work';
+    };
+    const row = el('div', 'row');
+    row.append(cancel, go);
+    box.append(el('label', '', 'Current password'), cur, el('label', '', 'New password (8+ characters)'), next, err, row);
+    cur.focus();
+  }, false);
+}
+
+/** Forgot your password: your trainer name, one recovery code, and a new password. */
+export function recoverDialog(net: Connection): Promise<boolean> {
+  let ok = false;
+  return modal((box, close) => {
+    box.append(el('h2', '', 'Forgot your password?'), el('p', '', 'Use one of the recovery codes you saved when you made your account.'));
+    const name = el('input');
+    name.autocomplete = 'username';
+    const code = el('input');
+    code.style.letterSpacing = '2px';
+    const pass = el('input');
+    pass.type = 'password';
+    pass.autocomplete = 'new-password';
+    const err = el('div', 'err');
+    const go = el('button', 'almia-btn', 'Set new password');
+    const cancel = el('button', 'almia-btn alt', 'Cancel');
+    cancel.onclick = close;
+    go.onclick = async () => {
+      go.disabled = true;
+      const r = await net.api<{ ok?: boolean; codesLeft?: number }>('/api/recover', { username: name.value.trim(), code: code.value, password: pass.value });
+      go.disabled = false;
+      if (!r.ok) {
+        err.textContent = r.error ?? 'That did not work';
+        return;
+      }
+      ok = true;
+      await net.refreshMe();
+      await net.reconnect();
+      err.style.color = '#2e7d32';
+      err.textContent = `You're back in. ${r.codesLeft ?? 0} recovery code${r.codesLeft === 1 ? '' : 's'} left${(r.codesLeft ?? 0) < 3 ? ': make new ones from your profile' : ''}.`;
+      window.setTimeout(close, 2200);
+    };
+    const row = el('div', 'row');
+    row.append(cancel, go);
+    box.append(el('label', '', 'Trainer name'), name, el('label', '', 'Recovery code'), code, el('label', '', 'New password (8+ characters)'), pass, err, row);
+    name.focus();
+  }, false).then(() => ok);
 }
 
 export type { ServerMsg };

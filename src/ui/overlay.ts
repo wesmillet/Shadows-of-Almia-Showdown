@@ -222,7 +222,12 @@ export class ChatPanel {
  * Sign in or create an account: a username and password, or Google when the server has it set up.
  * Resolves true once signed in, false if closed.
  */
-export function accountDialog(net: Connection, startWith: 'signin' | 'register' = 'signin'): Promise<boolean> {
+export function accountDialog(
+  net: Connection,
+  startWith: 'signin' | 'register' = 'signin',
+  /** After signing up: show the recovery codes. Forgot password: the recovery dialog (true when back in). */
+  hooks: { recovery?: (codes: string[]) => Promise<void>; forgot?: () => Promise<boolean> } = {},
+): Promise<boolean> {
   return new Promise((resolve) => {
     let mode = startWith;
     const wrap = el('div', 'almia-modal-wrap');
@@ -267,11 +272,21 @@ export function accountDialog(net: Connection, startWith: 'signin' | 'register' 
       };
       sw.append(document.createTextNode(mode === 'signin' ? 'New here? ' : 'Have an account? '), link);
       box.append(sw);
+      if (mode === 'signin' && hooks.forgot) {
+        const fg = el('div', 'switch');
+        const fl = el('a', '', 'Forgot your password?');
+        fl.onclick = async () => {
+          wrap.remove();
+          resolve(await (hooks.forgot as () => Promise<boolean>)());
+        };
+        fg.append(fl);
+        box.append(fg);
+      }
       cancel.onclick = () => close(false);
       const submit = async () => {
         go.disabled = true;
         err.textContent = '';
-        const r = await net.api<{ ok?: boolean }>(mode === 'signin' ? '/api/login' : '/api/register', { username: name.value.trim(), password: pass.value });
+        const r = await net.api<{ ok?: boolean; recovery?: string[] }>(mode === 'signin' ? '/api/login' : '/api/register', { username: name.value.trim(), password: pass.value });
         go.disabled = false;
         if (!r.ok) {
           err.textContent = r.error ?? 'That did not work';
@@ -280,6 +295,7 @@ export function accountDialog(net: Connection, startWith: 'signin' | 'register' 
         await net.refreshMe();
         await net.reconnect();
         close(true);
+        if (r.recovery && hooks.recovery) await hooks.recovery(r.recovery);
       };
       go.onclick = () => void submit();
       for (const i of [name, pass]) {

@@ -18,6 +18,8 @@ import { Chat } from './chat';
 import { Hub, type Client } from './hub';
 import { replayDir, replayFile } from './replays';
 import { notFoundPage, profilePage } from './profilePage';
+import { ModApi } from './modApi';
+import { MOD_PAGE } from './modPage';
 import { STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
 import { Accounts } from './accounts';
@@ -65,6 +67,10 @@ const roomHooks: RoomHooks = {
     const id = accountOf(key);
     if (id !== null) accounts.addToPc(id, Accounts.pcFields(mon), 'voucher', matchId);
   },
+  flagged: (key, name, matchId, summary) => {
+    log(`Flagged ${name} (${key}) in ${matchId}: ${summary}`);
+    accounts.autoReport(name, `Automatic: impossible actions in match ${matchId} (${summary})`);
+  },
 };
 
 const REPLAYS = process.env.REPLAYS !== '0';
@@ -76,6 +82,18 @@ const hub = new Hub({
 const chat = new Chat((msg) => {
   for (const c of hub.clients.values()) c.send(msg);
 }, accounts);
+const modApi = new ModApi(accounts, {
+  matches: () => [...hub.rooms].map((r) => ({ id: r.id, mode: r.mode, time: r.match.time, players: r.roster.filter((x) => x.human).map((x) => x.name), watchers: r.watcherCount })),
+  online: () => hub.clients.size,
+  kick: (userId, reason) => {
+    const c = hub.clients.get(`u${userId}`) as Conn | undefined;
+    if (!c) return;
+    c.send({ t: 'error', text: reason });
+    c.ws.close(4003, reason.slice(0, 100));
+  },
+  removeChat: (id) => chat.remove(id),
+  announce: (text) => chat.announce(text),
+});
 
 interface Conn extends Client {
   ws: WebSocket;
@@ -131,6 +149,14 @@ const http = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, ...hub.stats() }));
     return;
   }
+  if (url.split('?')[0] === '/mod' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }).end(MOD_PAGE);
+    return;
+  }
+  if (url.startsWith('/api/mod/')) {
+    void modApi.handle(req, res, url.split('?')[0] as string, new URL(url, 'http://x'));
+    return;
+  }
   if (url.startsWith('/u/') && req.method === 'GET') {
     // A trainer's public profile page (to share outside the game).
     const name = decodeURIComponent(url.slice(3).split(/[?#]/)[0] ?? '').slice(0, 32);
@@ -179,6 +205,12 @@ http.on('upgrade', (req, socket, head) => {
 
 async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   const who = await accounts.identify(req);
+  if (who.banned) {
+    // A banned device or address: told why, and nothing else.
+    ws.send(JSON.stringify({ t: 'error', text: `You can not play from here (${who.banned})` }));
+    ws.close(4003, 'banned');
+    return;
+  }
   const key = who.key;
   // The same player connecting twice (a second tab): the older connection goes.
   const old = hub.clients.get(key) as Conn | undefined;

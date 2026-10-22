@@ -9,7 +9,9 @@
  *   unban <name>
  *   delete <name>           removes the account and everything kept for it (a player's request)
  *   chat [n]                the last n chat messages
- *   mod <name>              makes an account a moderator (shown in chat)
+ *   mod <name>              makes an account a moderator (the dashboard at /mod, a MOD badge in chat)
+ *   admin <name>            an administrator (also sets roles and deletes accounts from the dashboard)
+ *   player-role <name>      back to an ordinary player
  */
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
@@ -91,12 +93,15 @@ switch (cmd) {
     for (const r of rows.reverse()) console.log(`#${r.id} ${when(r.at)} ${r.name}: ${r.text}`);
     break;
   }
-  case 'mod': {
+  case 'mod':
+  case 'admin':
+  case 'player-role': {
     const u = user(a);
-    db.prepare("UPDATE users SET role = 'moderator' WHERE id = ?").run(u.id);
-    console.log(`${u.username} is now a moderator.`);
+    const role = cmd === 'player-role' ? 'player' : cmd;
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, u.id);
+    console.log(`${u.username} is now ${role === 'player' ? 'a player again' : `a${role === 'admin' ? 'n admin' : ' moderator'} (the dashboard is at /mod)`}.`);
     break;
   }
   default:
-    console.log('Commands: reports | resolve <id> | player <name> | mute <name> <minutes> | ban <name> | unban <name> | delete <name> | chat [n] | mod <name>');
+    console.log('Commands: reports | resolve <id> | player <name> | mute <name> <minutes> | ban <name> | unban <name> | delete <name> | chat [n] | mod <name> | admin <name> | player-role <name>');
 }

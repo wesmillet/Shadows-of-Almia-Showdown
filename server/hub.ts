@@ -516,6 +516,7 @@ export class Hub {
       if (c.private) c.private.broadcast();
       this.presenceChanged(c);
     }
+    for (const f of room.flagsOf()) this.o.accounts.addFlags(f.key, f.name, room.id, f.flags);
     const deltas = room.mode === 'ranked' ? this.rate(room, results) : new Map<string, number>();
     const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length);
     for (const [key, p] of progress) this.clients.get(key)?.send({ t: 'progress', ...p });

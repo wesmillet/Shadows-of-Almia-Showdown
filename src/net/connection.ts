@@ -10,6 +10,23 @@ import type { ClientMsg, CommandName, FriendEntry, PartyState, PrivateState, Ser
 type Listener = (msg: ServerMsg) => void;
 
 const GUEST_KEY = 'almia.guest.v1';
+const DEVICE_KEY = 'almia.device.v1';
+
+/** A random id this browser keeps (bans can follow a device, not just an account). */
+function deviceId(): string {
+  try {
+    let d = localStorage.getItem(DEVICE_KEY);
+    if (!d) {
+      const b = new Uint8Array(18);
+      crypto.getRandomValues(b);
+      d = btoa(String.fromCharCode(...b)).replace(/[+/=]/g, (c) => (c === '+' ? '-' : c === '/' ? '_' : ''));
+      localStorage.setItem(DEVICE_KEY, d);
+    }
+    return d;
+  } catch {
+    return '';
+  }
+}
 
 export interface Me {
   signedIn: boolean;
@@ -105,7 +122,8 @@ export class Connection {
     this.closedByUs = false;
     return new Promise((resolve) => {
       const look = this.look ? `&look=${encodeURIComponent(this.look)}` : '';
-      const wsUrl = `${this.base.replace(/^http/, 'ws')}/ws?guest=${encodeURIComponent(guestKey())}${look}`;
+      const device = deviceId();
+      const wsUrl = `${this.base.replace(/^http/, 'ws')}/ws?guest=${encodeURIComponent(guestKey())}${look}${device ? `&device=${device}` : ''}`;
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
       let pinger: number | null = null;
@@ -136,11 +154,16 @@ export class Connection {
         else if (msg.t === 'chat') {
           if (!this.chat.some((c) => c.id !== undefined && c.id === msg.id)) this.chat.push(msg);
           if (this.chat.length > 100) this.chat.shift();
+        } else if (msg.t === 'chatDelete') {
+          const i = this.chat.findIndex((c) => c.id === msg.id);
+          if (i >= 0) this.chat.splice(i, 1);
         }
         for (const l of this.listeners) l(msg);
       };
-      ws.onclose = () => {
+      ws.onclose = (e) => {
         this.connected = false;
+        // Banned, or a moderator's kick: no reconnecting.
+        if (e.code === 4003) this.closedByUs = true;
         // The server forgets parties and lobbies of a dropped connection.
         this.social = { ...this.social, party: null, invites: [] };
         this.privateLobby = null;
@@ -179,7 +202,7 @@ export class Connection {
       const r = await fetch(`${this.base}${path}`, {
         method: body === undefined ? 'GET' : 'POST',
         credentials: 'include',
-        headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'X-Almia': '1' },
+        headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'X-Almia': '1', 'X-Device': deviceId() },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       return (await r.json()) as T & { error?: string };

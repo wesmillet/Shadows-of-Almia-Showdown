@@ -38,13 +38,20 @@ const AIM_SLACK = 1.6 + 6 * 0.25;
 const STYLER_COOLDOWN = 0.2;
 const lastStyler = new WeakMap<Seat, number>();
 
+/**
+ * Something an honest browser never sends (it checks the same things before sending): a ball thrown
+ * past its range, someone else's Pokémon, a made-up target. Each is refused anyway; flags are how
+ * the moderators hear about who keeps trying (server/room.ts adds them up).
+ */
+export type Flag = (kind: string, detail: string) => void;
+
 /** Runs one command; returns the message to show the player ('' for none). */
-export function runCommand(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
+export function runCommand(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag = () => {}): string {
   if (m.over || seat.outcome || !seat.trainer.alive) return '';
-  return m.withSeat(seat, () => command(m, seat, c, a));
+  return m.withSeat(seat, () => command(m, seat, c, a, flag));
 }
 
-function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
+function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): string {
   const p = seat.trainer;
   const tab = (v: Arg | undefined): 'items' | 'held' | null => (v === 'items' || v === 'held' ? v : null);
   const bag = CONFIG.items.inventorySize;
@@ -57,6 +64,8 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
       const foe = monById(m, a[1]);
       const lead = m.actingMon;
       const aim = seat.aim;
+      // Naming a foe far from where you aimed: an aimbot's tell (an honest browser names the one under the reticle).
+      if (foe && aim && Math.hypot(foe.x - aim.x, foe.y - aim.y) > AIM_SLACK * 2.5) flag('aim-claim', `${foe.name} ${Math.hypot(foe.x - aim.x, foe.y - aim.y).toFixed(1)} tiles from the aim`);
       let r: ReturnType<Match['playerCast']>;
       if (foe && lead && aim && foe !== lead && !foe.fainted && m.battle.isEnemy(lead, foe) && Math.hypot(foe.x - aim.x, foe.y - aim.y) <= AIM_SLACK) {
         seat.aim = { x: foe.x, y: foe.y };
@@ -74,6 +83,7 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
       return '';
     case 'take': {
       const mon = monById(m, a[0]);
+      if (mon && mon.owner !== p) flag('not-yours', `tried to steer ${mon.name}`);
       return mon && mon.owner === p && m.takeControl(mon) ? `Pokémon mode: you steer ${mon.name}. Esc or click your trainer to go back` : '';
     }
     case 'untake':
@@ -112,12 +122,16 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
       const t = tab(a[0]);
       const i = int(a[1], 0, bag - 1);
       if (!t || i === null) return '';
-      if (m.nearService()?.kind !== 'shop') return 'Walk up to a shop first';
+      if (m.nearService()?.kind !== 'shop') {
+        flag('shop-range', 'sold away from a shop');
+        return 'Walk up to a shop first';
+      }
       return m.sell(p, t, i);
     }
     case 'buy': {
       const s = m.nearService();
       const i = int(a[0], 0, 40);
+      if (s?.kind !== 'shop') flag('shop-range', 'bought away from a shop');
       if (s?.kind !== 'shop' || i === null) return s?.kind === 'shop' ? '' : 'Walk up to a shop first';
       return m.buy(s.shop, i);
     }
@@ -147,10 +161,17 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
     case 'stylerBreak': {
       const mon = monById(m, a[0]);
       if (!mon || !mon.wild) return '';
-      if (Math.hypot(mon.x - p.x, mon.y - p.y) > CONFIG.styler.maxRange + 2) return '';
+      const d = Math.hypot(mon.x - p.x, mon.y - p.y);
+      if (d > CONFIG.styler.maxRange + 2) {
+        flag('styler-range', `${d.toFixed(1)} tiles`);
+        return '';
+      }
       // The loop is drawn in the browser; a believable pace is all it may claim.
       const last = lastStyler.get(seat) ?? -Infinity;
-      if (c === 'stylerLoop' && m.time - last < STYLER_COOLDOWN) return '';
+      if (c === 'stylerLoop' && m.time - last < STYLER_COOLDOWN) {
+        flag('styler-pace', `${((m.time - last) * 1000).toFixed(0)} ms between loops`);
+        return '';
+      }
       lastStyler.set(seat, m.time);
       if (c === 'stylerLoop') m.stylerLoop(mon);
       else m.stylerBreak(mon);
@@ -187,7 +208,7 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
       return '';
     }
     case 'throw':
-      return throwBall(m, seat, a);
+      return throwBall(m, seat, a, flag);
     default:
       return '';
   }
@@ -214,7 +235,7 @@ function interact(m: Match): string {
 }
 
 /** A ball: at the legendary in your bout (any distance), else at a spot within throwing range. */
-function throwBall(m: Match, seat: Seat, a: Arg[]): string {
+function throwBall(m: Match, seat: Seat, a: Arg[], flag: Flag): string {
   const p = seat.trainer;
   const slot = int(a[0], 0, CONFIG.items.inventorySize - 1);
   const x = num(a[1]);
@@ -227,7 +248,10 @@ function throwBall(m: Match, seat: Seat, a: Arg[]): string {
     return '';
   }
   if (p.duelId) return "You can't catch another trainer's Pokémon";
-  if (Math.hypot(x - p.x, y - p.y) > CONFIG.catch.throwRange + 0.5) return 'Out of range';
+  if (Math.hypot(x - p.x, y - p.y) > CONFIG.catch.throwRange + 0.5) {
+    if (Math.hypot(x - p.x, y - p.y) > CONFIG.catch.throwRange + 3) flag('throw-range', `${Math.hypot(x - p.x, y - p.y).toFixed(1)} tiles`);
+    return 'Out of range';
+  }
   m.throwBall(p, slot, { x, y });
   return '';
 }

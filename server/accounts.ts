@@ -33,6 +33,8 @@ export interface Identity {
   accountId: number | null;
   look?: unknown;
   title?: string;
+  /** This device or address is banned (the connection is refused, with this reason). */
+  banned?: string;
 }
 
 /** What a finished match did for a player's progress (sent to them for the end screen). */
@@ -174,6 +176,17 @@ export class Accounts {
       CREATE TABLE IF NOT EXISTS recovery (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_hash TEXT NOT NULL, used_at INTEGER, PRIMARY KEY (user_id, code_hash)
       );
+      CREATE TABLE IF NOT EXISTS devices (
+        device_id TEXT NOT NULL, user_id INTEGER NOT NULL DEFAULT 0, ip TEXT NOT NULL, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+        PRIMARY KEY (device_id, user_id)
+      );
+      CREATE INDEX IF NOT EXISTS devices_user ON devices(user_id);
+      CREATE TABLE IF NOT EXISTS bans (kind TEXT NOT NULL, value TEXT NOT NULL, reason TEXT NOT NULL, at INTEGER NOT NULL, until INTEGER, by_user INTEGER, PRIMARY KEY (kind, value));
+      CREATE TABLE IF NOT EXISTS flags (
+        id INTEGER PRIMARY KEY, user_id INTEGER, player_key TEXT NOT NULL, name TEXT NOT NULL, match_id TEXT NOT NULL, kind TEXT NOT NULL, count INTEGER NOT NULL, detail TEXT, at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS flags_at ON flags(at);
+      CREATE TABLE IF NOT EXISTS mod_actions (id INTEGER PRIMARY KEY, by_user INTEGER, by_name TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, detail TEXT, at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS reports (
         id INTEGER PRIMARY KEY, reporter_id INTEGER, reporter_key TEXT NOT NULL, target TEXT NOT NULL, reason TEXT NOT NULL,
         chat_id INTEGER, at INTEGER NOT NULL, resolved INTEGER NOT NULL DEFAULT 0
@@ -196,7 +209,14 @@ export class Accounts {
 
   /** Who a connecting browser is: their account from the session cookie, else a guest (by the key the browser keeps). */
   async identify(req: IncomingMessage): Promise<Identity> {
+    const url0 = new URL(req.url ?? '/', 'http://x');
+    const device = cleanDevice(url0.searchParams.get('device'));
+    const ip = clientIp(req);
+    const ban = this.banFor(device, ip);
     const user = this.userFromRequest(req);
+    if (user) this.seeDevice(device, user.id, ip);
+    else if (device) this.seeDevice(device, 0, ip);
+    if (ban) return { key: `x${randomBytes(6).toString('base64url')}`, name: 'Banned', accountId: null, banned: ban };
     if (user && !user.banned) {
       const prof = this.profile(user.id);
       const look = typeof prof.look === 'string' && this.canWear(user.id, prof.look) ? prof.look : undefined;
@@ -372,6 +392,72 @@ export class Accounts {
   private useRecoveryCode(userId: number, code: string): boolean {
     const r = this.db.prepare('UPDATE recovery SET used_at = ? WHERE user_id = ? AND code_hash = ? AND used_at IS NULL').run(Date.now(), userId, sha256(normCode(code)));
     return Number(r.changes) === 1;
+  }
+
+  // ---------------------------------------------------------------- devices, bans, flags, the moderators' log
+
+  /** Remembers which device (a random id the browser keeps) and address an account uses. */
+  seeDevice(device: string | null, userId: number, ip: string): void {
+    if (!device) return;
+    const now = Date.now();
+    this.db.prepare(`INSERT INTO devices (device_id, user_id, ip, first_seen, last_seen) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(device_id, user_id) DO UPDATE SET ip = excluded.ip, last_seen = excluded.last_seen`).run(device, userId, ip, now, now);
+  }
+
+  /** Why this device or address is banned (null: it is not). Expired bans are lifted on the way. */
+  banFor(device: string | null, ip: string): string | null {
+    const now = Date.now();
+    this.db.prepare('DELETE FROM bans WHERE until IS NOT NULL AND until < ?').run(now);
+    const row = this.db.prepare("SELECT reason FROM bans WHERE (kind = 'device' AND value = ?) OR (kind = 'ip' AND value = ?) LIMIT 1").get(device ?? '', ip) as { reason: string } | undefined;
+    return row ? row.reason : null;
+  }
+
+  /** Bans an account, and with `devices` every device it used and its recent addresses (for a week). */
+  ban(userId: number, reason: string, by: number | null, devices: boolean): { devices: number; ips: number } {
+    const now = Date.now();
+    this.db.prepare('UPDATE users SET banned = 1 WHERE id = ?').run(userId);
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+    let nd = 0;
+    let ni = 0;
+    if (devices) {
+      const rows = this.db.prepare('SELECT device_id, ip, last_seen FROM devices WHERE user_id = ?').all(userId) as Array<{ device_id: string; ip: string; last_seen: number }>;
+      for (const r of rows) {
+        nd += Number(this.db.prepare("INSERT OR IGNORE INTO bans (kind, value, reason, at, until, by_user) VALUES ('device', ?, ?, ?, NULL, ?)").run(r.device_id, reason, now, by).changes);
+        // Addresses are shared (homes, schools): only recent ones, only for a week.
+        if (now - r.last_seen < 14 * 86400_000) ni += Number(this.db.prepare("INSERT OR IGNORE INTO bans (kind, value, reason, at, until, by_user) VALUES ('ip', ?, ?, ?, ?, ?)").run(r.ip, reason, now, now + 7 * 86400_000, by).changes);
+      }
+    }
+    return { devices: nd, ips: ni };
+  }
+
+  unban(userId: number): void {
+    this.db.prepare('UPDATE users SET banned = 0 WHERE id = ?').run(userId);
+    const rows = this.db.prepare('SELECT device_id, ip FROM devices WHERE user_id = ?').all(userId) as Array<{ device_id: string; ip: string }>;
+    for (const r of rows) {
+      this.db.prepare("DELETE FROM bans WHERE kind = 'device' AND value = ?").run(r.device_id);
+      this.db.prepare("DELETE FROM bans WHERE kind = 'ip' AND value = ?").run(r.ip);
+    }
+  }
+
+  /** A match's flags for one player (impossible actions the server refused). */
+  addFlags(key: string, name: string, matchId: string, counts: Map<string, { n: number; detail: string }>): void {
+    const userId = key.startsWith('u') ? Number(key.slice(1)) : null;
+    for (const [kind, f] of counts) this.db.prepare('INSERT INTO flags (user_id, player_key, name, match_id, kind, count, detail, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(userId, key, name, matchId, kind, f.n, f.detail.slice(0, 200), Date.now());
+  }
+
+  /** A report the server files itself (cheating flags, chat strikes). */
+  autoReport(target: string, reason: string): void {
+    const open = this.db.prepare("SELECT 1 FROM reports WHERE target = ? AND reporter_key = 'system' AND resolved = 0 AND reason = ?").get(target, reason);
+    if (!open) this.db.prepare("INSERT INTO reports (reporter_id, reporter_key, target, reason, chat_id, at) VALUES (NULL, 'system', ?, ?, NULL, ?)").run(target, reason.slice(0, 300), Date.now());
+  }
+
+  logMod(by: { id: number | null; name: string }, action: string, target: string, detail = ''): void {
+    this.db.prepare('INSERT INTO mod_actions (by_user, by_name, action, target, detail, at) VALUES (?, ?, ?, ?, ?, ?)').run(by.id, by.name, action, target, detail.slice(0, 300), Date.now());
+  }
+
+  /** Mutes from chat for `minutes` (0 lifts it). */
+  mute(userId: number, minutes: number): void {
+    this.db.prepare('UPDATE users SET muted_until = ? WHERE id = ?').run(minutes > 0 ? Date.now() + minutes * 60_000 : 0, userId);
   }
 
   // ---------------------------------------------------------------- ranked
@@ -655,6 +741,7 @@ export class Accounts {
 
   private async register(req: IncomingMessage, res: ServerResponse, send: (s: number, b: unknown, h?: Record<string, string | string[]>) => void): Promise<void> {
     const ip = clientIp(req);
+    if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip)) return send(403, { error: 'New accounts can not be made from here' });
     if (this.limited(`reg:${ip}`, this.kind === 'dev' ? 100 : 5, 3600_000)) return send(429, { error: 'Too many new accounts from here. Try again later' });
     const b = await readJson(req);
     const username = String(b.username ?? '');
@@ -691,6 +778,7 @@ export class Accounts {
       return send(401, { error: 'Wrong name or password' });
     }
     if (u.banned) return send(403, { error: 'This account is banned' });
+    if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip)) return send(403, { error: 'Signing in from here is blocked' });
     return send(200, { ok: true, username: u.username }, { 'Set-Cookie': this.cookie(req, this.newSession(u.id), SESSION_DAYS * 86400) });
   }
 
@@ -832,6 +920,11 @@ export function checkPassword(password: string, stored: string): boolean {
   const want = Buffer.from(hash, 'base64');
   const got = scryptSync(password, Buffer.from(salt, 'base64'), want.length, { N: Number(n), r: Number(r), p: Number(p) });
   return got.length === want.length && timingSafeEqual(got, want);
+}
+
+/** A browser's device id (random, kept in its storage): letters, digits, - and _ only. */
+export function cleanDevice(d: string | null | undefined): string | null {
+  return d && /^[A-Za-z0-9_-]{16,64}$/.test(d) ? d : null;
 }
 
 function sha256(s: string): string {

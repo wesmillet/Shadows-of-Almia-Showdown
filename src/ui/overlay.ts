@@ -17,6 +17,8 @@ const CSS = `
 .almia-chat.collapsed .almia-chat-log, .almia-chat.collapsed .almia-chat-row { display: none; }
 .almia-chat-log .who { color: #c2611a; cursor: pointer; }
 .almia-chat-log .sys { color: #8a6a4a; font-style: italic; }
+.almia-chat-log .announce { display: block; color: #c2611a; font-style: normal; border: 2px solid #c2611a; padding: 3px 6px; margin: 3px 0; }
+.almia-chat-log .modbadge { color: #fff; background: #1f6aa0; font-size: 11px; padding: 0 4px; margin-right: 4px; }
 .almia-chat-row { display: flex; border-top: 2px solid #4a3424; }
 .almia-chat-row input { flex: 1; min-width: 0; border: 0; padding: 7px 10px; font: inherit; background: #fffaf0; color: #4a3424; outline: none; }
 .almia-chat-row button, .almia-btn { font: inherit; border: 0; background: #c2611a; color: #fff; padding: 7px 12px; cursor: pointer; text-shadow: 0 1px 0 #8a3a0a; }
@@ -142,6 +144,7 @@ export class ChatPanel {
     for (const m of net.chat) this.add(m);
     this.unsub = net.on((m) => {
       if (m.t === 'chat') this.add(m);
+      else if (m.t === 'chatDelete') this.log.querySelector(`[data-id="${m.id}"]`)?.remove();
     });
     // Enter anywhere opens the chat line.
     this.keyHandler = (e: KeyboardEvent) => {
@@ -164,8 +167,11 @@ export class ChatPanel {
   private add(m: Extract<ServerMsg, { t: 'chat' }>): void {
     if (!m.system && this.muted.has(m.from)) return;
     const line = el('div');
-    if (m.system) line.append(el('span', 'sys', m.text));
+    if (m.id !== undefined) line.dataset.id = String(m.id);
+    if (m.announce) line.append(el('span', 'announce', `📣 ${m.text}`));
+    else if (m.system) line.append(el('span', 'sys', m.text));
     else {
+      if (m.mod) line.append(el('span', 'modbadge', 'MOD'));
       const who = el('span', 'who', m.from);
       who.onclick = (e) => this.openMenu(m, e.clientX, e.clientY);
       line.append(who, document.createTextNode(`: ${m.text}`));

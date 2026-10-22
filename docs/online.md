@@ -143,14 +143,26 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
 
 - **Health**: https://example.gg/health shows matches running, players connected and queued.
 - **Logs**: `fly logs --app almia-showdown` (each match start and result is logged).
-- **Moderation** (on the server):
+- **Moderation**: the dashboard at https://example.gg/mod (sign in to the game with a moderator
+  account first). Make the first administrator on the server:
   ```
-  fly ssh console --app almia-showdown -C "node dist-server/admin.js reports"
-  fly ssh console --app almia-showdown -C "node dist-server/admin.js mute SomeName 60"
-  fly ssh console --app almia-showdown -C "node dist-server/admin.js ban SomeName"
+  fly ssh console --app almia-showdown -C "node dist-server/admin.js admin YourName"
   ```
-  Also `player`, `unban`, `delete` (removes an account and everything kept for it, for a player's
-  request), `chat 50`, `resolve <report id>`, `mod <name>`.
+  The dashboard has: open reports (players' and the server's own); a page per player (stats,
+  reports, anti-cheat flags, chat, devices and other accounts seen on them, history) with mute,
+  kick, ban (optionally with every device it used, and its recent addresses for a week), unban,
+  and for admins roles and deleting an account; the chat log (remove a message from every open
+  chat); flagged players; live matches (watch any); announcements; and the log of everything the
+  moderators and the server did. `admin.js` still works from the console (`reports`, `player`,
+  `mute`, `ban`, `unban`, `delete`, `chat`, `resolve`, `mod`, `admin`, `player-role`).
+- **Anti-cheat**: the server runs every match, so a modified browser can not move faster, hit
+  harder or spawn items. What it can do is send things an honest browser never sends (keys
+  pressed harder than a key can be, a ball thrown across the island, someone else's Pokémon, a
+  shop used from afar); those are refused and **flagged**. Enough flags in one match files a
+  report automatically. Honest play (lag included) does not trip them.
+- **Chat strikes**: a filtered word, flooding, or saying the same thing again is a strike; three
+  in ten minutes mutes for 10 minutes, then an hour, then a day (and the second time in a week
+  reports the player). SHOUTING is quietly lower-cased.
 - **Backups**: Fly snapshots each volume daily (kept 5 days). `fly volumes snapshots list`.
 
 ## Capacity and cost

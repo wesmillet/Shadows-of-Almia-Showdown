@@ -60,9 +60,22 @@ export interface Peer {
   send(msg: ServerMsg): void;
 }
 
+/**
+ * How much each kind of flag counts (server/commands.ts Flag). A player past FLAG_REPORT in one match
+ * is reported to the moderators automatically; lag and quirks can trip the light ones once or twice.
+ */
+const FLAG_WEIGHT: Record<string, number> = {
+  'input': 5, 'aim-far': 3, 'aim-claim': 4, 'not-yours': 5, 'throw-range': 3, 'styler-range': 3, 'styler-pace': 1,
+  'shop-range': 1, 'command-flood': 1, 'bad-args': 4,
+};
+export const FLAG_REPORT = 25;
+
 interface Player {
   peer: Peer | null;
   seat: Seat;
+  /** Flags this match: kind -> count, an example, and when it last counted. */
+  flags: Map<string, { n: number; detail: string; at: number }>;
+  flagScore: number;
   view: PlayerView;
   enc: SyncEncoder;
   /** Events waiting for the next view update. */
@@ -95,6 +108,8 @@ export interface RoomHooks {
   chestSave(key: string, box: Array<InventorySlot | null>): void;
   /** A Pokémon a player sent home mid-match with an Extraction Voucher. */
   extracted(key: string, mon: Mon, matchId: string): void;
+  /** A player's flags passed FLAG_REPORT this match. */
+  flagged?(key: string, name: string, matchId: string, summary: string): void;
 }
 
 export class Room {
@@ -150,7 +165,7 @@ export class Room {
     this.match.seats.forEach((seat, i) => {
       const e = entries[i] as Human & { peer: Peer };
       const enc = new SyncEncoder(this.ids, seat.trainer);
-      this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, goneAt: null, commands: 0, ended: false });
+      this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, goneAt: null, commands: 0, ended: false, flags: new Map(), flagScore: 0 });
     });
     const roster: RosterEntry[] = this.match.allTrainers.filter((t) => !t.visitor).map((t) => {
       const owner = [...this.players.values()].find((p) => p.seat.trainer === t);
@@ -159,6 +174,26 @@ export class Room {
     this.roster = roster;
     for (const p of this.players.values()) p.peer?.send({ t: 'start', matchId: this.id, seed, you: p.seat.trainer.id, roster, mode: this.mode });
     this.recorder = opts.recorder?.(this) ?? null;
+  }
+
+  /** Notes an impossible action (refused already); past FLAG_REPORT the moderators hear of it. */
+  private flag(key: string, kind: string, detail: string): void {
+    const p = this.players.get(key);
+    if (!p) return;
+    const f = p.flags.get(kind) ?? { n: 0, detail, at: -Infinity };
+    f.n++;
+    p.flags.set(kind, f);
+    // The same thing again within half a second is one event (a held key, a stream of aims), not many.
+    if (this.match.time - f.at < 0.5) return;
+    f.at = this.match.time;
+    const before = p.flagScore;
+    p.flagScore += FLAG_WEIGHT[kind] ?? 2;
+    if (before < FLAG_REPORT && p.flagScore >= FLAG_REPORT) this.hooks.flagged?.(key, p.seat.trainer.name, this.id, [...p.flags].map(([k, v]) => `${k} x${v.n}`).join(', '));
+  }
+
+  /** Each player's flags (for the record when the match ends). */
+  flagsOf(): Array<{ key: string; name: string; flags: Map<string, { n: number; detail: string; at: number }> }> {
+    return [...this.players].filter(([, p]) => p.flags.size).map(([key, p]) => ({ key, name: p.seat.trainer.name, flags: p.flags }));
   }
 
   /** Humans still connected and playing. */
@@ -310,8 +345,10 @@ export class Room {
       if (Array.isArray(msg.f)) {
         // Numbered frames, one per step: queued in order, newer than anything already had.
         let last = seat.inputs.length ? (seat.inputs[seat.inputs.length - 1] as [number, number, number])[0] : seat.ack;
+        if (msg.f.length > 12) this.flag(key, 'input', `${msg.f.length} frames in one message`);
         for (const fr of msg.f.slice(0, 12)) {
           if (!Array.isArray(fr) || typeof fr[0] !== 'number' || fr[0] <= last) continue;
+          if (Math.hypot(Number(fr[1]) || 0, Number(fr[2]) || 0) > 1.01) this.flag(key, 'input', `move keys ${fr[1]},${fr[2]}`);
           const [x, y] = unitAxis(fr[1], fr[2]);
           seat.inputs.push([fr[0], x, y]);
           last = fr[0];
@@ -321,14 +358,22 @@ export class Room {
       } else if (typeof msg.mx === 'number' && typeof msg.my === 'number') {
         [seat.moveX, seat.moveY] = unitAxis(msg.mx, msg.my);
       }
-      if (typeof msg.ax === 'number' && typeof msg.ay === 'number' && Number.isFinite(msg.ax) && Number.isFinite(msg.ay)) p.seat.aim = { x: msg.ax, y: msg.ay };
+      if (typeof msg.ax === 'number' && typeof msg.ay === 'number' && Number.isFinite(msg.ax) && Number.isFinite(msg.ay)) {
+        // Aiming far past the screen: nothing honest points there.
+        const me = p.seat.controlled ?? p.seat.trainer;
+        if (Math.hypot(msg.ax - me.x, msg.ay - me.y) > 45) this.flag(key, 'aim-far', `${Math.hypot(msg.ax - me.x, msg.ay - me.y).toFixed(0)} tiles away`);
+        p.seat.aim = { x: msg.ax, y: msg.ay };
+      }
       return;
     }
     if (msg.t === 'cmd') {
-      if (++p.commands > COMMAND_RATE) return;
-      if (!Array.isArray(msg.a) || msg.a.length > 4) return;
+      if (++p.commands > COMMAND_RATE) {
+        if (p.commands === COMMAND_RATE + 1) this.flag(key, 'command-flood', `${msg.c}`);
+        return;
+      }
+      if (!Array.isArray(msg.a) || msg.a.length > 4) return this.flag(key, 'bad-args', String(msg.c).slice(0, 20));
       const from = this.match.battle.events.length;
-      const text = runCommand(this.match, p.seat, msg.c, msg.a);
+      const text = runCommand(this.match, p.seat, msg.c, msg.a, (kind, detail) => this.flag(key, kind, detail));
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
         if (ev.type === 'extracted' && ev.via === 'voucher') this.hooks.extracted(key, ev.mon, this.id);

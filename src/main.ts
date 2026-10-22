@@ -214,7 +214,12 @@ async function boot(): Promise<void> {
       // A shared link: ?replay=<match> plays a replay, ?profile=<name> opens a trainer's profile.
       const rp = params.get('replay');
       const pf = params.get('profile');
+      const watch = params.get('watch');
       if (rp && /^m[a-z0-9]{1,16}$/.test(rp)) void startReplay(rp);
+      else if (watch && /^m[a-z0-9]{1,16}$/.test(watch)) {
+        showOnline();
+        net.send({ t: 'spectate', matchId: watch });
+      }
       else if (pf) {
         showOnline();
         void profileDialog(net, pf.slice(0, 32), (id) => void startReplay(id));

@@ -28,7 +28,7 @@ export type BattleEvent =
   | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean }
   | { type: 'status'; target: Mon; status: StatusKind }
   | { type: 'stages'; target: Mon; stat: 'atk' | 'def' | 'spe'; delta: number }
-  | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' | 'poison' }
+  | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' | 'poison' | 'recoil' }
   | { type: 'thaw'; mon: Mon }
   | { type: 'dodged'; mon: Mon }
   | { type: 'dodge-start'; mon: Mon }
@@ -142,7 +142,12 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
 /** Score a move for AI selection: expected damage with a bonus for applying a fresh status. */
 export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
   const eff = effectiveness(m.type, target.types);
-  let score = m.power * eff * (attacker.types.includes(m.type) ? 1.5 : 1);
+  // What it would actually hit with: the attack stat the move uses against the target's matching
+  // defence, as computeDamage reckons it (an Infernape with Fire Punch and Flamethrower punches
+  // when its Attack is the better stat, or the target's Sp. Def is the higher wall).
+  const atk = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
+  const def = Math.max(1, m.category === 'physical' ? target.stats.def : target.stats.spd);
+  let score = m.power * eff * (attacker.types.includes(m.type) ? CONFIG.battle.stab : 1) * (m.power > 0 ? (atk / def) / ((attacker.stats.atk + attacker.stats.spa) / 2 / Math.max(1, (target.stats.def + target.stats.spd) / 2)) : 0);
   if (m.status && !target.status && eff > 0) score += 45 * m.status.chance;
   // Stat moves: worth a turn while the stat has room to move, never spammed past +2 / -2.
   const self = m.stages?.self;
@@ -164,6 +169,27 @@ export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
  * a falling one (from the sky) drops onto the middle of its body, a beam takes a moment to reach;
  * anything else lands at once. The damage waits for this, so HP drops as the effect arrives.
  */
+/**
+ * How far off a move can be used to effect, in tiles: a ring reaches round its user, a cone and a
+ * line out ahead of it, a contact move as far as its lunge comfortably carries, a ranged single
+ * move a good way. AI Pokémon get within this before using the move (Match.holdRange).
+ */
+export function moveReach(m: MoveDef): number {
+  const k = R();
+  switch (m.shape) {
+    case 'self':
+      return 99;
+    case 'ring':
+      return 2.3 * k * 0.8;
+    case 'cone':
+      return 2.9 * k * 0.85;
+    case 'line':
+      return 3.4 * k * 0.85;
+    default:
+      return isContact(m) ? 3.6 : 5;
+  }
+}
+
 /** Seconds into an attack animation to its strike frame (HitFrame), or null when it has none. */
 export function strikeSeconds(def: { durations: number[]; hitFrame: number | undefined } | undefined): number | null {
   if (!def || def.hitFrame === undefined) return null;
@@ -574,6 +600,14 @@ export class BattleSystem {
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
       if (!target.fainted && isContact(m)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;
+      // Recoil (Double-Edge, Flare Blitz): a share of the damage dealt, never the last HP from it.
+      if (m.recoil && !attacker.fainted) {
+        const r2 = Math.min(attacker.hp - 1, Math.max(1, Math.floor(r.damage * m.recoil)));
+        if (r2 > 0) {
+          this.applyDamage(attacker, r2, null);
+          this.events.push({ type: 'tick', target: attacker, damage: r2, source: 'recoil' });
+        }
+      }
       // Life Orb's recoil comes once per move used, not per Pokémon hit or per pulse of a beam.
       if (attacker.heldItem === 'life-orb' && !attacker.fainted && attacker.orbPaid !== attacker.castSeq) {
         attacker.orbPaid = attacker.castSeq;

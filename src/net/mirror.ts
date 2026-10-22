@@ -466,10 +466,11 @@ export class MirrorMatch {
       return;
     }
     const t = o as unknown as Trainer;
+    const from = { x: t.x, y: t.y };
     const moved = mx || my ? m.walkTrainer(t, mx, my, dt) : 0;
     // The server pushes a trainer out of anyone they walk into; so does the prediction.
     m.separate(t);
-    if (animate) m.afterTrainerMove(t, moved);
+    if (animate) m.afterTrainerMove(t, moved, from, dt);
   }
 
   /**

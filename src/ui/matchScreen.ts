@@ -12,7 +12,7 @@ import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, drawScale, monScale, move, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
 import { Match, type DuelSide } from '../sim/match';
@@ -1069,7 +1069,7 @@ export class MatchScreen implements Screen {
       if (def.kind === 'tm') {
         const m = lead(p);
         if (!m) return this.say('No Pokémon to teach', 1.2);
-        if (!m.types.includes(def.tmType ?? '')) return this.say(`${m.name} cannot learn ${def.name.replace('TM ', '')} (${def.tmType} type)`, 2);
+        if (!canLearnTm(m.species, def.move ?? '')) return this.say(tmRefusal(m, def.move ?? ''), 2.4);
         // A free move slot takes the TM at once; with four moves, ask which to forget.
         if (m.moves.length < MOVE_SLOTS) return this.say(this.match.teach(p, index, -1), 2);
         this.teach = { slot: index };
@@ -1147,7 +1147,7 @@ export class MatchScreen implements Screen {
         this.floaters.add(ev.target.x, ev.target.y - 0.3, `${ev.stat.toUpperCase()} ${ev.delta > 0 ? '▲' : '▼'}`, ev.delta > 0 ? '#9be7ff' : '#ff9e9e', 16);
         break;
       case 'tick':
-        this.floaters.add(ev.target.x, ev.target.y, String(ev.damage), ev.source === 'burn' ? '#ff8a65' : ev.source === 'poison' ? '#c77dff' : '#c38bff', 15);
+        this.floaters.add(ev.target.x, ev.target.y, String(ev.damage), ev.source === 'burn' ? '#ff8a65' : ev.source === 'poison' ? '#c77dff' : ev.source === 'recoil' ? '#f2efe6' : '#c38bff', 15);
         // Bad Dreams: the nightmare cloud loops over the sleeper until the next tick.
         if (ev.source === 'dreams') this.playFx(EXTRA_FX.dreams, { x: ev.target.x, y: ev.target.y, lift: 1.1, scale: 2, fps: 10, loopSeconds: 1.05, follow: ev.target });
         break;
@@ -1343,6 +1343,22 @@ export class MatchScreen implements Screen {
     return Math.max(0.2, (m.species.body[1] * drawScale(m.species)) / 16 / 2);
   }
 
+  /**
+   * Where a beam or projectile leaves its user: the mouth (the head marked on the frame being shown),
+   * the hands, or the middle of the body. Falls back to the body when the sprite marks no such point.
+   */
+  private launch(m: Mon, origin: FxPart['origin'] = 'mouth'): { from: { x: number; y: number }; lift: number } {
+    const body = { from: { x: m.x, y: m.y }, lift: this.bodyLift(m) };
+    if (origin === 'body') return body;
+    const pt = m.anim.point(origin === 'hands' ? 'hands' : 'head');
+    if (!pt) return body;
+    const v = this.ctx.view;
+    // Tiles per sprite pixel, as drawMon draws the frame (its centre on the ground point).
+    const k = (v.spriteScale * Math.max(0.01, m.visual.scale) * monScale(m)) / v.pxPerTile;
+    const leap = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) : 0;
+    return { from: { x: m.x + pt[0] * k, y: m.y }, lift: Math.max(0.1, -pt[1] * k + leap) };
+  }
+
   /** Impacts grow a little on big bodies so a hit on a Steelix still reads, and never swamp a Jirachi. */
   private bodyScale(m: Mon | null): number {
     if (!m) return 1;
@@ -1365,6 +1381,8 @@ export class MatchScreen implements Screen {
   private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[]): void {
     const from = { x: attacker.x, y: attacker.y };
     const fromLift = this.bodyLift(attacker);
+    // Beams and shots from a big body are a little thicker, from a small one a little thinner.
+    const userK = Math.sqrt(this.bodyScale(attacker));
     // With no one hit, a beam runs to the end of its reach along the aim (fx, fy is a direction,
     // not a point: aiming at it sent beams off toward the map's corner).
     const reach = area.shape === 'line' ? 3.4 * R() : area.shape === 'cone' ? 2.9 * R() : 0;
@@ -1385,9 +1403,10 @@ export class MatchScreen implements Screen {
         return;
       }
       const lift = part.ground ? (part.lift ?? 0) : part.lift ?? (onBody ? this.bodyLift(t.mon) : fromLift);
-      // Impacts stay about the size of the body they land on: never more than ~2.3 tiles across (3.2 on the ground).
+      // Impacts stay about the size of the body they land on: never more than ~1.9 tiles across for a
+      // trainer-sized body (2.8 on the ground), so a hit reads without swallowing the Pokémon that made it.
       let scale = (part.scale ?? 2) * k;
-      if (onBody) scale = Math.min(scale, ((part.ground ? 3.2 : 2.3) * k * 48) / Math.max(sheet.fw, sheet.fh));
+      if (onBody) scale = Math.min(scale, ((part.ground ? 2.8 : 1.9) * k * 48) / Math.max(sheet.fw, sheet.fh));
       this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift, scale, fps: part.fps ?? 15, tint: part.tint }), part);
     };
     // A channelled beam pulses every quarter second: its impacts play on every other pulse, so their
@@ -1410,9 +1429,12 @@ export class MatchScreen implements Screen {
           // every pulse piled their glows into a white-out).
           const key = `${attacker.id}:${part.id}`;
           const live = ch ? this.channelBeams.get(key) : undefined;
-          if (live && live.alive) live.refresh(from, focus, CONFIG.battle.channel.tick * 2.5);
+          const out = this.launch(attacker, part.origin);
+          // The far end lands on the middle of the body it hits (a miss stays level).
+          const toLift = hits[0] ? this.bodyLift(hits[0]) : undefined;
+          if (live && live.alive) live.refresh(out.from, focus, CONFIG.battle.channel.tick * 2.5, part.lift ?? out.lift, part.lift ?? toLift);
           else {
-            const beam = new FxBeam(sheet, { from, to: focus, mode: part.mode, lift: part.lift ?? fromLift, scale: part.scale ?? 2, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing });
+            const beam = new FxBeam(sheet, { from: out.from, to: focus, mode: part.mode, lift: part.lift ?? out.lift, toLift: part.lift ?? toLift, scale: (part.scale ?? 2) * userK, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing });
             if (ch) {
               if (this.channelBeams.size > 64) for (const [k2, b2] of this.channelBeams) if (!b2.alive) this.channelBeams.delete(k2);
               this.channelBeams.set(key, beam);
@@ -1450,14 +1472,15 @@ export class MatchScreen implements Screen {
         continue;
       }
       const sky = c.anchor === 'sky';
+      const out = this.launch(attacker, c.origin);
       this.addVfx(new FxProjectile(sheet, {
-        from: sky ? { x: t.x, y: t.y } : from,
+        from: sky ? { x: t.x, y: t.y } : out.from,
         to: { x: t.x, y: t.y },
         lift: c.lift ?? this.bodyLift(t.mon),
-        fromLift: sky ? (c.height ?? 6) : fromLift,
+        fromLift: sky ? (c.height ?? 6) : out.lift,
         arc: c.arc,
         speed: c.speed ?? (sky ? 14 : 11),
-        scale: c.scale ?? 2,
+        scale: (c.scale ?? 2) * (sky ? 1 : userK),
         fps: c.fps ?? 15,
         tint: c.tint,
         facing: c.facing,

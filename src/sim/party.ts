@@ -191,6 +191,13 @@ function unstick(m: Mon, t: Trainer, w: PartyWorld, chasing: Mon | null): boolea
 
 function setWalking(m: Mon, walking: boolean): void {
   if (m.casting || incapable(m) || m.anim.action === 'Hurt') return;
+  // Pressing into its trainer, a teammate or a corner it barely moves: after a few steps of that it
+  // stands rather than walking on the spot (a short stall keeps the walk going, so it doesn't flicker).
+  if (walking) {
+    const still = Math.hypot(m.x - m.px, m.y - m.py) < 0.006;
+    m.stillSteps = still ? (m.stillSteps ?? 0) + 1 : 0;
+    if (m.stillSteps >= 8) walking = false;
+  } else m.stillSteps = 0;
   if (walking !== m.moving) {
     m.moving = walking;
     m.anim.play(walking ? 'Walk' : 'Idle');

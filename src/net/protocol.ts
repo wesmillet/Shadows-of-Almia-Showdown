@@ -14,9 +14,62 @@ export type CommandName =
   | 'mega' | 'ride' | 'sell' | 'buy' | 'deposit' | 'withdraw' | 'interact' | 'pickUp' | 'duelPick' | 'stylerLoop' | 'stylerBreak'
   | 'snag' | 'extract' | 'teach' | 'equip' | 'useItem' | 'discard' | 'throw';
 
+export type QueueMode = 'casual' | 'ranked';
+
+/** A private lobby's custom rules (server/privateLobby.ts checks every one). */
+export interface PrivateRules {
+  /** Trainers in the match, 2 to 8. */
+  size: number;
+  /** Fill empty spots with computer trainers. */
+  bots: boolean;
+  /** Starting level of each starter. */
+  level: number;
+  /** Solo, teams of two or four, or players pick their team. */
+  teams: 'solo' | 'duos' | 'squads' | 'pick';
+  /** How fast the storm closes in (1 is normal). */
+  storm: number;
+  /** The rare-item chest in the player's camp. */
+  rareChest: boolean;
+}
+
+export interface PrivateState {
+  code: string;
+  host: string;
+  you: string;
+  rules: PrivateRules;
+  members: Array<{ name: string; team?: number; picked?: boolean }>;
+  /** 'picking': the host started; everyone rolls a starter. */
+  state: 'open' | 'picking';
+}
+
+export interface PartyState {
+  leader: string;
+  you: string;
+  members: Array<{ name: string; picked?: boolean }>;
+  /** Invites sent and not answered yet. */
+  invited: string[];
+}
+
+/** A friends list entry (server/accounts.ts friendList). */
+export interface FriendEntry {
+  name: string;
+  relation: 'friend' | 'incoming' | 'outgoing';
+  online: boolean;
+  activity: 'offline' | 'menu' | 'queue' | 'match' | 'watching' | 'private';
+  matchId?: string;
+}
+
 export type ClientMsg =
-  /** Join the queue for a match with the starter picked from the server's roll. */
-  | { t: 'queue'; pick: number }
+  /** Join the queue for a match with the starter picked from the server's roll (in a party or private lobby: that one's pick). */
+  | { t: 'queue'; pick: number; mode?: QueueMode }
+  /** Parties: invite a friend, answer an invite, leave, remove someone (leader), or queue together (leader). */
+  | { t: 'party'; a: 'invite' | 'accept' | 'decline' | 'leave' | 'kick' | 'queue'; name?: string; mode?: QueueMode }
+  /** Private lobbies: make one, join by code, change the rules (host), pick a team, start (host). */
+  | { t: 'private'; a: 'create' | 'join' | 'leave' | 'rules' | 'team' | 'start' | 'kick'; code?: string; rules?: Partial<PrivateRules>; team?: number; name?: string }
+  /** Watch a match: a friend's (by name), a match by id, or the featured one. `follow` switches whom the camera follows. */
+  | { t: 'spectate'; name?: string; matchId?: string; featured?: boolean }
+  | { t: 'follow'; trainerId?: number; step?: number }
+  | { t: 'unspectate' }
   /** Ask the server for a starter roll (it rolls; the browser only shows it). */
   | { t: 'roll' }
   | { t: 'leaveQueue' }
@@ -36,14 +89,30 @@ export interface RosterEntry {
   human: boolean;
   /** A player's look (src/look.ts), for drawing their trainer. */
   look?: unknown;
+  /** Squad number, when the match has squads. */
+  team?: number;
 }
 
 export type ServerMsg =
   | { t: 'hello'; name: string; guest: boolean; server: 'live' | 'demo' | 'dev'; build: string }
   /** The starter roll: the browser animates the reels from this seed (src/sim/starters.ts) and the server knows what it offered. */
   | { t: 'roll'; seed: number; pool: string[] }
-  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number }
-  | { t: 'start'; matchId: string; seed: number; you: number; roster: RosterEntry[] }
+  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode }
+  /** Friends (with what they are doing), your party, and party invites waiting for an answer. */
+  | { t: 'social'; friends: FriendEntry[]; party: PartyState | null; invites: string[] }
+  /** Roll a starter now: your party is queueing, or your private lobby is starting. */
+  | { t: 'pick'; reason: 'party' | 'private'; seconds: number }
+  | { t: 'private'; lobby: PrivateState | null }
+  /** Watching a match: its updates follow (as 's' messages, `delay` seconds behind). */
+  | { t: 'spectate'; matchId: string; seed: number; roster: RosterEntry[]; follow: number; delay: number; mode: string }
+  | { t: 'spectateEnd'; text: string }
+  /** You are out of the queue (a party member left it, or the party broke up). */
+  | { t: 'unqueued'; text: string }
+  /** A ranked match's effect on your rating. */
+  | { t: 'rated'; before: number; after: number; tier: { id: string; name: string; color: string } | null; placementLeft: number }
+  /** A short message for whatever screen is up (a friend request, an invite, a party change). */
+  | { t: 'notice'; text: string }
+  | { t: 'start'; matchId: string; seed: number; you: number; roster: RosterEntry[]; mode?: string }
   /** State patch and the events since the last one. */
   | { t: 's'; p: SyncPatch; e: Array<Record<string, unknown>>; time: number; /** The last movement frame applied. */ ack?: number }
   /** A command's reply (what the offline game shows as a message). */

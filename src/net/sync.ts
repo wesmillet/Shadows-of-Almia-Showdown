@@ -41,10 +41,14 @@ export function isTrainer(o: object): boolean {
   return 'party' in o && 'items' in o && 'isPlayer' in o;
 }
 
-/** Positions travel at 1/1000 of a tile: plenty for drawing, and fewer digits on the wire. */
-function round(v: number): number {
-  return Math.round(v * 1000) / 1000;
-}
+/** Numbers travel at 1/1000 (positions in tiles: plenty for drawing, and fewer digits on the wire). */
+const PRECISION = 1000;
+
+/**
+ * Fields sent only when an object first appears: they change every step in a way the mirror can
+ * follow by itself (a ground item's bob timer: the mirror advances it).
+ */
+const ONCE = new Set(['bob']);
 
 interface AnimLike {
   action: string;
@@ -58,7 +62,16 @@ interface AnimLike {
  */
 export class SyncEncoder {
   /** Ids for objects (shared by every encoder on the server, so ids mean the same thing for all). */
-  constructor(private readonly ids: IdTable, private owner: object | null = null) {}
+  private readonly precision: number;
+
+  /** `precision`: numbers are rounded to 1/precision (replays use 100: they are watched, not played). */
+  constructor(private readonly ids: IdTable, private owner: object | null = null, opts: { precision?: number } = {}) {
+    this.precision = opts.precision ?? PRECISION;
+  }
+
+  private round(v: number): number {
+    return Math.round(v * this.precision) / this.precision;
+  }
 
   /** What this player was last sent: id -> encoded fields. */
   private sent = new Map<number, Record<string, unknown>>();
@@ -87,6 +100,7 @@ export class SyncEncoder {
       seen.add(id);
       const enc = this.encodeObject(o, stack);
       const prev = this.sent.get(id);
+      if (prev) for (const k of ONCE) if (k in prev && k in enc) enc[k] = prev[k];
       const diff: Record<string, unknown> = {};
       let changed = false;
       for (const k in enc) {
@@ -128,7 +142,7 @@ export class SyncEncoder {
   encodeEvent(ev: object): Record<string, unknown> | null {
     let ok = true;
     const enc = (v: unknown, depth: number): unknown => {
-      if (v === null || v === undefined || typeof v !== 'object') return typeof v === 'number' ? round(v) : v;
+      if (v === null || v === undefined || typeof v !== 'object') return typeof v === 'number' ? this.round(v) : v;
       const o = v as Record<string, unknown>;
       if (isMon(o) || isTrainer(o) || ('a' in o && 'b' in o && 'cx' in o)) {
         const id = this.ids.id(o);
@@ -150,7 +164,7 @@ export class SyncEncoder {
     const out: Record<string, unknown> = {};
     const ref = (v: unknown): unknown => {
       if (v === null || v === undefined) return v ?? null;
-      if (typeof v === 'number') return Number.isFinite(v) ? round(v) : v > 0 ? 'Inf' : v < 0 ? '-Inf' : 'NaN';
+      if (typeof v === 'number') return Number.isFinite(v) ? this.round(v) : v > 0 ? 'Inf' : v < 0 ? '-Inf' : 'NaN';
       if (typeof v === 'string' || typeof v === 'boolean') return v;
       if (typeof v === 'function') return undefined;
       if (typeof v === 'object') {
@@ -194,7 +208,7 @@ export class SyncEncoder {
     }
     if (trainer) {
       const c = (o as { counter?: { x: number; y: number } | null }).counter;
-      if (c) out.$counter = `${round(c.x)},${round(c.y)}`;
+      if (c) out.$counter = `${this.round(c.x)},${this.round(c.y)}`;
     }
     return out;
   }

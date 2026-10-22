@@ -606,7 +606,8 @@ export class BattleSystem {
     if ((a.calm ?? 0) > 0 || (b.calm ?? 0) > 0) return false;
     // A one-on-one battle is sealed off: its two Pokémon fight only each other.
     if (a.duelId || b.duelId) return a.duelId === b.duelId && a.owner !== b.owner;
-    if (a.owner && b.owner) return a.owner !== b.owner;
+    // Squads: teammates' Pokémon never fight each other.
+    if (a.owner && b.owner) return a.owner !== b.owner && (a.owner.team === undefined || a.owner.team !== b.owner.team);
     if (!a.owner && !b.owner) return a.boss !== b.boss;
     return true;
   }

@@ -191,7 +191,7 @@ export class Match {
   /** Run by the game server (no hit-stop; set by server/room.ts). */
   online = false;
 
-  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[] }>; rivals?: number; mirror?: boolean } = {}) {
+  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[]; team?: number }>; rivals?: number; mirror?: boolean; stormSpeed?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
     this.nav = new Nav(this.ground);
@@ -202,6 +202,7 @@ export class Match {
     this.centerY = this.ground.rows / 2;
     // Everyone starts somewhere new each match, spread round the coast.
     this.mirror = !!opts.mirror;
+    this.stormSpeed = opts.stormSpeed ?? 1;
     if (this.mirror) {
       // Nothing is spawned: everything arrives from the server.
       this.seats.push(newSeat(this.makeTrainer('You', 'player', true, this.centerX, this.centerY)));
@@ -215,6 +216,7 @@ export class Match {
     for (const [i, h] of humans.entries()) {
       const spawn = this.startSpots[i] ?? this.edgeSpawn(this.startSpots);
       const t = this.makeTrainer(h.name, 'player', true, spawn.x, spawn.y);
+      if (h.team !== undefined) t.team = h.team;
       this.giveStartingKit(t);
       for (const dex of h.starters) t.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, t, spawn.x, spawn.y));
       this.placeParty(t);
@@ -1163,7 +1165,8 @@ export class Match {
 
   private stepOutposts(dt: number): void {
     for (const o of this.outposts) {
-      o.users = [];
+      // Emptied in place: online, a new list every step would travel as a new object every time.
+      o.users.length = 0;
       for (const t of this.allTrainers) {
         if (!t.alive || this.time < t.outpostReady) continue;
         // No healing in the middle of a battle, even standing right by the healer.
@@ -2953,8 +2956,11 @@ export class Match {
     // Each human is out the moment they are eliminated; the last trainer standing wins. Offline the
     // match ends with you; online it runs on until one trainer is left (or no humans are).
     for (const seat of this.seats) if (!seat.outcome && !seat.trainer.alive) seat.outcome = 'loss';
-    const standing = [...this.seats.map((x) => x.trainer), ...rivals].filter((t) => t.alive);
-    if (standing.length <= 1 && this.seats.length + rivals.length > 1) {
+    const everyone = [...this.seats.map((x) => x.trainer), ...rivals];
+    // Squads: the last team standing wins (a trainer with no team is a team of one).
+    const teamOf = (t: Trainer) => (t.team === undefined ? `t${t.id}` : `team${t.team}`);
+    const teamsLeft = new Set(everyone.filter((t) => t.alive).map(teamOf));
+    if (teamsLeft.size <= 1 && new Set(everyone.map(teamOf)).size > 1) {
       for (const seat of this.seats) if (!seat.outcome) seat.outcome = seat.trainer.alive ? 'win' : 'loss';
     }
     if (this.seats.every((x) => x.outcome)) this.over = true;
@@ -2964,7 +2970,7 @@ export class Match {
     const d = this.darkness;
     const mapRadius = Math.hypot(this.centerX, this.centerY) + 1;
     const wasPhase = d.phase;
-    stepDarkness(d, dt, mapRadius);
+    stepDarkness(d, dt * this.stormSpeed, mapRadius);
     if (d.pulsed) {
       this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
       if (d.finale && !this.darkrai) {
@@ -3135,7 +3141,7 @@ export class Match {
       if (a.duelId) continue;
       for (let j = i + 1; j < free.length; j++) {
         const b = free[j] as Trainer;
-        if (b.duelId || a.duelId) continue;
+        if (b.duelId || a.duelId || sameTeam(a, b)) continue;
         if (Math.hypot(a.x - b.x, a.y - b.y) > c.startRange) continue;
         if (!this.nav.clearLine(a.x, a.y, b.x, b.y)) continue;
         this.startDuel(a, b);
@@ -3680,6 +3686,8 @@ export class Match {
   /** The final showdown: seconds until the last two are called to the crystal's arena (null until there are two). */
   private finalCountdown: number | null = null;
   finalStarted = false;
+  /** How fast the storm closes in (private lobbies can change it). */
+  stormSpeed = 1;
 
   /**
    * When only two trainers are left in the match, both are called to the battlefield round the
@@ -3690,7 +3698,7 @@ export class Match {
     const arena = this.ground.features?.finalArena;
     if (!arena || this.finalStarted || this.over) return;
     const left = this.allTrainers.filter((t) => t.alive && !t.challenger && !t.visitor);
-    if (left.length !== 2) return;
+    if (left.length !== 2 || sameTeam(left[0] as Trainer, left[1] as Trainer)) return;
     const [a, b] = left as [Trainer, Trainer];
     if (this.finalCountdown === null) {
       this.finalCountdown = 5;
@@ -3933,4 +3941,9 @@ export function dirVec(d: Dir8): { x: number; y: number } {
   const v = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]][d] as [number, number];
   const n = Math.hypot(v[0], v[1]);
   return { x: v[0] / n, y: v[1] / n };
+}
+
+/** Two trainers on the same squad (online team play). */
+export function sameTeam(a: Trainer, b: Trainer): boolean {
+  return a.team !== undefined && a.team === b.team;
 }

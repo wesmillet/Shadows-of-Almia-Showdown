@@ -162,6 +162,8 @@ export interface Trainer {
   /** Character key in assets/rangers/manifest.json. */
   role: string;
   isPlayer: boolean;
+  /** Online squads: trainers on the same team never fight each other, and the last team standing wins. */
+  team?: number;
   x: number;
   y: number;
   px: number;

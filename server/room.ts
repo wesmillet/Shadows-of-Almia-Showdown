@@ -12,10 +12,12 @@ import type { Match } from '../src/sim/match';
 import type { Seat } from '../src/sim/seat';
 import type { ClientMsg, RosterEntry, ServerMsg } from '../src/net/protocol';
 import { IdTable, SyncEncoder } from '../src/net/sync';
+import { newSeat } from '../src/sim/seat';
 import { Accounts } from './accounts';
 import { runCommand } from './commands';
+import { RECORD_EVERY, type ReplayRecorder } from './replays';
 import { PlayerView } from './view';
-import { createMatch, type Human, type World } from './world';
+import { createMatch, type Human, type MatchRules, type World } from './world';
 
 export const STEP = 1 / 60;
 /** Simulation steps per view update (60 / 3 = 20 updates a second). */
@@ -23,6 +25,31 @@ const SEND_EVERY = 3;
 const RECONNECT_SECONDS = 45;
 /** Commands a player may send per second (beyond this they are dropped). */
 const COMMAND_RATE = 30;
+/** Spectators see the match this many seconds late (so watching can not be used to help a player). */
+export const SPECTATE_DELAY = 4;
+/** Watching someone who was just knocked out: the camera moves on after this long. */
+const FOLLOW_ON_AFTER = 3;
+
+export type RoomMode = 'casual' | 'ranked' | 'private';
+
+export interface RoomOptions extends MatchRules {
+  mode: RoomMode;
+  /** The rare-item chest (default: the server's setting). */
+  rareChest?: boolean;
+  /** Records the match (server/replays.ts), made once the match exists. */
+  recorder?: (room: Room) => ReplayRecorder | null;
+}
+
+interface Watcher {
+  peer: Peer;
+  follow: Trainer;
+  view: PlayerView;
+  enc: SyncEncoder;
+  /** Updates waiting out the delay (oldest first). */
+  queue: Array<{ at: number; msg: ServerMsg }>;
+  /** When the followed trainer went down (the camera moves on a little later). */
+  downAt: number | null;
+}
 
 /** A connected player, as the room sees them. */
 export interface Peer {
@@ -46,8 +73,10 @@ interface Player {
 export interface RoomResult {
   key: string;
   name: string;
+  /** A squad's win counts for every member, even one knocked out before the end. */
   outcome: 'win' | 'loss';
   place: number;
+  team?: number;
   stats: { catches: number; knockouts: number; damage: number; timeSurvived: number };
   /** The player's Pokémon at the end (what an extraction can keep). */
   party: Array<ReturnType<typeof Accounts.pcFields>>;
@@ -70,11 +99,18 @@ export interface RoomHooks {
 export class Room {
   readonly id: string;
   readonly match: Match;
-  private readonly ids = new IdTable();
+  readonly ids = new IdTable();
   private readonly players = new Map<string, Player>();
   private steps = 0;
   private events: BattleEvent[] = [];
   private eliminatedOrder: string[] = [];
+  private readonly watchers = new Map<string, Watcher>();
+  /** Computer trainers' places as they go out (ranked counts them as opponents). */
+  readonly botPlaces = new Map<Trainer, number>();
+  readonly roster: RosterEntry[];
+  readonly mode: RoomMode;
+  readonly startedAt = Date.now();
+  readonly recorder: ReplayRecorder | null;
   closed = false;
 
   constructor(
@@ -84,11 +120,13 @@ export class Room {
     readonly seed: number,
     private readonly hooks: RoomHooks,
     private readonly onEnd: (room: Room, results: RoomResult[]) => void,
+    opts: RoomOptions = { mode: 'casual' },
   ) {
     this.id = `m${seed.toString(36)}`;
-    this.match = createMatch(world, entries, size, seed);
+    this.mode = opts.mode;
+    this.match = createMatch(world, entries, size, seed, opts);
     this.match.online = true;
-    this.match.rareChest = hooks.rareChest;
+    this.match.rareChest = opts.rareChest ?? hooks.rareChest;
     // Testing (DEV_CLUSTER=1, never on the live server): every player starts beside the first.
     if (hooks.cluster && this.match.seats.length > 1) {
       const first = (this.match.seats[0] as Seat).trainer;
@@ -115,9 +153,118 @@ export class Room {
     });
     const roster: RosterEntry[] = this.match.allTrainers.filter((t) => !t.visitor).map((t) => {
       const owner = [...this.players.values()].find((p) => p.seat.trainer === t);
-      return { trainerId: t.id, name: t.name, human: t.isPlayer, look: owner?.peer?.look };
+      return { trainerId: t.id, name: t.name, human: t.isPlayer, look: owner?.peer?.look, team: t.team };
     });
-    for (const p of this.players.values()) p.peer?.send({ t: 'start', matchId: this.id, seed, you: p.seat.trainer.id, roster });
+    this.roster = roster;
+    for (const p of this.players.values()) p.peer?.send({ t: 'start', matchId: this.id, seed, you: p.seat.trainer.id, roster, mode: this.mode });
+    this.recorder = opts.recorder?.(this) ?? null;
+  }
+
+  /** Humans still connected and playing. */
+  get humansIn(): number {
+    return [...this.players.values()].filter((p) => p.peer && !p.ended).length;
+  }
+
+  /** The trainer a player has in this match. */
+  trainerOf(key: string): Trainer | null {
+    return this.players.get(key)?.seat.trainer ?? null;
+  }
+
+  // ---------------------------------------------------------------- spectators
+
+  /** Trainers a spectator can follow: everyone still in, the roster's order. */
+  private followable(): Trainer[] {
+    return this.match.allTrainers.filter((t) => t.alive && !t.visitor && !t.challenger && !t.legendBout && !t.hidden);
+  }
+
+  /** Starts watching (following a trainer, or the first human still in). */
+  spectate(peer: Peer, followId?: number): boolean {
+    if (this.closed) return false;
+    const list = this.followable();
+    const t = list.find((x) => x.id === followId) ?? list.find((x) => x.isPlayer) ?? list[0];
+    if (!t) return false;
+    const w: Watcher = { peer, follow: t, view: this.viewFor(t), enc: new SyncEncoder(this.ids, t), queue: [], downAt: null };
+    this.watchers.set(peer.key, w);
+    // Straight away, so the browser can get the screen ready while the delay runs.
+    peer.send(this.spectateHeader(t));
+    return true;
+  }
+
+  unspectate(key: string): void {
+    this.watchers.delete(key);
+  }
+
+  isWatching(key: string): boolean {
+    return this.watchers.has(key);
+  }
+
+  get watcherCount(): number {
+    return this.watchers.size;
+  }
+
+  /** Follows another trainer: one by id, or the next/previous one (step). */
+  follow(key: string, trainerId?: number, step?: number): void {
+    const w = this.watchers.get(key);
+    if (!w) return;
+    const list = this.followable();
+    let t: Trainer | undefined;
+    if (typeof trainerId === 'number') t = list.find((x) => x.id === trainerId);
+    else if (typeof step === 'number' && list.length) {
+      const i = list.indexOf(w.follow);
+      t = list[(((i < 0 ? 0 : i) + Math.sign(step)) % list.length + list.length) % list.length];
+    }
+    if (t && t !== w.follow) this.refollow(w, t);
+  }
+
+  private refollow(w: Watcher, t: Trainer): void {
+    w.follow = t;
+    w.view = this.viewFor(t);
+    w.enc = new SyncEncoder(this.ids, t);
+    w.downAt = null;
+    // In line with the delayed updates, so the browser starts over exactly where this view does.
+    w.queue.push({ at: this.match.time + SPECTATE_DELAY, msg: this.spectateHeader(t) });
+  }
+
+  private spectateHeader(t: Trainer): ServerMsg {
+    return { t: 'spectate', matchId: this.id, seed: this.seed, roster: this.roster, follow: t.id, delay: SPECTATE_DELAY, mode: this.mode };
+  }
+
+  /** A view as `t` sees it (a player's own seat; a computer trainer gets a stand-in). */
+  private viewFor(t: Trainer): PlayerView {
+    const seat = this.match.seats.find((s) => s.trainer === t) ?? newSeat(t);
+    return new PlayerView(this.match, seat);
+  }
+
+  private stepWatchers(evs: BattleEvent[]): void {
+    const now = this.match.time;
+    for (const w of this.watchers.values()) {
+      if (!w.follow.alive) {
+        if (w.downAt === null) w.downAt = now;
+        else if (now - w.downAt > FOLLOW_ON_AFTER) {
+          const next = this.followable().find((x) => x.isPlayer) ?? this.followable()[0];
+          if (next) this.refollow(w, next);
+        }
+      }
+      const patch = w.enc.encode(w.view.build(), w.view.visible);
+      const out: Array<Record<string, unknown>> = [];
+      for (const ev of evs) {
+        if (ev.type === 'notice' && ev.to !== undefined && ev.to !== w.follow.id) continue;
+        const e = w.enc.encodeEvent(ev);
+        if (e) out.push(e);
+      }
+      w.queue.push({ at: now + SPECTATE_DELAY, msg: { t: 's', p: patch, e: out, time: Math.round(now * 1000) / 1000 } });
+      while (w.queue.length && (w.queue[0] as { at: number }).at <= now) w.peer.send((w.queue.shift() as { msg: ServerMsg }).msg);
+    }
+  }
+
+  /** The match ended: spectators get the rest of what they have not seen yet, then the result. */
+  private releaseWatchers(text: string): void {
+    const now = this.match.time;
+    for (const w of this.watchers.values()) {
+      for (const q of w.queue) setTimeout(() => w.peer.send(q.msg), Math.max(0, (q.at - now) * 1000));
+      setTimeout(() => w.peer.send({ t: 'spectateEnd', text }), SPECTATE_DELAY * 1000 + 1500);
+    }
+    this.watchers.clear();
   }
 
   private keyOf(t: Trainer): string | null {
@@ -129,6 +276,12 @@ export class Room {
     return this.players.has(key);
   }
 
+  /** Still playing in this match (back after a dropped connection, they get their seat again). */
+  playing(key: string): boolean {
+    const p = this.players.get(key);
+    return !!p && !p.ended && !p.seat.outcome && p.seat.trainer.alive && !this.closed;
+  }
+
   /** A player came back (same account or guest key): they get their seat and a full view again. */
   rejoin(peer: Peer): void {
     const p = this.players.get(peer.key);
@@ -136,8 +289,7 @@ export class Room {
     p.peer = peer;
     p.goneAt = null;
     p.enc = new SyncEncoder(this.ids, p.seat.trainer);
-    const roster: RosterEntry[] = this.match.allTrainers.filter((t) => !t.visitor).map((t) => ({ trainerId: t.id, name: t.name, human: t.isPlayer }));
-    peer.send({ t: 'start', matchId: this.id, seed: this.seed, you: p.seat.trainer.id, roster });
+    peer.send({ t: 'start', matchId: this.id, seed: this.seed, you: p.seat.trainer.id, roster: this.roster, mode: this.mode });
   }
 
   disconnect(key: string): void {
@@ -205,7 +357,14 @@ export class Room {
     for (const p of this.players.values()) takeFrame(p.seat);
     m.step(STEP);
     this.events.push(...m.battle.events);
+    this.recorder?.collect(m.battle.events);
     m.battle.events.length = 0;
+    // Computer trainers' places, as they go out.
+    for (const t of m.trainers) {
+      if (!t.alive && !t.visitor && !t.challenger && !t.legendBout && !this.botPlaces.has(t)) {
+        this.botPlaces.set(t, m.allTrainers.filter((x) => x.alive && !x.visitor && !x.challenger && !x.legendBout).length + 1);
+      }
+    }
     for (const p of this.players.values()) {
       if (p.seat.outcome && !p.ended) {
         p.ended = true;
@@ -213,7 +372,9 @@ export class Room {
         p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: this.placeOf(p) });
       }
     }
-    if (++this.steps % SEND_EVERY === 0) {
+    ++this.steps;
+    if (this.steps % RECORD_EVERY === 0) this.recorder?.frame();
+    if (this.steps % SEND_EVERY === 0) {
       for (const p of this.players.values()) p.commands = Math.max(0, p.commands - COMMAND_RATE / 20);
       this.broadcast();
     }
@@ -230,6 +391,7 @@ export class Room {
   private broadcast(): void {
     const evs = this.events;
     this.events = [];
+    if (this.watchers.size) this.stepWatchers(evs);
     for (const p of this.players.values()) {
       // Eliminated players keep watching until they leave.
       if (!p.peer) continue;
@@ -254,17 +416,28 @@ export class Room {
     if (this.closed) return;
     this.closed = true;
     const results: RoomResult[] = [];
+    // The squad still standing at the end (if the match finished): all its members won.
+    const standing = this.match.allTrainers.filter((t) => t.alive && !t.visitor && !t.challenger && !t.legendBout);
+    const winTeam = this.match.over && standing.length && standing.every((t) => t.team !== undefined && t.team === standing[0]?.team) ? standing[0]?.team : undefined;
+    for (const t of this.match.trainers) if (!this.botPlaces.has(t) && t.alive && !t.visitor && !t.challenger && !t.legendBout) this.botPlaces.set(t, 1);
     for (const [key, p] of this.players) {
       const t = p.seat.trainer;
-      // Only the last trainer standing wins; leaving before the end is a loss.
-      const outcome = p.seat.outcome ?? (this.match.over && t.alive ? 'win' : 'loss');
-      if (!p.ended) p.peer?.send({ t: 'end', outcome, place: this.placeOf(p) });
+      // Only the last trainer (or squad) standing wins; leaving before the end is a loss.
+      let outcome = p.seat.outcome ?? (this.match.over && t.alive ? 'win' : 'loss');
+      let place = this.placeOf(p);
+      if (winTeam !== undefined && t.team === winTeam) {
+        outcome = 'win';
+        place = 1;
+      }
+      if (!p.ended) p.peer?.send({ t: 'end', outcome, place });
       results.push({
-        key, name: t.name, outcome, place: this.placeOf(p), stats: { ...t.stats },
+        key, name: t.name, outcome, place, team: t.team, stats: { ...t.stats },
         party: t.party.filter((x) => !x.captured).map((x) => Accounts.pcFields(x)),
         vouchers: t.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0),
       });
     }
+    const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';
+    this.releaseWatchers(`The match is over: ${winner} won`);
     this.onEnd(this, results);
   }
 }

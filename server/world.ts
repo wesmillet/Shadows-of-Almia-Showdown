@@ -31,12 +31,25 @@ export async function loadWorld(assetsDir: string): Promise<World> {
 export interface Human {
   name: string;
   starter: string;
+  /** Squad number (parties and team rules); none plays alone. */
+  team?: number;
+}
+
+export interface MatchRules {
+  /** Fill empty spots with computer trainers (default yes). */
+  bots?: boolean;
+  /** Starters' level (default the game's). */
+  level?: number;
+  /** How fast the storm closes in (1 normal). */
+  storm?: number;
 }
 
 /** A match for these players, with computer trainers filling the rest up to `size`. */
-export function createMatch(world: World, humans: Human[], size: number, seed: number): Match {
+export function createMatch(world: World, humans: Human[], size: number, seed: number, rules: MatchRules = {}): Match {
   return new Match({ ground: world.ground(), rng: new Rng(seed), sprites: world.sprites }, [], {
-    humans: humans.map((h) => ({ name: h.name, starters: [h.starter] })),
-    rivals: Math.max(0, size - humans.length),
+    humans: humans.map((h) => ({ name: h.name, starters: [h.starter], team: h.team })),
+    rivals: rules.bots === false ? 0 : Math.max(0, size - humans.length),
+    level: rules.level,
+    stormSpeed: rules.storm,
   });
 }

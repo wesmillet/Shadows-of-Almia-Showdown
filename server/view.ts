@@ -28,7 +28,16 @@ export class PlayerView {
   private seatView: Record<string, unknown> = {};
   private visitorsView: Record<string, unknown> = {};
 
-  constructor(private readonly match: Match, private readonly seat: Seat) {}
+  /** Tiles kept up to date around the focus (VIEW_RADIUS; replays see everything). */
+  private readonly radius: number;
+
+  /** Replays: kept up to date around every trainer, not just one. */
+  private readonly around: (() => Array<{ x: number; y: number }>) | null;
+
+  constructor(private readonly match: Match, private readonly seat: Seat, opts: { radius?: number; around?: () => Array<{ x: number; y: number }> } = {}) {
+    this.radius = opts.radius ?? VIEW_RADIUS;
+    this.around = opts.around ?? null;
+  }
 
   private list<T>(key: string, items: T[]): T[] {
     let l = this.lists.get(key) as T[] | undefined;
@@ -43,7 +52,9 @@ export class PlayerView {
     const seat = this.seat;
     const me = seat.trainer;
     const focus = seat.controlled ?? me;
-    const near = (x: number, y: number, extra = 0) => Math.hypot(x - focus.x, y - focus.y) <= VIEW_RADIUS + extra;
+    const radius = this.radius;
+    const foci = this.around ? this.around() : [focus];
+    const near = (x: number, y: number, extra = 0) => foci.some((f) => Math.hypot(x - f.x, y - f.y) <= radius + extra);
     const myDuel = me.duelId;
     const v = this.visible;
     v.clear();

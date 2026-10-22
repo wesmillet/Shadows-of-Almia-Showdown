@@ -18,6 +18,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { cleanName, isClean } from './moderation';
+import { DEFAULT_RATING, decay, PLACEMENT_GAMES, seasonAt, seasonReset, tierOf, type Rating } from './rating';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -43,6 +44,34 @@ export interface UserRow {
   role: string;
 }
 
+interface RatingRow {
+  user_id: number;
+  season: number;
+  rating: number;
+  rd: number;
+  vol: number;
+  games: number;
+  wins: number;
+  peak: number;
+  last_at: number;
+}
+
+const MAX_FRIENDS = 200;
+
+export interface FriendEntry {
+  name: string;
+  relation: 'friend' | 'incoming' | 'outgoing';
+  online: boolean;
+  activity: Presence['status'];
+  matchId?: string;
+}
+
+export interface Presence {
+  online: boolean;
+  status: 'offline' | 'menu' | 'queue' | 'match' | 'watching' | 'private';
+  matchId?: string;
+}
+
 interface Stats {
   matches: number;
   wins: number;
@@ -60,6 +89,10 @@ export class Accounts {
   private failures = new Map<string, [number, number]>();
   private readonly google: { id: string; secret: string } | null;
   private readonly publicUrl: string | null;
+  /** Who is online and doing what (main.ts fills this in), for the friends list. */
+  presence: (userId: number) => Presence = () => ({ online: false, status: 'offline' });
+  /** Friends lists changed for these players (main.ts pushes the new lists to them). */
+  onFriendsChanged: (userIds: number[]) => void = () => {};
 
   constructor(dataDir: string, private readonly kind: 'live' | 'demo' | 'dev') {
     mkdirSync(dataDir, { recursive: true });
@@ -91,11 +124,33 @@ export class Accounts {
         PRIMARY KEY (match_id, user_id)
       );
       CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT NOT NULL, text TEXT NOT NULL, at INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS ratings (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, season INTEGER NOT NULL,
+        rating REAL NOT NULL, rd REAL NOT NULL, vol REAL NOT NULL, games INTEGER NOT NULL DEFAULT 0, wins INTEGER NOT NULL DEFAULT 0,
+        peak REAL NOT NULL, last_at INTEGER NOT NULL, PRIMARY KEY (user_id, season)
+      );
+      CREATE INDEX IF NOT EXISTS ratings_board ON ratings(season, rating DESC);
+      CREATE TABLE IF NOT EXISTS friends (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, friend_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY (user_id, friend_id)
+      );
+      CREATE INDEX IF NOT EXISTS friends_of ON friends(friend_id);
+      CREATE TABLE IF NOT EXISTS replays (
+        id TEXT PRIMARY KEY, mode TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER NOT NULL, seconds REAL NOT NULL,
+        players TEXT NOT NULL, winner TEXT, bytes INTEGER NOT NULL, humans INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS replay_players (replay_id TEXT NOT NULL REFERENCES replays(id) ON DELETE CASCADE, user_id INTEGER NOT NULL, PRIMARY KEY (replay_id, user_id));
+      CREATE INDEX IF NOT EXISTS replay_players_user ON replay_players(user_id);
       CREATE TABLE IF NOT EXISTS reports (
         id INTEGER PRIMARY KEY, reporter_id INTEGER, reporter_key TEXT NOT NULL, target TEXT NOT NULL, reason TEXT NOT NULL,
         chat_id INTEGER, at INTEGER NOT NULL, resolved INTEGER NOT NULL DEFAULT 0
       );
     `);
+    // Columns added after the first release (older databases get them here).
+    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"]] as const) {
+      const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    }
     const gid = process.env.GOOGLE_CLIENT_ID;
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;
     this.google = gid && gsecret ? { id: gid, secret: gsecret } : null;
@@ -176,15 +231,20 @@ export class Accounts {
     };
   }
 
-  /** A finished match: stats for every signed-in player, and extraction picks for winners (and vouchers). */
-  recordMatch(matchId: string, results: RoomResult[]): void {
-    this.db.prepare('INSERT OR IGNORE INTO matches (id, ended_at, summary) VALUES (?, ?, ?)').run(matchId, Date.now(), JSON.stringify(results.map((r) => ({ name: r.name, place: r.place, outcome: r.outcome }))));
+  /**
+   * A finished match: stats for every signed-in player, and extraction picks for winners (and
+   * vouchers). Private matches (custom rules, friends only) keep nothing: they would be too easy to
+   * farm. `ratingDeltas` is filled in for ranked matches.
+   */
+  recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map()): void {
+    this.db.prepare('INSERT OR IGNORE INTO matches (id, ended_at, summary, mode) VALUES (?, ?, ?, ?)').run(matchId, Date.now(), JSON.stringify(results.map((r) => ({ name: r.name, place: r.place, outcome: r.outcome, team: r.team }))), mode);
+    if (mode === 'private') return;
     for (const r of results) {
       if (!r.key.startsWith('u')) continue;
       const userId = Number(r.key.slice(1));
       const picks = (r.outcome === 'win' ? 1 : 0) + r.vouchers;
-      this.db.prepare('INSERT OR REPLACE INTO match_players (match_id, user_id, place, outcome, stats, party, picks_left) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(matchId, userId, r.place, r.outcome, JSON.stringify(r.stats), JSON.stringify(r.party), picks);
+      this.db.prepare('INSERT OR REPLACE INTO match_players (match_id, user_id, place, outcome, stats, party, picks_left, rating_delta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(matchId, userId, r.place, r.outcome, JSON.stringify(r.stats), JSON.stringify(r.party), picks, ratingDeltas.get(r.key) ?? null);
       const p = this.profile(userId);
       const s = p.stats;
       s.matches++;
@@ -195,6 +255,122 @@ export class Accounts {
       s.bestPlace = s.bestPlace === null ? r.place : Math.min(s.bestPlace, r.place);
       this.db.prepare('UPDATE profiles SET stats = ? WHERE user_id = ?').run(JSON.stringify(s), userId);
     }
+  }
+
+  // ---------------------------------------------------------------- ranked
+
+  /**
+   * A player's rating this season (as of now: the deviation grows with days away). Their first
+   * ranked game of a season starts from last season's rating, halfway back to 1500.
+   */
+  rating(userId: number, now = Date.now()): { r: Rating; games: number; wins: number; peak: number; season: number } {
+    const { season } = seasonAt(now);
+    const row = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND season = ?').get(userId, season) as RatingRow | undefined;
+    if (row) return { r: decay({ rating: row.rating, rd: row.rd, vol: row.vol }, (now - row.last_at) / 86400_000), games: row.games, wins: row.wins, peak: row.peak, season };
+    const prev = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND season < ? ORDER BY season DESC LIMIT 1').get(userId, season) as RatingRow | undefined;
+    const r = prev ? seasonReset({ rating: prev.rating, rd: prev.rd, vol: prev.vol }) : { ...DEFAULT_RATING };
+    return { r, games: 0, wins: 0, peak: r.rating, season };
+  }
+
+  /** What a player's ranked standing looks like on screen. */
+  rankedCard(userId: number): { season: number; rating: number; rd: number; games: number; wins: number; peak: number; tier: ReturnType<typeof tierOf>; placementLeft: number; rank: number | null } {
+    const x = this.rating(userId);
+    const shown = Math.round(x.r.rating);
+    const rank = x.games >= PLACEMENT_GAMES ? 1 + (this.db.prepare('SELECT COUNT(*) AS n FROM ratings r JOIN users u ON u.id = r.user_id WHERE r.season = ? AND r.games >= ? AND r.rating > ? AND u.banned = 0').get(x.season, PLACEMENT_GAMES, x.r.rating) as { n: number }).n : null;
+    return { season: x.season, rating: shown, rd: Math.round(x.r.rd), games: x.games, wins: x.wins, peak: Math.round(x.peak), tier: tierOf(x.r.rating, x.games), placementLeft: Math.max(0, PLACEMENT_GAMES - x.games), rank };
+  }
+
+  saveRating(userId: number, r: Rating, won: boolean, now = Date.now()): void {
+    const cur = this.rating(userId, now);
+    this.db.prepare(`INSERT INTO ratings (user_id, season, rating, rd, vol, games, wins, peak, last_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, season) DO UPDATE SET rating = excluded.rating, rd = excluded.rd, vol = excluded.vol, games = excluded.games, wins = excluded.wins, peak = excluded.peak, last_at = excluded.last_at`)
+      .run(userId, cur.season, r.rating, r.rd, r.vol, cur.games + 1, cur.wins + (won ? 1 : 0), Math.max(cur.peak, r.rating), now);
+  }
+
+  // ---------------------------------------------------------------- friends
+
+  /** Friends, and requests both ways. */
+  friends(userId: number): Array<{ id: number; name: string; status: 'friend' | 'incoming' | 'outgoing' }> {
+    const out = this.db.prepare(`SELECT f.friend_id AS id, u.username AS name, f.status FROM friends f JOIN users u ON u.id = f.friend_id WHERE f.user_id = ? AND u.banned = 0`).all(userId) as Array<{ id: number; name: string; status: string }>;
+    const inc = this.db.prepare(`SELECT f.user_id AS id, u.username AS name FROM friends f JOIN users u ON u.id = f.user_id WHERE f.friend_id = ? AND f.status = 'pending' AND u.banned = 0`).all(userId) as Array<{ id: number; name: string }>;
+    return [
+      ...out.map((r) => ({ id: r.id, name: r.name, status: (r.status === 'accepted' ? 'friend' : 'outgoing') as 'friend' | 'outgoing' })),
+      ...inc.map((r) => ({ id: r.id, name: r.name, status: 'incoming' as const })),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** The friends list as a browser shows it: each friend's relation, and for friends what they are up to. */
+  friendList(userId: number): FriendEntry[] {
+    return this.friends(userId).map((f) => {
+      const p = f.status === 'friend' ? this.presence(f.id) : { online: false, status: 'offline' as const };
+      return { name: f.name, relation: f.status, online: p.online, activity: p.status, matchId: p.matchId };
+    });
+  }
+
+  areFriends(a: number, b: number): boolean {
+    return !!this.db.prepare("SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'accepted'").get(a, b);
+  }
+
+  /** Sends a request (or accepts theirs, if they already asked). Returns what happened, for the reply. */
+  addFriend(userId: number, name: string): { ok: boolean; text: string; other?: number } {
+    const u = this.db.prepare('SELECT * FROM users WHERE username = ?').get(name) as UserRow | undefined;
+    if (!u || u.banned) return { ok: false, text: 'No trainer by that name' };
+    if (u.id === userId) return { ok: false, text: "That's you!" };
+    if (this.areFriends(userId, u.id)) return { ok: false, text: `${u.username} is already your friend` };
+    const count = (this.db.prepare('SELECT COUNT(*) AS n FROM friends WHERE user_id = ?').get(userId) as { n: number }).n;
+    if (count >= MAX_FRIENDS) return { ok: false, text: `You can have up to ${MAX_FRIENDS} friends and requests` };
+    const theirs = this.db.prepare("SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'pending'").get(u.id, userId);
+    const now = Date.now();
+    if (theirs) {
+      this.db.prepare("UPDATE friends SET status = 'accepted' WHERE user_id = ? AND friend_id = ?").run(u.id, userId);
+      this.db.prepare("INSERT OR REPLACE INTO friends (user_id, friend_id, status, created_at) VALUES (?, ?, 'accepted', ?)").run(userId, u.id, now);
+      return { ok: true, text: `You and ${u.username} are now friends`, other: u.id };
+    }
+    this.db.prepare("INSERT OR IGNORE INTO friends (user_id, friend_id, status, created_at) VALUES (?, ?, 'pending', ?)").run(userId, u.id, now);
+    return { ok: true, text: `Friend request sent to ${u.username}`, other: u.id };
+  }
+
+  /** Unfriends, cancels a request, or declines one. */
+  removeFriend(userId: number, name: string): { ok: boolean; other?: number } {
+    const u = this.db.prepare('SELECT id FROM users WHERE username = ?').get(name) as { id: number } | undefined;
+    if (!u) return { ok: false };
+    this.db.prepare('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)').run(userId, u.id, u.id, userId);
+    return { ok: true, other: u.id };
+  }
+
+  // ---------------------------------------------------------------- replays
+
+  addReplay(r: { id: string; mode: string; startedAt: number; seconds: number; players: Array<{ name: string; place: number; human: boolean; key?: string }>; winner: string | null; bytes: number }): void {
+    this.db.prepare('INSERT OR REPLACE INTO replays (id, mode, started_at, ended_at, seconds, players, winner, bytes, humans) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(r.id, r.mode, r.startedAt, Date.now(), r.seconds, JSON.stringify(r.players.map((p) => ({ name: p.name, place: p.place, human: p.human }))), r.winner, r.bytes, r.players.filter((p) => p.human).length);
+    for (const p of r.players) if (p.key?.startsWith('u')) this.db.prepare('INSERT OR IGNORE INTO replay_players (replay_id, user_id) VALUES (?, ?)').run(r.id, Number(p.key.slice(1)));
+  }
+
+  /** Replays to delete so the kept ones fit in `maxBytes` (oldest first). */
+  replaysOver(maxBytes: number): string[] {
+    const rows = this.db.prepare('SELECT id, bytes FROM replays ORDER BY ended_at DESC').all() as Array<{ id: string; bytes: number }>;
+    let total = 0;
+    const out: string[] = [];
+    for (const r of rows) {
+      total += r.bytes;
+      if (total > maxBytes) out.push(r.id);
+    }
+    return out;
+  }
+
+  dropReplay(id: string): void {
+    this.db.prepare('DELETE FROM replays WHERE id = ?').run(id);
+  }
+
+  replayList(userId: number | null, limit = 30): unknown[] {
+    const rows = (userId === null
+      ? this.db.prepare("SELECT * FROM replays WHERE mode != 'private' ORDER BY humans DESC, ended_at DESC LIMIT ?").all(limit)
+      : this.db.prepare('SELECT r.* FROM replays r JOIN replay_players p ON p.replay_id = r.id WHERE p.user_id = ? ORDER BY r.ended_at DESC LIMIT ?').all(userId, limit)) as Array<Record<string, unknown>>;
+    return rows.map((r) => ({ id: r.id, mode: r.mode, endedAt: r.ended_at, seconds: r.seconds, players: JSON.parse(String(r.players)), winner: r.winner, humans: r.humans }));
+  }
+
+  hasReplay(id: string): boolean {
+    return !!this.db.prepare('SELECT 1 FROM replays WHERE id = ?').get(id);
   }
 
   // ---------------------------------------------------------------- HTTP API
@@ -225,6 +401,13 @@ export class Accounts {
       }
       if (req.method === 'GET' && path === '/api/auth/google') return this.googleStart(req, res);
       if (req.method === 'GET' && path === '/api/auth/google/callback') return this.googleCallback(req, res, url);
+      if (req.method === 'GET' && path === '/api/season') return send(200, seasonAt(Date.now()));
+      if (req.method === 'GET' && path === '/api/leaderboard' && url.searchParams.get('mode') === 'ranked') {
+        const season = Number(url.searchParams.get('season')) || seasonAt(Date.now()).season;
+        const rows = this.db.prepare('SELECT u.username, r.rating, r.games, r.wins, r.peak FROM ratings r JOIN users u ON u.id = r.user_id WHERE r.season = ? AND r.games >= ? AND u.banned = 0 ORDER BY r.rating DESC LIMIT 100').all(season, PLACEMENT_GAMES) as Array<{ username: string; rating: number; games: number; wins: number; peak: number }>;
+        return send(200, { season, players: rows.map((r) => ({ name: r.username, rating: Math.round(r.rating), games: r.games, wins: r.wins, tier: tierOf(r.rating, r.games) })) });
+      }
+      if (req.method === 'GET' && path === '/api/replays' && !url.searchParams.get('mine')) return send(200, { replays: this.replayList(null) });
       if (req.method === 'GET' && path === '/api/leaderboard') {
         const rows = this.db.prepare("SELECT u.username, p.stats FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.banned = 0 AND json_extract(p.stats, '$.wins') > 0 ORDER BY json_extract(p.stats, '$.wins') DESC LIMIT 50").all() as Array<{ username: string; stats: string }>;
         return send(200, { players: rows.map((r) => ({ name: r.username, ...JSON.parse(r.stats) })) });
@@ -236,10 +419,29 @@ export class Accounts {
         const prof = this.profile(u.id);
         const recent = this.db.prepare('SELECT m.match_id, m.place, m.outcome, x.ended_at FROM match_players m JOIN matches x ON x.id = m.match_id WHERE m.user_id = ? ORDER BY x.ended_at DESC LIMIT 10').all(u.id);
         const pcCount = (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(u.id) as { n: number }).n;
-        return send(200, { name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount });
+        return send(200, { name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, ranked: this.rankedCard(u.id), online: this.presence(u.id).online });
       }
       if (!me) return send(401, { error: 'Sign in first' });
       if (me.banned) return send(403, { error: 'This account is banned' });
+      if (req.method === 'GET' && path === '/api/ranked') return send(200, this.rankedCard(me.id));
+      if (req.method === 'GET' && path === '/api/replays') return send(200, { replays: this.replayList(me.id) });
+      if (req.method === 'GET' && path === '/api/friends') {
+        return send(200, { friends: this.friendList(me.id) });
+      }
+      if (req.method === 'POST' && (path === '/api/friends/add' || path === '/api/friends/remove')) {
+        const b = await readJson(req);
+        const name = String(b.name ?? '').slice(0, 32);
+        if (path === '/api/friends/add') {
+          if (this.limited(`friend:${me.id}`, 30, 3600_000)) return send(429, { error: 'Too many friend requests. Try again later' });
+          this.fail(`friend:${me.id}`);
+          const r = this.addFriend(me.id, name);
+          if (r.other !== undefined) this.onFriendsChanged([me.id, r.other]);
+          return send(r.ok ? 200 : 400, r.ok ? { ok: true, text: r.text } : { error: r.text });
+        }
+        const r = this.removeFriend(me.id, name);
+        if (r.other !== undefined) this.onFriendsChanged([me.id, r.other]);
+        return send(200, { ok: r.ok });
+      }
       if (req.method === 'GET' && path === '/api/pc') {
         const rows = this.db.prepare('SELECT entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ entry: string }>;
         return send(200, { pc: rows.map((r) => JSON.parse(r.entry)) });

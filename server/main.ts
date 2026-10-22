@@ -1,6 +1,7 @@
 /**
  * The game server: one program that serves the game's pages and art, runs every online match, the
- * matchmaking lobby and the global chat, and (server/accounts.ts) players' accounts and saves.
+ * matchmaking, parties, private lobbies, spectating and replays (server/hub.ts), the global chat,
+ * and (server/accounts.ts) players' accounts and saves.
  *
  *   npm run server            # development (port 8787, short lobby wait)
  *   node dist-server/main.js  # production, after npm run build:server
@@ -10,14 +11,13 @@
  */
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { randomBytes, randomInt } from 'node:crypto';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMsg, ServerMsg } from '../src/net/protocol';
-import { starterChoices, unlockedFromPc } from '../src/sim/starters';
 import { Chat } from './chat';
-import { Lobby, type Queued } from './lobby';
-import { Room, STEP, type Peer, type RoomHooks, type RoomResult } from './room';
+import { Hub, type Client } from './hub';
+import { replayDir, replayFile } from './replays';
+import { STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
 import { Accounts } from './accounts';
 
@@ -29,6 +29,8 @@ const ASSETS = process.env.ASSETS_DIR ?? join(ROOT, 'assets');
 const DATA = process.env.DATA_DIR ?? join(ROOT, '.data');
 const SIZE = Number(process.env.MATCH_SIZE ?? 8);
 const WAIT = Number(process.env.LOBBY_WAIT ?? (KIND === 'live' ? 60 : 15));
+/** Ranked waits longer for real players before filling up with computer trainers. */
+const RANKED_WAIT = Number(process.env.RANKED_WAIT ?? (KIND === 'live' ? 120 : WAIT * 2));
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -43,39 +45,6 @@ const accounts = new Accounts(DATA, KIND);
 log(`World ready: ${world.map.cols}x${world.map.rows}`);
 
 // ---------------------------------------------------------------- connections
-
-interface Conn extends Peer {
-  ws: WebSocket;
-  accountId: number | null;
-  guest: boolean;
-  rollSeed: number | null;
-  /** The starters this player's roll was drawn from (their PC's unlocks). */
-  rollPool: string[];
-  room: Room | null;
-  msgs: number;
-}
-
-const conns = new Map<string, Conn>();
-const rooms = new Set<Room>();
-const chat = new Chat((msg) => {
-  for (const c of conns.values()) c.send(msg);
-}, accounts);
-
-const lobby = new Lobby({
-  size: SIZE,
-  waitSeconds: WAIT,
-  fullSeconds: 3,
-  start: (players: Queued[]) => {
-    const seed = randomInt(1, 2 ** 31);
-    const room = new Room(world, players.map((q) => ({ name: q.peer.name, starter: q.starter, peer: q.peer })), SIZE, seed, roomHooks, endRoom);
-    rooms.add(room);
-    for (const q of players) {
-      const c = conns.get(q.peer.key);
-      if (c) c.room = room;
-    }
-    log(`Match ${room.id}: ${players.length} player(s), ${SIZE - players.length} computer trainer(s)`);
-  },
-});
 
 /** Account ids by player key (guests have none: nothing of theirs is kept). */
 const accountOf = (key: string): number | null => (key.startsWith('u') ? Number(key.slice(1)) : null);
@@ -97,11 +66,19 @@ const roomHooks: RoomHooks = {
   },
 };
 
-function endRoom(room: Room, results: RoomResult[]): void {
-  rooms.delete(room);
-  for (const c of conns.values()) if (c.room === room) c.room = null;
-  accounts.recordMatch(room.id, results);
-  log(`Match ${room.id} over: ${results.map((r) => `${r.name} #${r.place}`).join(', ')}`);
+const REPLAYS = process.env.REPLAYS !== '0';
+const REPLAY_DIR = REPLAYS ? replayDir(DATA) : null;
+const hub = new Hub({
+  world, accounts, size: SIZE, wait: { casual: WAIT, ranked: RANKED_WAIT }, hooks: roomHooks,
+  replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
+});
+const chat = new Chat((msg) => {
+  for (const c of hub.clients.values()) c.send(msg);
+}, accounts);
+
+interface Conn extends Client {
+  ws: WebSocket;
+  msgs: number;
 }
 
 function onMessage(c: Conn, raw: string): void {
@@ -112,34 +89,9 @@ function onMessage(c: Conn, raw: string): void {
     return;
   }
   if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
-  switch (msg.t) {
-    case 'ping':
-      c.send({ t: 'pong', at: msg.at });
-      return;
-    case 'chat':
-      chat.say(c, msg.text);
-      return;
-    case 'roll':
-      if (c.room) return;
-      c.rollSeed = randomInt(1, 2 ** 31);
-      // A signed-in player's pool grows with their PC; a guest rolls from the starting pool.
-      c.rollPool = c.accountId === null ? [] : unlockedFromPc(accounts.pcDexes(c.accountId));
-      c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
-      return;
-    case 'queue': {
-      if (c.room || c.rollSeed === null) return;
-      const choices = starterChoices(c.rollSeed, c.rollPool);
-      const pick = typeof msg.pick === 'number' && Number.isInteger(msg.pick) ? choices[msg.pick] : undefined;
-      if (!pick) return c.send({ t: 'error', text: 'Pick one of the starters you rolled' });
-      lobby.join({ peer: c, starter: pick }, Date.now());
-      return;
-    }
-    case 'leaveQueue':
-      lobby.leave(c.key);
-      return;
-    default:
-      c.room?.receive(c.key, msg);
-  }
+  if (msg.t === 'ping') return c.send({ t: 'pong', at: msg.at });
+  if (msg.t === 'chat') return chat.say(c, msg.text);
+  hub.message(c, msg);
 }
 
 // ---------------------------------------------------------------- web
@@ -175,7 +127,19 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 const http = createServer((req, res) => {
   const url = req.url ?? '/';
   if (url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, rooms: rooms.size, players: conns.size, queued: lobby.waiting }));
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, ...hub.stats() }));
+    return;
+  }
+  if (url.startsWith('/api/replay/') && req.method === 'GET') {
+    // A replay file: gzipped JSON lines, which the browser unpacks on the way in.
+    const id = decodeURIComponent(url.slice('/api/replay/'.length).split('?')[0] ?? '');
+    const file = REPLAY_DIR && accounts.hasReplay(id) ? replayFile(REPLAY_DIR, id) : null;
+    if (!file) {
+      res.writeHead(404, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'No such replay' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Content-Encoding': 'gzip', 'Cache-Control': 'public, max-age=86400', 'Content-Length': statSync(file).size });
+    createReadStream(file).pipe(res);
     return;
   }
   if (url.startsWith('/api/')) {
@@ -208,9 +172,14 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   const who = await accounts.identify(req);
   const key = who.key;
   // The same player connecting twice (a second tab): the older connection goes.
-  conns.get(key)?.ws.close(4000, 'Opened in another tab');
+  const old = hub.clients.get(key) as Conn | undefined;
+  if (old) {
+    hub.disconnect(old);
+    old.ws.close(4000, 'Opened in another tab');
+  }
   const c: Conn = {
     ws, key, name: who.name, look: who.look, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
+    watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '',
     send(msg: ServerMsg) {
       if (ws.readyState !== ws.OPEN) return;
       const data = JSON.stringify(msg);
@@ -218,16 +187,9 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
       else ws.send(data);
     },
   };
-  conns.set(key, c);
   c.send({ t: 'hello', name: c.name, guest: c.guest, server: KIND, build: BUILD });
   chat.history(c);
-  // Back after a dropped connection: straight into the match still running.
-  for (const r of rooms) {
-    if (r.has(key)) {
-      c.room = r;
-      r.rejoin(c);
-    }
-  }
+  hub.connect(c);
   ws.on('message', (data) => {
     if (++c.msgs > MSG_RATE) {
       ws.close(4001, 'Too many messages');
@@ -237,12 +199,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     if (LAG) setTimeout(() => onMessage(c, raw), LAG);
     else onMessage(c, raw);
   });
-  ws.on('close', () => {
-    if (conns.get(key) !== c) return;
-    conns.delete(key);
-    lobby.leave(key);
-    c.room?.disconnect(key);
-  });
+  ws.on('close', () => hub.disconnect(c));
 }
 
 // ---------------------------------------------------------------- the clock
@@ -255,19 +212,19 @@ setInterval(() => {
   last = now;
   while (acc >= STEP) {
     acc -= STEP;
-    for (const r of rooms) {
+    for (const r of hub.rooms) {
       try {
         r.step();
       } catch (e) {
         log(`Match ${r.id} crashed:`, e);
-        rooms.delete(r);
+        hub.rooms.delete(r);
       }
     }
   }
-  lobby.tick(Date.now());
+  hub.tick(Date.now());
 }, 4);
 setInterval(() => {
-  for (const c of conns.values()) c.msgs = 0;
+  for (const c of hub.clients.values()) (c as Conn).msgs = 0;
 }, 1000);
 
 http.listen(PORT, () => log(`Shadows of Almia Showdown server (${KIND}) on :${PORT}`));

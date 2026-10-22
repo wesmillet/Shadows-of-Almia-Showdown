@@ -354,6 +354,8 @@ export class MirrorMatch {
       if (mon.status !== 'freeze') mon.anim.update(dt);
     }
     m.battle.stepFainting(dt);
+    // Ground items bob on their own (the server sends their timer once).
+    for (const it of m.items) it.bob += dt;
     // Cooldowns run down between updates, so the move buttons count smoothly.
     for (const mon of m.player.party) for (let i = 0; i < mon.cooldowns.length; i++) mon.cooldowns[i] = Math.max(0, (mon.cooldowns[i] ?? 0) - dt);
     this.stepMotes(dt);

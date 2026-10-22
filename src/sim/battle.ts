@@ -381,7 +381,8 @@ export class BattleSystem {
     if (!a.casting) return;
     const gx = target ? target.x : tx;
     const gy = target ? target.y : ty;
-    const stop = 0.15 + bodyRadius(a.species) * 0.55 + (target ? bodyRadius(target.species) * 0.55 : 0.2);
+    // Stop with the two bodies touching, not overlapping (a Gyarados used to end up on top of its target).
+    const stop = 0.15 + bodyRadius(a.species) * 0.75 + (target ? bodyRadius(target.species) * 0.75 : 0.2);
     const travel = Math.hypot(gx - a.x, gy - a.y) - stop;
     if (travel < L.minTiles) return;
     const dur = Math.max(0.08, Math.min(L.maxSeconds, travel / (L.speed * moveSpeed(a))));

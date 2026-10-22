@@ -275,7 +275,7 @@ export class Visitors {
     const dex = storm ? SHADOW_MEWTWO : (pool[m.rng.int(0, pool.length - 1)] as string);
     this.portal = { x: at.x, y: at.y, t: 0, dex, out: null, shadow: storm };
     h.anim.play('Charge', { restart: true });
-    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#ffcf4a', shake: storm ? 0.5 : 0 });
+    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#5b8cff', shake: storm ? 0.5 : 0 });
     if (storm) return 'Hoopa: "Out here in the storm? Let\'s see what the dark is hiding!" A black ring tears open...';
     return 'Hoopa: "Ta-da! Want to see something AMAZING?" A ring portal opens!';
   }

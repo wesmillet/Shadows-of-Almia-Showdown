@@ -121,16 +121,25 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
 3. **Let GitHub deploy**: `fly tokens create org -x 999999h`, then in the GitHub repository:
    Settings -> Secrets and variables -> Actions -> New secret `FLY_API_TOKEN` with that token.
    From then on every push to `main` updates the demo server; promote to live from the Actions tab.
-4. **First deploy by hand** (optional, the workflow does the same):
+   For gentle live deploys (no match cut short), make up a long random OPS_TOKEN and set it in both
+   places: `fly secrets set OPS_TOKEN=... --app almia-showdown`, and the GitHub secret `OPS_TOKEN`.
+   If the live server's address is not almia-showdown.fly.dev, set the repository *variable*
+   `LIVE_URL` to it.
+4. **Backups off the machine** (recommended): `fly storage create --app almia-showdown` (and again
+   for the demo app). That makes a Tigris bucket and sets its variables on the app; backups start
+   uploading on their own.
+5. **Alerts** (recommended): make a Discord (or Slack) incoming webhook for a channel only you read,
+   then `fly secrets set ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/... --app almia-showdown`.
+6. **First deploy by hand** (optional, the workflow does the same):
    `fly deploy --config fly.demo.toml` and `fly deploy --config fly.toml`.
-5. **The domain**: buy it (Cloudflare Registrar or Porkbun), then
+7. **The domain**: buy it (Cloudflare Registrar or Porkbun), then
    ```
    fly certs add example.gg --app almia-showdown
    fly certs add demo.example.gg --app almia-showdown-demo
    ```
    and add the DNS records `fly certs show` prints at the registrar. Set `PUBLIC_URL` in each
    `.toml` to its address.
-6. **Sign in with Google** (optional): Google Cloud Console -> APIs & Services -> Credentials ->
+8. **Sign in with Google** (optional): Google Cloud Console -> APIs & Services -> Credentials ->
    Create OAuth client ID (Web application). Authorized redirect URI:
    `https://example.gg/api/auth/google/callback` (and the demo's). Then
    ```
@@ -163,7 +172,34 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
 - **Chat strikes**: a filtered word, flooding, or saying the same thing again is a strike; three
   in ten minutes mutes for 10 minutes, then an hour, then a day (and the second time in a week
   reports the player). SHOUTING is quietly lower-cased.
-- **Backups**: Fly snapshots each volume daily (kept 5 days). `fly volumes snapshots list`.
+- **Backups** (`server/backup.ts`): every 15 minutes the database is copied without pausing
+  matches, gzipped, and kept on the volume (the last 8 and one a day for a week) and, with S3
+  storage set up, uploaded: `live/latest.db.gz`, `live/hourly/<HH>.db.gz` (24 hours) and
+  `live/daily/<date>.db.gz` (add a lifecycle rule to the bucket to expire old dailies). A last one
+  is made on every shutdown. Fly also snapshots the volume daily. To restore:
+  ```
+  fly ssh console --app almia-showdown -C "node dist-server/admin.js backups"   # what is on the volume
+  fly machine stop --app almia-showdown
+  fly machine start --app almia-showdown  # then, quickly, before anyone plays:
+  fly ssh console --app almia-showdown -C "node dist-server/admin.js restore s3:hourly/07.db.gz"
+  fly machine restart --app almia-showdown
+  ```
+  (`restore <file>` takes a file in /data/backups too; the replaced database is kept beside it.)
+- **Deploys without cutting matches short**: the live deploy (Actions) first stops new matches
+  (players in the hub are told an update is coming), waits up to 20 minutes for the ones running,
+  then deploys. Whatever is still running when Fly stops the machine gets 4 more minutes, then is
+  called off with nothing counted (no loss, no rating change). The demo server just deploys.
+- **Watching it run**: the dashboard's Server tab (players, matches, simulation time per step,
+  bandwidth, memory over the last hour; backups; errors from the server and from players'
+  browsers, grouped). The same numbers go to Fly's Grafana (Prometheus, fly.toml `[metrics]`).
+  Alerts (ALERT_WEBHOOK_URL) on: each deploy, a new kind of error, a match crashing (it is called
+  off on its own; the others go on), the server falling behind for half a minute (time to `fly
+  scale vm`), backups failing twice.
+- **Events** (dashboard -> Events): Double XP, a shiny boost, a faster (or slower) storm, or a
+  timed announcement. Everyone online sees them in the hub and hears when they start and end.
+- **Checks**: every push runs `.github/workflows/ci.yml` (types, unit tests, both builds, then a
+  real server from the build with every end-to-end check and bots). The same on your machine:
+  `bash scripts/check-server.sh`. Deploys only happen after the checks pass.
 
 ## Capacity and cost
 

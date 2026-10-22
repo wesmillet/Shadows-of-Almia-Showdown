@@ -1,0 +1,54 @@
+# Checks: on every push and pull request (and before every deploy, server.yml).
+#   - types, unit tests, both builds
+#   - a real server started from the build, then the end-to-end checks against it: squads,
+#     lag compensation, accounts/friends/parties/ranked/private lobbies/replays/progress
+#     (server/checks/social.ts), anti-cheat and moderation, running the server (metrics, events,
+#     draining, backups), and bots playing for half a minute.
+name: Checks
+
+on:
+  push:
+    branches: [main, online]
+  pull_request:
+  workflow_call:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATA_DIR: /tmp/almia-ci
+      OPS_TOKEN: ci-ops-token-0000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build:client
+      - run: npm run build:server
+      - name: Start a test server (the built one)
+        run: |
+          mkdir -p "$DATA_DIR"
+          PORT=8787 SERVER_KIND=dev LOBBY_WAIT=4 MATCH_SIZE=4 DIST_DIR=dist \
+            node --disable-warning=ExperimentalWarning dist-server/main.js > "$DATA_DIR/server.log" 2>&1 &
+          for i in $(seq 1 90); do curl -sf localhost:8787/health && exit 0; sleep 1; done
+          cat "$DATA_DIR/server.log"; exit 1
+      - name: Squads
+        run: npx tsx server/checks/teams.ts
+      - name: Lag compensation
+        run: npx tsx server/checks/lagcomp.ts
+      - name: Accounts, friends, parties, ranked, private lobbies, spectating, replays, progress
+        run: npx tsx server/checks/social.ts
+      - name: Anti-cheat and moderation
+        run: npx tsx server/checks/moderation.ts
+      - name: Running the server
+        run: npx tsx server/checks/ops.ts
+      - name: Bots play for 30 s
+        run: npx tsx server/bots.ts 3 30
+      - name: Server log
+        if: always()
+        run: cat "$DATA_DIR/server.log" || true

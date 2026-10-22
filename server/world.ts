@@ -42,6 +42,8 @@ export interface MatchRules {
   level?: number;
   /** How fast the storm closes in (1 normal). */
   storm?: number;
+  /** Shiny odds multiplier (events). */
+  shinyBoost?: number;
 }
 
 /** A match for these players, with computer trainers filling the rest up to `size`. */
@@ -51,5 +53,6 @@ export function createMatch(world: World, humans: Human[], size: number, seed: n
     rivals: rules.bots === false ? 0 : Math.max(0, size - humans.length),
     level: rules.level,
     stormSpeed: rules.storm,
+    shinyBoost: rules.shinyBoost,
   });
 }

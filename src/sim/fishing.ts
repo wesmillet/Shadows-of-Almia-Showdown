@@ -206,7 +206,7 @@ function land(m: Match, f: FishingState): void {
   const lv = def.levels;
   const level = Math.min(100, m.rng.int(lv[0], lv[1]) + Math.round(m.centerBonus(f.bx, f.by) * FISH.centerLevelFactor));
   const dex = formAtLevel(pick[0], level, m.rng, true);
-  const shiny = m.rng.chance(CONFIG.wild.shinyChance);
+  const shiny = m.rng.chance(CONFIG.wild.shinyChance * m.shinyBoost);
   const w: Mon = m.makeMon(dex, level, null, f.bx, f.by, shiny);
   // It bursts out of the water and leaps ashore beside the trainer (visitors.ts moves leaps), then fights.
   w.leap = { t: 0, dur: 0.85, h: 2.2, fx: f.bx, fy: f.by, tx: shore.x, ty: shore.y };

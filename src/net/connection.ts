@@ -114,6 +114,8 @@ export class Connection {
   /** The last match's XP, levels and achievements (shown on the end screen). */
   progress: Extract<ServerMsg, { t: 'progress' }> | null = null;
   ranked: RankedCard | null = null;
+  /** Events on now (double XP, shiny hour...). */
+  events: Extract<ServerMsg, { t: 'events' }>['active'] = [];
 
   constructor(readonly base: string) {}
 
@@ -147,6 +149,7 @@ export class Connection {
         else if (msg.t === 'social') this.social = { friends: msg.friends, party: msg.party, invites: msg.invites };
         else if (msg.t === 'private') this.privateLobby = msg.lobby;
         else if (msg.t === 'rated') this.rated = msg;
+        else if (msg.t === 'events') this.events = msg.active;
         else if (msg.t === 'progress') {
           this.progress = msg;
           void this.refreshMe();

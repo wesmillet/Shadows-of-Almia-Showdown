@@ -25,7 +25,7 @@ export class Toaster {
     this.box = el('div', 'almia-toasts');
     overlayRoot().appendChild(this.box);
     this.unsub = net.on((m) => {
-      if (m.t === 'notice' || m.t === 'unqueued') this.show(m.text);
+      if (m.t === 'notice' || m.t === 'unqueued' || m.t === 'aborted') this.show(m.text, m.t === 'aborted' ? 6 : 3.5);
       else if (m.t === 'error') this.show(m.text);
     });
   }

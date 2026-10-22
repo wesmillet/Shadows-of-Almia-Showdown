@@ -5,6 +5,9 @@
 app = "almia-showdown-demo"
 primary_region = "iad"
 
+# On a stop (a deploy), running matches get DRAIN_SECONDS to finish before they are called off.
+kill_timeout = 300
+
 [build]
   dockerfile = "Dockerfile"
 
@@ -12,8 +15,15 @@ primary_region = "iad"
   SERVER_KIND = "demo"
   LOBBY_WAIT = "20"
   MATCH_SIZE = "8"
+  BACKUP_MINUTES = "30"
+  DRAIN_SECONDS = "60"
   RARE_CHEST = "1"
   # PUBLIC_URL = "https://demo.example.gg"
+
+# Prometheus metrics for Fly's Grafana (fly.io/apps/<app>/monitoring), on an internal port.
+[metrics]
+  port = 9091
+  path = "/metrics"
 
 [http_service]
   internal_port = 8080

@@ -120,6 +120,8 @@ export class Accounts {
   private readonly publicUrl: string | null;
   /** Who is online and doing what (main.ts fills this in), for the friends list. */
   presence: (userId: number) => Presence = () => ({ online: false, status: 'offline' });
+  /** An API request failed (main.ts records it with the other errors). */
+  onError: (e: unknown, context: Record<string, unknown>) => void = () => {};
   /** Friends lists changed for these players (main.ts pushes the new lists to them). */
   onFriendsChanged: (userIds: number[]) => void = () => {};
 
@@ -291,7 +293,7 @@ export class Accounts {
    * vouchers). Private matches (custom rules, friends only) keep nothing: they would be too easy to
    * farm. `ratingDeltas` is filled in for ranked matches.
    */
-  recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map(), field = 8): Map<string, Progress> {
+  recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map(), field = 8, xpBoost = 1): Map<string, Progress> {
     const progress = new Map<string, Progress>();
     this.db.prepare('INSERT OR IGNORE INTO matches (id, ended_at, summary, mode) VALUES (?, ?, ?, ?)').run(matchId, Date.now(), JSON.stringify(results.map((r) => ({ name: r.name, place: r.place, outcome: r.outcome, team: r.team }))), mode);
     if (mode === 'private') return progress;
@@ -316,6 +318,8 @@ export class Accounts {
         party: r.party.map((m) => ({ dex: m.dex, level: m.level, shiny: m.shiny, alpha: m.alpha, legend: m.legend, shadow: m.shadow })),
       };
       const lines = matchXp(facts);
+      // An XP event (server/events.ts): the bonus on its own line.
+      if (xpBoost > 1 && lines.length) lines.push({ what: `${xpBoost}x XP event`, xp: Math.round(lines.reduce((n, x) => n + x.xp, 0) * (xpBoost - 1)) });
       const gained = lines.reduce((n, x) => n + x.xp, 0);
       const xpBefore = this.xp(userId);
       this.db.prepare('UPDATE profiles SET xp = xp + ? WHERE user_id = ?').run(gained, userId);
@@ -572,6 +576,11 @@ export class Accounts {
     return rows.map((r) => ({ id: r.id, mode: r.mode, endedAt: r.ended_at, seconds: r.seconds, players: JSON.parse(String(r.players)), winner: r.winner, humans: r.humans }));
   }
 
+  /** Replays kept, in bytes. */
+  replayBytes(): number {
+    return (this.db.prepare('SELECT COALESCE(SUM(bytes), 0) AS n FROM replays').get() as { n: number }).n;
+  }
+
   hasReplay(id: string): boolean {
     return !!this.db.prepare('SELECT 1 FROM replays WHERE id = ?').get(id);
   }
@@ -729,6 +738,7 @@ export class Accounts {
       return send(404, { error: 'Not found' });
     } catch (e) {
       console.error('api error', e);
+      this.onError(e, { path, method: req.method });
       return send(500, { error: 'Something went wrong' });
     }
   }

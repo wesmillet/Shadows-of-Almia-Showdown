@@ -14,8 +14,15 @@
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts, UserRow } from './accounts';
+import type { Events } from './events';
 
 export interface ModHooks {
+  /** The Server tab: samples, counters, errors, backups. */
+  server(): Record<string, unknown>;
+  drain(on: boolean): void;
+  backupNow(): Promise<unknown>;
+  clearError(key: string): void;
+  events: Events;
   /** Live matches, for the dashboard. */
   matches(): Array<{ id: string; mode: string; time: number; players: string[]; watchers: number }>;
   online(): number;
@@ -160,6 +167,39 @@ export class ModApi {
         if (!text) return send(400, { error: 'Say something' });
         this.hooks.announce(text);
         this.acc.logMod(by, 'announce', 'everyone', text);
+        return send(200, { ok: true });
+      }
+      if (req.method === 'GET' && path === '/api/mod/server') return send(200, this.hooks.server());
+      if (req.method === 'POST' && path === '/api/mod/drain') {
+        if (!admin) return send(403, { error: 'Admins only' });
+        const b = await readJson(req);
+        this.hooks.drain(!!b.on);
+        this.acc.logMod(by, b.on ? 'drain' : 'undrain', 'server');
+        return send(200, { ok: true });
+      }
+      if (req.method === 'POST' && path === '/api/mod/backup') {
+        if (!admin) return send(403, { error: 'Admins only' });
+        const r = await this.hooks.backupNow();
+        this.acc.logMod(by, 'backup', 'server');
+        return send(200, { ok: !!r, backup: r });
+      }
+      if (req.method === 'POST' && path === '/api/mod/errors/clear') {
+        const b = await readJson(req);
+        this.hooks.clearError(String(b.key ?? ''));
+        return send(200, { ok: true });
+      }
+      if (req.method === 'GET' && path === '/api/mod/events') return send(200, { events: this.hooks.events.list(), now: Date.now() });
+      if (req.method === 'POST' && path === '/api/mod/events') {
+        const b = await readJson(req);
+        const err = this.hooks.events.create({ kind: b.kind, name: b.name, startsAt: b.startsAt, hours: b.hours, value: b.value }, me.username);
+        if (err) return send(400, { error: err });
+        this.acc.logMod(by, 'event', 'everyone', `${String(b.kind)}: ${String(b.name)} (${String(b.hours ?? 0)} h, x${String(b.value ?? '')})`);
+        return send(200, { ok: true });
+      }
+      if (req.method === 'POST' && path === '/api/mod/events/delete') {
+        const b = await readJson(req);
+        this.hooks.events.remove(Number(b.id));
+        this.acc.logMod(by, 'event-delete', 'everyone', `#${Number(b.id)}`);
         return send(200, { ok: true });
       }
       if (req.method === 'GET' && path === '/api/mod/log') {

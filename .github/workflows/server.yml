@@ -1,8 +1,12 @@
 # The game server on Fly.io.
-#   - Every push to main: tests, then deploys to the DEMO server.
-#   - Actions -> "Game server" -> Run workflow -> target "live": deploys the same code to the LIVE server.
-# Needs the repository secret FLY_API_TOKEN (fly tokens create deploy -x 999999h); without it the
-# deploy steps are skipped, so pushes keep working before the servers exist.
+#   - Every push to main: the checks (ci.yml), then a deploy to the DEMO server.
+#   - Actions -> "Game server" -> Run workflow -> target "live": the checks, then the LIVE server,
+#     gently: it stops starting new matches, waits (up to 20 minutes) for the ones running to finish,
+#     then deploys. Players in the hub are told an update is coming.
+# Needs the repository secrets FLY_API_TOKEN (fly tokens create deploy -x 999999h) and, for the
+# gentle live deploy, OPS_TOKEN (the same value as the live server's: fly secrets set OPS_TOKEN=...).
+# Without FLY_API_TOKEN the deploy steps are skipped, so pushes keep working before the servers exist.
+# The live server's address is the repository variable LIVE_URL (default https://almia-showdown.fly.dev).
 name: Game server
 
 on:
@@ -21,26 +25,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
       TARGET: ${{ github.event.inputs.target || 'demo' }}
+      LIVE_URL: ${{ vars.LIVE_URL || 'https://almia-showdown.fly.dev' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npx tsc --noEmit
       - name: Set up flyctl
         if: env.FLY_API_TOKEN != ''
         uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: "Live: stop new matches"
+        if: env.FLY_API_TOKEN != '' && env.TARGET == 'live' && env.OPS_TOKEN != ''
+        run: |
+          curl -sf -X POST -H "Authorization: Bearer $OPS_TOKEN" "$LIVE_URL/api/ops/drain"
+      - name: "Live: wait for the matches running to finish (up to 20 minutes)"
+        if: env.FLY_API_TOKEN != '' && env.TARGET == 'live' && env.OPS_TOKEN != ''
+        run: |
+          for i in $(seq 1 120); do
+            rooms=$(curl -sf "$LIVE_URL/health" | jq -r .rooms || echo "?")
+            if [ "$rooms" = "0" ]; then echo "No matches running"; exit 0; fi
+            echo "$rooms match(es) still running"; sleep 10
+          done
+          echo "Still running after 20 minutes: deploying anyway (they get 4 more minutes, then are called off with nothing counted)"
       - name: Deploy
         if: env.FLY_API_TOKEN != ''
         run: |
           CONFIG=fly.demo.toml
           if [ "$TARGET" = "live" ]; then CONFIG=fly.toml; fi
           flyctl deploy --config "$CONFIG" --remote-only --build-arg BUILD_ID=${GITHUB_SHA::7}
+      - name: "Live: the deploy failed, so let matches start again"
+        if: failure() && env.FLY_API_TOKEN != '' && env.TARGET == 'live' && env.OPS_TOKEN != ''
+        run: |
+          curl -s -X POST -H "Authorization: Bearer $OPS_TOKEN" "$LIVE_URL/api/ops/undrain"

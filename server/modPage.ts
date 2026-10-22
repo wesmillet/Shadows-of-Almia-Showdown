@@ -39,7 +39,16 @@ a { color: var(--accent); }
 <header><h1>Moderators</h1><span id="tabs"></span><span class="who" id="who"></span></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
-const TABS = [['overview', 'Overview'], ['reports', 'Reports'], ['player', 'Player'], ['chat', 'Chat'], ['flags', 'Flags'], ['matches', 'Live'], ['log', 'Log']];
+const TABS = [['overview', 'Overview'], ['reports', 'Reports'], ['player', 'Player'], ['chat', 'Chat'], ['flags', 'Flags'], ['matches', 'Live'], ['events', 'Events'], ['server', 'Server'], ['log', 'Log']];
+/** A small line chart of one value over the last hour (inline SVG). */
+function spark(samples, key, label, unit) {
+  const w = 300, h = 60;
+  const vals = samples.map((x) => x[key] || 0);
+  const max = Math.max(1e-9, ...vals);
+  const pts = vals.map((v, i) => (vals.length < 2 ? 0 : (i / (vals.length - 1)) * w).toFixed(1) + ',' + (h - (v / max) * (h - 4) - 2).toFixed(1)).join(' ');
+  const now = vals.length ? vals[vals.length - 1] : 0;
+  return '<div class="stat"><div class="dim">' + label + '</div><b>' + (Math.round(now * 100) / 100) + (unit || '') + '</b><svg width="100%" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="height:60px"><polyline fill="none" stroke="#c2611a" stroke-width="2" points="' + pts + '"/></svg><div class="dim">max ' + (Math.round(max * 100) / 100) + (unit || '') + ' this hour</div></div>';
+}
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const when = (t) => t ? new Date(t).toLocaleString() : '-';
@@ -134,6 +143,45 @@ async function render() {
       (r.matches || []).map((m) => '<tr><td>' + esc(m.id) + '</td><td>' + esc(m.mode) + '</td><td>' + Math.floor(m.time / 60) + ':' + String(Math.floor(m.time % 60)).padStart(2, '0') + '</td><td>' + m.players.map(player).join(', ') + '</td><td>' + m.watchers + '</td><td><a href="/?watch=' + encodeURIComponent(m.id) + '" target="_blank">Watch</a></td></tr>').join('') + '</table>' + (r.matches && r.matches.length ? '' : '<p class="dim">No matches running.</p>') + '</div>');
     return wire();
   }
+  if (tab === 'server') {
+    const r = await api('/api/mod/server');
+    if (r.error) return main('<div class="panel err">' + esc(r.error) + '</div>');
+    const sm = r.samples || [];
+    const up = Math.round((Date.now() - r.startedAt) / 60000);
+    let html = '<div class="panel"><h2>Server · ' + esc(r.kind) + ' · build ' + esc(r.build) + '</h2><div class="row">Up ' + (up >= 120 ? Math.round(up / 60) + ' h' : up + ' min') + ' · ' + r.counters.matchesStarted + ' matches started, ' + r.counters.matchesEnded + ' finished, ' + r.counters.matchesAborted + ' called off · ' + r.counters.connections + ' connections' +
+      '<span style="margin-left:auto"></span>' + (r.draining ? '<b class="bad">DRAINING: no new matches</b> <button class="act" data-drain="0">Let matches start</button>' : '<button class="act alt" data-drain="1">Drain (no new matches)</button>') + '</div></div>';
+    html += '<div class="panel"><h2>The last hour</h2><div class="grid">' + spark(sm, 'players', 'Players online') + spark(sm, 'rooms', 'Matches') + spark(sm, 'stepAvg', 'Simulation per step', ' ms') + spark(sm, 'stepMax', 'Worst step', ' ms') + spark(sm, 'lag', 'Clock late by', ' ms') + spark(sm, 'kbOut', 'Sent', ' KB/s') + spark(sm, 'msgIn', 'Messages in', '/s') + spark(sm, 'rssMb', 'Memory', ' MB') + '</div><p class="dim">A step must stay well under 16 ms for all matches together (60 a second); the server warns past about 11.</p></div>';
+    const b = r.backups;
+    html += '<div class="panel"><h2>Backups</h2><div class="row">' + (b.last ? 'Last: ' + when(b.last.at) + ' · ' + Math.round(b.last.bytes / 1024) + ' KB · ' + b.last.ms + ' ms' + (b.last.uploaded.length ? ' · uploaded ' + b.last.uploaded.map(esc).join(', ') : '') : 'None yet (the first runs a minute after start)') +
+      (b.lastError ? ' · <span class="bad">failing: ' + esc(b.lastError) + '</span>' : '') + '<span style="margin-left:auto"></span><button class="act alt" id="bk">Back up now</button></div><div class="dim">' + (b.s3 ? 'Off the machine: s3://' + esc(b.s3) : '<span class="bad">Only on the volume: set up S3 storage (fly storage create) for copies off the machine.</span>') + '</div>' +
+      '<table>' + b.local.map((f) => '<tr><td>' + esc(f.name) + '</td><td>' + Math.round(f.bytes / 1024) + ' KB</td><td class="dim">' + when(f.at) + '</td></tr>').join('') + '</table></div>';
+    html += '<div class="panel"><h2>Errors</h2><table><tr><th>Last</th><th>Where</th><th>Count</th><th>What</th><th></th></tr>' + (r.errors || []).map((e) => '<tr><td class="dim">' + when(e.last_at) + '</td><td><span class="tag">' + esc(e.source) + '</span></td><td>' + e.count + '</td><td>' + esc(e.message) + '<details><summary class="dim">details</summary><pre style="white-space:pre-wrap;font-size:12px">' + esc(e.stack) + '\n' + esc(e.context) + '</pre></details></td><td><button class="act alt" data-clr="' + esc(e.key) + '">Clear</button></td></tr>').join('') + '</table>' + (r.errors && r.errors.length ? '' : '<p class="dim">No errors. Nice.</p>') + '</div>';
+    main(html);
+    for (const x of document.querySelectorAll('[data-drain]')) x.onclick = async () => { const res = await api('/api/mod/drain', { on: x.dataset.drain === '1' }); if (res.error) alert(res.error); render(); };
+    $('#bk').onclick = async () => { $('#bk').textContent = 'Backing up...'; const res = await api('/api/mod/backup', {}); if (res.error) alert(res.error); render(); };
+    for (const x of document.querySelectorAll('[data-clr]')) x.onclick = async () => { await api('/api/mod/errors/clear', { key: x.dataset.clr }); render(); };
+    return;
+  }
+  if (tab === 'events') {
+    const r = await api('/api/mod/events');
+    const KINDS = { xp: ['XP boost', 'times the XP (2 = Double XP)', 2], shiny: ['Shiny boost', 'times the shiny odds (5 = Shiny Hour)', 5], storm: ['Storm speed', 'times as fast (1.5 = Storm Rush; 0.5 = slow)', 1.5], message: ['Announcement', 'said in chat at the start time', 0] };
+    const status = (e) => e.kind === 'message' ? (e.startsAt > r.now ? 'scheduled' : 'sent') : e.endsAt <= r.now ? 'over' : e.startsAt <= r.now ? '<b class="good">on now</b>' : 'upcoming';
+    let html = '<div class="panel"><h2>Events</h2><p class="dim">Casual and ranked matches that start during an event get its boost; everyone online sees it and hears when it starts and ends.</p><table><tr><th>Event</th><th>Kind</th><th>When</th><th></th><th></th></tr>' +
+      (r.events || []).map((e) => '<tr><td>' + esc(e.name) + '</td><td>' + esc(KINDS[e.kind][0]) + (e.kind === 'message' ? '' : ' x' + e.value) + '</td><td class="dim">' + when(e.startsAt) + (e.kind === 'message' ? '' : ' to ' + when(e.endsAt)) + '</td><td>' + status(e) + '</td><td><button class="act alt" data-del="' + e.id + '">Delete</button></td></tr>').join('') + '</table>' + (r.events && r.events.length ? '' : '<p class="dim">No events.</p>') + '</div>';
+    html += '<div class="panel"><h2>New event</h2><div class="row"><select id="ek">' + Object.entries(KINDS).map(([k, v]) => '<option value="' + k + '">' + v[0] + '</option>').join('') + '</select><input id="en" placeholder="Name (shown to players), e.g. Double XP Weekend" style="flex:1"></div>' +
+      '<div class="row">Starts <input id="es" type="datetime-local"> for <input id="eh" type="number" value="2" min="0.25" step="0.25" style="width:80px"> hours · amount <input id="ev" type="number" step="0.25" style="width:80px"> <span id="ehint" class="dim"></span></div><div class="row"><button class="act" id="ego">Create</button><span id="enote" class="err"></span></div></div>';
+    main(html);
+    const k = $('#ek');
+    const hint = () => { const d = KINDS[k.value]; $('#ehint').textContent = d[1]; $('#ev').value = d[2]; $('#ev').disabled = $('#eh').disabled = k.value === 'message'; };
+    k.onchange = hint; hint();
+    const t = new Date(Date.now() + 60000); t.setSeconds(0, 0); $('#es').value = new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    $('#ego').onclick = async () => {
+      const res = await api('/api/mod/events', { kind: k.value, name: $('#en').value, startsAt: new Date($('#es').value).getTime(), hours: Number($('#eh').value), value: Number($('#ev').value) });
+      if (res.error) $('#enote').textContent = res.error; else render();
+    };
+    for (const x of document.querySelectorAll('[data-del]')) x.onclick = async () => { await api('/api/mod/events/delete', { id: Number(x.dataset.del) }); render(); };
+    return;
+  }
   if (tab === 'log') {
     const r = await api('/api/mod/log');
     main('<div class="panel"><h2>Moderators\\' log</h2><table>' + (r.log || []).map((x) => '<tr><td class="dim">' + when(x.at) + '</td><td>' + esc(x.by_name) + '</td><td><span class="tag">' + esc(x.action) + '</span></td><td>' + (x.target && x.target !== 'everyone' && !x.target.startsWith('report') ? player(x.target) : esc(x.target)) + '</td><td>' + esc(x.detail) + '</td></tr>').join('') + '</table></div>');
@@ -143,5 +191,5 @@ async function render() {
 window.addEventListener('hashchange', () => { tab = location.hash.slice(1).split('/')[0] || 'overview'; tabs(); render(); });
 tabs();
 render();
-setInterval(() => { if (tab === 'overview' || tab === 'matches') render(); }, 15000);
+setInterval(() => { if (tab === 'overview' || tab === 'matches' || tab === 'server') render(); }, 15000);
 </script></body></html>`;

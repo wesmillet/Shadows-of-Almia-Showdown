@@ -191,7 +191,7 @@ export class Match {
   /** Run by the game server (no hit-stop; set by server/room.ts). */
   online = false;
 
-  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[]; team?: number }>; rivals?: number; mirror?: boolean; stormSpeed?: number } = {}) {
+  constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[]; team?: number }>; rivals?: number; mirror?: boolean; stormSpeed?: number; shinyBoost?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
     this.ground = deps.ground;
     this.nav = new Nav(this.ground);
@@ -203,6 +203,7 @@ export class Match {
     // Everyone starts somewhere new each match, spread round the coast.
     this.mirror = !!opts.mirror;
     this.stormSpeed = opts.stormSpeed ?? 1;
+    this.shinyBoost = opts.shinyBoost ?? 1;
     if (this.mirror) {
       // Nothing is spawned: everything arrives from the server.
       this.seats.push(newSeat(this.makeTrainer('You', 'player', true, this.centerX, this.centerY)));
@@ -1661,7 +1662,7 @@ export class Match {
         // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
         const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
         // Now and then a shiny (Alphas a little more often).
-        const shiny = this.rng.chance(alpha ? w.shinyChance * 4 : w.shinyChance);
+        const shiny = this.rng.chance((alpha ? w.shinyChance * 4 : w.shinyChance) * this.shinyBoost);
         const mon = this.makeMon(dex, level, null, spot.x, spot.y, shiny);
         if (elite) mon.elite = true;
         if (alpha) mon.alpha = true;
@@ -3686,8 +3687,10 @@ export class Match {
   /** The final showdown: seconds until the last two are called to the crystal's arena (null until there are two). */
   private finalCountdown: number | null = null;
   finalStarted = false;
-  /** How fast the storm closes in (private lobbies can change it). */
+  /** How fast the storm closes in (private lobbies and events can change it). */
   stormSpeed = 1;
+  /** Shiny odds multiplier (an online event). */
+  shinyBoost = 1;
 
   /**
    * When only two trainers are left in the match, both are called to the battlefield round the

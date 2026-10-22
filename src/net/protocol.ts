@@ -108,6 +108,10 @@ export type ServerMsg =
   /** Watching a match: its updates follow (as 's' messages, `delay` seconds behind). */
   | { t: 'spectate'; matchId: string; seed: number; roster: RosterEntry[]; follow: number; delay: number; mode: string }
   | { t: 'spectateEnd'; text: string }
+  /** Your match was called off (the server is updating): nothing was counted. */
+  | { t: 'aborted'; text: string }
+  /** Events on now (double XP, shiny hour...), sent on connect and when they change. */
+  | { t: 'events'; active: Array<{ name: string; kind: string; value: number; endsAt: number }> }
   /** You are out of the queue (a party member left it, or the party broke up). */
   | { t: 'unqueued'; text: string }
   /** What a match did for your progress: XP line by line, levels, achievements earned. */

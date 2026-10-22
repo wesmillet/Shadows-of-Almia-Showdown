@@ -202,6 +202,15 @@ export class OnlineScreen implements Screen {
     backdrop(v);
     const kind = this.net.hello?.server;
     heading(v, 'Play Online', kind === 'demo' ? 'DEMO SERVER: new things being tested, progress here is separate' : 'Eight trainers, one island, one winner', 52 * s);
+    // Events on now, under the title.
+    const ev = this.net.events;
+    if (ev.length) {
+      const left = (t: number) => {
+        const m = Math.max(0, Math.round((t - Date.now()) / 60000));
+        return m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
+      };
+      text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, v.width / 2, 98 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
+    }
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const r = this.rects();

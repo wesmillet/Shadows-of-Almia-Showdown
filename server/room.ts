@@ -463,6 +463,20 @@ export class Room {
     }
   }
 
+  /**
+   * Called off before its end (the server is shutting down): nobody wins or loses, nothing is
+   * counted (the hub sees `aborted`), and everyone is told why.
+   */
+  abort(text: string): void {
+    if (this.closed) return;
+    this.aborted = text;
+    for (const p of this.players.values()) if (!p.ended) p.peer?.send({ t: 'aborted', text });
+    this.close();
+  }
+
+  /** Why the match was called off, if it was. */
+  aborted: string | null = null;
+
   private close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -480,7 +494,7 @@ export class Room {
         outcome = 'win';
         place = 1;
       }
-      if (!p.ended) p.peer?.send({ t: 'end', outcome, place });
+      if (!p.ended && !this.aborted) p.peer?.send({ t: 'end', outcome, place });
       results.push({
         key, name: t.name, outcome, place, team: t.team, stats: { ...t.stats },
         party: t.party.filter((x) => !x.captured).map((x) => Accounts.pcFields(x)),
@@ -488,7 +502,7 @@ export class Room {
       });
     }
     const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';
-    this.releaseWatchers(`The match is over: ${winner} won`);
+    this.releaseWatchers(this.aborted ?? `The match is over: ${winner} won`);
     this.onEnd(this, results);
   }
 }

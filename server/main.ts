@@ -7,7 +7,9 @@
  *   node dist-server/main.js  # production, after npm run build:server
  *
  * Settings come from the environment: PORT, SERVER_KIND (live | demo | dev), LOBBY_WAIT (seconds),
- * MATCH_SIZE, DIST_DIR (the built client), ASSETS_DIR, DATA_DIR (the database).
+ * MATCH_SIZE, DIST_DIR (the built client), ASSETS_DIR, DATA_DIR (the database); and for running it
+ * (docs/online.md): OPS_TOKEN, ALERT_WEBHOOK_URL, METRICS_PORT, BACKUP_MINUTES, the S3 variables,
+ * DRAIN_SECONDS.
  */
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -22,7 +24,12 @@ import { ModApi } from './modApi';
 import { MOD_PAGE } from './modPage';
 import { STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
-import { Accounts } from './accounts';
+import { Accounts, clientIp } from './accounts';
+import { Alerts, ErrorLog, Metrics } from './telemetry';
+import { Backups } from './backup';
+import { s3FromEnv } from './s3';
+import { Events } from './events';
+import { timingSafeEqual } from 'node:crypto';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const PORT = Number(process.env.PORT ?? 8787);
@@ -41,10 +48,26 @@ const MSG_RATE = 120;
 const LAG = KIND === 'live' ? 0 : Number(process.env.SIM_LATENCY_MS ?? 0);
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
+/** A shared secret for /api/ops (the deploy workflow drains the server with it). */
+const OPS_TOKEN = process.env.OPS_TOKEN ?? '';
+/** On shutdown, matches get this long to finish before they are called off (fly.toml kill_timeout is longer). */
+const DRAIN_SECONDS = Number(process.env.DRAIN_SECONDS ?? 240);
 
 log(`Loading the world (${KIND})...`);
 const world = await loadWorld(ASSETS);
 const accounts = new Accounts(DATA, KIND);
+const alerts = new Alerts(KIND, log);
+const errors = new ErrorLog(accounts.db, alerts);
+accounts.onError = (e, ctx) => errors.record('api', e, ctx);
+// Nothing a bug does should take every match down with it: recorded, and the server carries on.
+process.on('uncaughtException', (e) => {
+  log('Uncaught:', e);
+  errors.record('server', e);
+});
+process.on('unhandledRejection', (e) => {
+  log('Unhandled rejection:', e);
+  errors.record('server', e);
+});
 log(`World ready: ${world.map.cols}x${world.map.rows}`);
 
 // ---------------------------------------------------------------- connections
@@ -75,13 +98,47 @@ const roomHooks: RoomHooks = {
 
 const REPLAYS = process.env.REPLAYS !== '0';
 const REPLAY_DIR = REPLAYS ? replayDir(DATA) : null;
+const metrics = new Metrics(() => {
+  const st = hub.stats();
+  return {
+    players: st.players, rooms: st.rooms, queued: st.queued.casual + st.queued.ranked, watching: st.watching, errors: errors.total,
+    dbBytes: fileSize(join(DATA, 'almia.db')) + fileSize(join(DATA, 'almia.db-wal')), replayBytes: replayBytes,
+  };
+});
+let replayBytes = 0;
 const hub = new Hub({
   world, accounts, size: SIZE, wait: { casual: WAIT, ranked: RANKED_WAIT }, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
+  onMatchStart: () => metrics.counters.matchesStarted++,
+  onMatchEnd: (r) => {
+    if (r.aborted) metrics.counters.matchesAborted++;
+    else metrics.counters.matchesEnded++;
+  },
 });
 const chat = new Chat((msg) => {
   for (const c of hub.clients.values()) c.send(msg);
 }, accounts);
+const events = new Events(
+  accounts.db,
+  (active) => {
+    const msg: ServerMsg = { t: 'events', active: active.map((e) => ({ name: e.name, kind: e.kind, value: e.value, endsAt: e.endsAt })) };
+    for (const c of hub.clients.values()) c.send(msg);
+  },
+  (text) => chat.announce(text),
+);
+hub.events = events;
+const s3 = s3FromEnv();
+const backups = new Backups(accounts.db, DATA, KIND, s3, (text) => alerts.send('backup', text), log);
+if (KIND !== 'dev' || process.env.BACKUP_MINUTES) backups.start(Number(process.env.BACKUP_MINUTES ?? 15));
+log(`Backups: every ${process.env.BACKUP_MINUTES ?? 15} min on the volume${s3 ? ` and to s3://${s3.bucket}` : ' (no S3 storage set up)'}`);
+
+function fileSize(f: string): number {
+  try {
+    return statSync(f).size;
+  } catch {
+    return 0;
+  }
+}
 const modApi = new ModApi(accounts, {
   matches: () => [...hub.rooms].map((r) => ({ id: r.id, mode: r.mode, time: r.match.time, players: r.roster.filter((x) => x.human).map((x) => x.name), watchers: r.watcherCount })),
   online: () => hub.clients.size,
@@ -93,6 +150,14 @@ const modApi = new ModApi(accounts, {
   },
   removeChat: (id) => chat.remove(id),
   announce: (text) => chat.announce(text),
+  server: () => ({
+    kind: KIND, build: BUILD, startedAt: metrics.started, draining: hub.draining, samples: metrics.samples, counters: metrics.counters,
+    errors: errors.recent(60), backups: { last: backups.last, lastError: backups.lastError, s3: s3 ? s3.bucket : null, local: backups.list().slice(0, 10) },
+  }),
+  drain: (on) => hub.drain(on),
+  backupNow: () => backups.run(),
+  clearError: (key) => errors.clear(key),
+  events,
 });
 
 interface Conn extends Client {
@@ -110,7 +175,55 @@ function onMessage(c: Conn, raw: string): void {
   if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
   if (msg.t === 'ping') return c.send({ t: 'pong', at: msg.at });
   if (msg.t === 'chat') return chat.say(c, msg.text);
-  hub.message(c, msg);
+  try {
+    hub.message(c, msg);
+  } catch (e) {
+    errors.record('message', e, { t: msg.t, player: c.name });
+  }
+}
+
+/** /api/ops: for the deploy workflow (Authorization: Bearer OPS_TOKEN). */
+async function ops(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
+  const send = (status: number, body: unknown): void => {
+    res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(body));
+  };
+  const given = Buffer.from(String(req.headers.authorization ?? '').replace(/^Bearer /, ''));
+  const want = Buffer.from(OPS_TOKEN);
+  if (!OPS_TOKEN || given.length !== want.length || !timingSafeEqual(given, want)) return send(403, { error: 'Not allowed' });
+  if (req.method === 'POST' && (path === '/api/ops/drain' || path === '/api/ops/undrain')) {
+    const on = path === '/api/ops/drain';
+    hub.drain(on);
+    if (on) chat.announce('The server is updating in a few minutes. Matches running now will finish; new ones start right after.');
+    log(on ? 'Draining for an update' : 'Draining stopped');
+    return send(200, { ok: true, ...hub.stats() });
+  }
+  if (req.method === 'POST' && path === '/api/ops/backup') return send(200, { ok: true, backup: await backups.run() });
+  return send(404, { error: 'Not found' });
+}
+
+/** A browser's own errors (the game threw): kept with the server's, a few per visitor. */
+const clientErrorBudget = new Map<string, number>();
+setInterval(() => clientErrorBudget.clear(), 3600_000).unref();
+async function clientError(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const ip = clientIp(req);
+  const n = (clientErrorBudget.get(ip) ?? 0) + 1;
+  clientErrorBudget.set(ip, n);
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > 8192) break;
+  }
+  if (n <= 20) {
+    try {
+      const b = JSON.parse(body) as { message?: string; stack?: string; build?: string; where?: string };
+      const e = new Error(String(b.message ?? 'unknown').slice(0, 300));
+      e.stack = `Error: ${e.message}\n${String(b.stack ?? '').slice(0, 1500)}`;
+      errors.record('client', e, { build: String(b.build ?? '').slice(0, 20), where: String(b.where ?? '').slice(0, 100), agent: String(req.headers['user-agent'] ?? '').slice(0, 120) });
+    } catch {
+      // not worth keeping
+    }
+  }
+  res.writeHead(204).end();
 }
 
 // ---------------------------------------------------------------- web
@@ -147,6 +260,14 @@ const http = createServer((req, res) => {
   const url = req.url ?? '/';
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, ...hub.stats() }));
+    return;
+  }
+  if (url.startsWith('/api/ops/')) {
+    void ops(req, res, url.split('?')[0] as string);
+    return;
+  }
+  if (url === '/api/client-error' && req.method === 'POST') {
+    void clientError(req, res);
     return;
   }
   if (url.split('?')[0] === '/mod' && req.method === 'GET') {
@@ -224,6 +345,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     send(msg: ServerMsg) {
       if (ws.readyState !== ws.OPEN) return;
       const data = JSON.stringify(msg);
+      metrics.sent(data.length);
       if (LAG) setTimeout(() => ws.readyState === ws.OPEN && ws.send(data), LAG);
       else ws.send(data);
     },
@@ -231,7 +353,9 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   c.send({ t: 'hello', name: c.name, guest: c.guest, server: KIND, build: BUILD });
   chat.history(c);
   hub.connect(c);
+  metrics.counters.connections++;
   ws.on('message', (data) => {
+    metrics.received();
     if (++c.msgs > MSG_RATE) {
       ws.close(4001, 'Too many messages');
       return;
@@ -249,23 +373,89 @@ let last = performance.now();
 let acc = 0;
 setInterval(() => {
   const now = performance.now();
+  // A tick is due every 4 ms; how late this one is says whether the server keeps up.
+  metrics.lag(now - last - 4);
   acc += Math.min(0.25, (now - last) / 1000);
   last = now;
   while (acc >= STEP) {
     acc -= STEP;
+    const t0 = performance.now();
     for (const r of hub.rooms) {
       try {
         r.step();
       } catch (e) {
+        // One match failing: recorded, called off for its players (nothing lost), the rest go on.
         log(`Match ${r.id} crashed:`, e);
-        hub.rooms.delete(r);
+        errors.record('match', e, { match: r.id, time: r.match.time });
+        alerts.send(`crash:${r.id}`, `Match ${r.id} crashed and was called off: ${e instanceof Error ? e.message : e}`);
+        try {
+          r.abort('Something went wrong in this match, so it was called off. Nothing was lost. Sorry!');
+        } catch {
+          hub.rooms.delete(r);
+        }
       }
     }
+    if (hub.rooms.size) metrics.step(performance.now() - t0);
   }
   hub.tick(Date.now());
 }, 4);
 setInterval(() => {
   for (const c of hub.clients.values()) (c as Conn).msgs = 0;
 }, 1000);
+setInterval(() => events.tick(), 5000).unref();
+// Every 10 s: a sample for the dashboard, and a word if the server keeps falling behind.
+let slowSamples = 0;
+setInterval(() => {
+  const s = metrics.sample();
+  replayBytes = REPLAY_DIR ? accounts.replayBytes() : 0;
+  // 60 steps a second must fit in a second; past ~70% of it, matches start to stutter. One slow
+  // moment (a match being set up) is normal: half a minute of it is not.
+  slowSamples = s.rooms && (s.stepAvg * 60 > 700 || s.lag > 100) ? slowSamples + 1 : 0;
+  if (slowSamples >= 3) alerts.send('slow', `The server is falling behind: ${s.stepAvg.toFixed(2)} ms a step over ${s.rooms} matches, ticks up to ${s.lag} ms late, for 30 s. Time for a bigger machine (fly scale vm).`);
+}, 10_000).unref();
+metrics.serve(Number(process.env.METRICS_PORT ?? 9091), log);
 
-http.listen(PORT, () => log(`Shadows of Almia Showdown server (${KIND}) on :${PORT}`));
+// Not being able to listen (the port taken) is the one error the server does not survive.
+http.on('error', (e) => {
+  log('Can not serve:', e);
+  process.exit(1);
+});
+http.listen(PORT, () => {
+  log(`Shadows of Almia Showdown server (${KIND}, build ${BUILD}) on :${PORT}`);
+  if (KIND !== 'dev') alerts.send(`start:${BUILD}`, `Server started (build ${BUILD})`);
+});
+
+// ---------------------------------------------------------------- shutting down
+
+/**
+ * Fly stops the machine with SIGTERM (a deploy, a restart). No new matches start; the ones running
+ * get DRAIN_SECONDS to finish, then are called off with nothing counted. Replays and a last backup
+ * are written, and the database closed cleanly.
+ */
+let stopping = false;
+async function shutdown(signal: string): Promise<void> {
+  if (stopping) return;
+  stopping = true;
+  log(`${signal}: draining (${hub.rooms.size} match(es) running)`);
+  hub.drain(true);
+  if (hub.rooms.size) chat.announce('The server is restarting soon. Matches running now have a few minutes to finish.');
+  const until = Date.now() + DRAIN_SECONDS * 1000;
+  while (hub.rooms.size && Date.now() < until) await new Promise((r) => setTimeout(r, 1000));
+  if (hub.rooms.size) {
+    log(`Calling off ${hub.rooms.size} match(es)`);
+    hub.shutdown('The server is restarting for an update, so this match was called off. Nothing was lost: no loss, no rating change.');
+  }
+  // Replays finishing, messages going out.
+  await new Promise((r) => setTimeout(r, 1500));
+  await backups.run();
+  for (const c of hub.clients.values()) (c as Conn).ws.close(1012, 'Server restarting');
+  try {
+    accounts.db.close();
+  } catch {
+    // already closed
+  }
+  log('Stopped cleanly');
+  process.exit(0);
+}
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));

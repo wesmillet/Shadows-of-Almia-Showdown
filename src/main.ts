@@ -238,6 +238,20 @@ async function boot(): Promise<void> {
   let watchingId: string | null = null;
   const toaster = net ? new Toaster(net) : null;
   if (net) debug.showdown.net = net;
+  // The game's own errors go to the server's error log (a few per visit), so they get fixed.
+  if (net) {
+    const sent = new Set<string>();
+    const report = (message: string, stack: string, where: string) => {
+      if (sent.size >= 5 || sent.has(message)) return;
+      sent.add(message);
+      void fetch(`${net.base}/api/client-error`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, stack, build: __BUILD__, where }) }).catch(() => {});
+    };
+    window.addEventListener('error', (e) => report(String(e.message), String((e.error as Error | undefined)?.stack ?? ''), `${e.filename}:${e.lineno}`));
+    window.addEventListener('unhandledrejection', (e) => {
+      const r = e.reason as Error | undefined;
+      report(String(r?.message ?? r), String(r?.stack ?? ''), 'promise');
+    });
+  }
 
   /** With a game server, looks are earned (src/net/progression.ts); why one is locked, or null. */
   const lookLock = (look: string): string | null => {
@@ -363,6 +377,15 @@ async function boot(): Promise<void> {
     });
     screen.online = { cmd: net.cmd.bind(net) };
     mirror.onReply = (text, seconds) => screen.say(text, seconds);
+    // Called off (the server is updating): back to the hub, nothing lost.
+    const offAbort = net.on((m) => {
+      if (m.t !== 'aborted' || playingId !== start.matchId) return;
+      offAbort();
+      chat.dispose();
+      mirror.dispose();
+      playingId = null;
+      showOnline(m.text);
+    });
     debug.showdown.screen = screen;
     game.setScreen(screen);
   };

@@ -16,6 +16,7 @@ import { Matchmaker, type Lineup } from './matchmaker';
 import { newCode, PrivateLobby } from './privateLobby';
 import { rateMatch, tierOf, PLACEMENT_GAMES, type Entrant } from './rating';
 import { deleteReplay, ReplayRecorder } from './replays';
+import type { Events } from './events';
 import { Room, type Peer, type RoomHooks, type RoomMode, type RoomResult } from './room';
 import type { World } from './world';
 
@@ -23,6 +24,7 @@ import type { World } from './world';
 export const PICK_SECONDS = 40;
 /** A party is a squad: at most this many. */
 export const PARTY_MAX = 4;
+const DRAIN_TEXT = 'The server is updating in a few minutes. Matches already running will finish; new ones start right after';
 
 export interface Client extends Peer {
   accountId: number | null;
@@ -75,6 +77,9 @@ export interface HubOptions {
   /** Replays kept, in bytes (oldest go first). */
   replayBytes: number;
   log: (...a: unknown[]) => void;
+  /** Every match's end (metrics). */
+  onMatchEnd?: (room: Room) => void;
+  onMatchStart?: (room: Room) => void;
 }
 
 export class Hub {
@@ -85,6 +90,10 @@ export class Hub {
   private sessions = new Set<PickSession>();
   readonly matchmaker: Matchmaker;
   private lastPresence = 0;
+  /** Getting ready to update: matches running finish, no new ones start. */
+  draining = false;
+  /** Timed events (XP, shiny, storm boosts), set once the chat exists to announce them. */
+  events: Events | null = null;
 
   constructor(private readonly o: HubOptions) {
     this.matchmaker = new Matchmaker({
@@ -116,6 +125,8 @@ export class Hub {
     }
     this.pushSocial(c);
     this.presenceChanged(c);
+    const ev = this.events?.active() ?? [];
+    if (ev.length) c.send({ t: 'events', active: ev.map((e) => ({ name: e.name, kind: e.kind, value: e.value, endsAt: e.endsAt })) });
   }
 
   disconnect(c: Client): void {
@@ -173,8 +184,28 @@ export class Hub {
 
   // ---------------------------------------------------------------- solo queue and picks
 
+  /** Stops new matches (the server is about to update), or lets them start again. */
+  drain(on: boolean): void {
+    this.draining = on;
+    if (!on) return;
+    for (const c of this.clients.values()) {
+      if (this.matchmaker.has(c.key) || c.pick) {
+        this.leaveQueue(c, DRAIN_TEXT);
+        this.cancelPick(c, DRAIN_TEXT);
+        c.send({ t: 'unqueued', text: DRAIN_TEXT });
+      }
+      if (c.private?.state === 'picking') c.private.state = 'open';
+    }
+  }
+
+  /** Shutting down now: every match still running is called off (nothing counted). */
+  shutdown(text: string): void {
+    for (const r of [...this.rooms]) r.abort(text);
+  }
+
   private queue(c: Client, pick: unknown, mode: QueueMode): void {
     if (c.room || c.rollSeed === null) return;
+    if (this.draining && !c.pick) return c.send({ t: 'notice', text: DRAIN_TEXT });
     const choices = starterChoices(c.rollSeed, c.rollPool);
     const starter = typeof pick === 'number' && Number.isInteger(pick) ? choices[pick] : undefined;
     if (!starter) return c.send({ t: 'error', text: 'Pick one of the starters you rolled' });
@@ -318,6 +349,7 @@ export class Hub {
       case 'queue': {
         const p = c.party;
         if (!p || p.leader !== c) return;
+        if (this.draining) return c.send({ t: 'notice', text: DRAIN_TEXT });
         if (p.members.length < 2) return c.send({ t: 'notice', text: 'Your party is just you: use Find a Match' });
         if (msg.mode === 'ranked') return c.send({ t: 'notice', text: 'Ranked is solo. Parties play casual' });
         if (p.members.some((m) => m.room || m.pick)) return c.send({ t: 'notice', text: 'Someone in your party is still in a match' });
@@ -448,6 +480,7 @@ export class Hub {
       }
       case 'start': {
         if (!lobby || lobby.hostKey !== c.key || lobby.state !== 'open') return;
+        if (this.draining) return c.send({ t: 'notice', text: DRAIN_TEXT });
         const members = [...lobby.members.keys()].map((k) => this.clients.get(k)).filter((x): x is Client => !!x);
         if (members.some((m) => m.room)) return c.send({ t: 'notice', text: 'Someone is still in a match' });
         if (!lobby.rules.bots && members.length < 2) return c.send({ t: 'notice', text: 'Two trainers at least, or turn computer trainers on' });
@@ -489,14 +522,22 @@ export class Hub {
   private startRoom(players: Lineup[], mode: RoomMode, rules: { size?: number; bots?: boolean; level?: number; storm?: number; rareChest?: boolean }): void {
     const live = players.filter((p) => this.clients.get(p.peer.key) === p.peer);
     if (!live.length) return;
+    if (this.draining) {
+      for (const p of live) p.peer.send({ t: 'unqueued', text: DRAIN_TEXT });
+      return;
+    }
     const seed = randomInt(1, 2 ** 31);
     const size = rules.size ?? this.o.size;
     const dir = this.o.replayDir;
+    // Events boost casual and ranked matches; private ones keep their own rules.
+    const ev = this.events;
+    const boosts = mode !== 'private' && ev ? { shinyBoost: ev.boost('shiny'), storm: ev.storm() } : {};
     const room = new Room(this.o.world, live.map((q) => ({ name: q.peer.name, starter: q.starter, team: q.team, peer: q.peer })), size, seed, this.o.hooks, (r, res) => this.endRoom(r, res), {
-      mode, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest,
+      mode, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts,
       recorder: dir ? (r) => new ReplayRecorder(dir, r.id, seed, mode, r.roster, r.match, r.ids) : undefined,
     });
     this.rooms.add(room);
+    this.o.onMatchStart?.(room);
     for (const q of live) {
       const c = this.clients.get(q.peer.key);
       if (!c) continue;
@@ -517,8 +558,15 @@ export class Hub {
       this.presenceChanged(c);
     }
     for (const f of room.flagsOf()) this.o.accounts.addFlags(f.key, f.name, room.id, f.flags);
+    this.o.onMatchEnd?.(room);
+    if (room.aborted) {
+      // Called off (a shutdown): nothing is counted, for anyone.
+      this.o.log(`Match ${room.id} called off: ${room.aborted}`);
+      void this.saveReplay(room, results);
+      return;
+    }
     const deltas = room.mode === 'ranked' ? this.rate(room, results) : new Map<string, number>();
-    const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length);
+    const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length, room.mode === 'private' ? 1 : (this.events?.boost('xp') ?? 1));
     for (const [key, p] of progress) this.clients.get(key)?.send({ t: 'progress', ...p });
     this.o.log(`Match ${room.id} over: ${results.map((r) => `${r.name} #${r.place}`).join(', ')}`);
     void this.saveReplay(room, results);
@@ -663,10 +711,10 @@ export class Hub {
   }
 
   /** Numbers for /health and the status page. */
-  stats(): { rooms: number; players: number; queued: Record<QueueMode, number>; privateLobbies: number; parties: number; watching: number } {
+  stats(): { rooms: number; players: number; queued: Record<QueueMode, number>; privateLobbies: number; parties: number; watching: number; draining: boolean } {
     let watching = 0;
     for (const r of this.rooms) watching += r.watcherCount;
-    return { rooms: this.rooms.size, players: this.clients.size, queued: this.matchmaker.waiting, privateLobbies: this.privates.size, parties: this.parties.size, watching };
+    return { rooms: this.rooms.size, players: this.clients.size, queued: this.matchmaker.waiting, privateLobbies: this.privates.size, parties: this.parties.size, watching, draining: this.draining };
   }
 }
 

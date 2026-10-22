@@ -93,4 +93,7 @@ for (const b of bots) {
     notices: b.notices.slice(0, 4), replies: [...new Set(b.replies)].slice(0, 4), errors: b.errors.slice(0, 3),
   }));
 }
-process.exit(0);
+// For CI: every bot must have played (updates arrived) without an error.
+const bad = bots.filter((b) => b.errors.length || b.snaps < 20);
+if (bad.length) console.error(`FAIL: ${bad.map((b) => `${b.name || 'a bot'} (${b.errors[0] ?? `${b.snaps} updates`})`).join(', ')}`);
+process.exit(bad.length ? 1 : 0);

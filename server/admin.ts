@@ -12,14 +12,53 @@
  *   mod <name>              makes an account a moderator (the dashboard at /mod, a MOD badge in chat)
  *   admin <name>            an administrator (also sets roles and deletes accounts from the dashboard)
  *   player-role <name>      back to an ordinary player
+ *   backup                  a backup now (DATA_DIR/backups, and S3 when set up)
+ *   backups                 the backups on the volume
+ *   restore <file|s3:key>   puts a backup back (STOP THE SERVER FIRST: fly machine stop); the database
+ *                           it replaces is kept as almia.db.before-restore-<time>. s3:latest.db.gz,
+ *                           s3:hourly/07.db.gz, s3:daily/2026-11-02.db.gz (under SERVER_KIND/)
  */
 import { DatabaseSync } from 'node:sqlite';
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
+import { Backups } from './backup';
+import { s3FromEnv, s3Get } from './s3';
 
 const DATA = process.env.DATA_DIR ?? join(import.meta.dirname, '..', '.data');
+const [cmd, a, b] = process.argv.slice(2);
+
+if (cmd === 'restore') {
+  // Before the database is opened: it is about to be replaced.
+  if (!a) {
+    console.error('restore <file | s3:key>');
+    process.exit(1);
+  }
+  let zipped: Buffer;
+  if (a.startsWith('s3:')) {
+    const c = s3FromEnv();
+    if (!c) {
+      console.error('No S3 storage is set up (AWS_ENDPOINT_URL_S3, BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).');
+      process.exit(1);
+    }
+    zipped = await s3Get(c, `${process.env.SERVER_KIND ?? 'dev'}/${a.slice(3)}`);
+  } else zipped = readFileSync(existsSync(a) ? a : join(DATA, 'backups', a));
+  const data = a.endsWith('.gz') || zipped[0] === 0x1f ? gunzipSync(zipped) : zipped;
+  if (data.subarray(0, 15).toString() !== 'SQLite format 3') {
+    console.error('That is not a database backup.');
+    process.exit(1);
+  }
+  const live = join(DATA, 'almia.db');
+  const keep = `${live}.before-restore-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}`;
+  if (existsSync(live)) renameSync(live, keep);
+  for (const x of ['-wal', '-shm']) if (existsSync(live + x)) unlinkSync(live + x);
+  writeFileSync(live, data);
+  console.log(`Restored ${a} (${Math.round(data.length / 1024)} KB).${existsSync(keep) ? ` The old database is ${keep}.` : ''} Start the server again.`);
+  process.exit(0);
+}
+
 const db = new DatabaseSync(join(DATA, 'almia.db'));
 db.exec('PRAGMA foreign_keys = ON');
-const [cmd, a, b] = process.argv.slice(2);
 
 interface U {
   id: number;
@@ -102,6 +141,19 @@ switch (cmd) {
     console.log(`${u.username} is now ${role === 'player' ? 'a player again' : `a${role === 'admin' ? 'n admin' : ' moderator'} (the dashboard is at /mod)`}.`);
     break;
   }
+  case 'backup': {
+    const bk = new Backups(db, DATA, process.env.SERVER_KIND ?? 'dev', s3FromEnv(), (t) => console.error(t), console.log);
+    const r = await bk.run();
+    console.log(r ? `Backed up: ${r.file} (${Math.round(r.bytes / 1024)} KB, ${r.ms} ms)${r.uploaded.length ? `, uploaded ${r.uploaded.join(', ')}` : ''}` : 'Backup failed.');
+    break;
+  }
+  case 'backups': {
+    const dir = join(DATA, 'backups');
+    const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.db.gz')).sort().reverse() : [];
+    if (!files.length) console.log('No backups on the volume yet.');
+    for (const f of files) console.log(`${f}  ${Math.round(statSync(join(dir, f)).size / 1024)} KB`);
+    break;
+  }
   default:
-    console.log('Commands: reports | resolve <id> | player <name> | mute <name> <minutes> | ban <name> | unban <name> | delete <name> | chat [n] | mod <name> | admin <name> | player-role <name>');
+    console.log('Commands: reports | resolve <id> | player <name> | mute <name> <minutes> | ban <name> | unban <name> | delete <name> | chat [n] | mod <name> | admin <name> | player-role <name> | backup | backups | restore <file|s3:key>');
 }

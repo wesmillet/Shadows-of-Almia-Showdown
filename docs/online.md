@@ -229,6 +229,7 @@ memory, and SQLite has one writer), so scale up, not out.
 - Chat: signed-in players only, 200 characters, 5 messages per 10 s, a word filter
   (`server/moderation.ts`), mute (hides a player for you) and report (to the moderators).
 - Players may be young: accounts ask for a trainer name only (the sign-up box says not to use a
-  real name) and no email is kept. Before launch, publish a short privacy policy saying what is
-  kept (name, password hash, game saves, chat) and how to ask for deletion (`admin.js delete`).
+  real name) and no email is kept. The privacy page is at /privacy (linked from sign-up): what is
+  kept, who sees it, and how to have an account deleted. Set `PRIVACY_CONTACT` (an email address or
+  a link) to where deletion requests should go; without it, the page says to ask in the chat.
 - This is a fan game: keep it free, with no ads or payments.

@@ -251,6 +251,13 @@ export function accountDialog(
       box.replaceChildren();
       box.append(el('h2', '', mode === 'signin' ? 'Sign in' : 'Create an account'));
       box.append(el('p', '', mode === 'signin' ? 'Your PC box, chest, look and stats are kept on the server.' : 'Pick a trainer name others will see. Don’t use your real name. We keep no email.'));
+      if (mode === 'register') {
+        const pl = el('a', '', 'What we keep (privacy)');
+        pl.href = `${net.base}/privacy`;
+        pl.target = '_blank';
+        pl.style.cssText = 'font-size:13px;color:#c2611a';
+        box.append(pl);
+      }
       const name = el('input');
       name.autocomplete = 'username';
       name.maxLength = 16;

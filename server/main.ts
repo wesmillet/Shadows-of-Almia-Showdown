@@ -22,6 +22,7 @@ import { replayDir, replayFile } from './replays';
 import { notFoundPage, profilePage } from './profilePage';
 import { ModApi } from './modApi';
 import { MOD_PAGE } from './modPage';
+import { privacyPage } from './privacyPage';
 import { Room, STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
 import { Accounts, clientIp } from './accounts';
@@ -288,6 +289,10 @@ const http = createServer((req, res) => {
   }
   if (url === '/api/client-error' && req.method === 'POST') {
     void clientError(req, res);
+    return;
+  }
+  if (url.split('?')[0] === '/privacy' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }).end(privacyPage(process.env.PRIVACY_CONTACT ?? null));
     return;
   }
   if (url.split('?')[0] === '/mod' && req.method === 'GET') {

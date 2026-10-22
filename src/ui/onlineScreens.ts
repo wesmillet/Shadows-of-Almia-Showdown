@@ -26,7 +26,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'casual' | 'ranked' | 'signin' | 'register' | 'signout' | 'create' | 'join' | 'watch' | 'replays' | 'boards' | 'back' | 'me';
+type HubButton = 'find' | 'casual' | 'ranked' | 'signin' | 'register' | 'signout' | 'create' | 'join' | 'watch' | 'replays' | 'boards' | 'back' | 'me' | 'privacy';
 
 /**
  * The hub: who you are (and your ranked standing), Casual or Ranked, Find a Match (with your party,
@@ -95,6 +95,7 @@ export class OnlineScreen implements Screen {
       replays: { x: cx - bw / 2, y: row + 50 * s, w: bw, h: 40 * s },
       boards: { x: cx + bw / 2 + gap, y: row + 50 * s, w: bw, h: 40 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
+      privacy: { x: cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
     };
   }
 
@@ -159,6 +160,7 @@ export class OnlineScreen implements Screen {
       else if (on(c, 'watch')) return this.actions.watchFeatured();
       else if (on(c, 'replays')) return this.actions.replays();
       else if (on(c, 'boards')) return this.actions.leaderboards();
+      else if (on(c, 'privacy')) window.open(`${this.net.base}/privacy`, '_blank', 'noopener');
       else if (!signedIn && on(c, 'signin')) void this.account('signin');
       else if (!signedIn && on(c, 'register')) void this.account('register');
       else if (signedIn && on(c, 'signout')) void this.signOut();
@@ -253,6 +255,7 @@ export class OnlineScreen implements Screen {
     if (this.message) text(v, this.message, cx, r.watch.y + r.watch.h + 26 * s, 13, { align: 'center', color: '#f4ecdc', maxWidth: v.width - 60 * s });
     button(v, 'Back (Esc)', r.back.x, r.back.y, r.back.w, r.back.h, over('back'), '#f4e6c8');
     if (this.net.ping) text(v, `${this.net.ping} ms`, v.width - 20 * s, v.height - 16 * s, 11, { align: 'right', color: '#9f97bb' });
+    text(v, 'Privacy', cx, r.privacy.y + 15 * s, 11, { align: 'center', color: over('privacy') ? '#f4ecdc' : '#9f97bb' });
   }
 }
 

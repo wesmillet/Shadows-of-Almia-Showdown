@@ -29,6 +29,12 @@ function monById(m: Match, id: Arg | undefined): Mon | null {
   return null;
 }
 
+/**
+ * How far an aimed-at opponent may be from the aim and still count: the aim pick (1.6 tiles) plus
+ * how far a fast Pokémon runs in a quarter second of lag.
+ */
+const AIM_SLACK = 1.6 + 6 * 0.25;
+
 const STYLER_COOLDOWN = 0.2;
 const lastStyler = new WeakMap<Seat, number>();
 
@@ -46,7 +52,17 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[]): string {
     case 'cast': {
       const slot = int(a[0], 0, 3);
       if (slot === null) return '';
-      const r = m.playerCast(slot);
+      // Lag compensation: the browser names the opponent it aimed at, drawn where it was a moment
+      // ago. If it is near the aim (as far as it could have moved since), aim at where it is now.
+      const foe = monById(m, a[1]);
+      const lead = m.actingMon;
+      const aim = seat.aim;
+      let r: ReturnType<Match['playerCast']>;
+      if (foe && lead && aim && foe !== lead && !foe.fainted && m.battle.isEnemy(lead, foe) && Math.hypot(foe.x - aim.x, foe.y - aim.y) <= AIM_SLACK) {
+        seat.aim = { x: foe.x, y: foe.y };
+        r = m.playerCast(slot);
+        seat.aim = aim;
+      } else r = m.playerCast(slot);
       return r === 'asleep' ? 'Your Pokémon is asleep' : '';
     }
     case 'dodge': {

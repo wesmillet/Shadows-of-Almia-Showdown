@@ -26,6 +26,8 @@ type Obj = Record<string, unknown>;
 
 /** Fields that glide between updates. */
 const SMOOTH = ['x', 'y', 'z'] as const;
+/** How close to the reticle an opponent must be drawn to count as the one aimed at (as the offline aim snap). */
+const AIM_PICK = 1.6;
 
 interface Glide {
   from: Record<string, number>;
@@ -378,6 +380,24 @@ export class MirrorMatch {
     return p as unknown as Obj;
   }
 
+  /** The opponent closest to the reticle (within AIM_PICK tiles), as drawn here. */
+  private aimedFoe(lead: Mon): Mon | null {
+    const m = this.match;
+    const a = m.aim;
+    if (!a) return null;
+    let best: Mon | null = null;
+    let bd = AIM_PICK;
+    for (const c of m.mons()) {
+      if (c === lead || c.fainted || !m.battle.isEnemy(lead, c)) continue;
+      const d = Math.hypot(c.x - a.x, c.y - a.y);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
   /** One step of the avatar under the keys, exactly as the server steps it. */
   private walk(o: Obj, mx: number, my: number, dt: number, animate: boolean): void {
     const m = this.match;
@@ -473,7 +493,11 @@ export class MirrorMatch {
       if (!lead) return 'no-lead';
       if (lead.status === 'sleep' || lead.status === 'freeze') return 'asleep';
       if ((lead.cooldowns[slot] ?? 0) > 0) return 'cooldown';
-      net.cmd('cast', slot);
+      // Lag compensation: name the opponent under the reticle as this screen shows it (a little behind
+      // the server); the server aims at where that opponent really is.
+      const t = this.aimedFoe(lead);
+      if (t) net.cmd('cast', slot, t.id);
+      else net.cmd('cast', slot);
       return 'cast';
     };
     m.playerDodge = () => {

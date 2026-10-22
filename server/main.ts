@@ -189,7 +189,13 @@ const http = createServer((req, res) => {
   serveStatic(req, res);
 });
 
-const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+// Updates are JSON with the same field names over and over: compression (keeping its dictionary
+// between messages) cuts them to a fraction. Level 3 is quick; small messages go as they are.
+const wss = new WebSocketServer({
+  noServer: true,
+  maxPayload: 16 * 1024,
+  perMessageDeflate: { zlibDeflateOptions: { level: 3, memLevel: 7 }, serverMaxWindowBits: 13, clientNoContextTakeover: true, threshold: 200, concurrencyLimit: 16 },
+});
 http.on('upgrade', (req, socket, head) => {
   if (!(req.url ?? '').startsWith('/ws')) {
     socket.destroy();

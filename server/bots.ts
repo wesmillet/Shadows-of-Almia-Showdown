@@ -17,6 +17,8 @@ const URL = process.argv[4] ?? 'ws://127.0.0.1:8787/ws';
 interface Bot {
   name: string;
   bytes: number;
+  /** Bytes read from the network (after compression). */
+  wire?: number;
   snaps: number;
   events: number;
   notices: string[];
@@ -72,6 +74,7 @@ await Promise.all(Array.from({ length: N }, (_, i) => new Promise<void>((done) =
   ws.on('error', (e) => bot.errors.push(String(e)));
   setTimeout(() => {
     if (timer) clearInterval(timer);
+    bot.wire = (ws as unknown as { _socket?: { bytesRead: number } })._socket?.bytesRead ?? 0;
     ws.close();
     done();
   }, SECONDS * 1000);
@@ -79,10 +82,12 @@ await Promise.all(Array.from({ length: N }, (_, i) => new Promise<void>((done) =
 
 const secs = (Date.now() - t0) / 1000;
 for (const b of bots) {
+  // What actually crossed the network (compressed), next to the size of the messages themselves.
+  const wire = b.wire ?? 0;
   const root = b.dec.root as { trainers?: unknown[]; wilds?: unknown[]; seat?: { trainer?: { name?: string; x?: number; y?: number; party?: Array<{ name?: string; hp?: number }> } } } | null;
   const me = root?.seat?.trainer;
   console.log(JSON.stringify({
-    bot: b.name, kbPerSec: +(b.bytes / 1024 / secs).toFixed(1), snaps: b.snaps, events: b.events, objects: b.dec.objects.size, maxObjects: b.maxObjects,
+    bot: b.name, kbPerSec: +(b.bytes / 1024 / secs).toFixed(1), wireKbPerSec: +(wire / 1024 / secs).toFixed(1), snaps: b.snaps, events: b.events, objects: b.dec.objects.size, maxObjects: b.maxObjects,
     me: me ? `${me.name} @ ${me.x?.toFixed(1)},${me.y?.toFixed(1)} party ${me.party?.map((p) => `${p?.name}:${p?.hp}`).join('/')}` : null,
     seeTrainers: root?.trainers?.length, seeWilds: root?.wilds?.length, outcome: b.outcome,
     notices: b.notices.slice(0, 4), replies: [...new Set(b.replies)].slice(0, 4), errors: b.errors.slice(0, 3),

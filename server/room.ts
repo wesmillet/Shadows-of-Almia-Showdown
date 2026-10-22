@@ -87,6 +87,7 @@ export class Room {
   ) {
     this.id = `m${seed.toString(36)}`;
     this.match = createMatch(world, entries, size, seed);
+    this.match.online = true;
     this.match.rareChest = hooks.rareChest;
     // Testing (DEV_CLUSTER=1, never on the live server): every player starts beside the first.
     if (hooks.cluster && this.match.seats.length > 1) {
@@ -152,10 +153,21 @@ export class Room {
     const p = this.players.get(key);
     if (!p || this.closed) return;
     if (msg.t === 'in') {
-      const clamp = (v: number) => (Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
-      const n = Math.hypot(clamp(msg.mx), clamp(msg.my));
-      p.seat.moveX = n > 1 ? clamp(msg.mx) / n : clamp(msg.mx);
-      p.seat.moveY = n > 1 ? clamp(msg.my) / n : clamp(msg.my);
+      const seat = p.seat;
+      if (Array.isArray(msg.f)) {
+        // Numbered frames, one per step: queued in order, newer than anything already had.
+        let last = seat.inputs.length ? (seat.inputs[seat.inputs.length - 1] as [number, number, number])[0] : seat.ack;
+        for (const fr of msg.f.slice(0, 12)) {
+          if (!Array.isArray(fr) || typeof fr[0] !== 'number' || fr[0] <= last) continue;
+          const [x, y] = unitAxis(fr[1], fr[2]);
+          seat.inputs.push([fr[0], x, y]);
+          last = fr[0];
+        }
+        // Far behind (a stall): catch up by dropping the oldest, the browser corrects itself.
+        if (seat.inputs.length > 30) seat.inputs.splice(0, seat.inputs.length - 6);
+      } else if (typeof msg.mx === 'number' && typeof msg.my === 'number') {
+        [seat.moveX, seat.moveY] = unitAxis(msg.mx, msg.my);
+      }
       if (typeof msg.ax === 'number' && typeof msg.ay === 'number' && Number.isFinite(msg.ax) && Number.isFinite(msg.ay)) p.seat.aim = { x: msg.ax, y: msg.ay };
       return;
     }
@@ -190,6 +202,7 @@ export class Room {
         void key;
       }
     }
+    for (const p of this.players.values()) takeFrame(p.seat);
     m.step(STEP);
     this.events.push(...m.battle.events);
     m.battle.events.length = 0;
@@ -233,7 +246,7 @@ export class Room {
         const e = p.enc.encodeEvent(ev);
         if (e) out.push(e);
       }
-      p.peer.send({ t: 's', p: patch, e: out, time: this.match.time });
+      p.peer.send({ t: 's', p: patch, e: out, time: Math.round(this.match.time * 1000) / 1000, ack: p.seat.ack });
     }
   }
 
@@ -253,5 +266,52 @@ export class Room {
       });
     }
     this.onEnd(this, results);
+  }
+}
+
+/** Movement keys from a browser: each in -1..1, and no faster on a diagonal than straight. */
+function unitAxis(x: unknown, y: unknown): [number, number] {
+  const c = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
+  let ax = c(x);
+  let ay = c(y);
+  const n = Math.hypot(ax, ay);
+  if (n > 1) {
+    ax /= n;
+    ay /= n;
+  }
+  return [ax, ay];
+}
+
+/** At most this many steps are walked on held keys while the browser's next ones are late (about 0.1 s). */
+const MAX_AHEAD = 6;
+
+/**
+ * This step's keys for a seat: the next numbered frame. With none waiting (a late packet) the last
+ * keys are held for up to MAX_AHEAD steps, and that many frames are skipped when they arrive, so the
+ * trainer covers the same ground the browser walked it; past that it waits for the browser.
+ */
+function takeFrame(seat: Seat): void {
+  while (seat.ahead > 0 && seat.inputs.length) {
+    const f = seat.inputs.shift() as [number, number, number];
+    seat.ack = f[0];
+    seat.held = [f[1], f[2]];
+    seat.ahead--;
+  }
+  const f = seat.inputs.shift();
+  if (f) {
+    seat.ack = f[0];
+    seat.moveX = f[1];
+    seat.moveY = f[2];
+    seat.held = [f[1], f[2]];
+    return;
+  }
+  const [hx, hy] = seat.held;
+  if ((hx || hy) && seat.ahead < MAX_AHEAD) {
+    seat.moveX = hx;
+    seat.moveY = hy;
+    seat.ahead++;
+  } else {
+    seat.moveX = 0;
+    seat.moveY = 0;
   }
 }

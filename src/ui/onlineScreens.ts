@@ -78,6 +78,7 @@ export class OnlineScreen implements Screen {
       else if (signedIn && hit(c.x, c.y, r.signin.x, r.signin.y, r.signin.w + r.register.w + 20, r.signin.h)) void this.signOut();
     }
     if (input.pressed('Escape')) this.onBack();
+    if (input.pressed('Space') && this.net.connected) this.onFind();
   }
 
   private async account(mode: 'signin' | 'register'): Promise<void> {
@@ -131,7 +132,7 @@ export class OnlineScreen implements Screen {
       button(v, 'Create account', r.register.x, r.register.y, r.register.w, r.register.h, hit(mx, my, r.register.x, r.register.y, r.register.w, r.register.h), '#f4e6c8');
     }
     const connected = this.net.connected;
-    button(v, connected ? 'Find a Match' : 'Connecting...', r.find.x, r.find.y, r.find.w, r.find.h, connected && hit(mx, my, r.find.x, r.find.y, r.find.w, r.find.h), connected ? undefined : '#44405a');
+    button(v, connected ? 'Find a Match (Space)' : 'Connecting...', r.find.x, r.find.y, r.find.w, r.find.h, connected && hit(mx, my, r.find.x, r.find.y, r.find.w, r.find.h), connected ? undefined : '#44405a');
     if (this.message) text(v, this.message, v.width / 2, r.find.y + r.find.h + 30 * s, 14, { align: 'center', color: '#f4ecdc' });
     button(v, 'Back (Esc)', r.back.x, r.back.y, r.back.w, r.back.h, hit(mx, my, r.back.x, r.back.y, r.back.w, r.back.h), '#f4e6c8');
     // Leaderboard, right.

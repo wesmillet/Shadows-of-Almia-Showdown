@@ -236,6 +236,7 @@ async function boot(): Promise<void> {
     await mirror.ready;
     const chat = new ChatPanel(net, { compact: true, collapsed: true });
     debug.showdown.match = mirror.match;
+    debug.showdown.mirror = mirror;
     const screen: MatchScreen = new MatchScreen(game, mirror.match, rangers, assets, ui, () => {
       const end = mirror.ended ?? { outcome: mirror.match.outcome ?? 'loss', place: 0 };
       chat.dispose();

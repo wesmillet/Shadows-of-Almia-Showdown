@@ -188,6 +188,8 @@ export class Match {
    */
   /** An online match's copy in the browser (src/net/mirror.ts): filled from the server, never stepped. */
   readonly mirror: boolean;
+  /** Run by the game server (no hit-stop; set by server/room.ts). */
+  online = false;
 
   constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[] }>; rivals?: number; mirror?: boolean } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
@@ -2369,8 +2371,9 @@ export class Match {
   step(dt: number, input?: Input): void {
     if (this.over) return;
     if (this.battle.hitStop > 0) {
-      // Hit-stop freezes the world for a beat on a heavy hit: offline only (online it would freeze everyone).
-      if (this.seats.length > 1) this.battle.hitStop = 0;
+      // Hit-stop freezes the world for a beat on a heavy hit: offline only (online it would freeze
+      // everyone, and swallow movement the players' browsers already showed).
+      if (this.online) this.battle.hitStop = 0;
       else {
         this.battle.hitStop -= dt;
         return;
@@ -2529,9 +2532,7 @@ export class Match {
         p.y = p.py = spot.y;
       }
     }
-    const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
-    const ride = p.mount ? (p.mount.fly ? CONFIG.riding.flySpeed : CONFIG.riding.rideSpeed) : 1;
-    const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1) * ride;
+    const speed = this.trainerSpeed(p);
     let moved = 0;
     // In a one-on-one battle the trainer stands back; the movement keys steer the Pokémon instead.
     if (p.duelId) {
@@ -2569,22 +2570,7 @@ export class Match {
       p.stats.timeSurvived = this.time;
       return;
     }
-    if (this.moveX !== 0 || this.moveY !== 0) {
-      // Walking up or down at a ladder lines the player up with it, so the one-tile gap is easy to take.
-      if (this.ground.onLadder && Math.abs(this.moveY) >= Math.abs(this.moveX)) {
-        const ahead = Math.floor(p.y + Math.sign(this.moveY) * 0.8);
-        for (const dx of [0, -1, 1]) {
-          const tx = Math.floor(p.x) + dx;
-          if (this.ground.onLadder(tx, ahead) || this.ground.onLadder(tx, Math.floor(p.y))) {
-            const off = tx + 0.5 - p.x;
-            if (Math.abs(off) > 0.02) tryMove(this.ground, p, Math.sign(off) * Math.min(Math.abs(off), speed * dt), 0, CONFIG.player.radius);
-            break;
-          }
-        }
-      }
-      moved = tryMove(p.mount?.fly ? this.flyGround() : this.ground, p, this.moveX * speed * dt, this.moveY * speed * dt, CONFIG.player.radius);
-      p.dir = dirFromVector(this.moveX, this.moveY, p.dir);
-    }
+    if (this.moveX !== 0 || this.moveY !== 0) moved = this.walkTrainer(p, this.moveX, this.moveY, dt);
     if (p.mount) {
       // The mount walks (or flies) under the trainer.
       const mon = p.mount.mon;
@@ -3574,6 +3560,44 @@ export class Match {
     }
   }
 
+  /** How fast a trainer walks here (slower on a ladder, faster riding or flying). */
+  trainerSpeed(p: Trainer): number {
+    const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
+    const ride = p.mount ? (p.mount.fly ? CONFIG.riding.flySpeed : CONFIG.riding.rideSpeed) : 1;
+    return CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1) * ride;
+  }
+
+  /**
+   * One step of a trainer walking with the movement keys (mx, my). Shared by the match and by an
+   * online player's browser, which walks its own trainer ahead of the server (src/net/mirror.ts).
+   */
+  walkTrainer(p: Trainer, mx: number, my: number, dt: number): number {
+    const speed = this.trainerSpeed(p);
+    // Walking up or down at a ladder lines the player up with it, so the one-tile gap is easy to take.
+    if (this.ground.onLadder && Math.abs(my) >= Math.abs(mx)) {
+      const ahead = Math.floor(p.y + Math.sign(my) * 0.8);
+      for (const dx of [0, -1, 1]) {
+        const tx = Math.floor(p.x) + dx;
+        if (this.ground.onLadder(tx, ahead) || this.ground.onLadder(tx, Math.floor(p.y))) {
+          const off = tx + 0.5 - p.x;
+          if (Math.abs(off) > 0.02) tryMove(this.ground, p, Math.sign(off) * Math.min(Math.abs(off), speed * dt), 0, CONFIG.player.radius);
+          break;
+        }
+      }
+    }
+    const moved = tryMove(p.mount?.fly ? this.flyGround() : this.ground, p, mx * speed * dt, my * speed * dt, CONFIG.player.radius);
+    p.dir = dirFromVector(mx, my, p.dir);
+    return moved;
+  }
+
+  /** One step of a Pokémon the player steers (Pokémon mode or a battle). Shared with the browser like walkTrainer. */
+  walkSteered(m: Mon, mx: number, my: number, dt: number): number {
+    const speed = CONFIG.duel.monSpeed * moveSpeed(m);
+    const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
+    m.dir = dirFromVector(mx, my, m.dir);
+    return moved;
+  }
+
   /** The player's Pokémon follows the movement keys; 1-4 cast as usual. */
   private stepDuelPlayerMon(m: Mon, dt: number): void {
     if (m.casting || incapable(m)) {
@@ -3592,9 +3616,7 @@ export class Match {
       }
       return;
     }
-    const speed = CONFIG.duel.monSpeed * moveSpeed(m);
-    const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
-    m.dir = dirFromVector(mx, my, m.dir);
+    const moved = this.walkSteered(m, mx, my, dt);
     const walking = moved > 1e-4;
     if (walking !== m.moving) {
       m.moving = walking;

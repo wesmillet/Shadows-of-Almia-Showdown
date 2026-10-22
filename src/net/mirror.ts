@@ -40,9 +40,23 @@ export class MirrorMatch {
   private glides = new Map<Obj, Glide>();
   private lastUpdateAt = 0;
   private interval = 0.05;
-  private lastAxis = { x: 0, y: 0 };
-  private lastAim = { x: 0, y: 0 };
-  private sinceInput = 0;
+  /** Movement frames: numbered keys for every step, sent a few at a time (see Seat.inputs). */
+  private seq = 0;
+  private outbox: Array<[number, number, number]> = [];
+  /** Frames the server has not applied yet, replayed on top of each update (prediction). */
+  private pending: Array<{ seq: number; mx: number; my: number }> = [];
+  /** What the frames move: this player's trainer, or the Pokémon they steer. */
+  private avatar: Obj | null = null;
+  /** Server-side acknowledgement of the frames (Seat.ack). */
+  private ack = 0;
+  /** How far prediction had to be corrected lately (tiles), for the network readout. */
+  correction = 0;
+  /** Testing: when set, every step and every correction is recorded here. */
+  /** Testing only (null unless a test sets it): every step, replay and correction of the prediction. */
+  trace: Array<{ k: 'step' | 'fix'; t: number; x: number; y: number; mx?: number; err?: number; seq?: number; sx?: number; sy?: number; cx?: number; cy?: number; n?: number }> | null = null;
+  private hist = new Map<number, { x: number; y: number }>();
+  /** The avatar's position (and facing) as the server last sent it. */
+  private auth: { o: Obj; x: number; y: number; dir: unknown } | null = null;
   private human = new Set<number>();
   private looks = new Map<number, string>();
   private unsub: () => void;
@@ -98,6 +112,8 @@ export class MirrorMatch {
       },
       animate: (o, action, loop, restart) => {
         const m = o as unknown as Mon;
+        // The avatar's walking is predicted here; the server's Walk/Idle would only lag behind it.
+        if (o === this.avatar && (action === 'Walk' || action === 'Idle') && !restart) return;
         if (!m.anim) {
           o.$want = { action, loop };
           return;
@@ -134,7 +150,7 @@ export class MirrorMatch {
   }
 
   private onMessage(msg: ServerMsg): void {
-    if (msg.t === 's') this.applyUpdate(msg.p, msg.e);
+    if (msg.t === 's') this.applyUpdate(msg.p, msg.e, msg.ack ?? 0);
     else if (msg.t === 'start') {
       // Back after a dropped connection: the server starts the view over.
       this.dec = this.decoder();
@@ -148,7 +164,7 @@ export class MirrorMatch {
     }
   }
 
-  private applyUpdate(p: Extract<ServerMsg, { t: 's' }>['p'], events: Array<Record<string, unknown>>): void {
+  private applyUpdate(p: Extract<ServerMsg, { t: 's' }>['p'], events: Array<Record<string, unknown>>, ack: number): void {
     const now = performance.now() / 1000;
     if (this.lastUpdateAt) this.interval = Math.max(0.03, Math.min(0.15, this.interval * 0.8 + (now - this.lastUpdateAt) * 0.2));
     this.lastUpdateAt = now;
@@ -161,8 +177,21 @@ export class MirrorMatch {
       for (const k of SMOOTH) if (typeof o[k] === 'number') cur[k] = o[k] as number;
       before.set(o, cur);
     }
+    // Where this player's own trainer (or steered Pokémon) is shown now, before the server's word on it.
+    const avatar = this.avatar;
+    const shown = avatar ? { x: avatar.x as number, y: avatar.y as number, moving: avatar.moving, walkPhase: avatar.walkPhase } : null;
+    // Updates carry only what changed, so a field the server left out still holds the prediction:
+    // put back the server's last word on the avatar first, so the replay starts from the server's spot.
+    if (avatar && this.auth && this.auth.o === avatar) {
+      avatar.x = this.auth.x;
+      avatar.y = this.auth.y;
+      if (this.auth.dir !== undefined) avatar.dir = this.auth.dir;
+    }
     this.dec.apply(p);
+    if (avatar) this.auth = { o: avatar, x: avatar.x as number, y: avatar.y as number, dir: avatar.dir };
     for (const [o, cur] of before) {
+      // This player's own trainer (or steered Pokémon) is predicted, not glided: see reconcile().
+      if (o === avatar) continue;
       const to: Record<string, number> = {};
       let moved = false;
       for (const k of SMOOTH) {
@@ -188,6 +217,7 @@ export class MirrorMatch {
     }
     for (const o of this.glides.keys()) if (!this.dec.objects.has(this.idOf(o))) this.glides.delete(o);
     this.syncRoot();
+    this.reconcile(ack, shown);
     if (this.match.player.party.length) this.markReady();
     const decoded: unknown[] = [];
     for (const e of events) {
@@ -269,24 +299,46 @@ export class MirrorMatch {
     const m = this.match;
     const axis = input.moveAxis();
     const aim = m.aim ?? { x: 0, y: 0 };
-    this.sinceInput += dt;
-    const changed = axis.x !== this.lastAxis.x || axis.y !== this.lastAxis.y;
-    const aimMoved = Math.hypot(aim.x - this.lastAim.x, aim.y - this.lastAim.y) > 0.25;
-    if (changed || (aimMoved && this.sinceInput > 0.05) || this.sinceInput > 0.25) {
-      this.net.send({ t: 'in', mx: axis.x, my: axis.y, ax: Math.round(aim.x * 100) / 100, ay: Math.round(aim.y * 100) / 100 });
-      this.lastAxis = { ...axis };
-      this.lastAim = { ...aim };
-      this.sinceInput = 0;
-    }
     m.moveX = axis.x;
     m.moveY = axis.y;
     m.time += dt;
     m.ground.update(dt);
-    // Everyone glides toward where the server last put them.
     for (const o of [...m.allTrainers, ...m.npcs, ...m.renderMons()] as unknown as Obj[]) {
       o.px = o.x;
       o.py = o.y;
     }
+    // This step's keys: numbered, walked here at once (prediction), and sent three steps at a time.
+    const f: [number, number, number] = [++this.seq, Math.round(axis.x * 1000) / 1000, Math.round(axis.y * 1000) / 1000];
+    this.outbox.push(f);
+    const av = this.pickAvatar();
+    if (av !== this.avatar) {
+      this.avatar = av;
+      this.pending = [];
+      if (av) {
+        // It was gliding toward the server's spot: that spot is where the server has it.
+        const g = this.glides.get(av);
+        if (g) {
+          for (const k of Object.keys(g.to)) av[k] = g.to[k];
+          this.glides.delete(av);
+        }
+        this.auth = { o: av, x: av.x as number, y: av.y as number, dir: av.dir };
+      } else this.auth = null;
+    }
+    if (av) {
+      this.pending.push({ seq: f[0], mx: f[1], my: f[2] });
+      if (this.pending.length > 120) this.pending.shift();
+      this.walk(av, f[1], f[2], dt, true);
+    }
+    if (this.trace && av) {
+      this.trace.push({ k: 'step', t: performance.now(), x: av.x as number, y: av.y as number, mx: f[1], seq: f[0] });
+      this.hist.set(f[0], { x: av.x as number, y: av.y as number });
+      if (this.hist.size > 400) this.hist.delete(this.hist.keys().next().value as number);
+    }
+    if (this.outbox.length >= 3) {
+      this.net.send({ t: 'in', f: this.outbox, ax: Math.round(aim.x * 100) / 100, ay: Math.round(aim.y * 100) / 100 });
+      this.outbox = [];
+    }
+    this.correction *= Math.exp(-dt * 2);
     for (const [o, g] of this.glides) {
       g.t += dt;
       const k = Math.min(1, g.t / g.d);
@@ -303,6 +355,82 @@ export class MirrorMatch {
     // Cooldowns run down between updates, so the move buttons count smoothly.
     for (const mon of m.player.party) for (let i = 0; i < mon.cooldowns.length; i++) mon.cooldowns[i] = Math.max(0, (mon.cooldowns[i] ?? 0) - dt);
     this.stepMotes(dt);
+  }
+
+  /**
+   * What this player's movement keys move right now, when the browser can walk it the same way the
+   * server will: their Pokémon in a battle or in Pokémon mode, else their trainer. Nothing while it
+   * is busy (casting, dodging, asleep, knocked back): then it simply follows the server.
+   */
+  private pickAvatar(): Obj | null {
+    const m = this.match;
+    const p = m.player;
+    if (!p.alive || p.downUntil !== undefined || m.seat.outcome) return null;
+    let mon: Mon | null = null;
+    const d = m.playerDuel;
+    if (d && d.state !== 'over') mon = (d.a.trainer === p ? d.a : d.b).mon;
+    else if (m.controlled) mon = m.controlled;
+    if (mon) {
+      if (mon.casting || mon.dodge || mon.leap || mon.lunge || mon.knock || mon.status === 'sleep' || mon.status === 'freeze' || mon.fainted || mon.visual.scale < 1) return null;
+      return mon as unknown as Obj;
+    }
+    if (d || m.fishing) return null;
+    return p as unknown as Obj;
+  }
+
+  /** One step of the avatar under the keys, exactly as the server steps it. */
+  private walk(o: Obj, mx: number, my: number, dt: number, animate: boolean): void {
+    const m = this.match;
+    if (isMon(o)) {
+      const mon = o as unknown as Mon;
+      const moved = mx || my ? m.walkSteered(mon, mx, my, dt) : 0;
+      if (animate) {
+        const walking = moved > 1e-4;
+        if (walking !== mon.moving || (walking && mon.anim.action !== 'Walk')) {
+          mon.moving = walking;
+          mon.anim.play(walking ? 'Walk' : 'Idle');
+        }
+      }
+      return;
+    }
+    const t = o as unknown as Trainer;
+    const moved = mx || my ? m.walkTrainer(t, mx, my, dt) : 0;
+    // The server pushes a trainer out of anyone they walk into; so does the prediction.
+    m.separate(t);
+    if (animate) m.afterTrainerMove(t, moved);
+  }
+
+  /**
+   * An update came in: the avatar is where the server had it after frame `ack`. Replay the frames
+   * sent since on top of that, and show the result; a small difference eases in, a big one snaps.
+   */
+  private reconcile(ack: number, shown: { x: number; y: number; moving: unknown; walkPhase: unknown } | null): void {
+    const o = this.avatar;
+    this.ack = Math.max(this.ack, ack);
+    this.pending = this.pending.filter((f) => f.seq > this.ack);
+    if (!o || !shown) return;
+    const sx = o.x as number;
+    const sy = o.y as number;
+    for (const f of this.pending) this.walk(o, f.mx, f.my, 1 / 60, false);
+    // The walk cycle runs here; the server's copy of it would make it stutter.
+    o.moving = shown.moving;
+    if (shown.walkPhase !== undefined) o.walkPhase = shown.walkPhase;
+    const rx = o.x as number;
+    const ry = o.y as number;
+    if (this.trace) (this.trace as unknown as Array<Record<string, unknown>>).push({ k: 'replay', shownX: shown.x, shownY: shown.y, sx, sy, rx, ry, ack: this.ack, nz: this.pending.length });
+    const ex = (o.x as number) - shown.x;
+    const ey = (o.y as number) - shown.y;
+    const err = Math.hypot(ex, ey);
+    this.correction = Math.max(this.correction, err);
+    const h = this.hist.get(this.ack);
+    this.trace?.push({ k: 'fix', t: performance.now(), x: o.x as number, y: o.y as number, err, seq: this.ack, sx, sy, cx: h?.x, cy: h?.y, n: this.pending.length });
+    if (err < 0.6) {
+      // Most of the way to the corrected spot now, the rest as more updates come in.
+      o.x = shown.x + ex * 0.35;
+      o.y = shown.y + ey * 0.35;
+    }
+    o.px = o.x;
+    o.py = o.y;
   }
 
   /** Dust drifting through the dark part of the screen (only drawn; the server has none). */

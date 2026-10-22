@@ -32,6 +32,8 @@ const WAIT = Number(process.env.LOBBY_WAIT ?? (KIND === 'live' ? 60 : 15));
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
+/** Testing only: pretend every message takes this long each way (to try the game on a slow connection). */
+const LAG = KIND === 'live' ? 0 : Number(process.env.SIM_LATENCY_MS ?? 0);
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
 
@@ -204,7 +206,10 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   const c: Conn = {
     ws, key, name: who.name, look: who.look, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
     send(msg: ServerMsg) {
-      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+      if (ws.readyState !== ws.OPEN) return;
+      const data = JSON.stringify(msg);
+      if (LAG) setTimeout(() => ws.readyState === ws.OPEN && ws.send(data), LAG);
+      else ws.send(data);
     },
   };
   conns.set(key, c);
@@ -222,7 +227,9 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
       ws.close(4001, 'Too many messages');
       return;
     }
-    onMessage(c, String(data));
+    const raw = String(data);
+    if (LAG) setTimeout(() => onMessage(c, raw), LAG);
+    else onMessage(c, raw);
   });
   ws.on('close', () => {
     if (conns.get(key) !== c) return;

@@ -20,8 +20,11 @@ export type ClientMsg =
   /** Ask the server for a starter roll (it rolls; the browser only shows it). */
   | { t: 'roll' }
   | { t: 'leaveQueue' }
-  /** Movement keys and cursor (tiles), sent when they change and a few times a second. */
-  | { t: 'in'; mx: number; my: number; ax?: number; ay?: number }
+  /**
+   * Movement keys, one frame per simulation step as [number, x, y] (sent a few at a time), and the
+   * cursor in tiles. `mx`/`my` alone (no frames) holds the keys until the next message.
+   */
+  | { t: 'in'; f?: Array<[number, number, number]>; mx?: number; my?: number; ax?: number; ay?: number }
   | { t: 'cmd'; c: CommandName; a: Array<number | string | boolean | null>; n?: number }
   | { t: 'chat'; text: string }
   | { t: 'leave' }
@@ -42,7 +45,7 @@ export type ServerMsg =
   | { t: 'lobby'; players: string[]; startsIn: number | null; size: number }
   | { t: 'start'; matchId: string; seed: number; you: number; roster: RosterEntry[] }
   /** State patch and the events since the last one. */
-  | { t: 's'; p: SyncPatch; e: Array<Record<string, unknown>>; time: number }
+  | { t: 's'; p: SyncPatch; e: Array<Record<string, unknown>>; time: number; /** The last movement frame applied. */ ack?: number }
   /** A command's reply (what the offline game shows as a message). */
   | { t: 'reply'; n?: number; text: string; seconds: number }
   | { t: 'end'; outcome: 'win' | 'loss'; place: number }

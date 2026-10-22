@@ -54,7 +54,7 @@ export const EXTRA_FX = {
   poison: 'fx_038',
   freeze: 'fx_204',
   confusion: 'fx_041',
-  /** Hoopa's ring portal. */
+  /** The flash on the ground as Hoopa's portal opens. */
   portal: 'fx_190',
   paralysis: 'fx_096',
   /** Rising sparkles while a Pokémon evolves. */
@@ -145,6 +145,10 @@ export class MatchScreen implements Screen {
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
+    void assets.loadImage('fx/hoopa_portal.png').then((img) => {
+      this.hoopaPortal = img;
+      this.hoopaPortalDark = img ? darkPortal(img) : null;
+    });
     void assets.loadImage('ui/shadow_crystal.png').then((img) => (this.crystalImg = img));
     void assets.loadImage('ui/storage_chest.png').then((img) => (this.chestSheet = img));
     void assets.loadImage('ui/reticle.png').then((img) => (this.reticle = img));
@@ -494,6 +498,9 @@ export class MatchScreen implements Screen {
   private alphaBadge: HTMLImageElement | null = null;
   /** Darkrai's portal: three 36x50 frames (closed slit, half open, open). */
   private portalSheet: HTMLImageElement | null = null;
+  /** Hoopa's portal: eight 64x64 frames of a blue ring standing upright (assets/fx/hoopa_portal.png), and its storm (purple) copy. */
+  private hoopaPortal: HTMLImageElement | null = null;
+  private hoopaPortalDark: CanvasImageSource | null = null;
   /** The Shadow Crystal's art. */
   private crystalImg: HTMLImageElement | null = null;
   /** The Pokémon-mode aim reticle (and its red version over an enemy). */
@@ -1891,42 +1898,35 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
-  /** Hoopa's ring: a gold hoop standing on the ground, opening, swirling dark inside, then closing. In the storm it is black and red. */
+  /**
+   * Hoopa's portal standing upright: it tears open sideways (0.5 s), swirls while the legendary
+   * comes through, then pinches shut. In the storm it is the purple copy.
+   */
   private drawPortal(v: View, po: { x: number; y: number; t: number; shadow?: boolean }): void {
-    const dark = !!po.shadow;
-    const ctx = v.ctx;
-    const open = Math.min(1, po.t / 0.6) * Math.min(1, Math.max(0, (4 - po.t) / 0.6));
+    const img = po.shadow ? this.hoopaPortalDark : this.hoopaPortal;
+    if (!img) return;
+    const opening = Math.min(1, po.t / 0.5);
+    const closing = Math.min(1, Math.max(0, (4 - po.t) / 0.5));
+    const open = Math.min(opening, closing);
     if (open <= 0) return;
-    const x = v.toScreenX(po.x);
-    const y = v.toScreenY(po.y) - 1.3 * v.pxPerTile * open;
-    const rx = 1.1 * v.pxPerTile * open;
-    const ry = 1.3 * v.pxPerTile * open;
+    const fw = 64;
+    const frame = Math.floor(po.t * 12) % 8;
+    const k = v.spriteScale * 1.5;
+    // Wide open with a small overshoot as it tears open; full height from the start.
+    const sx = open * (opening < 1 ? 1 + 0.15 * Math.sin(opening * Math.PI) : 1);
+    const sy = 0.6 + 0.4 * open;
+    const w = fw * k * sx;
+    const h = fw * k * sy;
+    const cx = v.toScreenX(po.x);
+    // The ring's bottom (row 56 of 64) a little above the ground.
+    const bottom = v.toScreenY(po.y) - 0.15 * v.pxPerTile;
+    const ctx = v.ctx;
     ctx.save();
-    const g = ctx.createRadialGradient(x, y, 0, x, y, ry);
-    g.addColorStop(0, dark ? 'rgba(255,90,90,0.9)' : 'rgba(255,240,200,0.95)');
-    g.addColorStop(0.35, dark ? 'rgba(70,10,60,0.92)' : 'rgba(160,90,230,0.85)');
-    g.addColorStop(1, dark ? 'rgba(8,2,14,0.95)' : 'rgba(40,10,70,0.9)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Swirl
-    ctx.strokeStyle = dark ? 'rgba(190,60,255,0.65)' : 'rgba(255,230,160,0.6)';
-    ctx.lineWidth = 2 * v.baseScale;
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.ellipse(x, y, rx * (0.3 + i * 0.22), ry * (0.3 + i * 0.22), po.t * (2 + i), 0.3, 4.2);
-      ctx.stroke();
-    }
-    // The hoop itself
-    ctx.strokeStyle = dark ? '#2a0f3a' : '#ffcf4a';
-    ctx.lineWidth = 6 * v.baseScale;
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = dark ? '#c03a2b' : '#9a6a10';
-    ctx.lineWidth = 2 * v.baseScale;
-    ctx.stroke();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = Math.min(1, open * 1.5);
+    ctx.shadowColor = po.shadow ? 'rgba(170,60,230,0.85)' : 'rgba(90,150,255,0.85)';
+    ctx.shadowBlur = 22 * v.baseScale;
+    ctx.drawImage(img, frame * fw, 0, fw, fw, Math.round(cx - w / 2), Math.round(bottom - (56 / 64) * h), w, h);
     ctx.restore();
   }
 
@@ -2323,4 +2323,25 @@ function drawReticle(ctx: CanvasRenderingContext2D, x: number, y: number, u: num
   ctx.fillStyle = `rgb(${rgb})`;
   draw(0);
   ctx.restore();
+}
+
+/** The storm's copy of Hoopa's portal: the blues turned to a dark purple. */
+function darkPortal(img: HTMLImageElement): CanvasImageSource {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const g = c.getContext('2d');
+  if (!g) return img;
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height);
+  const px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const b = px[i + 2] as number;
+    const gr = px[i + 1] as number;
+    px[i] = Math.round(b * 0.62 + gr * 0.2);
+    px[i + 1] = Math.round(gr * 0.15);
+    px[i + 2] = Math.round(b * 0.7);
+  }
+  g.putImageData(d, 0, 0);
+  return c;
 }

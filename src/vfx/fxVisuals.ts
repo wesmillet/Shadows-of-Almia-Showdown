@@ -251,7 +251,10 @@ export interface FxBeamOptions {
   to: { x: number; y: number };
   /** 'beam' tiles the strip along the length, 'stream' stretches one copy to it. */
   mode: 'beam' | 'stream';
+  /** Height of the source end above `from` (the user's mouth or hands), in tiles. */
   lift?: number;
+  /** Height of the far end above `to` (the middle of the body it hits); the same as `lift` when left out. */
+  toLift?: number;
   scale?: number;
   fps?: number;
   seconds?: number;
@@ -263,25 +266,39 @@ export interface FxBeamOptions {
 export class FxBeam implements MoveVisual {
   private t = 0;
   private life: number;
-  private ang: number;
-  private len: number;
+  private ang = 0;
+  private len = 0;
   private readonly facing: FxFacing;
   private readonly source: CanvasImageSource;
-  private readonly lift: number;
+  private lift: number;
+  private toLift: number;
   private readonly scale: number;
   private readonly fps: number;
-  y: number;
+  y = 0;
 
   constructor(private readonly sheet: FxSheet, private readonly o: FxBeamOptions) {
     this.life = o.seconds ?? Math.max(0.4, sheet.frames / (o.fps ?? 15));
-    this.ang = Math.atan2(o.to.y - o.from.y, o.to.x - o.from.x);
-    this.len = Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y);
     this.facing = o.facing ?? (defaultFacing(sheet) === 'none' ? 'right' : defaultFacing(sheet));
     this.source = o.tint ? tintedSheet(sheet, o.tint) : sheet.img;
     this.lift = o.lift ?? 0.45;
+    this.toLift = o.toLift ?? this.lift;
     this.scale = o.scale ?? 3;
     this.fps = o.fps ?? 15;
-    this.y = Math.max(o.from.y, o.to.y) + 0.02;
+    this.aim();
+  }
+
+  /**
+   * The beam runs from the source end (the user's mouth, lifted) to the far end (the middle of the
+   * body it hits), as seen on screen: from a tall Lugia it angles down onto a small target instead
+   * of passing over its head. It draws behind its user when fired away from the camera.
+   */
+  private aim(): void {
+    const { from, to } = this.o;
+    const dx = to.x - from.x;
+    const dy = to.y - this.toLift - (from.y - this.lift);
+    this.ang = Math.atan2(dy, dx);
+    this.len = Math.hypot(dx, dy);
+    this.y = to.y < from.y - 0.2 ? from.y - 0.05 : Math.max(from.y, to.y) + 0.02;
   }
 
   update(dt: number): boolean {
@@ -298,12 +315,12 @@ export class FxBeam implements MoveVisual {
    * A channelled beam's next pulse: the same beam swings to the new line and keeps going for
    * `seconds` more, so one beam follows the sweep instead of a new one stacking on every pulse.
    */
-  refresh(from: { x: number; y: number }, to: { x: number; y: number }, seconds: number): void {
+  refresh(from: { x: number; y: number }, to: { x: number; y: number }, seconds: number, lift?: number, toLift?: number): void {
     this.o.from = from;
     this.o.to = to;
-    this.ang = Math.atan2(to.y - from.y, to.x - from.x);
-    this.len = Math.hypot(to.x - from.x, to.y - from.y);
-    this.y = Math.max(from.y, to.y) + 0.02;
+    if (lift !== undefined) this.lift = lift;
+    if (toLift !== undefined) this.toLift = toLift;
+    this.aim();
     // Hold it at full strength: the fade starts at 70% of its life.
     this.life = Math.max(this.life, this.t + seconds);
   }
@@ -357,7 +374,7 @@ export class FxBeam implements MoveVisual {
       const p = i / n;
       const x = this.o.from.x + (this.o.to.x - this.o.from.x) * p;
       const y = this.o.from.y + (this.o.to.y - this.o.from.y) * p;
-      glow(view.lightCtx, view.toScreenX(x), view.toScreenY(y) - this.lift * view.pxPerTile, r, this.sheet.color, 0.25 * k);
+      glow(view.lightCtx, view.toScreenX(x), view.toScreenY(y) - (this.lift + (this.toLift - this.lift) * p) * view.pxPerTile, r, this.sheet.color, 0.25 * k);
     }
   }
 }

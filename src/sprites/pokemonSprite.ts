@@ -104,17 +104,26 @@ export class SpriteRegistry {
   }
 }
 import { parseAnimData, type AnimData, type AnimDef, TICK_SECONDS } from './animData';
-import { decodeOffsets, effectAnchor, type OffsetTable } from './offsets';
+import { bodyPoint, decodeOffsets, effectAnchor, type OffsetTable } from './offsets';
 
 /** Actions loaded up front; anything else in AnimData.xml loads on first use. */
 export const CORE_ACTIONS = ['Idle', 'Walk', 'Attack', 'Hurt', 'Sleep', 'Charge', 'Shoot', 'Faint'] as const;
 
 /** When an action's sheet is absent, the next one in its chain plays instead (with one warning). */
+/** Actions that play once and hold their last frame (an attack, a hit, a faint); everything else loops. */
+const ONE_SHOT = new Set(['Attack', 'Shoot', 'Charge', 'Strike', 'Swing', 'Double', 'Rotate', 'Hop', 'Hurt', 'Faint']);
+
 const FALLBACKS: Record<string, string[]> = {
   Sleep: ['Idle'],
   Charge: ['Shoot', 'Attack', 'Idle'],
   Shoot: ['Attack', 'Idle'],
   Attack: ['Shoot', 'Idle'],
+  // The swings, strikes and spins most sprites have; any that lack one lunge with Attack.
+  Strike: ['Attack', 'Idle'],
+  Swing: ['Attack', 'Idle'],
+  Double: ['Attack', 'Idle'],
+  Rotate: ['Attack', 'Idle'],
+  Hop: ['Attack', 'Idle'],
   Hurt: ['Idle'],
   Faint: ['Hurt', 'Idle'],
   Walk: ['Idle'],
@@ -356,6 +365,14 @@ export class PokemonSprites {
     return [ax + 0.5 - def.frameWidth / 2, ay + 0.5 - def.frameHeight / 2];
   }
 
+  /** A marked body point (head or hands) for a frame, as an offset from the frame centre in sheet pixels; null when unmarked. */
+  point(action: string, dir: Dir8, index: number, kind: 'head' | 'hands'): [number, number] | null {
+    const def = this.def(action);
+    if (!def) return null;
+    const pt = bodyPoint(this.sheets.get(def.sheet)?.offsets, dir, index, kind);
+    return pt ? [pt[0] + 0.5 - def.frameWidth / 2, pt[1] + 0.5 - def.frameHeight / 2] : null;
+  }
+
   /** The HUD portrait: the SpriteCollab portrait, else the first Idle frame facing down. */
   portraitSource(): FrameRect {
     if (this.portrait) return { image: this.portrait, sx: 0, sy: 0, w: this.portrait.width, h: this.portrait.height, placeholder: false };
@@ -424,7 +441,7 @@ export class AnimPlayer {
 
   play(action: string, opts: { loop?: boolean; restart?: boolean } = {}): void {
     const resolved = this.sprites.resolve(action);
-    const loop = opts.loop ?? !['Attack', 'Shoot', 'Charge', 'Hurt', 'Faint'].includes(resolved);
+    const loop = opts.loop ?? !ONE_SHOT.has(resolved);
     if (resolved === this.action && !opts.restart && (loop === this.loop)) return;
     void this.sprites.ensureSheet(resolved);
     this.action = resolved;
@@ -479,5 +496,10 @@ export class AnimPlayer {
 
   anchor(): [number, number] {
     return this.sprites.anchor(this.action, this.dir, this.frame);
+  }
+
+  /** The current frame's head or hands (offset from the frame centre, sheet pixels), if the sheet marks it. */
+  point(kind: 'head' | 'hands'): [number, number] | null {
+    return this.sprites.point(this.action, this.dir, this.frame, kind);
   }
 }

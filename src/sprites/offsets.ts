@@ -59,3 +59,12 @@ export function effectAnchor(table: OffsetTable | undefined, dir: Dir8, frame: n
   if (fp?.rightHand) return fp.rightHand;
   return [frameWidth / 2, frameHeight / 2];
 }
+
+/** A body point for a frame (in sheet pixels from the frame's top-left): the head, or the hands' midpoint (else either hand). */
+export function bodyPoint(table: OffsetTable | undefined, dir: Dir8, frame: number, kind: 'head' | 'hands'): [number, number] | null {
+  const fp = table?.[dir]?.[frame];
+  if (!fp) return null;
+  if (kind === 'head') return fp.head ?? null;
+  if (fp.leftHand && fp.rightHand) return [(fp.leftHand[0] + fp.rightHand[0]) / 2, (fp.leftHand[1] + fp.rightHand[1]) / 2];
+  return fp.leftHand ?? fp.rightHand ?? null;
+}

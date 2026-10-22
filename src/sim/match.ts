@@ -11,7 +11,7 @@ import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, type AiWorld } from './ai';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, hitPad, move, movesAt, movesLearnedBetween, moveSpeed, species, statsAtLevel } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead } from './entities';
@@ -20,7 +20,7 @@ import { canStand, moveAround, tryMove } from './movement';
 import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
-import { areaContains, makeArea } from './battle';
+import { areaContains, makeArea, moveReach } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
@@ -466,7 +466,10 @@ export class Match {
     const contents: InventorySlot[] = [];
     const r = this.rng.next();
     const rareTms = TM_LIST.filter((t) => t.rare);
-    if (r < 0.4 && rareTms.length) contents.push({ id: this.rng.pick(rareTms).id, count: 1 });
+    // Usually one its winner's team can use.
+    const usable = rareTms.filter((t) => !!t.move && (by?.party ?? []).some((m) => canLearnTm(m.species, t.move as string)));
+    const tmPool = usable.length && this.rng.chance(0.65) ? usable : rareTms;
+    if (r < 0.4 && tmPool.length) contents.push({ id: this.rng.pick(tmPool).id, count: 1 });
     else if (r < 0.75) contents.push({ id: 'rare-candy', count: 2 });
     else contents.push(rollLoot(this.rng, 'rare'));
     const voucher = this.rng.chance(0.12);
@@ -568,7 +571,7 @@ export class Match {
     const m = lead(t);
     if (!entry || !def || def.kind !== 'tm' || !def.move) return '';
     if (!m) return 'No Pokémon to teach';
-    if (!m.types.includes(def.tmType ?? '')) return `${m.name} cannot learn ${move(def.move).name} (${def.tmType} type)`;
+    if (!canLearnTm(m.species, def.move)) return tmRefusal(m, def.move);
     if (m.moves.includes(def.move)) return `${m.name} already knows ${move(def.move).name}`;
     if (m.moves.length < MOVE_SLOTS) {
       m.moves.push(def.move);
@@ -607,19 +610,16 @@ export class Match {
         }
         continue;
       }
-      // Never drops a signature move.
-      let weakest = -1;
-      m.moves.forEach((mid, i) => {
-        if (move(mid).signature) return;
-        if (weakest < 0 || move(mid).power < move(m.moves[weakest] as string).power) weakest = i;
-      });
-      if (weakest < 0) continue;
-      const old = m.moves[weakest] as string;
-      if (move(id).power > move(old).power) {
-        m.moves[weakest] = id;
-        m.cooldowns[weakest] = 0;
-        if (m.owner?.isPlayer) this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: move(old).name });
-      }
+      // Everyone else's keep the best pair (data.ts pickMoves: its best attack for how it fights, and
+      // the best of another type), never dropping a signature move.
+      const keep = pickMoves(m.species, [...m.moves, id]);
+      if (!keep.includes(id)) continue;
+      const old = m.moves.find((mid) => !keep.includes(mid));
+      const slot = old ? m.moves.indexOf(old) : -1;
+      if (slot < 0) continue;
+      m.moves[slot] = id;
+      m.cooldowns[slot] = 0;
+      if (m.owner?.isPlayer) this.battle.events.push({ type: 'learned', mon: m, moveId: id, forgot: move(old as string).name });
     }
     // One line for the lot; the card on the right asks about each in turn.
     if (asked.length) this.battle.events.push({ type: 'notice', text: asked.length === 1 ? `${m.name} wants to learn ${asked[0]}` : `${m.name} wants to learn ${asked.length} new moves`, seconds: 2.6 });
@@ -2184,6 +2184,7 @@ export class Match {
       return;
     }
     this.time += dt;
+    this.lastDt = dt;
     this.ground.update(dt);
     this.nav.tick(dt);
     for (const m of this.renderMons()) {
@@ -2424,12 +2425,20 @@ export class Match {
     if (this.darkrai && !this.darkrai.fainted) push(this.darkrai.x, this.darkrai.y);
   }
 
-  /** Walk-cycle phase for the overworld sheet. */
-  afterTrainerMove(t: Trainer, moved: number): void {
-    t.moving = moved > 1e-4;
+  /**
+   * Walk-cycle phase for the overworld sheet. A trainer walks only while actually getting somewhere:
+   * the distance covered this step (after being pushed back off Pokémon and other trainers), not
+   * what it tried to walk, so one pressing into a crowd or a corner stands instead of running on the spot.
+   */
+  afterTrainerMove(t: Trainer, moved: number, from: { x: number; y: number } = { x: t.px, y: t.py }, dt = this.lastDt || 1 / 60): void {
+    const net = Math.hypot(t.x - from.x, t.y - from.y);
+    t.moving = moved > 1e-4 && net / dt > 0.9;
     // One walk cycle per 2.2 tiles: the side run has two strides in it, so feet land about five times a second at full speed.
-    if (t.moving) t.walkPhase = (t.walkPhase + moved / 2.2) % 1;
+    if (t.moving) t.walkPhase = (t.walkPhase + net / 2.2) % 1;
   }
+
+  /** The length of the step being simulated (seconds). */
+  private lastDt = 1 / 60;
 
   /** The world a party sees when it steers and fights. */
   private partyWorld(): PartyWorld {
@@ -3139,34 +3148,15 @@ export class Match {
       }
       return;
     }
-    const dx = foe.x - m.x;
-    const dy = foe.y - m.y;
-    const d = Math.hypot(dx, dy) || 1;
     m.target = foe;
-    // Mid range, strafing; switches side every couple of seconds; enraged, it rushes in now and then.
+    // Like a rival's Pokémon (holdRange), but readier to move: it side-steps more often each phase,
+    // and enraged it rushes in now and then.
     const rush = phase === 2 && Math.sin(this.time * 0.9 + m.id) > 0.75;
-    let vx = 0;
-    let vy = 0;
-    if (rush ? d > 1.8 : d > 4.6) {
-      vx = dx / d;
-      vy = dy / d;
-    } else if (d < 2.4 && !rush) {
-      vx = -dx / d;
-      vy = -dy / d;
-    } else {
-      const side = Math.sin(this.time * 1.3 + m.id) > 0 ? 1 : -1;
-      vx = (-dy / d) * side * 0.8;
-      vy = (dx / d) * side * 0.8;
-    }
+    const plan = this.planMove(m, foe);
+    const reach = plan >= 0 ? moveReach(move(m.moves[plan] as string)) : 4;
     const speed = CONFIG.duel.monSpeed * (rush ? 1.25 : 0.9) * moveSpeed(m);
-    const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.3, dt) : 0;
-    const walking = moved > 1e-4;
-    if (walking !== m.moving) {
-      m.moving = walking;
-      m.anim.play(walking ? 'Walk' : 'Idle');
-    }
-    m.dir = dirFromVector(dx, dy, m.dir);
-    if (m.busy <= 0) {
+    const inReach = this.holdRange(m, foe, reach, dt, { speed, stepEvery: ([1.8, 1.4, 1.0] as const)[phase] as number, rush });
+    if (m.busy <= 0 && inReach) {
       const [lo, hi] = ([[1.1, 1.6], [0.8, 1.3], [0.5, 1.0]] as const)[phase] as readonly [number, number];
       m.busy = this.rng.range(lo, hi);
       const slot = this.battle.chooseMove(m, foe);
@@ -3328,7 +3318,12 @@ export class Match {
     }
   }
 
-  /** A rival's Pokémon keeps to mid range, circles, and attacks on its own timer. */
+  /**
+   * A rival's Pokémon in a trainer battle. It settles on its next move (the best one ready, or the
+   * one coming off cooldown soonest), gets within that move's reach and no closer than it needs,
+   * then holds its ground facing its foe with a side-step now and then (holdRange). It strikes when
+   * the move is ready and the foe in reach, and dashes out of a telegraph it is standing in.
+   */
   private stepDuelAiMon(m: Mon, foe: Mon | null, dt: number): void {
     if (m.casting || incapable(m)) return;
     // Standing in the player's telegraph: sometimes dash out of it sideways.
@@ -3341,42 +3336,82 @@ export class Match {
       m.dodgeCd = 1;
     }
     if (!foe || foe.fainted || m.visual.scale < 1) {
-      if (m.moving) {
-        m.moving = false;
-        m.anim.play('Idle');
-      }
+      this.setMonWalking(m, false);
       return;
     }
+    m.target = foe;
+    const slot = this.planMove(m, foe);
+    const reach = slot >= 0 ? moveReach(move(m.moves[slot] as string)) : 3.5;
+    const inReach = this.holdRange(m, foe, reach, dt, { speed: CONFIG.duel.monSpeed * 0.8 * moveSpeed(m), stepEvery: 2.6 });
+    if (slot >= 0 && inReach && m.busy <= 0 && (m.cooldowns[slot] ?? 0) <= 0) {
+      // A beat of reaction time before the next one.
+      m.busy = this.rng.range(0.45, 1.0);
+      this.battle.castAt(m, slot, this.mons(), 6);
+    }
+  }
+
+  /** The move a battling AI Pokémon is working towards: the best one ready, else the one ready soonest. */
+  private planMove(m: Mon, foe: Mon): number {
+    const ready = this.battle.chooseMove(m, foe);
+    if (ready >= 0) return ready;
+    let best = -1;
+    m.moves.forEach((id, i) => {
+      if (move(id).category === 'status' && !move(id).stages) return;
+      if (best < 0 || (m.cooldowns[i] ?? 0) < (m.cooldowns[best] ?? 0)) best = i;
+    });
+    return best;
+  }
+
+  /**
+   * Keeps a battling Pokémon at a distance it can strike from with a move of `reach` tiles: it
+   * closes in when out of reach, backs off when crowding its foe, and otherwise stands its ground
+   * facing it, taking a short side-step every `stepEvery` seconds or so (so it isn't a statue, and
+   * never runs rings round the foe). Returns whether the foe is in reach.
+   */
+  private holdRange(m: Mon, foe: Mon, reach: number, dt: number, o: { speed: number; stepEvery: number; rush?: boolean }): boolean {
     const dx = foe.x - m.x;
     const dy = foe.y - m.y;
     const d = Math.hypot(dx, dy) || 1;
-    m.target = foe;
-    // Approach to about three tiles, back off when crowded, otherwise circle slowly.
+    const bodies = bodyRadius(m.species) + bodyRadius(foe.species);
+    const far = Math.max(bodies + 0.6, reach * 0.85);
+    // Ring moves and lunges want to be close; anything aimed is happier with a little room.
+    const near = Math.min(far - 0.5, Math.max(bodies + 0.4, reach * 0.45));
     let vx = 0;
     let vy = 0;
-    if (d > 3.4) {
+    let pace = 1;
+    if (d > (o.rush ? bodies + 0.8 : far)) {
       vx = dx / d;
       vy = dy / d;
-    } else if (d < 1.6) {
+      m.sidestep = null;
+    } else if (d < near && !o.rush) {
       vx = -dx / d;
       vy = -dy / d;
+      pace = 0.7;
+      m.sidestep = null;
+    } else if (m.sidestep && m.sidestep.t > 0) {
+      m.sidestep.t -= dt;
+      vx = (-dy / d) * m.sidestep.side;
+      vy = (dx / d) * m.sidestep.side;
+      pace = 0.6;
     } else {
-      const side = Math.sin(this.time * 0.7 + m.id) > 0 ? 1 : -1;
-      vx = (-dy / d) * side * 0.45;
-      vy = (dx / d) * side * 0.45;
+      m.sidestep = null;
+      m.sidestepIn = (m.sidestepIn ?? this.rng.range(0.5, o.stepEvery)) - dt;
+      if (m.sidestepIn <= 0) {
+        m.sidestep = { t: this.rng.range(0.3, 0.6), side: this.rng.chance(0.5) ? 1 : -1 };
+        m.sidestepIn = this.rng.range(o.stepEvery * 0.6, o.stepEvery * 1.4);
+      }
     }
-    const speed = CONFIG.duel.monSpeed * 0.8 * moveSpeed(m);
-    const moved = vx || vy ? moveAround(this.ground, m, vx * speed * dt, vy * speed * dt, 0.22, dt) : 0;
-    const walking = moved > 1e-4;
+    const moved = vx || vy ? moveAround(this.ground, m, vx * o.speed * pace * dt, vy * o.speed * pace * dt, 0.22, dt) : 0;
+    this.setMonWalking(m, moved > 1e-4);
+    m.dir = dirFromVector(dx, dy, m.dir);
+    return d <= reach;
+  }
+
+  /** Walk or Idle for a battling Pokémon, without restarting the animation every frame. */
+  private setMonWalking(m: Mon, walking: boolean): void {
     if (walking !== m.moving) {
       m.moving = walking;
       m.anim.play(walking ? 'Walk' : 'Idle');
-    }
-    m.dir = dirFromVector(dx, dy, m.dir);
-    if (m.busy <= 0) {
-      m.busy = this.rng.range(0.9, 1.8);
-      const slot = this.battle.chooseMove(m, foe);
-      if (slot >= 0) this.battle.castAt(m, slot, this.mons(), 6);
     }
   }
 

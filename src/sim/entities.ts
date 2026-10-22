@@ -82,6 +82,11 @@ export interface Mon {
   /** A target it couldn't reach, left alone for `chaseBlockT` seconds. */
   chaseBlockId?: number;
   chaseBlockT?: number;
+  /** A battling AI Pokémon's side-step in progress (seconds left, which way), and seconds to the next one. */
+  sidestep?: { t: number; side: number } | null;
+  sidestepIn?: number;
+  /** Steps in a row it has tried to walk without getting anywhere (it stands after a few: party.ts setWalking). */
+  stillSteps?: number;
   /** Stepping round an obstacle (movement.ts moveAround). */
   detourSide?: number;
   detourT?: number;

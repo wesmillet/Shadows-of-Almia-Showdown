@@ -38,6 +38,11 @@ export interface SpeciesDef {
   evolves?: Array<{ to: string; level: number; item?: string }>;
   /** Level-up moves, [level, move id] in level order (scripts/learnsets.py). Without one, `moves` is the fixed kit. */
   learnset?: Array<[number, string]>;
+  /**
+   * How it fights (scripts/learnsets.py): physical, special or mixed. Its level-up attacks, its kit
+   * and the TMs it can use follow this; left out, it is read from Attack against Sp. Atk.
+   */
+  role?: 'physical' | 'special' | 'mixed';
   /** Mega forms: the base form's dex and the Mega Stone it holds (scripts/megas.py, src/sim/mega.ts). */
   megaOf?: string;
   stone?: string;
@@ -47,9 +52,33 @@ export interface SpeciesDef {
 /** How many moves a Pokémon knows at once. */
 export const MOVE_SLOTS = 2;
 
+/** How a species fights: its `role`, else physical or special by a 10% lead of one attack stat, else mixed. */
+export function roleOf(sp: Pick<SpeciesDef, 'role' | 'stats'>): 'physical' | 'special' | 'mixed' {
+  if (sp.role) return sp.role;
+  const { atk, spa } = sp.stats;
+  return atk >= spa * 1.1 ? 'physical' : spa >= atk * 1.1 ? 'special' : 'mixed';
+}
+
 /**
- * The moves a species knows at a level: the newest two it has reached, preferring moves that
- * deal damage (a status move only fills a slot no attack can).
+ * What an attack is worth to a species: its power, half again with the same type (STAB), and
+ * cut when it uses the attack stat the species doesn't fight with. Status moves are worth 0 here.
+ */
+export function moveValue(sp: Pick<SpeciesDef, 'role' | 'stats' | 'types'>, id: string): number {
+  const m = MOVES.get(id);
+  if (!m || m.category === 'status' || m.power <= 0) return 0;
+  const role = roleOf(sp);
+  const fits = role === 'mixed' || role === m.category;
+  // The stat it would use, against the better one (a mixed Pokémon loses little either way).
+  const stat = m.category === 'physical' ? sp.stats.atk : sp.stats.spa;
+  const best = Math.max(sp.stats.atk, sp.stats.spa, 1);
+  const statK = fits ? Math.max(0.85, stat / best) : Math.min(0.7, stat / best);
+  return m.power * (sp.types.includes(m.type) ? CONFIG.battle.stab : 1) * statK;
+}
+
+/**
+ * The moves a species knows at a level: a signature move always (Aeroblast, Sacred Fire...), then
+ * its best attack (moveValue), then its best attack of another type, so it carries coverage; a
+ * status move only fills a slot no attack can.
  */
 export function movesAt(sp: SpeciesDef, level: number): string[] {
   const known: string[] = [];
@@ -60,11 +89,51 @@ export function movesAt(sp: SpeciesDef, level: number): string[] {
       if (!known.includes(id) && MOVES.has(id)) known.push(id);
     }
   }
-  // A signature move (Aeroblast, Sacred Fire...) is always kept; the newest attacks fill the rest.
-  const sig = known.filter((id) => MOVES.get(id)?.signature).slice(0, MOVE_SLOTS);
-  const pick = [...sig, ...known.filter((id) => !sig.includes(id) && (MOVES.get(id)?.power ?? 0) > 0).slice(-(MOVE_SLOTS - sig.length) || known.length)].slice(0, MOVE_SLOTS);
+  return pickMoves(sp, known);
+}
+
+/** The MOVE_SLOTS moves to carry out of `known` (see movesAt). Ties go to the move learned later. */
+export function pickMoves(sp: SpeciesDef, known: string[]): string[] {
+  const pick = known.filter((id) => MOVES.get(id)?.signature).slice(0, MOVE_SLOTS);
+  const attacks = known
+    .map((id, i) => ({ id, i, v: moveValue(sp, id) }))
+    .filter((a) => a.v > 0 && !pick.includes(a.id))
+    .sort((a, b) => b.v - a.v || b.i - a.i);
+  const top = attacks[0];
+  if (top && pick.length < MOVE_SLOTS) pick.push(top.id);
+  const types = new Set(pick.map((id) => MOVES.get(id)?.type));
+  const other = attacks.find((a) => !types.has(MOVES.get(a.id)?.type)) ?? attacks.find((a) => !pick.includes(a.id));
+  if (other && pick.length < MOVE_SLOTS) pick.push(other.id);
   for (let i = known.length - 1; i >= 0 && pick.length < MOVE_SLOTS; i--) if (!pick.includes(known[i] as string)) pick.push(known[i] as string);
   return known.filter((id) => pick.includes(id));
+}
+
+/**
+ * Can a TM's move be taught to this species? An attack when it is of the kind the species fights
+ * with (physical for a physical attacker, special for a special one, either for a mixed one), of
+ * any type: a TM is how a Pokémon gets coverage, and a Flamethrower TM is no use to an Infernape
+ * that punches. Set-up moves go the same way: Swords Dance, Bulk Up, Agility and Dragon Dance to
+ * physical fighters, Nasty Plot and Calm Mind to special ones; other status moves to anyone.
+ */
+export function canLearnTm(sp: Pick<SpeciesDef, 'role' | 'stats' | 'types'>, id: string): boolean {
+  const m = MOVES.get(id);
+  if (!m) return false;
+  const role = roleOf(sp);
+  if (m.category === 'status') {
+    if (id === 'nasty-plot' || id === 'calm-mind') return role !== 'physical';
+    if (id === 'swords-dance' || id === 'bulk-up' || id === 'agility' || id === 'dragon-dance') return role !== 'special';
+    return true;
+  }
+  return role === 'mixed' || role === m.category;
+}
+
+/** Why a Pokémon can't use a TM, in words for the player. */
+export function tmRefusal(m: { name: string; species: SpeciesDef }, id: string): string {
+  const mv = MOVES.get(id);
+  if (!mv) return '';
+  const role = roleOf(m.species);
+  const how = role === 'physical' ? 'it fights with physical attacks' : 'it fights with special attacks';
+  return `${m.name} cannot learn ${mv.name}: ${how}${mv.category === 'status' ? '' : ` and ${mv.name} is a ${mv.category} move`}`;
 }
 
 /** Moves this species learns on reaching a level above `from` and up to `to`. */
@@ -95,6 +164,12 @@ export interface FxPart {
    * (never rotated, e.g. upright flames). Left out, it is guessed from the frame shape.
    */
   facing?: 'right' | 'up' | 'down' | 'none';
+  /**
+   * Where a beam or projectile leaves the user: 'mouth' (the default: breath, beams, spit), 'hands'
+   * (punches, Aura Sphere, thrown rocks) or 'body' (dashes and slashes that are the user itself).
+   * Read from the sprite's Offsets sheet for the frame being shown.
+   */
+  origin?: 'mouth' | 'hands' | 'body';
   /** Height above the ground point in tiles (0 for rings and puddles on the ground). */
   lift?: number;
   /** Beams and streams: how long the strip stays up, looping its frames (a crackling bolt). */
@@ -134,7 +209,8 @@ export interface MoveDef {
   cooldown: number;
   cast?: number;
   vfx: VfxFamily;
-  anim: 'Attack' | 'Shoot' | 'Charge';
+  /** The body animation: SpriteCollab action names (Strike, Swing... fall back to Attack where a sprite lacks them). */
+  anim: 'Attack' | 'Shoot' | 'Charge' | 'Strike' | 'Swing' | 'Double' | 'Rotate' | 'Hop';
   size?: number;
   status?: { kind: StatusKind; chance: number };
   stages?: { self?: { atk?: number; def?: number; spe?: number }; target?: { atk?: number; def?: number; spe?: number }; chance: number };
@@ -149,6 +225,8 @@ export interface MoveDef {
   shake?: number;
   /** Override for isContact: false for a physical move that strikes from range (Stone Edge's spikes). */
   contact?: boolean;
+  /** The user takes this share of the damage it dealt (Double-Edge, Flare Blitz), once per use. */
+  recoil?: number;
 }
 
 /**

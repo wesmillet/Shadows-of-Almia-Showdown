@@ -89,7 +89,7 @@
       "moves": ["flamethrower", "ice-beam", "thunderbolt", "dragon-pulse", "hydro-pump", "solar-beam", "flash-cannon", "aeroblast", "psybeam", "aurora-beam", "signal-beam", "dark-pulse"],
       "seconds": 2,
       "tick": 0.25,
-      "powerMult": 1.6,
+      "powerMult": 1.3,
       "turnDegPerSec": 140
     },
     "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at lungeSpeed tiles a second (times its Speed multiplier), at most lungeMaxSeconds, and strikes on arrival. A contact hit shoves the target knockTiles (times power / 80, within knockScale) unless it is a boss, a legend, an Alpha or much bigger than the attacker.",

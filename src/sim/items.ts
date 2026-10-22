@@ -4,7 +4,7 @@ import tmsJson from '../../data/items/tms.json';
 import lootJson from '../../data/items/loot.json';
 import type { Rng } from '../core/rng';
 import type { InventorySlot } from './entities';
-import { MOVES } from './data';
+import { MOVES, SPECIES, canLearnTm } from './data';
 
 export type HeldEffect = 'regen' | 'sash' | 'choice-band' | 'life-orb' | 'type-boost' | 'exp-share' | 'lucky-egg' | 'mega';
 
@@ -97,7 +97,13 @@ export function rollLoot(rng: Rng, tier: LootTier, party: string[] = []): Invent
   }
   if (entry.id === 'tm' || entry.id === 'rare-tm') {
     const pool = TM_LIST.filter((t) => !!t.rare === (entry.id === 'rare-tm'));
-    return { id: rng.pick(pool.length ? pool : TM_LIST).id, count: 1 };
+    // Usually one the finder's team can use (like Mega Stones): a TM nobody in the party can learn is dead weight.
+    const usable = pool.filter((t) => party.some((dex) => {
+      const sp = SPECIES.get(dex);
+      return !!sp && !!t.move && canLearnTm(sp, t.move);
+    }));
+    const from = usable.length && rng.chance(0.65) ? usable : pool.length ? pool : TM_LIST;
+    return { id: rng.pick(from).id, count: 1 };
   }
   return { id: entry.id, count: entry.count ?? 1 };
 }

@@ -1,21 +1,6 @@
 {
-  "_comment": "TMs teach `move` (moves.json id) to the lead when one of its types matches the move's type. Icon = assets/items/tm-<type>.png. rare TMs only come from Ultra Ball loot.",
+  "_comment": "TMs teach `move` (moves.json id) to the lead when it is an attack of the kind the Pokemon fights with (physical for a physical attacker, special for a special one, either for a mixed one), whatever its type: sim/data.ts canLearnTm. Set-up moves go the same way (Swords Dance, Bulk Up, Agility, Dragon Dance to physical fighters; Nasty Plot, Calm Mind to special ones). Icon = assets/items/tm-<type>.png. Rare TMs (the strongest attacks and the set-up moves) only come from Ultra Ball loot and Alpha prizes.",
   "tms": [
-    {
-      "id": "tm-flamethrower",
-      "move": "flamethrower",
-      "rare": true
-    },
-    {
-      "id": "tm-surf",
-      "move": "surf",
-      "rare": true
-    },
-    {
-      "id": "tm-thunderbolt",
-      "move": "thunderbolt",
-      "rare": true
-    },
     {
       "id": "tm-energy-ball",
       "move": "energy-ball",
@@ -32,28 +17,18 @@
       "rare": false
     },
     {
-      "id": "tm-earthquake",
-      "move": "earthquake",
-      "rare": true
-    },
-    {
-      "id": "tm-aerial-ace",
-      "move": "aerial-ace",
-      "rare": false
-    },
-    {
       "id": "tm-poison-jab",
       "move": "poison-jab",
       "rare": false
     },
     {
-      "id": "tm-sludge-bomb",
-      "move": "sludge-bomb",
-      "rare": true
-    },
-    {
       "id": "tm-rock-slide",
       "move": "rock-slide",
+      "rare": false
+    },
+    {
+      "id": "tm-dragon-claw",
+      "move": "dragon-claw",
       "rare": false
     },
     {
@@ -62,29 +37,14 @@
       "rare": false
     },
     {
-      "id": "tm-stone-edge",
-      "move": "stone-edge",
-      "rare": true
-    },
-    {
-      "id": "tm-wild-charge",
-      "move": "wild-charge",
-      "rare": true
-    },
-    {
       "id": "tm-x-scissor",
       "move": "x-scissor",
       "rare": false
     },
     {
-      "id": "tm-return",
-      "move": "return",
-      "rare": true
-    },
-    {
-      "id": "tm-heat-wave",
-      "move": "heat-wave",
-      "rare": true
+      "id": "tm-fire-punch",
+      "move": "fire-punch",
+      "rare": false
     },
     {
       "id": "tm-thunder-punch",
@@ -102,8 +62,33 @@
       "rare": false
     },
     {
-      "id": "tm-steel-wing",
-      "move": "steel-wing",
+      "id": "tm-iron-head",
+      "move": "iron-head",
+      "rare": false
+    },
+    {
+      "id": "tm-shadow-ball",
+      "move": "shadow-ball",
+      "rare": false
+    },
+    {
+      "id": "tm-shadow-claw",
+      "move": "shadow-claw",
+      "rare": false
+    },
+    {
+      "id": "tm-zen-headbutt",
+      "move": "zen-headbutt",
+      "rare": false
+    },
+    {
+      "id": "tm-play-rough",
+      "move": "play-rough",
+      "rare": false
+    },
+    {
+      "id": "tm-waterfall",
+      "move": "waterfall",
       "rare": false
     },
     {
@@ -112,9 +97,89 @@
       "rare": false
     },
     {
-      "id": "tm-smack-down",
-      "move": "smack-down",
+      "id": "tm-air-slash",
+      "move": "air-slash",
       "rare": false
+    },
+    {
+      "id": "tm-agility",
+      "move": "agility",
+      "rare": false
+    },
+    {
+      "id": "tm-bulk-up",
+      "move": "bulk-up",
+      "rare": false
+    },
+    {
+      "id": "tm-calm-mind",
+      "move": "calm-mind",
+      "rare": false
+    },
+    {
+      "id": "tm-flamethrower",
+      "move": "flamethrower",
+      "rare": true
+    },
+    {
+      "id": "tm-surf",
+      "move": "surf",
+      "rare": true
+    },
+    {
+      "id": "tm-thunderbolt",
+      "move": "thunderbolt",
+      "rare": true
+    },
+    {
+      "id": "tm-ice-beam",
+      "move": "ice-beam",
+      "rare": true
+    },
+    {
+      "id": "tm-psychic",
+      "move": "psychic",
+      "rare": true
+    },
+    {
+      "id": "tm-earthquake",
+      "move": "earthquake",
+      "rare": true
+    },
+    {
+      "id": "tm-sludge-bomb",
+      "move": "sludge-bomb",
+      "rare": true
+    },
+    {
+      "id": "tm-stone-edge",
+      "move": "stone-edge",
+      "rare": true
+    },
+    {
+      "id": "tm-wild-charge",
+      "move": "wild-charge",
+      "rare": true
+    },
+    {
+      "id": "tm-return",
+      "move": "return",
+      "rare": true
+    },
+    {
+      "id": "tm-heat-wave",
+      "move": "heat-wave",
+      "rare": true
+    },
+    {
+      "id": "tm-flash-cannon",
+      "move": "flash-cannon",
+      "rare": true
+    },
+    {
+      "id": "tm-close-combat",
+      "move": "close-combat",
+      "rare": true
     },
     {
       "id": "tm-swords-dance",
@@ -127,9 +192,9 @@
       "rare": true
     },
     {
-      "id": "tm-agility",
-      "move": "agility",
-      "rare": false
+      "id": "tm-dragon-dance",
+      "move": "dragon-dance",
+      "rare": true
     }
   ]
 }

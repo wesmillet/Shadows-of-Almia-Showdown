@@ -113,6 +113,11 @@ export class MatchScreen implements Screen {
    * there as commands, and extractions are saved by the server, not this browser.
    */
   online: { cmd: Connection['cmd'] } | null = null;
+  /**
+   * Watching (a spectator or a replay): the player's controls are off; `step` gets the keys instead
+   * (switch whom to follow, leave, the replay's controls) and `draw` adds its bar on top.
+   */
+  spectator: { step(input: Input, dt: number): void; draw(v: View): void } | null = null;
 
   constructor(
     protected readonly ctx: GameContext,
@@ -148,6 +153,15 @@ export class MatchScreen implements Screen {
     ctx.view.zoom = ctx.view.targetZoom = 1;
   }
 
+  /** The camera jumps to a spot (watching: a new trainer to follow). */
+  snapCamera(x: number, y: number): void {
+    this.ctx.view.snapTo(x, y);
+  }
+
+  get view(): View {
+    return this.ctx.view;
+  }
+
   say(s: string, seconds = 1.6): void {
     if (!s) return;
     // The same message again just refreshes its timer.
@@ -162,6 +176,16 @@ export class MatchScreen implements Screen {
   }
 
   step(dt: number, input: Input): void {
+    if (this.spectator) {
+      this.spectator.step(input, dt);
+      input.takeClicks();
+      this.match.step(dt, input);
+      this.stepChestLids(dt);
+      this.consumeEvents();
+      for (const n of this.notices) n.t -= dt;
+      this.notices = this.notices.filter((n) => n.t > 0);
+      return;
+    }
     if (this.match.outcome) {
       // Let the last hit land and the camera settle before the results.
       if (this.endTimer < 0) this.endTimer = 1.6;
@@ -1777,6 +1801,7 @@ export class MatchScreen implements Screen {
 
   protected hudState(v: View): HudState {
     return {
+      watching: !!this.spectator,
       mouseX: this.ctx.input.mouseX,
       mouseY: this.ctx.input.mouseY,
       darkRadius: this.match.darkness.radius,
@@ -1987,10 +2012,11 @@ export class MatchScreen implements Screen {
       this.drawInfoBars(v, alpha);
     } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
-    this.drawReticleTop(v);
+    if (!this.spectator) this.drawReticleTop(v);
     this.drawDuelHud(v);
     this.drawDowned(v);
     this.drawOverlay(v);
+    this.spectator?.draw(v);
     v.camX -= ox;
     v.camY -= oy;
   }

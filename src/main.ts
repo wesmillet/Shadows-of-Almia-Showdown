@@ -23,7 +23,9 @@ import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
 import { starterChoices, unlockedFromPc } from './sim/starters';
 import { loadPc } from './pc';
-import { LobbyScreen, OnlineEndScreen, OnlineScreen } from './ui/onlineScreens';
+import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
+import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
+import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
 import { ChatPanel } from './ui/overlay';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
@@ -129,6 +131,9 @@ async function boot(): Promise<void> {
     setScreen(s: Screen) {
       screen?.exit?.();
       screen = s;
+      // For tests and the console: whatever is up now.
+      const d = (window as unknown as { showdown?: Record<string, unknown> }).showdown;
+      if (d) d.screen = s;
       s.enter?.();
     },
   };
@@ -208,29 +213,98 @@ async function boot(): Promise<void> {
     });
   }
 
-  const showOnline = (): void => {
+  /** The online match this browser is playing, and the one it is watching (by id). */
+  let playingId: string | null = null;
+  let watchingId: string | null = null;
+  const toaster = net ? new Toaster(net) : null;
+  if (net) debug.showdown.net = net;
+
+  const showOnline = (message = ''): void => {
     if (!net) return;
-    game.setScreen(new OnlineScreen(game, net, findMatch, () => void showTitle(false)));
+    playingId = null;
+    watchingId = null;
+    // Still in a private lobby (after its match): back there.
+    if (net.privateLobby) return showPrivate();
+    game.setScreen(new OnlineScreen(game, net, hubActions, message));
+  };
+
+  const showPrivate = (): void => {
+    if (!net) return;
+    game.setScreen(new PrivateLobbyScreen(game, net, () => showOnline()));
   };
 
   /** The server rolls the starters (it must know what was offered); this browser spins the reels. */
-  const findMatch = (): void => {
+  const rollStarter = (onPicked: (index: number) => void): void => {
     if (!net) return;
     const off = net.on((m) => {
       if (m.t !== 'roll') return;
       off();
       const rollSeed = m.seed;
       const pool = m.pool ?? [];
-      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => {
-        net.send({ t: 'queue', pick: starterChoices(rollSeed, pool).indexOf(dex) });
-        game.setScreen(new LobbyScreen(game, net, showOnline, (start) => void startOnline(start)));
-      }, null, pool));
+      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => onPicked(starterChoices(rollSeed, pool).indexOf(dex)), null, pool));
     });
     net.send({ t: 'roll' });
   };
 
+  const hubActions: HubActions = {
+    find: (mode) => {
+      if (!net) return;
+      const party = net.social.party;
+      // A party's leader queues everyone (each of them is then asked to pick a starter).
+      if (party && party.members.length > 1) return net.send({ t: 'party', a: 'queue', mode: 'casual' });
+      rollStarter((pick) => {
+        net.send({ t: 'queue', pick, mode });
+        game.setScreen(new LobbyScreen(game, net, (why) => showOnline(why ?? '')));
+      });
+    },
+    back: () => void showTitle(false),
+    createPrivate: () => net?.send({ t: 'private', a: 'create' }),
+    joinPrivate: () => {
+      void joinCodeDialog().then((code) => {
+        if (code) net?.send({ t: 'private', a: 'join', code });
+      });
+    },
+    watchFeatured: () => net?.send({ t: 'spectate', featured: true }),
+    replays: () => {
+      if (net) void replaysDialog(net, (r) => void startReplay(r.id));
+    },
+    leaderboards: () => {
+      if (net) void leaderboardDialog(net, (name) => void profileDialog(net, name));
+    },
+    watchFriend: (name) => net?.send({ t: 'spectate', name }),
+    profile: (name) => {
+      if (net) void profileDialog(net, name);
+    },
+  };
+
+  // What the server can start from any screen: a party or private lobby's pick, a match, a lobby, watching.
+  net?.on((m) => {
+    if (m.t === 'pick') {
+      rollStarter((pick) => {
+        net.send({ t: 'queue', pick });
+        if (m.reason === 'party') game.setScreen(new LobbyScreen(game, net, (why) => showOnline(why ?? '')));
+        else showPrivate();
+      });
+    } else if (m.t === 'start') {
+      if (playingId !== m.matchId) void startOnline(m);
+    } else if (m.t === 'private') {
+      if (m.lobby && screen instanceof OnlineScreen) showPrivate();
+    } else if (m.t === 'spectate') {
+      if (watchingId !== m.matchId && !playingId) void startSpectate(m);
+    } else if (m.t === 'spectateEnd') {
+      toaster?.show(m.text, 4);
+      if (watchingId) showOnline();
+    } else if (m.t === 'unqueued') {
+      // Picking a starter for a party that broke up: back to the hub.
+      if (screen instanceof RollScreen) showOnline(m.text);
+    }
+  });
+
   const startOnline = async (start: Extract<ServerMsg, { t: 'start' }>): Promise<void> => {
     if (!net) return;
+    playingId = start.matchId;
+    watchingId = null;
+    net.rated = null;
     game.setScreen(loadingScreen(() => 'Heading out'));
     const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(start.seed), sprites }, net, start.you, start.roster, rangers);
     await mirror.ready;
@@ -240,15 +314,83 @@ async function boot(): Promise<void> {
     const screen: MatchScreen = new MatchScreen(game, mirror.match, rangers, assets, ui, () => {
       const end = mirror.ended ?? { outcome: mirror.match.outcome ?? 'loss', place: 0 };
       chat.dispose();
-      game.setScreen(new OnlineEndScreen(game, net, screen, end.outcome, end.place, () => {
+      const leave = () => {
         mirror.dispose();
         net.send({ t: 'leave' });
+        playingId = null;
+      };
+      // Knocked out while the match goes on: the rest of it can be watched.
+      const watch = end.outcome === 'loss' ? () => {
+        leave();
+        net.send({ t: 'spectate', matchId: start.matchId });
+      } : null;
+      game.setScreen(new OnlineEndScreen(game, net, screen, end.outcome, end.place, () => {
+        leave();
         showOnline();
-      }));
+      }, watch));
     });
     screen.online = { cmd: net.cmd.bind(net) };
     mirror.onReply = (text, seconds) => screen.say(text, seconds);
     debug.showdown.screen = screen;
+    game.setScreen(screen);
+  };
+
+  /** Watching a live match (a few seconds behind). */
+  const startSpectate = async (h: Extract<ServerMsg, { t: 'spectate' }>): Promise<void> => {
+    if (!net) return;
+    watchingId = h.matchId;
+    game.setScreen(loadingScreen(() => `Joining the match (${h.delay} s behind)`));
+    const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(h.seed), sprites }, net, h.follow, h.roster, rangers, { observe: true });
+    await mirror.ready;
+    if (watchingId !== h.matchId) return mirror.dispose();
+    const chat = new ChatPanel(net, { compact: true, collapsed: true });
+    const screen = new MatchScreen(game, mirror.match, rangers, assets, ui);
+    const leave = () => {
+      chat.dispose();
+      mirror.dispose();
+      showOnline();
+    };
+    setupSpectate(screen, mirror, net, h, leave);
+    const off = net.on((m) => {
+      if (m.t === 'spectateEnd' || (m.t === 'spectate' && m.matchId !== h.matchId)) {
+        off();
+        chat.dispose();
+        mirror.dispose();
+      }
+    });
+    debug.showdown.match = mirror.match;
+    debug.showdown.mirror = mirror;
+    debug.showdown.screen = screen;
+    game.setScreen(screen);
+  };
+
+  /** A finished match, played back from its recording. */
+  const startReplay = async (id: string): Promise<void> => {
+    if (!net) return;
+    game.setScreen(loadingScreen(() => 'Loading the replay'));
+    let body = '';
+    try {
+      const r = await fetch(`${net.base}/api/replay/${encodeURIComponent(id)}`, { credentials: 'include' });
+      if (!r.ok) throw new Error(String(r.status));
+      body = await r.text();
+    } catch {
+      return showOnline('That replay could not be loaded');
+    }
+    const { header, lines } = parseReplay(body);
+    if (!lines.length) return showOnline('That replay is empty');
+    const feed = new ReplayFeed();
+    const first = (header.roster.find((r) => r.human) ?? header.roster[0])?.trainerId ?? 0;
+    const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(header.seed), sprites }, feed, first, header.roster, rangers, { observe: true });
+    const player = new ReplayPlayer(feed, mirror, header, lines, () => {
+      mirror.dispose();
+      showOnline();
+    });
+    const screen = new MatchScreen(game, mirror.match, rangers, assets, ui);
+    player.attach(screen);
+    debug.showdown.match = mirror.match;
+    debug.showdown.mirror = mirror;
+    debug.showdown.screen = screen;
+    debug.showdown.replay = player;
     game.setScreen(screen);
   };
 

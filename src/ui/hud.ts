@@ -74,6 +74,8 @@ export interface HudState {
   chest?: { slots: Array<InventorySlot | null>; town: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
+  /** Watching (a spectator or a replay): no bag and no control hints, only what is going on. */
+  watching?: boolean;
 }
 
 /** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
@@ -390,7 +392,7 @@ export class Hud {
     this.drawMinimap(ctx, match, st, s);
     this.drawParty(ctx, match, st, s);
     this.drawMoves(ctx, match, st, s);
-    this.drawItems(ctx, match, st, s);
+    if (!st.watching) this.drawItems(ctx, match, st, s);
     this.drawLearn(ctx, st, s);
     // The darkness strip, top centre (the battle banner takes that spot in a battle), and the
     // messages stacked under it: cream strips, older ones above, smaller and dimmer.
@@ -1023,6 +1025,8 @@ export class Hud {
     // The strips above, stacked upward from the buttons, right-aligned.
     let cy = top - 8 * s;
     const chip = (text: string, color: string, glow?: string) => {
+      // Watching: the hints are about controls nobody watching has.
+      if (st.watching) return;
       const w = this.creamWidth(ctx, text, 10);
       const h = Math.round(8 * this.px2 + 10 * 1.25 * s);
       cy -= h;

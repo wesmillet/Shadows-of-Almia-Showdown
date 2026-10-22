@@ -37,8 +37,9 @@ export function isMon(o: object): boolean {
   return 'dex' in o && 'cooldowns' in o && 'stats' in o;
 }
 
+/** A trainer (not by its bag: other players' bags are never sent, so their mirrors have none). */
 export function isTrainer(o: object): boolean {
-  return 'party' in o && 'items' in o && 'isPlayer' in o;
+  return 'party' in o && 'isPlayer' in o && 'role' in o;
 }
 
 /** Numbers travel at 1/1000 (positions in tiles: plenty for drawing, and fewer digits on the wire). */

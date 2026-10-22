@@ -505,7 +505,7 @@ export class Accounts {
 
   private async register(req: IncomingMessage, res: ServerResponse, send: (s: number, b: unknown, h?: Record<string, string | string[]>) => void): Promise<void> {
     const ip = clientIp(req);
-    if (this.limited(`reg:${ip}`, 5, 3600_000)) return send(429, { error: 'Too many new accounts from here. Try again later' });
+    if (this.limited(`reg:${ip}`, this.kind === 'dev' ? 100 : 5, 3600_000)) return send(429, { error: 'Too many new accounts from here. Try again later' });
     const b = await readJson(req);
     const username = String(b.username ?? '');
     const password = String(b.password ?? '');

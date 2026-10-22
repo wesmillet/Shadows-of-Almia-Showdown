@@ -22,6 +22,25 @@ the domain, and (optionally) Google for "Sign in with Google".
   Extraction Voucher), the storage chest, the trainer look and stats. Guests can play but nothing
   is kept.
 - **Seats** (`src/sim/seat.ts`): a match holds up to eight humans; computer trainers fill the rest.
+- **Instant movement**: the browser walks your trainer (or the Pokémon you steer) the moment you
+  press a key and numbers each step's keys; the server applies them one per step and says which it
+  used last, and the browser replays the rest on top of the server's position (client-side
+  prediction). Measured at 300 ms round trip, corrections stay under a hundredth of a tile.
+- **Fair hits on a slow connection**: a cast names the opponent under your reticle as your screen
+  shows it; the server aims at where that opponent really is, if it is close enough to your aim.
+- **Compression**: updates are compressed (about 2 KB/s per player on the wire).
+
+## Playing together
+
+| | |
+|---|---|
+| **Casual** | Anyone, alone or in a party. |
+| **Ranked** | Signed-in players, solo. Glicko-2 rating extended to free-for-all placements (`server/rating.ts`); five placement games, then a tier (Bronze to Master). Seasons last `SEASON_DAYS` (60) from `SEASON_START`; each starts everyone halfway back to 1500. Computer trainers count as weaker opponents and stop helping past 1750, so the top tiers take real players. Lobbies match by rating, the window widening while they wait. |
+| **Parties** | Friends, up to four. The leader starts the match; everyone picks a starter; the party plays as a squad (teammates never fight; the last squad standing wins, knocked-out members included). |
+| **Private lobbies** | A host makes one and shares the five-letter code. Rules: trainers (2-8), computer trainers on/off, starter level, teams (solo, pairs, fours, pick), storm speed, the rare-item chest. Nothing from a private match is kept (no stats, no Pokémon), so they can not be farmed. After the match everyone is back in the lobby. |
+| **Friends** | Requests by trainer name (asking back accepts). Friends show what they are doing. |
+| **Watching** | A friend's match, the featured match (most players), or the rest of your own after being knocked out (your squad first). Spectators are 4 seconds behind, so watching can not help a player. ←/→ switch whom the camera follows. |
+| **Replays** | Every match is recorded (`server/replays.ts`): what any trainer could see, nobody's bag, keyframed every 30 s for seeking, about 2 KB/s. Space pause, ←/→ 10 s, ↑/↓ speed, Q/E switch trainer. The oldest go once they pass `REPLAY_MB` (400). |
 
 ## Running it locally
 
@@ -40,11 +59,24 @@ private one) to be a second player. Useful settings (environment variables):
 | `MATCH_SIZE=2` | Trainers per match (2 makes a quick 1v1) |
 | `DEV_CLUSTER=1` | Players start side by side (testing PvP; ignored on the live server) |
 | `RARE_CHEST=1` | The rare-item chest (default: on except on the live server) |
+| `RANKED_WAIT=120` | Seconds a ranked lobby waits for players (default 120 live, twice `LOBBY_WAIT` elsewhere) |
+| `SEASON_START`, `SEASON_DAYS` | When ranked season 1 starts (ISO date) and how long seasons last |
+| `REPLAYS=0`, `REPLAY_MB=400` | Turn recording off; how much disk replays may use |
+| `SIM_LATENCY_MS=100` | Testing: pretend every message takes this long each way (never on live) |
 | `DATA_DIR=...` | Where the database file goes (default `.data/`) |
 
 `npx tsx server/bots.ts 3 60` connects three fake players to a running server and plays for a
-minute (a quick load and protocol check). `npx tsx server/headless.ts 120 3` runs a whole match
-without any network, to measure the simulation's speed.
+minute (a quick load and protocol check, with bandwidth). `npx tsx server/headless.ts 120 3` runs a
+whole match without any network, to measure the simulation's speed.
+
+Checks (each exits non-zero on a failure):
+
+```
+npx tsx server/checks/social.ts      # against a running server (MATCH_SIZE=4 LOBBY_WAIT=4): accounts,
+                                     # friends, party squads, watching, ranked, private lobbies, replays
+npx tsx server/checks/teams.ts       # squads in the simulation
+npx tsx server/checks/lagcomp.ts     # lag-compensated casts
+```
 
 ## Two servers: live and demo
 

@@ -5,7 +5,7 @@
  * The server is the page's own host when the game is served by it; ?server=host:port (or the
  * build-time VITE_GAME_SERVER) points elsewhere, e.g. the local server during development.
  */
-import type { ClientMsg, CommandName, ServerMsg } from './protocol';
+import type { ClientMsg, CommandName, FriendEntry, PartyState, PrivateState, ServerMsg } from './protocol';
 
 type Listener = (msg: ServerMsg) => void;
 
@@ -17,6 +17,25 @@ export interface Me {
   user?: { id: number; username: string; role: string; google: boolean };
   look?: string | null;
   stats?: { matches: number; wins: number; catches: number; knockouts: number; damage: number; bestPlace: number | null };
+}
+
+/** A ranked standing (server/accounts.ts rankedCard). */
+export interface RankedCard {
+  season: number;
+  rating: number;
+  games: number;
+  wins: number;
+  peak: number;
+  tier: { id: string; name: string; color: string } | null;
+  placementLeft: number;
+  rank: number | null;
+}
+
+/** What only the browser needs to send messages (the replay player feeds a mirror without a server). */
+export interface MirrorNet {
+  on(l: (msg: ServerMsg) => void): () => void;
+  send(msg: ClientMsg): void;
+  cmd(c: CommandName, ...a: Array<number | string | boolean | null>): void;
 }
 
 /** Where the game server is (no trailing slash), or null when this build has none (GitHub Pages). */
@@ -63,6 +82,13 @@ export class Connection {
   me: Me = { signedIn: false, google: false };
   /** This browser's trainer look, shown to others while playing as a guest. */
   look: string | null = null;
+  /** Friends, party and party invites, as the server last sent them. */
+  social: { friends: FriendEntry[]; party: PartyState | null; invites: string[] } = { friends: [], party: null, invites: [] };
+  /** The private lobby this player is in. */
+  privateLobby: PrivateState | null = null;
+  /** The last ranked result (shown on the end screen). */
+  rated: Extract<ServerMsg, { t: 'rated' }> | null = null;
+  ranked: RankedCard | null = null;
 
   constructor(readonly base: string) {}
 
@@ -92,6 +118,9 @@ export class Connection {
           this.hello = msg;
           resolve();
         } else if (msg.t === 'pong') this.ping = Math.round(performance.now() - msg.at);
+        else if (msg.t === 'social') this.social = { friends: msg.friends, party: msg.party, invites: msg.invites };
+        else if (msg.t === 'private') this.privateLobby = msg.lobby;
+        else if (msg.t === 'rated') this.rated = msg;
         else if (msg.t === 'chat') {
           if (!this.chat.some((c) => c.id !== undefined && c.id === msg.id)) this.chat.push(msg);
           if (this.chat.length > 100) this.chat.shift();
@@ -100,6 +129,9 @@ export class Connection {
       };
       ws.onclose = () => {
         this.connected = false;
+        // The server forgets parties and lobbies of a dropped connection.
+        this.social = { ...this.social, party: null, invites: [] };
+        this.privateLobby = null;
         if (pinger !== null) clearInterval(pinger);
         if (this.closedByUs) return;
         // Back off a little each time, up to 10 s.
@@ -147,7 +179,17 @@ export class Connection {
   async refreshMe(): Promise<Me> {
     const me = await this.api<Me>('/api/me');
     if (!me.error) this.me = me;
+    if (this.me.signedIn) {
+      const r = await this.api<RankedCard>('/api/ranked');
+      this.ranked = r.error ? null : r;
+    } else this.ranked = null;
     return this.me;
+  }
+
+  /** In a party, and not its leader (the leader starts matches). */
+  get partyFollower(): boolean {
+    const p = this.social.party;
+    return !!p && p.members.length > 1 && p.leader !== p.you;
   }
 
   /** After signing in or out the connection reopens, so the server knows who it is talking to. */

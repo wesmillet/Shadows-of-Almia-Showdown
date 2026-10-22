@@ -336,8 +336,13 @@ export class Room {
       return;
     }
     if (msg.t === 'leave') {
-      // Leaving mid-match: out for good.
+      // Leaving mid-match: out for good (told so, so the browser can show the result).
       if (!p.seat.outcome && p.seat.trainer.alive) this.match.eliminate(p.seat.trainer);
+      if (!p.ended) {
+        p.seat.outcome ??= 'loss';
+        this.eliminatedOrder.push(key);
+        p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: this.placeOf(p) });
+      }
       p.ended = true;
       p.peer = null;
     }

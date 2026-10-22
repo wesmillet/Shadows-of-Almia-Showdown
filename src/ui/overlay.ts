@@ -10,7 +10,8 @@ const CSS = `
 .almia-ui * { box-sizing: border-box; }
 .almia-panel { pointer-events: auto; background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; image-rendering: pixelated; }
 .almia-chat { position: absolute; left: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }
-.almia-chat.compact { opacity: 0.88; }
+.almia-chat.compact { opacity: 0.88; top: 96px; bottom: auto; width: min(300px, calc(100vw - 32px)); }
+.almia-chat.compact .almia-chat-log { height: 120px; }
 .almia-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #4a3424; color: #f4ecdc; font-size: 14px; letter-spacing: 0.5px; cursor: pointer; }
 .almia-chat-log { height: 180px; overflow-y: auto; padding: 6px 10px; line-height: 1.35; overflow-wrap: anywhere; }
 .almia-chat.collapsed .almia-chat-log, .almia-chat.collapsed .almia-chat-row { display: none; }
@@ -34,6 +35,45 @@ const CSS = `
 .almia-modal .google { display: block; text-align: center; margin-top: 10px; background: #fff; color: #4a3424; border: 2px solid #4a3424; padding: 8px; text-decoration: none; }
 .almia-modal .switch { margin-top: 12px; font-size: 14px; text-align: center; color: #8a6a4a; }
 .almia-modal .switch a { color: #c2611a; cursor: pointer; }
+.almia-side { position: absolute; right: 16px; top: 16px; bottom: 16px; width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }
+.almia-side.collapsed { bottom: auto; }
+.almia-side.collapsed .almia-side-body { display: none; }
+.almia-side-body { flex: 1; overflow-y: auto; padding: 8px 10px; }
+.almia-side h3 { margin: 10px 0 4px; font-size: 14px; font-weight: normal; color: #8a6a4a; letter-spacing: 0.5px; text-transform: uppercase; }
+.almia-side h3:first-child { margin-top: 2px; }
+.almia-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px dashed #d8c7a6; }
+.almia-row:last-child { border-bottom: 0; }
+.almia-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.almia-row .sub { display: block; font-size: 12px; color: #8a6a4a; }
+.almia-row .dot { width: 9px; height: 9px; flex: none; border: 2px solid #4a3424; background: #b8ad98; }
+.almia-row .dot.on { background: #5bbf5b; } .almia-row .dot.busy { background: #e0a030; } .almia-row .dot.watch { background: #6aa8e8; }
+.almia-small { font: inherit; font-size: 12px; border: 0; background: #c2611a; color: #fff; padding: 4px 7px; cursor: pointer; }
+.almia-small.alt { background: #e9dcc2; color: #4a3424; }
+.almia-small:disabled { background: #b8ad98; cursor: default; }
+.almia-add { display: flex; gap: 6px; margin: 6px 0 2px; }
+.almia-add input { flex: 1; min-width: 0; padding: 5px 7px; font: inherit; font-size: 14px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; outline: none; }
+.almia-note { font-size: 13px; color: #8a6a4a; line-height: 1.35; margin: 4px 0; }
+.almia-toasts { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.almia-toast { padding: 8px 14px; font-size: 15px; animation: almia-in 0.2s ease-out; }
+@keyframes almia-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.almia-modal.wide { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.almia-modal .list { overflow-y: auto; margin-top: 8px; border-top: 2px solid #4a3424; }
+.almia-tabs { display: flex; gap: 6px; margin: 6px 0 2px; }
+.almia-tabs .almia-small { font-size: 14px; padding: 5px 10px; }
+.almia-board { width: 100%; border-collapse: collapse; font-size: 14px; }
+.almia-board td, .almia-board th { padding: 4px 6px; text-align: left; border-bottom: 1px dashed #d8c7a6; font-weight: normal; }
+.almia-board th { color: #8a6a4a; font-size: 12px; text-transform: uppercase; }
+.almia-board td.r, .almia-board th.r { text-align: right; }
+.almia-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 140px); overflow-y: auto; padding: 16px 18px; font-size: 15px; }
+.almia-center h2 { margin: 0; font-size: 24px; font-weight: normal; }
+.almia-code { font-size: 34px; letter-spacing: 6px; color: #c2611a; }
+.almia-rules { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin: 8px 0; font-size: 14px; }
+@media (min-width: 1000px) { .almia-center.beside-chat { left: max(50%, 700px); } }
+.almia-row select { font: inherit; font-size: 13px; padding: 2px 4px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; }
+.almia-rules select, .almia-rules input[type=number] { font: inherit; font-size: 14px; padding: 3px 5px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; }
+.almia-rules select:disabled, .almia-rules input:disabled { opacity: 0.75; }
+.almia-actions { display: flex; gap: 8px; margin-top: 12px; }
+.almia-actions .almia-btn { flex: 1; }
 `;
 
 let root: HTMLDivElement | null = null;
@@ -49,7 +89,7 @@ export function overlayRoot(): HTMLDivElement {
   return root;
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
+export function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text) e.textContent = text;

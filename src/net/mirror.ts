@@ -10,6 +10,8 @@
  *   animation changes (and restarts) are played on them.
  * - Actions: every Match method the screen calls to change something is replaced on this object by
  *   a command to the server; reads (cooldowns, what is near, ball slots) keep working on the mirror.
+ * - Watching (observe: spectating, replays): nothing is sent and nothing is predicted; the camera
+ *   follows whichever trainer `you` names, and that can change.
  */
 import type { Input } from '../core/input';
 import { CONFIG, species } from '../sim/data';
@@ -18,7 +20,7 @@ import type { Mon, Trainer } from '../sim/entities';
 import { Match, type MatchDeps } from '../sim/match';
 import { AnimPlayer } from '../sprites/pokemonSprite';
 import type { RangerSprites } from '../sprites/rangerSprite';
-import type { Connection } from './connection';
+import type { MirrorNet } from './connection';
 import type { RosterEntry, ServerMsg } from './protocol';
 import { isMon, isTrainer, SyncDecoder } from './sync';
 
@@ -60,6 +62,7 @@ export class MirrorMatch {
   /** The avatar's position (and facing) as the server last sent it. */
   private auth: { o: Obj; x: number; y: number; dir: unknown } | null = null;
   private human = new Set<number>();
+  readonly roster: RosterEntry[];
   private looks = new Map<number, string>();
   private unsub: () => void;
   /** Called with a command's reply (the offline game's message line). */
@@ -72,15 +75,24 @@ export class MirrorMatch {
   /** Set when the server ends the match for this player. */
   ended: { outcome: 'win' | 'loss'; place: number } | null = null;
 
+  /** Watching, not playing (a spectator or a replay). */
+  readonly observe: boolean;
+  /** Called when a watched match changes whom it follows. */
+  onFollow: ((trainerId: number) => void) | null = null;
+
   constructor(
     deps: MatchDeps,
-    private readonly net: Connection,
-    readonly you: number,
+    private readonly net: MirrorNet,
+    /** This player's trainer (watching: the one followed). */
+    public you: number,
     roster: RosterEntry[],
     private readonly rangers: RangerSprites,
+    opts: { observe?: boolean } = {},
   ) {
+    this.observe = !!opts.observe;
     this.match = new Match(deps, [], { mirror: true });
     this.ready = new Promise((res) => (this.markReady = res));
+    this.roster = roster;
     for (const r of roster) {
       if (r.human) this.human.add(r.trainerId);
       if (r.human && typeof r.look === 'string') this.looks.set(r.trainerId, r.look);
@@ -109,6 +121,12 @@ export class MirrorMatch {
           const t = o as unknown as Trainer;
           t.px = t.x;
           t.py = t.y;
+          // Bags and money are only sent to their owner: everyone else's are empty here (a replay
+          // shows nobody's), so the screen can read them all the same.
+          if (!Array.isArray(t.items)) t.items = [];
+          if (!Array.isArray(t.held)) t.held = [];
+          if (typeof t.money !== 'number') t.money = 0;
+          if (!t.stats) t.stats = { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 };
           this.dressTrainer(t);
         }
       },
@@ -133,9 +151,24 @@ export class MirrorMatch {
     this.unsub();
   }
 
+  /** Starts the view over (everything arrives again), following `follow`. */
+  restart(follow: number): void {
+    this.dec = this.decoder();
+    this.glides.clear();
+    this.follow(follow);
+  }
+
+  /** Watching: the camera follows this trainer. */
+  follow(trainerId: number): void {
+    if (this.you === trainerId) return;
+    this.you = trainerId;
+    this.onFollow?.(trainerId);
+    this.syncRoot();
+  }
+
   /** Other players get their own look; until it loads they borrow a rival's. */
   private dressTrainer(t: Trainer): void {
-    if (t.id === this.you) {
+    if (t.id === this.you && !this.observe) {
       t.isPlayer = true;
       t.role = 'player';
       return;
@@ -153,10 +186,13 @@ export class MirrorMatch {
 
   private onMessage(msg: ServerMsg): void {
     if (msg.t === 's') this.applyUpdate(msg.p, msg.e, msg.ack ?? 0);
-    else if (msg.t === 'start') {
+    else if (msg.t === 'start' && !this.observe) {
       // Back after a dropped connection: the server starts the view over.
       this.dec = this.decoder();
       this.glides.clear();
+    } else if (msg.t === 'spectate' && this.observe) {
+      // Watching someone else now (or a replay jumping): the view starts over.
+      this.restart(msg.follow);
     }
     else if (msg.t === 'reply') this.onReply?.(msg.text, msg.seconds);
     else if (msg.t === 'end') {
@@ -253,22 +289,30 @@ export class MirrorMatch {
     if (!r) return;
     const m = this.match as unknown as Obj & Match;
     const seat = r.seat as Obj;
-    const me = seat.trainer as Trainer | null;
+    const seatTrainer = seat.trainer as Trainer | null;
+    // Watching: the followed trainer (a replay sees everyone and picks; a spectator's view is theirs).
+    let me = seatTrainer;
+    if (this.observe) {
+      const all = [...(((r.trainers as Trainer[]) ?? []).filter(Boolean)), ...(seatTrainer ? [seatTrainer] : [])];
+      me = all.find((t) => t.id === this.you) ?? seatTrainer;
+    }
+    const own = me === seatTrainer;
     if (me) {
       if (m.seat.trainer !== me) this.dressTrainer(me);
       m.seat.trainer = me;
     }
-    m.seat.controlled = (seat.controlled as Mon | null) ?? null;
-    m.seat.lockTarget = (seat.lockTarget as Mon | null) ?? null;
+    m.seat.controlled = own ? ((seat.controlled as Mon | null) ?? null) : null;
+    m.seat.lockTarget = own ? ((seat.lockTarget as Mon | null) ?? null) : null;
     m.seat.auto = !!seat.auto;
-    m.seat.fishing = (seat.fishing as Match['fishing']) ?? null;
-    m.seat.pendingLearn = (seat.pendingLearn as Match['pendingLearn']) ?? [];
-    m.seat.snagOffer = (seat.snagOffer as Match['snagOffer']) ?? null;
-    if (!this.ended) m.seat.outcome = (seat.outcome as Match['outcome']) ?? null;
+    m.seat.fishing = own ? ((seat.fishing as Match['fishing']) ?? null) : null;
+    m.seat.pendingLearn = own && !this.observe ? ((seat.pendingLearn as Match['pendingLearn']) ?? []) : [];
+    m.seat.snagOffer = own && !this.observe ? ((seat.snagOffer as Match['snagOffer']) ?? null) : null;
+    if (this.observe) m.seat.outcome = null;
+    else if (!this.ended) m.seat.outcome = (seat.outcome as Match['outcome']) ?? null;
     m.time = r.time as number;
     m.over = !!r.over;
     m.finalStarted = !!r.finalStarted;
-    m.trainers = ((r.trainers as Trainer[]) ?? []).filter((t) => t && t !== me);
+    m.trainers = [...((r.trainers as Trainer[]) ?? []), ...(seatTrainer && seatTrainer !== me ? [seatTrainer] : [])].filter((t) => t && t !== me);
     m.npcs = ((r.npcs as Trainer[]) ?? []).filter(Boolean);
     m.wilds = ((r.wilds as Mon[]) ?? []).filter(Boolean);
     m.darkrai = (r.darkrai as Mon | null) ?? null;
@@ -311,8 +355,8 @@ export class MirrorMatch {
     }
     // This step's keys: numbered, walked here at once (prediction), and sent three steps at a time.
     const f: [number, number, number] = [++this.seq, Math.round(axis.x * 1000) / 1000, Math.round(axis.y * 1000) / 1000];
-    this.outbox.push(f);
-    const av = this.pickAvatar();
+    if (!this.observe) this.outbox.push(f);
+    const av = this.observe ? null : this.pickAvatar();
     if (av !== this.avatar) {
       this.avatar = av;
       this.pending = [];
@@ -520,7 +564,7 @@ export class MirrorMatch {
       net.cmd('cycleLock');
       return seat().lockTarget;
     };
-    const say = (c: Parameters<Connection['cmd']>[0], ...a: Array<number | string | boolean | null>) => {
+    const say = (c: Parameters<MirrorNet['cmd']>[0], ...a: Array<number | string | boolean | null>) => {
       net.cmd(c, ...a);
       return '';
     };

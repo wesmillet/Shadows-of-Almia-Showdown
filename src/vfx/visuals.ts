@@ -246,6 +246,50 @@ export class Beam implements MoveVisual {
   }
 }
 
+/** Pieces of a shattering crystal: whole-pixel shards flung up and out, falling back and fading. */
+export class ShardBurst implements MoveVisual {
+  private t = 0;
+  private readonly life = 1.1;
+  private readonly bits: Array<{ vx: number; vy: number; size: number; color: string }> = [];
+  y: number;
+
+  constructor(private readonly x: number, private readonly wy: number, private readonly lift: number, colors: string[]) {
+    this.y = wy + 0.05;
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2 + Math.random() * 0.4;
+      const v = 2.2 + Math.random() * 3.2;
+      this.bits.push({ vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 2.5, size: 1 + Math.floor(Math.random() * 3), color: colors[i % colors.length] as string });
+    }
+  }
+
+  update(dt: number): boolean {
+    this.t += dt;
+    return this.t < this.life;
+  }
+
+  draw(view: View): void {
+    const ctx = view.ctx;
+    const k = view.spriteScale;
+    const p = this.t / this.life;
+    const sx = view.toScreenX(this.x);
+    const sy = view.toScreenY(this.wy) - this.lift * view.pxPerTile;
+    ctx.save();
+    ctx.globalAlpha = 1 - p * p;
+    for (const b of this.bits) {
+      const x = sx + b.vx * this.t * view.pxPerTile;
+      const y = sy + (b.vy * this.t + 4.5 * this.t * this.t) * view.pxPerTile;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(Math.round(x / k) * k, Math.round(y / k) * k, b.size * k, b.size * k);
+    }
+    ctx.restore();
+  }
+
+  drawLight(view: View): void {
+    const p = this.t / this.life;
+    glow(view.lightCtx, view.toScreenX(this.x), view.toScreenY(this.wy) - this.lift * view.pxPerTile, 3.5 * view.pxPerTile, '#c77dff', (1 - p) * 0.9);
+  }
+}
+
 export class RingPulse implements MoveVisual {
   private t = 0;
   private readonly life = 0.55;

@@ -21,7 +21,7 @@ import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { BEHAVIOR_LABEL, isRoaming, nextBehavior } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
-import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
+import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import { extractToPc } from '../pc';
 import type { PixelUi } from './pixelUi';
@@ -139,6 +139,8 @@ export class MatchScreen implements Screen {
       this.hoopaPortalDark = img ? darkPortal(img) : null;
     });
     void assets.loadImage('ui/shadow_crystal.png').then((img) => (this.crystalImg = img));
+    void assets.loadImage('ui/shadow_crystal_broken.png').then((img) => (this.crystalBroken = img));
+    void assets.loadImage('ui/shadow_crystal_base.png').then((img) => (this.crystalBase = img));
     void assets.loadImage('ui/storage_chest.png').then((img) => (this.chestSheet = img));
     void assets.loadImage('ui/reticle.png').then((img) => (this.reticle = img));
     void assets.loadImage('ui/reticle_hot.png').then((img) => (this.reticleHot = img));
@@ -457,8 +459,12 @@ export class MatchScreen implements Screen {
   /** Hoopa's portal: eight 64x64 frames of a blue ring standing upright (assets/fx/hoopa_portal.png), and its storm (purple) copy. */
   private hoopaPortal: HTMLImageElement | null = null;
   private hoopaPortalDark: CanvasImageSource | null = null;
-  /** The Shadow Crystal's art. */
+  /** The Shadow Crystal's art (scripts/shadow_crystal.py): the cluster, its broken stump, its pedestal. */
   private crystalImg: HTMLImageElement | null = null;
+  private crystalBroken: HTMLImageElement | null = null;
+  private crystalBase: HTMLImageElement | null = null;
+  /** Whether the crystal was still whole last frame (it shatters once, when Darkrai wakes). */
+  private crystalWhole: boolean | null = null;
   /** The Pokémon-mode aim reticle (and its red version over an enemy). */
   private reticle: HTMLImageElement | null = null;
   private reticleHot: HTMLImageElement | null = null;
@@ -1583,10 +1589,21 @@ export class MatchScreen implements Screen {
       ctx.beginPath();
       ctx.arc(mx, my, r, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = arena === fields[1] ? 'rgba(150,80,230,0.3)' : 'rgba(214,72,72,0.35)';
-      ctx.beginPath();
-      ctx.arc(mx, my, r, Math.PI, Math.PI * 2);
-      ctx.fill();
+      if (arena === fields[1]) {
+        // Round the crystal: a violet glow fading out to the circle, not a half-painted disc.
+        const g = ctx.createRadialGradient(mx, my, r * 0.2, mx, my, r);
+        g.addColorStop(0, 'rgba(150,80,230,0.32)');
+        g.addColorStop(1, 'rgba(150,80,230,0.06)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(mx, my, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(214,72,72,0.35)';
+        ctx.beginPath();
+        ctx.arc(mx, my, r, Math.PI, Math.PI * 2);
+        ctx.fill();
+      }
       if (wide) {
         const bw = w * 0.16;
         const bh = h * 0.36;
@@ -1750,30 +1767,72 @@ export class MatchScreen implements Screen {
     this.vfx.drawLights(v);
   }
 
-  /** The Shadow Crystal at the map centre: a faceted procedural gem on a dark pedestal. */
   /**
-   * The Shadow Crystal: the Fan-tasy tileset's large violet Magic Crystal (assets/ui/shadow_crystal.png),
-   * floating over its rings with a slow bob and a purple glow; dim and cracked-looking once Darkrai is out.
+   * The Shadow Crystal (scripts/shadow_crystal.py draws the art): a violet cluster with a dark heart,
+   * hovering over an obsidian pedestal with a slow bob, a soft glow behind it, the heart pulsing and
+   * a few motes circling. Once Darkrai is out it is a broken stump sitting on the pedestal.
    */
   private drawCrystal(v: View): void {
     const ctx = v.ctx;
-    const cx = v.toScreenX(this.match.centerX);
-    const cy = v.toScreenY(this.match.centerY);
-    const t = this.match.time;
+    const base = this.crystalBase;
     const finale = this.match.darkness.finale;
-    drawSoftShadow(v, cx, cy, 0.8, 0.4);
-    const img = this.crystalImg;
-    if (!img) return;
-    const k = v.spriteScale * 0.85;
-    const w = img.width * k;
-    const h = img.height * k;
-    const bob = Math.round(Math.sin(t * 1.5) * 3 * v.baseScale);
+    // The moment it breaks: shards flung out and a ring of violet light.
+    if (finale && this.crystalWhole === true) {
+      this.vfx.add(new ShardBurst(this.match.centerX, this.match.centerY, 2.4, ['#e8ceff', '#b080ff', '#7a3ad6', '#ff7ae6']));
+      this.vfx.add(new RingPulse(this.match.centerX, this.match.centerY, 4, '#b46bff', 1.2));
+    }
+    this.crystalWhole = !finale;
+    const img = finale ? this.crystalBroken : this.crystalImg;
+    if (!base || !img) return;
+    // One art pixel per sprite pixel, so the crystal sits in the same pixel grid as the Pokémon.
+    const k = v.spriteScale;
+    const snap = (n: number): number => Math.round(n / k) * k;
+    const cx = snap(v.toScreenX(this.match.centerX));
+    const cy = snap(v.toScreenY(this.match.centerY));
+    const t = this.match.time;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.shadowColor = finale ? 'rgba(90,40,140,0.6)' : `rgba(170,110,255,${0.65 + 0.25 * Math.sin(t * 2.2)})`;
-    ctx.shadowBlur = 22 * v.baseScale;
-    if (finale) ctx.filter = 'brightness(0.55) saturate(0.6)';
-    ctx.drawImage(img, Math.round(cx - w / 2), Math.round(cy - h + 4 * k) - bob, w, h);
+    // The pedestal: its top face (art row 8) on the crystal's ground point.
+    drawSoftShadow(v, cx, cy + 9 * k, 2.2, 0.35);
+    ctx.drawImage(base, cx - (base.width / 2) * k, cy - 8 * k, base.width * k, base.height * k);
+    // The cluster hovers a little over the pedestal and bobs; the stump rests on it.
+    const lift = finale ? 0 : 3 + Math.round(1.5 + 1.5 * Math.sin(t * 1.4));
+    const x = cx - (img.width / 2) * k;
+    const y = cy - (img.height - 1 + lift) * k;
+    // A soft violet glow behind it (added light, so it brightens rather than smudges).
+    const gy = y + img.height * 0.45 * k;
+    const gr = img.height * 0.75 * k;
+    const glow = ctx.createRadialGradient(cx, gy, 0, cx, gy, gr);
+    const a0 = finale ? 0.12 : 0.28 + 0.12 * pulse;
+    glow.addColorStop(0, `rgba(170,100,255,${a0})`);
+    glow.addColorStop(1, 'rgba(170,100,255,0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = glow;
+    ctx.fillRect(cx - gr, gy - gr, gr * 2, gr * 2);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(img, x, y, img.width * k, img.height * k);
+    ctx.globalCompositeOperation = 'lighter';
+    if (!finale) {
+      // The dark heart breathes: a magenta light deep inside it.
+      const hy = y + 43 * k;
+      const hr = 9 * k;
+      const heart = ctx.createRadialGradient(cx, hy, 0, cx, hy, hr);
+      heart.addColorStop(0, `rgba(255,90,220,${0.35 + 0.35 * pulse})`);
+      heart.addColorStop(0.5, `rgba(200,60,255,${0.12 + 0.12 * pulse})`);
+      heart.addColorStop(1, 'rgba(160,60,255,0)');
+      ctx.fillStyle = heart;
+      ctx.fillRect(cx - hr, hy - hr, hr * 2, hr * 2);
+      // Motes circling the cluster: whole art pixels on a tilted ring.
+      for (let i = 0; i < 5; i++) {
+        const ang = t * 0.9 + (i / 5) * Math.PI * 2;
+        const mx = snap(cx + Math.cos(ang) * 22 * k);
+        const my = snap(y + (36 + Math.sin(ang) * 6 + Math.sin(t * 2 + i) * 2) * k);
+        const front = Math.sin(ang) > 0;
+        ctx.fillStyle = front ? 'rgba(236,200,255,0.95)' : 'rgba(170,110,255,0.55)';
+        ctx.fillRect(mx, my, k * (front ? 2 : 1), k * (front ? 2 : 1));
+      }
+    }
     ctx.restore();
   }
 

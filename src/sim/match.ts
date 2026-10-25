@@ -198,8 +198,10 @@ export class Match {
     this.rng = deps.rng;
     this.sprites = deps.sprites;
     this.battle = new BattleSystem(this.rng);
-    this.centerX = this.ground.cols / 2;
-    this.centerY = this.ground.rows / 2;
+    // The crystal stands in the middle of its tile (the map says where); older grounds use the map's middle.
+    const centre = (this.ground as { center?: { x: number; y: number } }).center;
+    this.centerX = centre?.x ?? this.ground.cols / 2;
+    this.centerY = centre?.y ?? this.ground.rows / 2;
     // Everyone starts somewhere new each match, spread round the coast.
     this.mirror = !!opts.mirror;
     this.stormSpeed = opts.stormSpeed ?? 1;

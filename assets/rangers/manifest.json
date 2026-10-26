@@ -1,5 +1,5 @@
 {
-  "source": "The Spriters Resource, Pokémon Ranger 2: Shadows of Almia, NPCs (Set 1) and Ranger Union NPCs, ripped by Lemon",
+  "source": "The Spriters Resource, Pok\u00e9mon Ranger 2: Shadows of Almia, NPCs (Set 1) and Ranger Union NPCs, ripped by Lemon",
   "frame_layout": "one packed PNG per character, frames left to right, uniform cell size, sprite anchored bottom-center, orange key made transparent",
   "animations": {
     "idle_down": [
@@ -192,20 +192,6 @@
     "union_09": {
       "file": "union_09.png",
       "frame_w": 20,
-      "frame_h": 34,
-      "frames": 15,
-      "anchor": "bottom-center"
-    },
-    "orig_00": {
-      "file": "orig_00.png",
-      "frame_w": 22,
-      "frame_h": 34,
-      "frames": 15,
-      "anchor": "bottom-center"
-    },
-    "orig_01": {
-      "file": "orig_01.png",
-      "frame_w": 22,
       "frame_h": 34,
       "frames": 15,
       "anchor": "bottom-center"

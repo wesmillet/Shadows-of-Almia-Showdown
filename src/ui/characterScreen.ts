@@ -1,10 +1,10 @@
 /**
  * Pick your trainer: every Ranger Union and townsfolk sheet in assets/rangers, walking in place.
- * Click one (or arrows + Enter) to wear it; Esc or Back returns. All looks are free for now; online
- * they will be unlockables.
+ * Click one (or arrows + Enter) to wear it; Esc or Back returns. Only the starting Ranger is open for
+ * now (src/look.ts); the others show as locked silhouettes.
  */
 import type { Input } from '../core/input';
-import { saveLook } from '../look';
+import { lookUnlocked, saveLook } from '../look';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
@@ -27,12 +27,8 @@ export class CharacterScreen implements Screen {
     for (const c of this.list) rangers.preview(c);
   }
 
-  /** Named originals, then "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
-  static readonly NAMES: Record<string, string> = { orig_00: 'Wren', orig_01: 'Kit' };
-
+  /** "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
   static label(character: string): string {
-    const named = CharacterScreen.NAMES[character];
-    if (named) return named;
     const [kind, n] = character.split('_');
     return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
   }
@@ -74,6 +70,7 @@ export class CharacterScreen implements Screen {
     const c = this.list[i];
     if (!c) return;
     this.cursor = i;
+    if (!lookUnlocked(c)) return;
     this.current = c;
     saveLook(c);
     void this.rangers.setRole('player', c);
@@ -105,7 +102,7 @@ export class CharacterScreen implements Screen {
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);
     backdrop(v);
-    heading(v, 'CHOOSE YOUR TRAINER', 'Every look is free for now. When the game goes online these become unlockables.', 56 * s);
+    heading(v, 'CHOOSE YOUR TRAINER', 'More trainers unlock soon.', 56 * s);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const k = skinPx(v);
@@ -113,7 +110,8 @@ export class CharacterScreen implements Screen {
     this.list.forEach((c, i) => {
       const r0 = this.rect(i);
       const chosen = c === this.current;
-      const hover = hit(mx, my, r0.x, r0.y, r0.w, r0.h) || i === this.cursor;
+      const open = lookUnlocked(c);
+      const hover = open && (hit(mx, my, r0.x, r0.y, r0.w, r0.h) || i === this.cursor);
       // A cream card that rises a pixel under the pointer; the one you wear is framed in orange.
       const r = { ...r0, y: r0.y - (hover ? k : 0) };
       if (!skinPiece(v, chosen ? 'orange' : 'cream', r.x, r.y, r.w, r.h, k)) panel(v, r.x, r.y, r.w, r.h, 12);
@@ -124,6 +122,11 @@ export class CharacterScreen implements Screen {
       const kk = Math.max(1, Math.floor((r.h * 0.66) / f.h));
       h.save();
       h.imageSmoothingEnabled = false;
+      // A locked look is a dark silhouette.
+      if (!open) {
+        h.filter = 'brightness(0)';
+        h.globalAlpha = 0.35;
+      }
       const dw = f.w * kk;
       const dh = f.h * kk;
       const dx = Math.round(r.x + r.w / 2 - dw / 2);
@@ -135,7 +138,7 @@ export class CharacterScreen implements Screen {
       } else h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, dw, dh);
       h.restore();
       text(v, CharacterScreen.label(c), r.x + r.w / 2, r.y + r.h - 30 * s, 13, { align: 'center', color: INK.text, shadow: false, maxWidth: r.w - 16 * s });
-      text(v, chosen ? 'Wearing' : 'Free', r.x + r.w / 2, r.y + r.h - 14 * s, 10, { align: 'center', color: chosen ? INK.good : INK.dim, shadow: false });
+      text(v, chosen ? 'Wearing' : open ? 'Free' : 'Locked', r.x + r.w / 2, r.y + r.h - 14 * s, 10, { align: 'center', color: chosen ? INK.good : INK.dim, shadow: false });
     });
     const b = this.backRect();
     button(v, 'Back', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#4f7ad6');

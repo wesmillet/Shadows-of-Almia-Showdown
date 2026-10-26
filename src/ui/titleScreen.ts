@@ -256,41 +256,35 @@ export class TitleScreen implements Screen {
     return { x: Math.round(v.width / 2 - w / 2), y: Math.round(v.height - 182 * s), w, h };
   }
 
-  /** The row of four under it: Demo Team, Move Gallery, My PC, Trainer. */
+  /** The row of three under it: Move Gallery, My PC, Trainer. (The demo team is off for now; ?demo=1 still starts it.) */
   private rowRect(i: number): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
     const w = Math.round(168 * s);
     const h = Math.round(52 * s);
     const gap = Math.round(12 * s);
-    const total = 4 * w + 3 * gap;
+    const total = 3 * w + 2 * gap;
     return { x: Math.round(v.width / 2 - total / 2 + i * (w + gap)), y: Math.round(v.height - 112 * s), w, h };
   }
 
-  private demoRect(): { x: number; y: number; w: number; h: number } {
+  private galleryRect(): { x: number; y: number; w: number; h: number } {
     return this.rowRect(0);
   }
 
-  private galleryRect(): { x: number; y: number; w: number; h: number } {
+  private pcRect(): { x: number; y: number; w: number; h: number } {
     return this.rowRect(1);
   }
 
-  private pcRect(): { x: number; y: number; w: number; h: number } {
-    return this.rowRect(2);
-  }
-
   private characterRect(): { x: number; y: number; w: number; h: number } {
-    return this.rowRect(3);
+    return this.rowRect(2);
   }
 
   step(dt: number, input: Input): void {
     this.t += dt;
     this.stepScene(dt);
     const b = this.buttonRect();
-    const d = this.demoRect();
     for (const c of input.takeClicks()) {
       if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
-      else if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) this.leave(this.onDemo);
       else {
         const g = this.galleryRect();
         const p = this.pcRect();
@@ -306,7 +300,6 @@ export class TitleScreen implements Screen {
     if (input.pressed('KeyP')) this.leave(this.onPc);
     if (input.pressed('KeyC')) this.leave(this.onCharacter);
     if (input.pressed('Enter') || input.pressed('Space')) this.leave(this.onStart);
-    if (input.pressed('KeyD')) this.leave(this.onDemo);
   }
 
   /** The other screens set their own zoom; the title hands the camera back at 1. */
@@ -883,15 +876,11 @@ export class TitleScreen implements Screen {
     const b = this.buttonRect();
     button(v, 'Roll Starter', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h));
     const rows: Array<[string, { x: number; y: number; w: number; h: number }]> = [
-      ['Demo Team (D)', this.demoRect()],
       ['Move Gallery (M)', this.galleryRect()],
       [`My PC (P) · ${this.pcCount}`, this.pcRect()],
       ['Trainer (C)', this.characterRect()],
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
-    // The demo team, shown while its button is hovered.
-    const d = this.demoRect();
-    if (hit(mx, my, d.x, d.y, d.w, d.h)) strip(v, 'Lv 100 Infernape · Shiny Rayquaza · Latios · Shiny Jirachi · Tinkaton', v.width / 2, b.y - 40 * s, 11, INK.text);
     text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler · N music', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;

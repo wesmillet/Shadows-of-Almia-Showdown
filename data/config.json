@@ -60,7 +60,7 @@
     "eliteChance": 0.12,
     "eliteLevels": [5, 9],
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
-    "shinyChance": 0.02,
+    "shinyChance": 0.002,
     "alphaChance": 0.07,
     "alphaRadius": 55,
     "alphaLevelBonus": 10,
@@ -205,12 +205,9 @@
     "rideSpeed": 1.7,
     "flySpeed": 2.1,
     "flyLift": 1.2,
+    "_mountsComment": "Only Latios is a mount for now. Tuned values for the others, to add back later: 0243 ride seat 0.52 back -0.02; 1007 ride seat 0.42 back 0.15; 1008 ride seat 0.34 back 0.06; 0398 fly seat 0.5 back 0.2 scale 1.8.",
     "mounts": {
-      "0243": { "kind": "ride", "seat": 0.52, "back": -0.02 },
-      "1007": { "kind": "ride", "seat": 0.42, "back": 0.15 },
-      "1008": { "kind": "ride", "seat": 0.34, "back": 0.06 },
-      "0381": { "kind": "fly", "seat": 0.42, "back": 0.05 },
-      "0398": { "kind": "fly", "seat": 0.5, "back": 0.2, "scale": 1.8 }
+      "0381": { "kind": "fly", "seat": 0.42, "back": 0.05 }
     }
   },
   "respawn": {

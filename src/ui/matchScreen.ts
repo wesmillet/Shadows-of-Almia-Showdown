@@ -10,6 +10,7 @@ import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
+import { music, type TrackId } from '../audio/music';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
@@ -181,7 +182,37 @@ export class MatchScreen implements Screen {
     while (this.notices.length > 3) this.notices.shift();
   }
 
+  /** Leaving the match: the music fades out. */
+  exit(): void {
+    music.want(null);
+  }
+
+  /**
+   * The music for this moment: Darkrai's theme near Darkrai (or anywhere in the dark once it is out),
+   * the Shadow Lugia and Mewtwo themes in their bouts, the trainer battle theme in any other battle,
+   * Abyss while you stand in the storm, and quiet otherwise.
+   */
+  private musicNow(): TrackId | null {
+    const m = this.match;
+    if (m.outcome) return null;
+    const p = m.player;
+    const dark = m.isDark(p.x, p.y);
+    const D = m.darkrai;
+    if (D && !D.fainted && (Math.hypot(D.x - p.x, D.y - p.y) < 18 || dark)) return 'darkrai';
+    const d = m.playerDuel;
+    if (d && d.state !== 'over') {
+      const foe = (d.a.trainer === p ? d.b : d.a).mon;
+      if (m.shadowBoutFoe() || (foe?.shadow && foe.dex.startsWith('0249'))) return 'shadow_lugia';
+      if (foe && foe.dex.startsWith('0150')) return 'mewtwo';
+      return 'trainer';
+    }
+    return dark ? 'abyss' : null;
+  }
+
   step(dt: number, input: Input): void {
+    music.want(this.musicNow());
+    // N: music on or off (remembered in this browser).
+    if (input.pressed('KeyN')) this.say(music.toggleMute() ? 'Music off (N)' : 'Music on (N)', 1.2);
     if (this.spectator) {
       this.spectator.step(input, dt);
       input.takeClicks();

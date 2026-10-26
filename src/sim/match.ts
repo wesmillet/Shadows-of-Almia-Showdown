@@ -2252,7 +2252,7 @@ export class Match {
     if (p.duelId) return "You can't ride during a battle";
     if (p.downUntil !== undefined) return '';
     const mon = p.party.find((m) => !m.fainted && !m.captured && !m.evolving && Match.mountOf(m.dex));
-    if (!mon) return 'No Pokémon in your party can carry you (Raikou, Koraidon, Miraidon ride; Latios, Staraptor fly)';
+    if (!mon) return '';
     if (this.controlled) this.releaseControl();
     this.fishing = null;
     const fly = Match.mountOf(mon.dex)?.kind === 'fly';

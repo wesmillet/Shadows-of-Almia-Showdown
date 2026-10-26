@@ -37,3 +37,8 @@ CC0), scaled down to 28 px and recoloured for the pixel art.
 for #810-898 from msikma/pokesprite (https://github.com/msikma/pokesprite). Pokémon and its
 sprites are © Nintendo, Creatures Inc. and GAME FREAK inc.; used here for a non-commercial fan
 game. Newer Pokémon with no box icon show their portrait.
+
+## Music
+
+The music in `assets/music/` (Abyss, the trainer battle theme, and the Shadow Lugia, Mewtwo and Darkrai
+battle themes) is original, synthesized for this game from scratch (numpy), with no samples.

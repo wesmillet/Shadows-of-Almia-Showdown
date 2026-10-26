@@ -145,8 +145,8 @@ export class RangerSprites {
 
   /** Every character in the manifest (the trainer looks a player can pick from). */
   characters(): string[] {
-    // Named originals first, then the Union Rangers and the townsfolk.
-    const rank = (c: string) => (c.startsWith('orig_') ? 0 : c.startsWith('union_') ? 1 : 2);
+    // The Union Rangers first, then the townsfolk.
+    const rank = (c: string) => (c.startsWith('union_') ? 0 : 1);
     return Object.keys(this.manifest?.characters ?? {}).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   }
 

@@ -49,9 +49,9 @@ the domain, and (optionally) Google for "Sign in with Google".
 - **Trainer XP and levels**: every casual or ranked match a signed-in player finishes earns XP for
   playing, for each trainer outlasted, for winning, knockouts, catches, damage and time survived
   (ranked +25%). The end screen lists it line by line.
-- **Looks**: the townsfolk and the first Ranger are free; the other Rangers unlock with levels (2 to
-  25), and the two named trainers with achievements (Wren: win a match; Kit: reach Gold). The
-  server checks every look (`/api/look`), and guests wear free looks only.
+- **Looks**: the first Ranger is free; the other Rangers unlock with levels (2 to 25), and the
+  townsfolk are locked for now. The server checks every look (`/api/look`), and guests wear the
+  free look only.
 - **Achievements**: 25, from one match (10 knockouts, a shiny in your party at the end...) or totals
   (100 catches, level 25, Master tier...). Several give a **title**, worn on your profile and shown
   under your name in battles.

@@ -16,6 +16,37 @@ import { poolSize, poolTiers, REEL_CARDS, rollChoice, rollStarter, STARTER_CHOIC
 
 export { rollStarter, STARTER_TIERS, type StarterTier };
 
+/** The box round a frame's visible pixels (cached; frames don't change). */
+const boxes = new Map<string, { x0: number; y0: number; x1: number; y1: number }>();
+let scratch: HTMLCanvasElement | null = null;
+const ids = new WeakMap<object, number>();
+let nextId = 1;
+function opaqueBox(img: CanvasImageSource, sx: number, sy: number, w: number, h: number): { x0: number; y0: number; x1: number; y1: number } {
+  let id = ids.get(img as object);
+  if (!id) ids.set(img as object, (id = nextId++));
+  const key = `${id}:${sx}:${sy}:${w}:${h}`;
+  const hit = boxes.get(key);
+  if (hit) return hit;
+  scratch ??= document.createElement('canvas');
+  scratch.width = w;
+  scratch.height = h;
+  const c = scratch.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  c.clearRect(0, 0, w, h);
+  c.drawImage(img, sx, sy, w, h, 0, 0, w, h);
+  const px = c.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+    if ((px[(yy * w + xx) * 4 + 3] ?? 0) < 40) continue;
+    if (xx < x0) x0 = xx;
+    if (yy < y0) y0 = yy;
+    if (xx + 1 > x1) x1 = xx + 1;
+    if (yy + 1 > y1) y1 = yy + 1;
+  }
+  const box = x1 > x0 ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: w, y1: h };
+  boxes.set(key, box);
+  return box;
+}
+
 interface Card {
   def: SpeciesDef;
   tier: StarterTier;
@@ -245,19 +276,20 @@ export class RollScreen implements Screen {
     if (card.anim && !card.anim.sprites.loaded) {
       text(v, '?', cx, y + 136 * s, 48, { align: 'center', color: 'rgba(138,106,74,0.4)', shadow: false });
     } else if (card.anim) {
-      // The sprite fills a fixed box whatever its size in the Pokédex, so small starters read as well as big ones.
+      // Every Pokémon stands on the same line and is scaled to fit the space between the tier label and
+      // its name: measured from the visible pixels of its frame, so no two stand at different heights.
       const f = card.anim.current();
-      const body = card.def.body ?? [24, 24];
-      const box = Math.min(100 * s, inner);
-      const sc = Math.max(1, Math.floor(box / Math.max(body[0], body[1], 1)));
+      const bb = opaqueBox(f.image, f.sx, f.sy, f.w, f.h);
+      const bw = Math.max(1, bb.x1 - bb.x0);
+      const bh = Math.max(1, bb.y1 - bb.y0);
+      const sc = Math.max(1, Math.floor(Math.min((inner * 0.92) / bw, (100 * s) / bh)));
       ctx.imageSmoothingEnabled = false;
-      const sy = y + 122 * s;
-      // Kept between the tier label and the name.
+      const feet = y + 170 * s;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(x, y + 50 * s, w, 128 * s);
+      ctx.rect(x, y + 46 * s, w, 132 * s);
       ctx.clip();
-      ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(cx - (f.w * sc) / 2), Math.round(sy - (f.h * sc) / 2), f.w * sc, f.h * sc);
+      ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(cx - ((bb.x0 + bb.x1) / 2) * sc), Math.round(feet - bb.y1 * sc), f.w * sc, f.h * sc);
       ctx.restore();
     }
     text(v, card.def.name, cx, y + 200 * s, 24, { align: 'center', color: INK.text, shadow: false, maxWidth: inner });

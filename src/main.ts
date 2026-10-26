@@ -26,7 +26,7 @@ import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
-import { canWear, lookRequirement } from './net/progression';
+import { canWear, isFreeLook, lookRequirement } from './net/progression';
 import { ChatPanel } from './ui/overlay';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
@@ -108,8 +108,9 @@ async function boot(): Promise<void> {
   void sprites.preload([...matchCast()].filter((d) => !first.has(d)));
   const rangers = await rangersP;
   // The trainer look picked on the title screen (Trainer, C), kept in this browser.
+  // A look that is locked now (the townsfolk, or a Ranger level look with no server to check) is not worn.
   const look = loadLook();
-  if (look) await rangers.setRole('player', look);
+  if (look && (isFreeLook(look) || (serverBase() && !lookRequirement(look)?.soon))) await rangers.setRole('player', look);
   const ui = new PixelUi(assets);
   await ui.load();
   setUiSkin(ui);
@@ -227,8 +228,8 @@ async function boot(): Promise<void> {
       // A look worn before looks were earned (or on another account): back to a free one.
       const worn = loadLook();
       if (worn && lookLock(worn)) {
-        saveLook('civ_00');
-        void rangers.setRole('player', 'civ_00');
+        saveLook('union_00');
+        void rangers.setRole('player', 'union_00');
       }
     });
   }
@@ -255,9 +256,9 @@ async function boot(): Promise<void> {
 
   /** With a game server, looks are earned (src/net/progression.ts); why one is locked, or null. */
   const lookLock = (look: string): string | null => {
-    if (!net) return null;
     const req = lookRequirement(look);
     if (!req) return null;
+    if (req.soon || !net) return 'Coming soon';
     const me = net.me;
     if (canWear(look, me.signedIn ? (me.progress?.level ?? 1) : 0, me.achievements ?? [])) return null;
     if (!me.signedIn) return 'Sign in';

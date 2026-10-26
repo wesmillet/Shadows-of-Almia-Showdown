@@ -50,16 +50,13 @@ describe('achievements, titles and looks', () => {
   });
 
   it('keeps Ranger looks for levels and the named ones for achievements', () => {
-    expect(canWear('civ_03', 1, [])).toBe(true);
+    expect(canWear('civ_03', 50, [])).toBe(false);
     expect(canWear('union_00', 1, [])).toBe(true);
     expect(canWear('union_05', 9, [])).toBe(false);
     expect(canWear('union_05', 10, [])).toBe(true);
-    expect(canWear('orig_00', 50, [])).toBe(false);
-    expect(canWear('orig_00', 1, ['first_win'])).toBe(true);
   });
 
   it('has unique ids and real looks', () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length);
-    for (const a of ACHIEVEMENTS) if (a.look) expect(a.look).toMatch(/^orig_\d\d$/);
   });
 });

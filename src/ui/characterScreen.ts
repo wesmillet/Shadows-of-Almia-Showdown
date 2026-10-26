@@ -1,8 +1,8 @@
 /**
  * Pick your trainer: every Ranger Union and townsfolk sheet in assets/rangers, walking in place.
  * Click one (or arrows + Enter) to wear it; Esc or Back returns. With a game server, the townsfolk
- * are free and the rest are earned online (src/net/progression.ts): Rangers by trainer level, the
- * two named trainers by achievements. A build without a server (offline only) has them all.
+ * The first Ranger is free; the other Rangers are earned online by trainer level (src/net/progression.ts)
+ * and the townsfolk are locked for now. Without a server only the first Ranger can be worn.
  */
 import type { Input } from '../core/input';
 import { saveLook } from '../look';
@@ -32,12 +32,8 @@ export class CharacterScreen implements Screen {
     for (const c of this.list) rangers.preview(c);
   }
 
-  /** Named originals, then "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
-  static readonly NAMES: Record<string, string> = { orig_00: 'Wren', orig_01: 'Kit' };
-
+  /** "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
   static label(character: string): string {
-    const named = CharacterScreen.NAMES[character];
-    if (named) return named;
     const [kind, n] = character.split('_');
     return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
   }
@@ -119,7 +115,7 @@ export class CharacterScreen implements Screen {
     h.clearRect(0, 0, v.width, v.height);
     backdrop(v);
     const anyLocked = this.list.some((c) => this.lock(c));
-    heading(v, 'CHOOSE YOUR TRAINER', anyLocked ? 'Townsfolk and the first Ranger are free; more Rangers unlock with your trainer level online, and two trainers with achievements' : 'Pick the trainer you play as', 56 * s);
+    heading(v, 'CHOOSE YOUR TRAINER', anyLocked ? 'The first Ranger is free; more Rangers unlock with your trainer level online, and more trainers are coming soon' : 'Pick the trainer you play as', 56 * s);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const k = skinPx(v);

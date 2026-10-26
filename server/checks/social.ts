@@ -200,7 +200,8 @@ check(prog.achievements.some((a) => a.id === 'first_match'), 'and the first achi
 const meA = (await api(A.cookie, '/api/me')).json as { progress: { xp: number; level: number }; achievements: string[] };
 check(meA.progress.xp === gained && meA.achievements.includes('first_match'), `kept on the account (level ${meA.progress.level})`);
 check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === 403, 'a Ranger look is locked at level 1');
-check((await api(A.cookie, '/api/look', { look: 'civ_04' })).json.ok, 'a townsfolk look is free');
+check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are locked');
+check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the first Ranger is free');
 check((await api(A.cookie, '/api/title', { title: 'Master Ranger' })).status === 400, 'titles must be earned');
 const bMe = (await api(B.cookie, '/api/me')).json as { progress: { xp: number } };
 const gMe = (await api('', '/api/me')).json as { signedIn: boolean };

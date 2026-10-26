@@ -89,7 +89,7 @@ const atLeast = (tier: string | null, want: string) => tier !== null && TIER_ORD
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'first_match', name: 'First Steps', desc: 'Finish an online match', check: (c) => c.life.matches >= 1 },
-  { id: 'first_win', name: 'Last One Standing', desc: 'Win a match', title: 'Champion', look: 'orig_00', check: (c) => c.life.wins >= 1 },
+  { id: 'first_win', name: 'Last One Standing', desc: 'Win a match', title: 'Champion', check: (c) => c.life.wins >= 1 },
   { id: 'wins_10', name: 'Seasoned', desc: 'Win 10 matches', title: 'Veteran', check: (c) => c.life.wins >= 10 },
   { id: 'wins_50', name: 'Island Legend', desc: 'Win 50 matches', title: 'Legend of Almia', check: (c) => c.life.wins >= 50 },
   { id: 'squad_win', name: 'Stronger Together', desc: 'Win as a squad', title: 'Squad Leader', check: (c) => !!c.match && c.match.outcome === 'win' && c.match.squad },
@@ -105,7 +105,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'legend', name: 'Legend Tamer', desc: 'Finish a match with a legendary Pokémon', title: 'Legend Tamer', check: (c) => !!c.match?.party.some((m) => m.legend) },
   { id: 'level_50_mon', name: 'Raised Right', desc: 'Finish a match with a Pokémon at level 50 or higher', check: (c) => !!c.match?.party.some((m) => m.level >= 50) },
   { id: 'ranked_win', name: 'Ranked Victor', desc: 'Win a ranked match', check: (c) => c.rankedWins >= 1 },
-  { id: 'tier_gold', name: 'Gold Standard', desc: 'Reach Gold in ranked', look: 'orig_01', check: (c) => atLeast(c.tier, 'gold') },
+  { id: 'tier_gold', name: 'Gold Standard', desc: 'Reach Gold in ranked', check: (c) => atLeast(c.tier, 'gold') },
   { id: 'tier_diamond', name: 'Diamond Hands', desc: 'Reach Diamond in ranked', title: 'Diamond', check: (c) => atLeast(c.tier, 'diamond') },
   { id: 'tier_master', name: 'Master Ranger', desc: 'Reach Master in ranked', title: 'Master Ranger', check: (c) => atLeast(c.tier, 'master') },
   { id: 'pc_10', name: 'Starting a Collection', desc: 'Keep 10 Pokémon in your PC', check: (c) => c.pc >= 10 },
@@ -127,9 +127,9 @@ export function titlesFor(earned: Iterable<string>): string[] {
 
 // ---------------------------------------------------------------- looks
 
-/** Looks every trainer has from the start: the townsfolk, and the game's own Ranger. */
+/** The look every trainer has from the start: the game's own Ranger. */
 export function isFreeLook(look: string): boolean {
-  return look.startsWith('civ_') || look === 'union_00';
+  return look === 'union_00';
 }
 
 /** The other Ranger looks unlock with trainer levels. */
@@ -139,13 +139,14 @@ export const LOOK_LEVELS: Record<string, number> = {
 };
 
 /** What it takes to wear a look (null: free). */
-export function lookRequirement(look: string): { level?: number; achievement?: Achievement } | null {
+export function lookRequirement(look: string): { level?: number; achievement?: Achievement; soon?: boolean } | null {
   if (isFreeLook(look)) return null;
   const level = LOOK_LEVELS[look];
   if (level !== undefined) return { level };
   const a = ACHIEVEMENTS.find((x) => x.look === look);
   if (a) return { achievement: a };
-  return null;
+  // Everything else (the townsfolk) is locked until it gets an unlock of its own.
+  return { soon: true };
 }
 
 /** Can a trainer at this level with these achievements wear this look? */

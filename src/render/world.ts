@@ -211,7 +211,7 @@ function drawRider(view: View, t: Trainer, f: { image: CanvasImageSource; sx: nu
   const ctx = view.ctx;
   const mt = t.mount as { mon: Mon; fly: boolean };
   const mon = mt.mon;
-  const rules = (CONFIG.riding.mounts as Record<string, { seat: number; back: number; scale?: number }>)[mon.dex.replace(/-shiny$/, '')] ?? { seat: 0.55, back: 0.1 };
+  const rules = (CONFIG.riding.mounts as Record<string, { seat: number; seatDown?: number; seatUp?: number; back: number; scale?: number }>)[mon.dex.replace(/-shiny$/, '')] ?? { seat: 0.55, back: 0.1 };
   const mul = rules.scale ?? 1;
   const ms = view.spriteScale * monScale(mon) * mul;
   const lift = mt.fly ? CONFIG.riding.flyLift + Math.sin(performance.now() / 380) * 0.08 : 0;
@@ -221,8 +221,11 @@ function drawRider(view: View, t: Trainer, f: { image: CanvasImageSource; sx: nu
   // The seat: up the body, and back toward the tail when seen side on.
   const [bw, bh] = mon.species.body;
   const dirv = DIR_VECTORS[t.dir] as { x: number; y: number };
+  // The saddle sits elsewhere seen from the front or behind (a maned back, a tree on the shell).
+  const facing = dir8To4(t.dir);
+  const seat = facing === 'down' ? rules.seatDown ?? rules.seat : facing === 'up' ? rules.seatUp ?? rules.seat : rules.seat;
   const seatX = sx - Math.sign(dirv.x) * rules.back * bw * ms;
-  const seatY = sy - lift * view.pxPerTile - rules.seat * bh * ms;
+  const seatY = sy - lift * view.pxPerTile - seat * bh * ms;
   // Hips at the seat: draw the top 62% of the trainer frame.
   const crop = Math.round(f.footY * 0.62);
   const top = f.footY - Math.round(f.footY * 0.97);

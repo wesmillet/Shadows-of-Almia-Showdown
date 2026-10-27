@@ -10,6 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
+import { incomingTrades, openTrades } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
 import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
 
@@ -28,7 +29,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'options' | 'back' | 'me' | 'privacy';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'options' | 'back' | 'me' | 'privacy';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -62,8 +63,11 @@ export class OnlineScreen implements Screen {
 
   enter(): void {
     loadHubLogo();
-    this.chat = new ChatPanel(this.net);
-    void this.net.refreshMe();
+    this.chat = new ChatPanel(this.net, { side: true, collapsed: window.innerWidth < 900 });
+    void this.net.refreshMe().then(() => this.checkTrades());
+    this.unsubTrades = this.net.on((m) => {
+      if (m.t === 'trades') void this.checkTrades();
+    });
     const q = new URLSearchParams(location.search).get('signin');
     if (q && !this.message) this.message = q;
   }
@@ -71,6 +75,22 @@ export class OnlineScreen implements Screen {
   exit(): void {
     this.chat?.dispose();
     this.chat = null;
+    this.unsubTrades?.();
+  }
+
+  private unsubTrades: (() => void) | null = null;
+  /** Trade offers waiting for this player (the Trade button's badge). */
+  private tradesWaiting = 0;
+
+  private async checkTrades(): Promise<void> {
+    if (!this.net.me.signedIn) {
+      this.tradesWaiting = 0;
+      return;
+    }
+    const n = await incomingTrades(this.net);
+    if (n > this.tradesWaiting) this.message = `You have ${n} trade offer${n === 1 ? '' : 's'} waiting`;
+    else if (!n && this.message.includes('trade offer')) this.message = '';
+    this.tradesWaiting = n;
   }
 
   /** The column everything sits in. */
@@ -98,7 +118,8 @@ export class OnlineScreen implements Screen {
       register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
       signout: signedIn ? { x: L.cx - 80 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
-      options: { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      trade: signedIn ? { x: L.cx - 172 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      options: signedIn ? { x: L.cx + 8 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
     };
@@ -136,6 +157,14 @@ export class OnlineScreen implements Screen {
     for (const c of input.takeClicks()) {
       if (on(c, 'find')) return this.find();
       if (on(c, 'back')) return this.actions.back();
+      if (signedIn && on(c, 'trade')) {
+        this.busy = true;
+        void openTrades(this.net).then(() => {
+          this.busy = false;
+          void this.checkTrades();
+        });
+        return;
+      }
       if (on(c, 'options')) {
         this.busy = true;
         void openOptions().then(() => (this.busy = false));
@@ -148,7 +177,7 @@ export class OnlineScreen implements Screen {
       else if (signedIn && on(c, 'me') && this.net.me.user) this.actions.profile(this.net.me.user.username);
     }
     if (input.pressed('Escape')) this.actions.back();
-    if ((input.pressed('Space') || input.pressed('Enter')) && this.net.connected) this.find();
+    if (input.pressed('Space') && this.net.connected) this.find();
   }
 
   private async account(mode: 'signin' | 'register'): Promise<void> {
@@ -158,7 +187,8 @@ export class OnlineScreen implements Screen {
     if (ok) {
       this.message = `Welcome, ${this.net.me.user?.username}!`;
       this.chat?.dispose();
-      this.chat = new ChatPanel(this.net);
+      this.chat = new ChatPanel(this.net, { side: true });
+      void this.checkTrades();
     }
   }
 
@@ -170,7 +200,8 @@ export class OnlineScreen implements Screen {
     this.busy = false;
     this.message = 'Signed out';
     this.chat?.dispose();
-    this.chat = new ChatPanel(this.net);
+    this.chat = new ChatPanel(this.net, { side: true });
+    this.tradesWaiting = 0;
   }
 
   render(): void {
@@ -231,6 +262,7 @@ export class OnlineScreen implements Screen {
     const f = this.findState();
     button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
     text(v, 'Eight trainers, one island, one winner. Empty seats get computer trainers.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
+    if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
     const sy = r.options.y + r.options.h + 34 * s;
     text(v, this.net.connected ? `Connected${this.net.ping ? ` · ${this.net.ping} ms` : ''}` : 'Connecting...', cx, sy, 12, { align: 'center', color: this.net.connected ? '#9fe8b8' : '#ffe2a0' });
@@ -404,7 +436,7 @@ export class LobbyScreen implements Screen {
   ) {}
 
   enter(): void {
-    this.chat = new ChatPanel(this.net);
+    this.chat = new ChatPanel(this.net, { side: true });
     this.unsub = this.net.on((m) => {
       if (m.t === 'lobby') {
         this.players = m.players;

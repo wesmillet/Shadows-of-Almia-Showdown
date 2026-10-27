@@ -103,6 +103,8 @@ export type ServerMsg =
   | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode }
   /** Friends (with what they are doing), your party, and party invites waiting for an answer. */
   | { t: 'social'; friends: FriendEntry[]; party: PartyState | null; invites: string[] }
+  /** Your trade offers changed (one came in, was answered or cancelled): fetch /api/trades again. */
+  | { t: 'trades' }
   /** Roll a starter now: your party is queueing, or your private lobby is starting. */
   | { t: 'pick'; reason: 'party' | 'private'; seconds: number }
   | { t: 'private'; lobby: PrivateState | null }

@@ -131,6 +131,9 @@ export class Hub {
       start: (players, mode) => this.startRoom(players, mode, {}),
     });
     o.accounts.presence = (id) => this.presence(id);
+    o.accounts.onTradesChanged = (ids) => {
+      for (const id of ids) this.clients.get(`u${id}`)?.send({ t: 'trades' });
+    };
     o.accounts.onFriendsChanged = (ids) => {
       for (const id of ids) {
         const c = this.clients.get(`u${id}`);

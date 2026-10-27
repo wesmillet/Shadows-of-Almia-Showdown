@@ -10,6 +10,9 @@ const CSS = `
 .almia-ui * { box-sizing: border-box; }
 .almia-panel { pointer-events: auto; background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; image-rendering: pixelated; }
 .almia-chat { position: absolute; left: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }
+.almia-chat.side { left: auto; right: 16px; top: 16px; bottom: 16px; width: min(300px, calc(100vw - 32px)); }
+.almia-chat.side .almia-chat-log { flex: 1; height: auto; }
+.almia-chat.side.collapsed { bottom: auto; }
 .almia-chat.compact { opacity: 0.88; top: 96px; bottom: auto; width: min(300px, calc(100vw - 32px)); }
 .almia-chat.compact .almia-chat-log { height: 120px; }
 .almia-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #4a3424; color: #f4ecdc; font-size: 14px; letter-spacing: 0.5px; cursor: pointer; }
@@ -121,8 +124,8 @@ export class ChatPanel {
   private menu: HTMLDivElement | null = null;
   private keyHandler: (e: KeyboardEvent) => void;
 
-  constructor(private readonly net: Connection, opts: { compact?: boolean; collapsed?: boolean } = {}) {
-    this.el = el('div', `almia-panel almia-chat${opts.compact ? ' compact' : ''}${opts.collapsed ? ' collapsed' : ''}`);
+  constructor(private readonly net: Connection, opts: { compact?: boolean; collapsed?: boolean; side?: boolean } = {}) {
+    this.el = el('div', `almia-panel almia-chat${opts.compact ? ' compact' : ''}${opts.side ? ' side' : ''}${opts.collapsed ? ' collapsed' : ''}`);
     const head = el('div', 'almia-chat-head');
     head.append(el('span', '', 'Global chat'), el('span', '', 'Enter to talk'));
     head.onclick = () => this.el.classList.toggle('collapsed');

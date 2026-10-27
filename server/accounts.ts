@@ -149,6 +149,14 @@ export class Accounts {
         entry TEXT NOT NULL, created_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS pc_user ON pc(user_id);
+      CREATE TABLE IF NOT EXISTS trades (
+        id INTEGER PRIMARY KEY, from_user INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_user INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        give_pc INTEGER NOT NULL, want_pc INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open', created_at INTEGER NOT NULL, closed_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS trades_to ON trades(to_user, status);
+      CREATE INDEX IF NOT EXISTS trades_from ON trades(from_user, status);
       CREATE TABLE IF NOT EXISTS matches (id TEXT PRIMARY KEY, ended_at INTEGER NOT NULL, summary TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS match_players (
         match_id TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, place INTEGER NOT NULL,
@@ -207,6 +215,102 @@ export class Accounts {
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
   }
+
+  // ---------------------------------------------------------------- trading
+
+  /**
+   * Trading between accounts (guests can not trade): an offer is "my Pokémon for yours", picked
+   * from both PCs. The other player accepts or declines whenever they next look; accepting swaps
+   * the two PC rows in one transaction, after checking both trainers still own them. Offers that
+   * involved either Pokémon are closed when it changes hands.
+   */
+  private async tradeApi(req: IncomingMessage, path: string, me: UserRow, send: (status: number, body: unknown) => void): Promise<void> {
+    const card = (id: number): Record<string, unknown> | null => {
+      const r = this.db.prepare('SELECT id, user_id, entry FROM pc WHERE id = ?').get(id) as { id: number; user_id: number; entry: string } | undefined;
+      if (!r) return null;
+      const e = JSON.parse(r.entry) as Record<string, unknown>;
+      return { pcId: r.id, owner: r.user_id, dex: e.dex, name: e.name, level: e.level, shiny: !!e.shiny, alpha: !!e.alpha, shadow: !!e.shadow };
+    };
+    const nameOf = (id: number): string => (this.db.prepare('SELECT username FROM users WHERE id = ?').get(id) as { username: string } | undefined)?.username ?? '?';
+    if (req.method === 'GET' && path.startsWith('/api/trade/pc/')) {
+      // Someone's PC, to pick what to ask them for.
+      const name = decodeURIComponent(path.slice('/api/trade/pc/'.length));
+      const u = this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(name) as UserRow | undefined;
+      if (!u || u.banned) return send(404, { error: 'No player with that name' });
+      if (u.id === me.id) return send(400, { error: "That's you!" });
+      const rows = this.db.prepare('SELECT id FROM pc WHERE user_id = ? ORDER BY id').all(u.id) as Array<{ id: number }>;
+      return send(200, { name: u.username, pc: rows.map((r) => card(r.id)) });
+    }
+    if (req.method === 'GET' && path === '/api/trades') {
+      const rows = this.db.prepare("SELECT * FROM trades WHERE status = 'open' AND (from_user = ? OR to_user = ?) ORDER BY id DESC").all(me.id, me.id) as Array<{ id: number; from_user: number; to_user: number; give_pc: number; want_pc: number; created_at: number }>;
+      const offers = rows.map((t) => ({ id: t.id, from: nameOf(t.from_user), to: nameOf(t.to_user), incoming: t.to_user === me.id, give: card(t.give_pc), want: card(t.want_pc), at: t.created_at }));
+      return send(200, { offers });
+    }
+    if (req.method !== 'POST') return send(404, { error: 'Not found' });
+    const b = await readJson(req);
+    if (path === '/api/trades/offer') {
+      if (this.limited(`trade:${me.id}`, 20, 3600_000)) return send(429, { error: 'Too many trade offers. Try again later' });
+      const give = card(Number(b.give));
+      const want = card(Number(b.want));
+      if (!give || give.owner !== me.id) return send(400, { error: 'Pick one of your own Pokémon to give' });
+      if (!want || want.owner === me.id) return send(400, { error: "Pick one of the other trainer's Pokémon" });
+      const other = want.owner as number;
+      const target = this.db.prepare('SELECT banned FROM users WHERE id = ?').get(other) as { banned: number } | undefined;
+      if (!target || target.banned) return send(400, { error: 'That trainer can not trade' });
+      const open = (this.db.prepare("SELECT COUNT(*) AS n FROM trades WHERE from_user = ? AND status = 'open'").get(me.id) as { n: number }).n;
+      if (open >= 10) return send(400, { error: 'You have 10 offers waiting already. Cancel one first' });
+      const dup = this.db.prepare("SELECT id FROM trades WHERE status = 'open' AND from_user = ? AND give_pc = ? AND want_pc = ?").get(me.id, give.pcId as number, want.pcId as number);
+      if (dup) return send(400, { error: 'You already offered that trade' });
+      this.fail(`trade:${me.id}`);
+      this.db.prepare('INSERT INTO trades (from_user, to_user, give_pc, want_pc, created_at) VALUES (?, ?, ?, ?, ?)').run(me.id, other, give.pcId as number, want.pcId as number, Date.now());
+      this.onTradesChanged([other]);
+      return send(200, { ok: true, text: `Offer sent to ${nameOf(other)}: your ${give.name} for their ${want.name}` });
+    }
+    const t = this.db.prepare("SELECT * FROM trades WHERE id = ? AND status = 'open'").get(Number(b.id)) as { id: number; from_user: number; to_user: number; give_pc: number; want_pc: number } | undefined;
+    if (!t) return send(400, { error: 'That offer is gone' });
+    if (path === '/api/trades/cancel') {
+      if (t.from_user !== me.id) return send(403, { error: 'Not your offer' });
+      this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
+      this.onTradesChanged([t.to_user]);
+      return send(200, { ok: true });
+    }
+    if (path === '/api/trades/respond') {
+      if (t.to_user !== me.id) return send(403, { error: 'Not your offer' });
+      if (!b.accept) {
+        this.db.prepare("UPDATE trades SET status = 'declined', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
+        this.onTradesChanged([t.from_user]);
+        return send(200, { ok: true, text: 'Declined' });
+      }
+      // The swap: both Pokémon must still be where the offer found them.
+      this.db.exec('BEGIN IMMEDIATE');
+      try {
+        const g = this.db.prepare('SELECT user_id, entry FROM pc WHERE id = ?').get(t.give_pc) as { user_id: number; entry: string } | undefined;
+        const w = this.db.prepare('SELECT user_id, entry FROM pc WHERE id = ?').get(t.want_pc) as { user_id: number; entry: string } | undefined;
+        if (!g || !w || g.user_id !== t.from_user || w.user_id !== t.to_user) {
+          this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
+          this.db.exec('COMMIT');
+          return send(400, { error: 'One of those Pokémon is not there any more, so the offer was closed' });
+        }
+        const stamp = (entry: string, from: number): string => JSON.stringify({ ...JSON.parse(entry), tradedFrom: nameOf(from), tradedAt: new Date().toISOString() });
+        this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.to_user, stamp(g.entry, t.from_user), t.give_pc);
+        this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.from_user, stamp(w.entry, t.to_user), t.want_pc);
+        this.db.prepare("UPDATE trades SET status = 'done', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
+        // Any other open offer that involved either Pokémon is now stale.
+        this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc IN (?, ?) OR want_pc IN (?, ?))").run(Date.now(), t.give_pc, t.want_pc, t.give_pc, t.want_pc);
+        this.db.exec('COMMIT');
+      } catch (e) {
+        this.db.exec('ROLLBACK');
+        throw e;
+      }
+      this.onTradesChanged([t.from_user, t.to_user]);
+      const gName = (JSON.parse((this.db.prepare('SELECT entry FROM pc WHERE id = ?').get(t.give_pc) as { entry: string }).entry) as { name: string }).name;
+      return send(200, { ok: true, text: `Trade complete! ${gName} is in your PC` });
+    }
+    return send(404, { error: 'Not found' });
+  }
+
+  /** Set by main.ts: tell these accounts (when online) their trade offers changed. */
+  onTradesChanged: (userIds: number[]) => void = () => {};
 
   // ---------------------------------------------------------------- identity
 
@@ -654,9 +758,10 @@ export class Accounts {
         return send(200, { ok: r.ok });
       }
       if (req.method === 'GET' && path === '/api/pc') {
-        const rows = this.db.prepare('SELECT entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ entry: string }>;
-        return send(200, { pc: rows.map((r) => JSON.parse(r.entry)) });
+        const rows = this.db.prepare('SELECT id, entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ id: number; entry: string }>;
+        return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id })) });
       }
+      if (path.startsWith('/api/trade')) return this.tradeApi(req, path, me, send);
       if (req.method === 'GET' && path === '/api/extract') {
         const row = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 1').get(me.id) as { match_id: string; party: string; picks_left: number; outcome: string } | undefined;
         return send(200, row ? { match: row.match_id, party: JSON.parse(row.party), picks: row.picks_left, outcome: row.outcome } : { match: null });

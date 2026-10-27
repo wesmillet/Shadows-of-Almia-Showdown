@@ -16,6 +16,7 @@ import random
 import numpy as np
 
 import design3 as D
+import content3
 from content3 import catalogue
 
 DIRS = ['East', 'SouthEast', 'South', 'SouthWest', 'West', 'NorthWest', 'North', 'NorthEast']
@@ -40,6 +41,7 @@ def roads(d, placer, seed=21):
                + catalogue('Objects_Props', r'Plant_SaffronFlower') + catalogue('Objects_Props', r'Crate_Small_Flowers'))
     forest_bits = (catalogue('Objects_Props', r'Plant_Mushroom(_\w+)?') + catalogue('Objects_Props', r'TreeLog')
                    + catalogue('Objects_Props', r'TreeStump_(Small|Big|Lantern|Small_Lantern)'))
+    blight = D.blight()
     n_sign = n_lamp = n_flower = 0
     for idx, (kind, pts) in enumerate(D.ROADS):
         if kind != '1':
@@ -88,6 +90,7 @@ def roads(d, placer, seed=21):
                 continue
             b = d.biome[fy, fx]
             pool = flowers if b in (D.MEADOW, D.CASTLE) else forest_bits if b in (D.FOREST, D.AUTUMN) else None
+            if blight[fy, fx]: pool = content3.DEAD_BITS       # nothing blooms on the blighted plain
             if pool and placer.put(rng.choice(pool), fx, fy, clear=0, shadow=False):
                 n_flower += 1
     return n_sign, n_lamp, n_flower

@@ -48,6 +48,14 @@ ROCKS = {
 }
 
 
+# The blighted plain round the Shadow Crystal: nothing green grows there.
+DEAD_TREES = catalogue('Objects_Trees_Desert', r'Tree_Dead_(2|3|4|6|7)')
+DEAD_BITS = (catalogue('Objects_Props', r'TreeStump_(Big|Small)') + catalogue('Objects_Props', r'TreeLog_[123]')
+             + catalogue('Objects_Props', r'Skull_1') * 2 + catalogue('Objects_Props', r'Skull_Animal_1')
+             + catalogue('Objects_Props', r'Tombstone_[13]_Destroyed'))
+DEAD_ROCKS = catalogue('Objects_Rocks_Desert', r'Rock_Gray_(\d+)') + catalogue('Objects_Rocks_Desert', r'Rock_Gray_Rune_\d')
+
+
 def size(key):
     t = tiled.tileset(key[0]).tiles[key[1]]
     return t.w, t.h

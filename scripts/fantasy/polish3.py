@@ -146,9 +146,9 @@ keep_out |= ((xx - lk['x']) / (lk['rx'] + 2.5)) ** 2 + ((yy - lk['y']) / (lk['ry
 # the castle stands in its own clearing: nothing planted against its walls or before its gates
 from scipy import ndimage as _nd
 keep_out |= _nd.binary_dilation(biome == 7, iterations=8)
-# and the crystal arena's oval stands clear too
+# and the blighted plain round the crystal grows nothing (build3 plants the dead things there)
 _c = m['center']
-keep_out |= ((xx - _c['x']) / 21) ** 2 + ((yy - _c['y']) / 15.5) ** 2 <= 1
+keep_out |= ((xx - _c['x']) / 41) ** 2 + ((yy - _c['y']) / 33) ** 2 <= 1
 keep_out[:2, :] = keep_out[-2:, :] = True
 keep_out[:, :2] = keep_out[:, -2:] = True
 

@@ -32,6 +32,24 @@ def statue(dex, frame=0):
     # the original's dark lines stay dark (its outline and details)
     dark = a & (lum < 0.18)
     body[dark, :3] = OUTLINE
+    # depth: lit from the top-left like the tileset. A pixel whose lower-right neighbour is outside
+    # the figure is in shade (one tone down, two at the very edge); one whose upper-left neighbour is
+    # outside catches the light (one tone up). The right half sits a little in shade overall.
+    def nb(dy, dx):
+        p = np.pad(a, 1)
+        return p[1 + dy:1 + dy + h, 1 + dx:1 + dx + w]
+    shade = a & (~nb(1, 1) | ~nb(0, 1) | ~nb(1, 0))
+    deep = a & ~nb(1, 1) & ~nb(0, 1)
+    lit = a & (~nb(-1, -1) | ~nb(-1, 0)) & ~shade
+    q2 = q.copy()
+    xs_ = np.arange(w)[None, :].repeat(h, 0)
+    q2[a & (xs_ > w * 0.55)] -= 1
+    q2[shade] -= 1
+    q2[deep] -= 1
+    q2[lit] += 1
+    q2 = q2.clip(0, 3)
+    body[a, :3] = STONE[q2[a]]
+    body[dark, :3] = OUTLINE
     # outline round the figure
     pad = np.pad(body, ((1, 1), (1, 1), (0, 0)))
     am = np.pad(a, 1)
@@ -58,6 +76,8 @@ def statue(dex, frame=0):
     plinth[0, :, :3] = OUTLINE
     plinth[:4, 0, :3] = OUTLINE
     plinth[:4, -1, :3] = OUTLINE
+    plinth[1:3, -4:-1, :3] = STONE[1]     # the cap's shaded right end
+    plinth[4:-1, -7:-3, :3] = STONE[0]    # the base's shaded right side
     W = max(w, pw)
     out = np.zeros((h - 2 + ph, W, 4), np.uint8)
     out[h - 2:, (W - pw) // 2:(W - pw) // 2 + pw] = plinth
@@ -66,7 +86,22 @@ def statue(dex, frame=0):
     region = out[0:h, ox:ox + w]
     m = fig[..., 3] > 0
     region[m] = fig[m]
-    return out
+    # its shadow, cast down and to the right: the figure's silhouette, flattened and offset, in a
+    # see-through dark that falls on the plinth top and the water behind it
+    H_, W_ = out.shape[:2]
+    shadow = np.zeros((H_ + 4, W_ + 6, 4), np.uint8)
+    sil = fig[..., 3] > 0
+    ys_, xs_ = np.nonzero(sil)
+    for y_, x_ in zip(ys_, xs_):
+        sy = h - 2 - (h - 2 - y_) // 3 + 2          # squashed toward the feet
+        sx = ox + x_ + 3 + (h - y_) // 6             # leaning right
+        if 0 <= sy < shadow.shape[0] and 0 <= sx < shadow.shape[1]:
+            shadow[sy, sx] = (20, 18, 40, 110)
+    full = np.zeros_like(shadow)
+    full[:H_, :W_] = out
+    m2 = full[..., 3] == 0
+    full[m2] = shadow[m2]
+    return full
 
 
 if __name__ == '__main__':

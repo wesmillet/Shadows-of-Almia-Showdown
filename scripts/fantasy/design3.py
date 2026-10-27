@@ -39,7 +39,7 @@ CASTLE_RECTS = [
     (176, 154, 224, 190),   # the main ward
     (189, 144, 210, 158),   # the keep's spur on the north wall
     (153, 159, 178, 190),   # the west gate yard (barbican); its south wall runs on as the ward's
-    (221, 144, 235, 165),   # the garden bastion, north-east
+    (210, 140, 224, 158),   # the garden wing, north-east: beside the keep's spur, open to the court
 ]
 CASTLE_CUTS = []
 # walls inside the castle region (the union has none where the rects meet): the gate yard's inner wall
@@ -342,8 +342,9 @@ def paint_roads(d, roads=ROADS, w=3, out=None):
         ph = rng.uniform(0, 2 * np.pi)
         for j, (x, y) in enumerate(line):
             # a little width variation along dirt roads
-            # brick gate approaches are as wide as the gates (5); dirt roads vary a little
-            r = 2.5 if k == 2 else (w / 2) + (0.28 * np.sin(j * 0.045 + ph) if wind else 0.0)
+            # brick gate approaches are as wide as the gates (5); dirt roads vary a little but never
+            # below three tiles across
+            r = 2.5 if k == 2 else 1.75 + (0.3 * (1 + np.sin(j * 0.045 + ph)) / 2 if wind else 0.0)
             x0, x1 = int(np.floor(x - r)), int(np.ceil(x + r))
             y0, y1 = int(np.floor(y - r)), int(np.ceil(y + r))
             for yy in range(max(0, y0), min(H_, y1 + 1)):
@@ -351,6 +352,13 @@ def paint_roads(d, roads=ROADS, w=3, out=None):
                     if (xx + 0.5 - x - 0.5) ** 2 + (yy + 0.5 - y - 0.5) ** 2 <= r * r:
                         target[yy, xx] = max(target[yy, xx], k)
     if out is not None: return
+    # no road is ever one or two tiles across: wherever no 3x3 block of road covers a cell, widen
+    for _ in range(3):
+        p = d.paths > 0
+        thin = p & ~ndimage.binary_opening(p, structure=np.ones((3, 3), bool))
+        if not thin.any(): break
+        grow = ndimage.binary_dilation(thin, structure=np.ones((3, 3), bool)) & ~p
+        d.paths[grow] = 1
     d.paths[~d.land] = 0
     d.paths[d.water] = 0
     d.paths[d.castle & ~ndimage.binary_erosion(d.castle, iterations=CASTLE_WALL)] = 0   # no road over the wall

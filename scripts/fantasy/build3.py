@@ -214,18 +214,21 @@ def main():
     walks[int(ocy):D.GATES['S'][1] + 6, kx - wh:kx + wh + 1] = True     # plaza -> south gate
     ex, ey, _ = D.GATES['E']
     walks[ey - wh:ey + wh + 1, int(ocx):ex + 5] = True                  # plaza -> east postern
-    walks[ey - wh:ey + wh + 1, 176:int(ocx)] = True                      # west wing -> plaza (same axis)
+    walks[ey - wh:ey + wh + 1, 156:int(ocx)] = True                      # across the west wing to the plaza (same axis)
     # outside every gate, the same slabs run out to meet the road (no brick stubs of another stone)
     for (gx, gy, horiz) in D.GATES.values():
         if horiz:
             out_up = not d.castle[gy - 4, gx]          # the gap opens to the north (gate yard) or south
-            if out_up: walks[gy - 6:gy + 1, gx - wh:gx + wh + 1] = True
+            if out_up:
+                walks[gy - 6:gy + 1, gx - wh:gx + wh + 1] = True
+                walks[gy:ey, gx - wh:gx + wh + 1] = True     # the gate yard's walk down to the cross walk
             else: walks[gy:gy + 10, gx - wh:gx + wh + 1] = True
         else:
             walks[gy - wh:gy + wh + 1, gx:gx + 9] = True
     yard_x1 = 179
     west_wing = court & (xx_ < yard_x1)
-    pav[(walks & d.land) | west_wing] = F.color('Slab Floor')
+    # the west wing: lawns either side of its two walks (no longer all stone)
+    pav[walks & d.land] = F.color('Slab Floor')
     pav[oval(15.5, 8.5)] = F.color('Mid Slab Floor')
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
@@ -242,7 +245,7 @@ def main():
     pav[D.ellipse(cx, cy, 14.5, 9.5) < 1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
     # one fountain on the lawn of the garden bastion (no paving round it)
-    fountains = [(225, 151)]   # centred in the bastion's garden
+    fountains = [(214, 148)]   # centred in the garden wing, clear of its north wall's face
     # under the walls' walkway edges, stone where the court beside them is paved (their edge pixels
     # are see-through, and grass showed through in a thin line)
     under = W & ndimage.binary_dilation(pav > 0, structure=np.ones((3, 3)))
@@ -258,7 +261,7 @@ def main():
     # true ovals (tile units: cx, cy, rx, ry, class) that the stepped tiles stand for
     _ovals = np.array([(ocx + 0.5, ocy + 0.5, 19, 11, 1), (ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2),
                        (cx + 0.5, cy + 0.5, 17.5, 12, 1), (cx + 0.5, cy + 0.5, 14.5, 9.5, 2)], np.float32)
-    np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=(walks & d.land) | west_wing)
+    np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=walks & d.land)
     fountain_layer = np.full(W.shape, None, dtype=object)
     for (fx, fy) in fountains:
         for L in stamps.tile_stamp('Forest Castle', 37, 54, 43, 60, ['Animations']):
@@ -298,7 +301,7 @@ def main():
     st = _statue.statue('0251')
     for (fx, fy) in fountains:
         bcx, bcy = (fx + 2.9) * 16, (fy + 3.0) * 16 + 10      # the basin's centre (the stamp is 6x6 tiles)
-        objects.append({'img': st, 'name': 'statue_celebi', 'x': int(bcx - st.shape[1] / 2), 'y': int(bcy)})
+        objects.append({'img': st, 'name': 'statue_celebi', 'x': int(bcx - (st.shape[1] - 6) / 2), 'y': int(bcy) + 4})   # (+6 wide, +4 tall: its shadow)
     blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
     placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
     # towers on the four corners, halfway down the long sides, and either side of each gate.
@@ -360,7 +363,7 @@ def main():
     import random as _r; rr = _r.Random(3)
     if formal:
         # pairs mirrored about the south walk (x 199): by the south wall, and by the north wall
-        for (x, y) in [(188, 185), (210, 185), (183, 162), (214, 162)]:
+        for (x, y) in [(188, 185), (210, 185), (183, 162), (214, 162), (160, 182), (171, 182)]:
             if not yard.put(formal[0], x, y, clear=1): log(f'  no room for the courtyard tree at {x},{y}')
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')

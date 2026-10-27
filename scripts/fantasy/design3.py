@@ -35,15 +35,11 @@ WATER, MEADOW, FOREST, SHORE, SNOW, DESERT, AUTUMN, CASTLE = range(8)
 
 # the castle: the union of these rectangles (x0, y0, x1, y1, exclusive ends) minus the cut-outs;
 # the outer 3 tiles are the wall walkway, the rest the courtyard
-CASTLE_RECTS = [
-    (176, 154, 224, 190),   # the main ward
-    (189, 144, 210, 158),   # the keep's spur on the north wall
-    (153, 159, 178, 190),   # the west gate yard (barbican); its south wall runs on as the ward's
-    (210, 140, 224, 158),   # the garden wing, north-east: beside the keep's spur, open to the court
-]
+# The castle is the pack's Bosk Barracks (castle2.py) stretched to CASTLE_SIZE: this is its outer
+# wall's rectangle (the keep stands above it).
+CASTLE_RECTS = [(160, 142, 236, 190)]
 CASTLE_CUTS = []
-# walls inside the castle region (the union has none where the rects meet): the gate yard's inner wall
-CASTLE_INNER_WALLS = []
+CASTLE_STRETCH = (26, 26, 28)    # castle2.compose: columns added left and right of the gate, rows added
 CASTLE_WALL = 3
 CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
@@ -206,9 +202,9 @@ TOWNS = {
 }
 # gates in the castle wall: (x, y) of the gap's middle, and whether the gap is in a N/S wall
 GATES = {
-    'W': (165, 160, True),       # the gate yard's outer gate, in its north wall
-    'S': (199, 188, True),
-    'E': (222, 172, False),      # the postern towards Greenhollow, on the plaza's east-west axis
+    'S': (198, 188, True),       # the gatehouse (castle2: the sample's, four tiles wide)
+    'W': (161, 164, False),      # gaps in the side walls, a tower above and below each
+    'E': (234, 164, False),
 }
 GATE_W = 5
 
@@ -238,10 +234,10 @@ ROADS = [
     ('1', [(118, 109), (122, 100), (122, 77)]),
     # to the castle: the gate yard's north gate, the south gate and the east postern
     # (the castle paves its own approaches with the courtyard's slabs: build3.py)
-    ('1', [(186, 115), (182, 128), (168, 142), (165, 155)]),
+    ('1', [(186, 115), (182, 128), (168, 142), (156, 152), (159, 164)]),
     ('1', [(158, 134), (168, 142)]),
-    ('1', [(229, 172), (243, 166), (252, 150), (262, 128)]),
-    ('1', [(199, 196), (199, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
+    ('1', [(236, 164), (247, 158), (252, 150), (262, 128)]),
+    ('1', [(198, 191), (198, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
 ]
 
 

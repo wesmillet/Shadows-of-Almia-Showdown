@@ -20,6 +20,7 @@ import { activeParty } from './entities';
 import type { Match } from './match';
 import { canStand, tryMove } from './movement';
 import type { Shop } from './town';
+import { TownsfolkCrew } from './townsfolk';
 
 /** The merchant's stock: rare things the town stalls do not carry (at most ten lines with the Storm Mask). */
 const MERCHANT_STOCK: Array<[string, number]> = [
@@ -68,6 +69,8 @@ export class Visitors {
   lugiaDone = false;
   /** Lugia's entrance in progress: the lake churns, Lugia bursts out (Guardian Signs' Lugia sheet), then leaps ashore. */
   lugiaIntro: { t: number; L: Mon; from: { x: number; y: number }; to: { x: number; y: number }; stage: number; shadow?: boolean } | null = null;
+  /** The wandering townsfolk and, some matches, the Breeder (townsfolk.ts). */
+  folk: TownsfolkCrew | null = null;
 
   constructor(private readonly m: Match) {
     const rng = m.rng;
@@ -112,6 +115,7 @@ export class Visitors {
       m.wilds.push(h);
       this.hoopa = h;
     }
+    this.folk = new TownsfolkCrew(m);
   }
 
   // ---------------------------------------------------------------- stepping
@@ -134,6 +138,14 @@ export class Visitors {
     if (this.hoopa && !this.hoopaUsed) this.announce('hoopa', this.hoopa.x, this.hoopa.y, 'Hoopa is floating nearby, giggling... (Space to talk)');
     if (this.merchant) this.walk(this.merchant, dt, 2.0);
     if (this.ace && this.aceState === 'idle') this.walk(this.ace, dt, 2.4);
+    if (this.folk) {
+      if (this.folk.breeder) {
+        this.announce('breeder', this.folk.breeder.npc.x, this.folk.breeder.npc.y, 'A Pokémon Breeder is wandering nearby, hoping to trade an Egg... (Space to talk)');
+        this.walk(this.folk.breeder, dt, 1.6);
+      }
+      for (const w of this.folk.walkers) this.walk(w, dt, 1.4);
+      this.folk.step(dt);
+    }
     if (this.aceFoe) {
       // Her battle team holds its ground, facing the player.
       const f = this.aceFoe;

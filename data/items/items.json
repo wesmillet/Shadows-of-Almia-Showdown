@@ -494,6 +494,14 @@
       "short": "SuperRod",
       "kind": "rod",
       "desc": "Fish at the water's edge (Space): the best bites, items, and something big in Tide Lake"
+    },
+    {
+      "id": "mystery-egg",
+      "name": "Pokémon Egg",
+      "short": "Egg",
+      "kind": "charm",
+      "desc": "A Breeder's Egg. It hatches when it's ready. Keep it warm",
+      "stack": 3
     }
   ]
 }

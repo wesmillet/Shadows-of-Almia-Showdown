@@ -1,81 +1,121 @@
 {
-  "_comment": "Which character from assets/rangers/manifest.json plays each role. A role whose character is missing from the manifest draws the labeled placeholder (the Team Dim Sun grunt has no sheet yet).",
-  "roles": {
-    "player": {
-      "character": "union_00",
-      "name": "Player Ranger"
-    },
-    "trainer_a": {
-      "character": "union_06",
-      "name": "Rook"
-    },
-    "trainer_b": {
-      "character": "union_08",
-      "name": "Marlo"
-    },
-    "host": {
-      "character": "union_05",
-      "name": "Ranger Union host"
-    },
-    "staff_a": {
-      "character": "civ_06",
-      "name": "Outpost staff"
-    },
-    "staff_b": {
-      "character": "civ_09",
-      "name": "Outpost staff"
-    },
-    "grunt": {
-      "character": "dimsun_grunt",
-      "name": "Team Dim Sun Grunt (placeholder)"
-    },
-    "trainer_c": {
-      "character": "union_01",
-      "name": "Wynne"
-    },
-    "trainer_d": {
-      "character": "union_02",
-      "name": "Brigg"
-    },
-    "trainer_e": {
-      "character": "union_04",
-      "name": "Tamsin"
-    },
-    "trainer_f": {
-      "character": "union_07",
-      "name": "Dale"
-    },
-    "healer": {
-      "character": "civ_10",
-      "name": "Healer"
-    },
-    "vendor_a": {
-      "character": "civ_01",
-      "name": "Vendor"
-    },
-    "vendor_b": {
-      "character": "civ_02",
-      "name": "Vendor"
-    },
-    "vendor_c": {
-      "character": "civ_03",
-      "name": "Vendor"
-    },
-    "challenger": {
-      "character": "union_03",
-      "name": "Castle Champion"
-    },
-    "trainer_g": {
-      "character": "union_09",
-      "name": "Juniper"
-    },
-    "merchant": {
-      "character": "civ_07",
-      "name": "Wandering Merchant"
-    },
-    "ace": {
-      "character": "civ_12",
-      "name": "Ace Trainer Celeste"
-    }
+ "_comment": "Which character from assets/rangers/manifest.json plays each role. A role whose character is missing from the manifest draws the labeled placeholder (the Team Dim Sun grunt has no sheet yet).",
+ "roles": {
+  "player": {
+   "character": "union_00",
+   "name": "Player Ranger"
+  },
+  "trainer_a": {
+   "character": "union_06",
+   "name": "Rook"
+  },
+  "trainer_b": {
+   "character": "union_08",
+   "name": "Marlo"
+  },
+  "host": {
+   "character": "union_05",
+   "name": "Ranger Union host"
+  },
+  "staff_a": {
+   "character": "civ_06",
+   "name": "Outpost staff"
+  },
+  "staff_b": {
+   "character": "civ_09",
+   "name": "Outpost staff"
+  },
+  "grunt": {
+   "character": "dimsun_grunt",
+   "name": "Team Dim Sun Grunt (placeholder)"
+  },
+  "trainer_c": {
+   "character": "union_01",
+   "name": "Wynne"
+  },
+  "trainer_d": {
+   "character": "union_02",
+   "name": "Brigg"
+  },
+  "trainer_e": {
+   "character": "union_04",
+   "name": "Tamsin"
+  },
+  "trainer_f": {
+   "character": "union_07",
+   "name": "Dale"
+  },
+  "healer": {
+   "character": "civ_10",
+   "name": "Healer"
+  },
+  "vendor_a": {
+   "character": "civ_01",
+   "name": "Vendor"
+  },
+  "vendor_b": {
+   "character": "civ_02",
+   "name": "Vendor"
+  },
+  "vendor_c": {
+   "character": "civ_03",
+   "name": "Vendor"
+  },
+  "challenger": {
+   "character": "union_03",
+   "name": "Castle Champion"
+  },
+  "trainer_g": {
+   "character": "union_09",
+   "name": "Juniper"
+  },
+  "merchant": {
+   "character": "civ_07",
+   "name": "Wandering Merchant"
+  },
+  "ace": {
+   "character": "civ_12",
+   "name": "Ace Trainer Celeste"
+  },
+  "villager_a": {
+   "character": "civ_00",
+   "name": "Townsperson"
+  },
+  "villager_b": {
+   "character": "civ_03",
+   "name": "Townsperson"
+  },
+  "villager_c": {
+   "character": "civ_04",
+   "name": "Townsperson"
+  },
+  "villager_d": {
+   "character": "civ_07",
+   "name": "Townsperson"
+  },
+  "villager_e": {
+   "character": "civ_08",
+   "name": "Townsperson"
+  },
+  "villager_f": {
+   "character": "civ_11",
+   "name": "Townsperson"
+  },
+  "villager_g": {
+   "character": "civ_12",
+   "name": "Townsperson"
+  },
+  "villager_h": {
+   "character": "union_03",
+   "name": "Ranger Instructor"
+  },
+  "villager_i": {
+   "character": "union_09",
+   "name": "Townsperson"
+  },
+  "breeder": {
+   "character": "civ_05",
+   "name": "Breeder"
   }
+ }
 }

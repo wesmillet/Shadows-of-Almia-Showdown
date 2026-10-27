@@ -56,12 +56,8 @@ def write(area, preview_layers=()):
     x0, y0, x1, y1 = area['rect']
     w, h = x1 - x0, y1 - y0
     os.makedirs(AREAS, exist_ok=True)
-    used = set()
-    for _, arr, _ in list(preview_layers) + list(area['layers']):
-        for k in arr[y0:y1, x0:x1].flat:
-            if k is not None: used.add(k[0])
-    for o in area['objects']:
-        if 'key' in o: used.add(o['key'][0])
+    # every tileset of the pack goes in, so the editor's tileset panel offers the whole set
+    used = {fn[:-4] for fn in os.listdir(tiled.TSX_DIR) if fn.endswith('.tsx') and fn[:-4] != META}
     first = {}
     gid = 1
     for ts in sorted(used) + [META]:

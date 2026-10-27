@@ -566,7 +566,7 @@ export class Match {
     return `Took the ${def?.name ?? 'item'} from ${m.name}`;
   }
 
-  /** Teaches a TM's move to the lead in move slot `replace` (0-3). */
+  /** Teaches a TM's move to the lead in move slot `replace` (0 or 1: MOVE_SLOTS is 2). */
   teach(t: Trainer, slot: number, replace: number): string {
     const entry = t.held[slot];
     const def = entry ? ITEMS[entry.id] : undefined;

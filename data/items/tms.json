@@ -1,14 +1,9 @@
 {
-  "_comment": "TMs teach `move` (moves.json id) to the lead when it is an attack of the kind the Pokemon fights with (physical for a physical attacker, special for a special one, either for a mixed one), whatever its type: sim/data.ts canLearnTm. Set-up moves go the same way (Swords Dance, Bulk Up, Agility, Dragon Dance to physical fighters; Nasty Plot, Calm Mind to special ones). Icon = assets/items/tm-<type>.png. Rare TMs (the strongest attacks and the set-up moves) only come from Ultra Ball loot and Alpha prizes.",
+  "_comment": "TMs teach `move` (moves.json id) to the lead when it is an attack of the kind the Pokemon fights with (physical for a physical attacker, special for a special one, either for a mixed one), whatever its type: sim/data.ts canLearnTm. Set-up moves go the same way (Bulk Up, Dragon Dance to physical fighters; Calm Mind to special ones); other status TMs (Will-O-Wisp, Thunder Wave, Hypnosis) go to anyone. Every TM here earns its slot in this game's real-time two-move battles; the dull ones were cut. Icon = assets/items/tm-<type>.png. Rare TMs (the strongest attacks and the best set-up moves) only come from Ultra Ball loot and Alpha prizes.",
   "tms": [
     {
       "id": "tm-energy-ball",
       "move": "energy-ball",
-      "rare": false
-    },
-    {
-      "id": "tm-crunch",
-      "move": "crunch",
       "rare": false
     },
     {
@@ -27,18 +22,8 @@
       "rare": false
     },
     {
-      "id": "tm-dragon-claw",
-      "move": "dragon-claw",
-      "rare": false
-    },
-    {
       "id": "tm-dragon-pulse",
       "move": "dragon-pulse",
-      "rare": false
-    },
-    {
-      "id": "tm-x-scissor",
-      "move": "x-scissor",
       "rare": false
     },
     {
@@ -57,28 +42,8 @@
       "rare": false
     },
     {
-      "id": "tm-giga-drain",
-      "move": "giga-drain",
-      "rare": false
-    },
-    {
-      "id": "tm-iron-head",
-      "move": "iron-head",
-      "rare": false
-    },
-    {
       "id": "tm-shadow-ball",
       "move": "shadow-ball",
-      "rare": false
-    },
-    {
-      "id": "tm-shadow-claw",
-      "move": "shadow-claw",
-      "rare": false
-    },
-    {
-      "id": "tm-zen-headbutt",
-      "move": "zen-headbutt",
       "rare": false
     },
     {
@@ -102,11 +67,6 @@
       "rare": false
     },
     {
-      "id": "tm-agility",
-      "move": "agility",
-      "rare": false
-    },
-    {
       "id": "tm-bulk-up",
       "move": "bulk-up",
       "rare": false
@@ -114,6 +74,36 @@
     {
       "id": "tm-calm-mind",
       "move": "calm-mind",
+      "rare": false
+    },
+    {
+      "id": "tm-aura-sphere",
+      "move": "aura-sphere",
+      "rare": false
+    },
+    {
+      "id": "tm-power-gem",
+      "move": "power-gem",
+      "rare": false
+    },
+    {
+      "id": "tm-dark-pulse",
+      "move": "dark-pulse",
+      "rare": false
+    },
+    {
+      "id": "tm-leaf-blade",
+      "move": "leaf-blade",
+      "rare": false
+    },
+    {
+      "id": "tm-will-o-wisp",
+      "move": "will-o-wisp",
+      "rare": false
+    },
+    {
+      "id": "tm-thunder-wave",
+      "move": "thunder-wave",
       "rare": false
     },
     {
@@ -162,18 +152,8 @@
       "rare": true
     },
     {
-      "id": "tm-return",
-      "move": "return",
-      "rare": true
-    },
-    {
       "id": "tm-heat-wave",
       "move": "heat-wave",
-      "rare": true
-    },
-    {
-      "id": "tm-flash-cannon",
-      "move": "flash-cannon",
       "rare": true
     },
     {
@@ -182,18 +162,33 @@
       "rare": true
     },
     {
-      "id": "tm-swords-dance",
-      "move": "swords-dance",
-      "rare": true
-    },
-    {
-      "id": "tm-nasty-plot",
-      "move": "nasty-plot",
-      "rare": true
-    },
-    {
       "id": "tm-dragon-dance",
       "move": "dragon-dance",
+      "rare": true
+    },
+    {
+      "id": "tm-earth-power",
+      "move": "earth-power",
+      "rare": true
+    },
+    {
+      "id": "tm-moonblast",
+      "move": "moonblast",
+      "rare": true
+    },
+    {
+      "id": "tm-brave-bird",
+      "move": "brave-bird",
+      "rare": true
+    },
+    {
+      "id": "tm-outrage",
+      "move": "outrage",
+      "rare": true
+    },
+    {
+      "id": "tm-hypnosis",
+      "move": "hypnosis",
       "rare": true
     }
   ]

@@ -179,11 +179,13 @@ def main():
         print('  ', *c)
 
     # TMs: common ones are good mid-power moves; rare ones are the strongest moves and set-up moves.
-    COMMON = ['energy-ball', 'crunch', 'brick-break', 'poison-jab', 'rock-slide', 'dragon-claw', 'dragon-pulse', 'x-scissor',
-              'fire-punch', 'thunder-punch', 'ice-punch', 'giga-drain', 'iron-head', 'shadow-ball', 'shadow-claw', 'zen-headbutt',
-              'play-rough', 'waterfall', 'sucker-punch', 'air-slash', 'agility', 'bulk-up', 'calm-mind']
+    COMMON = ['energy-ball', 'brick-break', 'poison-jab', 'rock-slide', 'dragon-pulse',
+              'fire-punch', 'thunder-punch', 'ice-punch', 'shadow-ball',
+              'play-rough', 'waterfall', 'sucker-punch', 'air-slash', 'bulk-up', 'calm-mind',
+              'aura-sphere', 'power-gem', 'dark-pulse', 'leaf-blade', 'will-o-wisp', 'thunder-wave']
     RARE = ['flamethrower', 'surf', 'thunderbolt', 'ice-beam', 'psychic', 'earthquake', 'sludge-bomb', 'stone-edge',
-            'wild-charge', 'return', 'heat-wave', 'flash-cannon', 'close-combat', 'swords-dance', 'nasty-plot', 'dragon-dance']
+            'wild-charge', 'heat-wave', 'close-combat', 'dragon-dance',
+            'earth-power', 'moonblast', 'brave-bird', 'outrage', 'hypnosis']
     all_ids = {m['id'] for m in moves}
     tms = json.load(open(TMS))
     tms['_comment'] = ("TMs teach `move` (moves.json id) to the lead when it is an attack of the kind the Pokemon fights with "

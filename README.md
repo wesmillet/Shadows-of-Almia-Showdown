@@ -332,7 +332,7 @@ data/
   species.json            dex, name, types, base stats, starter tier, wild biome, kit
   moves.json              38 moves: type, power, shape, cooldown, Guardian Signs fx parts, fallback VFX family
   items/items.json        balls, medicine, X items, held items and what they do
-  items/tms.json          the 16 TMs and the move each one teaches
+  items/tms.json          the 38 TMs and the move each one teaches
   items/loot.json         the three rarity tiers and what each item ball can contain
   types.json              the 18-type chart and type colours
   spawns.json             wild spawn tables per biome, starter and trainer pools

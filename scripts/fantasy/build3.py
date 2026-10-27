@@ -11,7 +11,7 @@ import numpy as np
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design3 as D
-import paint3, cliffs, castle, stamps, content3, towns3, collide, export3, wang, tiled, decor3
+import paint3, cliffs, castle, castle2, stamps, content3, towns3, collide, export3, wang, tiled, decor3
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NAME = 'almia3'
@@ -190,50 +190,55 @@ def main():
     stack.append(('Road', paint3.roads(d)))
 
     log('castle')
-    W = castle_walls(d)
-    walls = castle.Walls()
+    # The castle: the pack's Bosk Barracks stretched (castle2.py), its layers laid over the map.
+    (ox0, oy0, ox1, oy1) = D.CASTLE_RECTS[0]
+    c_layers, (cw, ch), c_hall, c_gate, c_stairs, c_cols, c_rows = castle2.compose(*D.CASTLE_STRETCH)
+    assert (cw, ch) == (ox1 - ox0, oy1 - oy0), f'castle is {cw}x{ch}, the rect {ox1 - ox0}x{oy1 - oy0}'
     F = wang.WangSet('Atlas_Castle_Floor', seed=8)
-    court = ndimage.binary_erosion(d.castle, iterations=D.CASTLE_WALL)
-    # the courtyard: slab paving round a battlefield of lighter slabs
-    pav = np.zeros(W.shape, np.int32)
-    bx0, bx1, by0, by1 = 186, 212, 166, 178    # centred on the south gate (x 199) and the east gate (y 172)
-    # A planned court: lawn, with an oval plaza round the battlefield (light slabs inside a ring of
-    # slabs), and walks of one width (the gates' passages, 7 tiles) running straight from every
-    # gate and from the keep's door into the ring. The west wing, the gate yard, is all stone.
-    yy_, xx_ = np.mgrid[0:W.shape[0], 0:W.shape[1]]
-    ocx, ocy = (bx0 + bx1) / 2, (by0 + by1) / 2
-    def oval(rx, ry): return ((xx_ - ocx) / rx) ** 2 + ((yy_ - ocy) / ry) ** 2 < 1
-    ring = oval(19, 11)
-    pav[ring & court] = F.color('Slab Floor')
-    pav[oval(15.5, 8.5)] = F.color('Mid Slab Floor')
-    WALK = D.GATE_W + 2
-    wh = WALK // 2
-    walks = np.zeros(W.shape, bool)
-    kx = D.GATES['S'][0]
-    walks[146:int(ocy), kx - wh:kx + wh + 1] = True                     # keep door -> plaza
-    walks[int(ocy):D.GATES['S'][1] + 6, kx - wh:kx + wh + 1] = True     # plaza -> south gate
-    ex, ey, _ = D.GATES['E']
-    walks[ey - wh:ey + wh + 1, int(ocx):ex + 5] = True                  # plaza -> east postern
-    walks[ey - wh:ey + wh + 1, 156:int(ocx)] = True                      # across the west wing to the plaza (same axis)
-    # outside every gate, the same slabs run out to meet the road (no brick stubs of another stone)
-    for (gx, gy, horiz) in D.GATES.values():
-        if horiz:
-            out_up = not d.castle[gy - 4, gx]          # the gap opens to the north (gate yard) or south
-            if out_up:
-                walks[gy - 6:gy + 1, gx - wh:gx + wh + 1] = True
-                walks[gy:ey, gx - wh:gx + wh + 1] = True     # the gate yard's walk down to the cross walk
-            else: walks[gy:gy + 10, gx - wh:gx + wh + 1] = True
-        else:
-            walks[gy - wh:gy + wh + 1, gx:gx + 9] = True
-    yard_x1 = 179
-    west_wing = court & (xx_ < yard_x1)
-    # the west wing: lawns either side of its two walks (no longer all stone)
-    pav[walks & d.land] = F.color('Slab Floor')
-    pav[oval(15.5, 8.5)] = F.color('Mid Slab Floor')
+    # the hall's interior (the sample's rows 19..24 start at column 24: the arched range fills the top-left)
+    hx0, hy0, hx1, hy1 = c_hall
+    hall = np.zeros((ch, cw), bool)
+    hall[hy0:hy1, hx0:hx1] = True
+    hall[hy0:c_rows[21][0], hx0:c_cols[24][0]] = False
+    # gates: the gatehouse passage, and gaps cut in the side walls (towers cover their ends)
+    gx0, gy0, gx1, gy1 = c_gate
+    passage = np.zeros((ch, cw), bool)
+    passage[c_rows[26][0]:gy1, gx0:gx1] = True
+    side_gaps = []
     half = D.GATE_W // 2
-    for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
-        if horiz: pav[gy - 1:gy + 6, gx - wh:gx + wh + 1] = F.color('Slab Floor')
-        else: pav[gy - wh:gy + wh + 1, gx - 4:gx + 5] = F.color('Slab Floor')   # side gates: the walk's own width
+    for (gx, gy, horiz) in D.GATES.values():
+        if horiz: continue
+        r0, r1 = gy - half - oy0, gy + half + 1 - oy0
+        c0, c1 = (0, 4) if gx < (ox0 + ox1) / 2 else (cw - 4, cw)
+        passage[r0:r1, c0:c1] = True
+        side_gaps.append((r0, r1, c0, c1))
+    # the hall's own wall opens where a passage meets it; the side gaps are cleared from every layer
+    # (the gatehouse keeps its arch and doors, which are walked through)
+    cut = np.zeros((ch, cw), bool)
+    cut[c_rows[25][0]:c_rows[25][-1] + 1, gx0:gx1] = True           # the hall's south wall at the gate
+    for (r0, r1, c0, c1) in side_gaps:
+        cut[r0:r1, c0:c1] = True
+    for n, arr in c_layers:
+        arr[cut] = None
+        if n == 'Castle Floor': arr[hall] = None                      # the hall floor is painted below
+    W = np.zeros(d.land.shape, bool)                                 # the castle's solid parts (walls, towers, walkways)
+    W[oy0:oy1, ox0:ox1] = ~hall & ~passage
+    face = np.zeros(d.land.shape, np.int32)
+    court = np.zeros(d.land.shape, bool)
+    court[oy0:oy1, ox0:ox1] = hall | passage
+    # the hall floor: slabs, with the battlefield's light oval in the middle (on the gate's axis)
+    pav = np.zeros(W.shape, np.int32)
+    hall_full = np.zeros(d.land.shape, bool)
+    hall_full[oy0:oy1, ox0:ox1] = hall
+    pav[hall_full] = F.color('Slab Floor')
+    for (r0, r1, c0, c1) in side_gaps: pav[oy0 + r0:oy0 + r1, ox0 + c0:ox0 + c1] = F.color('Slab Floor')
+    yy_, xx_ = np.mgrid[0:W.shape[0], 0:W.shape[1]]
+    ocx = ox0 + (gx0 + gx1) / 2
+    ocy = oy0 + (hy0 + hy1) / 2 + 1
+    def oval(rx, ry): return ((xx_ - ocx) / rx) ** 2 + ((yy_ - ocy) / ry) ** 2 < 1
+    pav[oval(15.5, 8.5) & court] = F.color('Mid Slab Floor')
+    bx0, bx1, by0, by1 = int(ocx - 15.5), int(ocx + 15.5), int(ocy - 8.5), int(ocy + 8.5)   # the battlefield's box
+    walks = court.copy()
     # the crystal's arena in the middle of the plain: the last two trainers fight it out here,
     # a paved field with the crystal in its centre circle, on a terrace of darker slabs
     cx, cy = D.CRYSTAL
@@ -244,22 +249,22 @@ def main():
     pav[terrace] = F.color('Slab Floor')
     pav[D.ellipse(cx, cy, 14.5, 9.5) < 1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
-    # one fountain on the lawn of the garden bastion (no paving round it)
-    fountains = [(214, 148)]   # centred in the garden wing, clear of its north wall's face
-    # under the walls' walkway edges, stone where the court beside them is paved (their edge pixels
-    # are see-through, and grass showed through in a thin line)
-    under = W & ndimage.binary_dilation(pav > 0, structure=np.ones((3, 3)))
-    pav_wall = np.where(under, F.color('Slab Floor'), 0)
-    pav[W] = 0
-    pav_draw = np.where(under, pav_wall, pav)
-    stack.append(('Courtyard', F.paint(pav_draw)))
+    # the fountain in the hall, west of the battlefield, with the Celebi statue in its basin
+    fountains = [(int(ocx) - 29, int(ocy) - 3)]
+    for (fx, fy) in fountains:
+        pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
+    stack.append(('Courtyard', F.paint(pav)))
+    for n, arr in c_layers:
+        full = np.full(W.shape, None, dtype=object)
+        full[oy0:oy1, ox0:ox1] = arr
+        stack.append((f'Castle {n.split("/")[-1]}' if not n.startswith('Castle') else n, full))
     # for scripts/mapgen/pave_smooth.py: the paving per tile (0 none, 1 slab, 2 light slab) and
     # where it may be reshaped (court and approaches, not the walls, faces or fountain)
     _fixed = W.copy()
     for (fx, fy) in fountains: _fixed[fy - 1:fy + 7, fx - 1:fx + 7] = True
     os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out'), exist_ok=True)
     # true ovals (tile units: cx, cy, rx, ry, class) that the stepped tiles stand for
-    _ovals = np.array([(ocx + 0.5, ocy + 0.5, 19, 11, 1), (ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2),
+    _ovals = np.array([(ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2),
                        (cx + 0.5, cy + 0.5, 17.5, 12, 1), (cx + 0.5, cy + 0.5, 14.5, 9.5, 2)], np.float32)
     np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=walks & d.land)
     fountain_layer = np.full(W.shape, None, dtype=object)
@@ -271,13 +276,6 @@ def main():
     log('cliffs')
     cl_layers, cliff_block, stair_cells = build_cliffs(d)
     for i, L in enumerate(cl_layers): stack.append((f'Cliffs {i + 1}', L))
-    wl, face = walls.paint(W)
-    # The walkway on top of the walls is planked (the pack's barracks do the same), so a wall never
-    # reads as one more paved path beside the courtyard's slabs.
-    stack.append(('Castle walk', F.paint(W.astype(np.int32) * F.color('Wood Floor'))))
-    if walls.unknown: log('  castle contexts without a learned tile:', sum(walls.unknown.values()))
-    stack.append(('Castle walls', wl))
-
     log('objects')
     # where objects may stand: dry land off roads, cliffs, castle and plazas
     occupied = (~d.land) | d.water | (d.paths > 0) | cliff_block | stair_cells | W | (face > 0) | (pav > 0) | d.beach
@@ -293,92 +291,68 @@ def main():
     placer = content3.Placer(~occupied)
     objects = list(town_objects)
     blocked_stamps = np.zeros(W.shape, bool)
-    # the keep in the castle's north wing, its door on the forecourt
+    # the keep on the north wall, over the stairs down into the hall; the wooden store beside it
     img, foot = stamps.stamp('keep_red')
     kh, kw = img.shape[0] // 16, img.shape[1] // 16
-    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2 + 1, 151   # on the spur's north wall, its door on the walk's axis (x 199)
+    kx0, ky1 = ox0 + (c_stairs[0] + c_stairs[2]) // 2 - kw // 2, oy0 - 1     # on the wall's top edge, as in the sample
     objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16})
+    blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
+    placer.free[max(0, ky1 + 1 - kh):ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
+    store = castle2.store_stamp()
+    sx0, sy0 = ox0 + c_cols[18][0], oy0 - 3
+    for n, arr in store:
+        full = np.full(W.shape, None, dtype=object)
+        full[sy0:sy0 + arr.shape[0], sx0:sx0 + arr.shape[1]] = arr
+        stack.append((f'Store {n.split("/")[-1]}', full))
+    blocked_stamps[sy0:sy0 + 3, sx0:sx0 + 7] = True
+    placer.free[sy0 - 1:sy0 + 3, sx0 - 1:sx0 + 8] = False
+    # a tower above and below each side gate, standing on the wall band
+    timg, tfoot = stamps.stamp('tower_cone')
+    th, tw = timg.shape[0] // 16, timg.shape[1] // 16
+    spots = []
+    for (r0, r1, c0, c1) in side_gaps:
+        spots += [(ox0 + c0, oy0 + r0), (ox0 + c0, oy0 + r1 + th)]
+    for (tx, yb) in spots:
+        objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})
+        blocked_stamps[yb - th:yb, tx:tx + tw] |= tfoot
+        placer.free[max(0, yb - th):yb + 1, max(0, tx - 1):tx + tw + 1] = False
     # a stone Celebi on a plinth in the middle of the fountain's basin
     import statue as _statue
     st = _statue.statue('0251')
     for (fx, fy) in fountains:
         bcx, bcy = (fx + 2.9) * 16, (fy + 3.0) * 16 + 10      # the basin's centre (the stamp is 6x6 tiles)
         objects.append({'img': st, 'name': 'statue_celebi', 'x': int(bcx - (st.shape[1] - 6) / 2), 'y': int(bcy) + 4})   # (+6 wide, +4 tall: its shadow)
-    blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
-    placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
-    # towers on the four corners, halfway down the long sides, and either side of each gate.
-    # A tower's base lines up with the bottom of the brick face beside it, so no stray face
-    # pokes out under it; corner and gate towers cover the wall ends completely.
-    timg, tfoot = stamps.stamp('tower_cone')
-    th, tw = timg.shape[0] // 16, timg.shape[1] // 16
-    # A tower on every outer corner of the castle, squared to the walls the way the first hold's
-    # were: left corners overhang one column out, top corners stand on the north wall's inner
-    # face, bottom corners on the outer face. Then either side of every gate.
-    wl_ = D.CASTLE_WALL
-    R = d.castle
-    Rp = np.pad(R, 1)
-    spots = []
-    for (y, x) in zip(*np.nonzero(R)):
-        up, dn, lf, rt = not Rp[y, x + 1], not Rp[y + 2, x + 1], not Rp[y + 1, x], not Rp[y + 1, x + 2]
-        if (up or dn) and (lf or rt):
-            tx = x - 1 if lf else x - tw + 2
-            yb = y + wl_ + castle.FACE_ROWS if up else y + 1 + castle.FACE_ROWS
-            spots.append((tx, yb))
-    half = D.GATE_W // 2
-    gate_spots = []
-    for (gx, gy, horiz) in D.GATES.values():
-        if horiz:
-            base = gy + 2 + castle.FACE_ROWS
-            gate_spots += [(gx - half - tw, base), (gx + half + 1, base)]
-        else:
-            # a side gate: one tower, standing on the wall end's face just north of the gap (a
-            # tower south of the gap would be drawn over the doorway, towers being tall)
-            gate_spots += [(gx - 2, gy - half)]
-    # Where two walls meet on the inside of a bend (a concave corner of the outline: three of the
-    # four cells round a lattice point are castle), a tower stands on the join, as on a real
-    # curtain wall; the wall tiles have no clean picture for that corner.
-    for Y in range(1, R.shape[0]):
-        for X in range(1, R.shape[1]):
-            q = R[Y - 1:Y + 1, X - 1:X + 1]
-            if q.sum() != 3: continue
-            oy, ox = np.argwhere(~q)[0]                 # the outside quadrant
-            tx = X - 1 if ox == 0 else X - tw + 1
-            yb = Y + wl_ + castle.FACE_ROWS if oy == 0 else Y + castle.FACE_ROWS
-            spots.insert(0, (tx, yb))
-    # gate towers win over a corner tower crowding them; no two towers on top of each other
-    kept = list(gate_spots)
-    for sp in spots:
-        if all(abs(sp[0] - k[0]) >= tw or abs(sp[1] - k[1]) >= 9 for k in kept): kept.append(sp)
-    spots = kept
-    for (tx, yb) in spots:
-        objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})
-        blocked_stamps[yb - th:yb, tx:tx + tw] |= tfoot
-        placer.free[max(0, yb - th):yb + 1, max(0, tx - 1):tx + tw + 1] = False
     log('courtyard')
     yard = content3.Placer(np.ones(W.shape, bool))
-    yard.free = placer.free.copy() | (court & (pav == 0) & (face == 0))
-    yard.free &= ~blocked_stamps
-    # One kind of tree, planted the way a castle garden is: mirrored pairs about the south gate's
-    # axis (x 199): two along the south wall either side of the gate, and a pair framing the
-    # fountain in the garden bastion.
-    formal = content3.catalogue('Objects_Trees_Castle', r'Tree_Emerald_4')
+    yard.free = hall_full & ~oval(17, 10) & ~blocked_stamps
+    for (fx, fy) in fountains: yard.free[fy - 2:fy + 8, fx - 2:fx + 8] = False
+    # The hall furnished the way the sample's is: red banners on the walls, lamps and benches round
+    # the battlefield, the training yard (dummies, targets, weapon stands) in the east, stores
+    # (barrels, crates, sacks) along the north wall.
+    P = lambda rx: content3.catalogue('Objects_Props_Castle', rx)
+    banner, bench, lamp = P(r'Banner_Large_Red'), P(r'Bench_[1-3]'), P(r'LampPost_1')
     import random as _r; rr = _r.Random(3)
-    if formal:
-        # pairs mirrored about the south walk (x 199): by the south wall, and by the north wall
-        for (x, y) in [(188, 185), (210, 185), (183, 162), (214, 162), (160, 182), (171, 182)]:
-            if not yard.put(formal[0], x, y, clear=1): log(f'  no room for the courtyard tree at {x},{y}')
-    banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
-    bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')
-    lamp = content3.catalogue('Objects_Props_Castle', r'LampPost(_\d+)?')
-    for (x, y) in [(bx0 - 3, by0 - 1), (bx1 + 3, by0 - 1), (bx0 - 3, by1 + 1), (bx1 + 3, by1 + 1)]:
-        if banner: yard.put(rr.choice(banner), x, y, clear=0, shadow=False)
-    for x in range(bx0 + 3, bx1 - 2, 7):
-        if bench: yard.put(bench[0], x, by1 + 3, clear=0, shadow=False)
-    for (x, y) in [(191, 155), (207, 155), (158, 166), (172, 166)]:
+    icx, icy = int(ocx), int(ocy)
+    hx0_, hy0_, hx1_, hy1_ = ox0 + c_cols[24][0], oy0 + c_rows[21][0], ox0 + hx1, oy0 + hy1
+    for x in range(hx0_ + 6, hx1_ - 4, 12):
+        if banner: yard.put(banner[0], x, hy0_ - 1, clear=0, shadow=False)
+    for x in range(icx - 10, icx + 11, 10):
+        if bench: yard.put(bench[0], x, icy + 11, clear=0, shadow=False)
+        if bench: yard.put(bench[1 % len(bench)], x, icy - 10, clear=0, shadow=False)
+    for (x, y) in [(icx - 19, icy - 10), (icx + 19, icy - 10), (icx - 19, icy + 11), (icx + 19, icy + 11)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
+    east = [(P(r'Hay_Dummy_1'), (hx1_ - 10, icy - 6)), (P(r'Hay_Dummy_1'), (hx1_ - 6, icy - 3)), (P(r'ArcheryTarget_Red'), (hx1_ - 4, icy + 3)),
+            (P(r'WeaponsStand_1'), (hx1_ - 3, icy - 9)), (P(r'WeaponsStand_4_Red'), (hx1_ - 3, icy + 8)), (P(r'Anvil'), (hx1_ - 9, icy + 7))]
+    for pool, (x, y) in east:
+        if pool: yard.put(pool[0], x, y, clear=0, shadow=False)
+    north = [P(r'Barrel_Medium_Swords'), P(r'Barrel_Small_Arrows'), P(r'Crate_Large_Closed'), P(r'Sack_2'), P(r'Barrel_Medium_Covered'), P(r'Crate_Wide_Hay_1')]
+    for i, pool in enumerate(north):
+        if pool: yard.put(pool[0], hx0_ + 1 + i * 3, hy0_ + 1, clear=0, shadow=False)
+    sw = [(P(r'Table_Large_Red'), (hx0_ + 8, hy1_ - 8)), (P(r'Chair_Left_1'), (hx0_ + 6, hy1_ - 8)), (P(r'Chair_Right_1'), (hx0_ + 12, hy1_ - 8)), (P(r'Fireplace_2_Pot_Soup_1'), (hx0_ + 3, hy1_ - 4)), (P(r'WoodStack_1'), (hx0_ + 7, hy1_ - 3))]
+    for pool, (x, y) in sw:
+        if pool: yard.put(pool[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
-    placer.free &= yard.free
-    placer.free &= ~d.castle          # inside the walls only the planted garden: no wild bushes or rocks
+    placer.free &= ~d.castle          # inside the walls nothing wild
     log('decor')
     n_arena = decor3.arena(placer)
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)
@@ -436,7 +410,7 @@ def main():
 
     towns = [{'name': n, 'x': x + 0.5, 'y': y + 0.5} for n, (x, y, b) in D.TOWNS.items()]
     # healers: one per town and one in the castle courtyard; the challenger at the battlefield's north edge
-    npcs.append({'role': 'healer', 'x': bx0 - 2.5, 'y': by0 + 1.5, 'town': 'Castle'})
+    npcs.append({'role': 'healer', 'x': bx0 - 4.5, 'y': by0 + 1.5, 'town': 'Castle'})
     npcs.append({'role': 'challenger', 'x': (bx0 + bx1 + 1) / 2, 'y': by0 + 1.5, 'town': 'Castle'})
     outposts = [{'x': n['x'], 'y': n['y']} for n in npcs if n['role'] == 'healer']
     # trainer starts (tile coordinates): the reachable road tile nearest each planned point
@@ -457,7 +431,7 @@ def main():
         if not reach[int(o['y']), int(o['x'])]: log('  healer off the reachable ground:', o)
 
     log('export')
-    st = [{'kind': 'tiles', 'name': n, 'opacity': 1.0, 'tiles': L} for n, L in stack]
+    st = [{'kind': 'tiles', 'name': n, 'opacity': 0.25 if n.endswith('Shadows') else 1.0, 'tiles': L} for n, L in stack]
     decals = [x for x in placer.decals if x]
     st.insert(len(st) - 2, {'kind': 'decals', 'name': 'Shadows', 'opacity': 0.25, 'decals': decals})
     data = {'name': NAME, 'cols': Wd, 'rows': H, 'stack': st, 'objects': objects,

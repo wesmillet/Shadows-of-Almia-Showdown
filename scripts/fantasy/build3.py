@@ -303,10 +303,15 @@ def main():
     yard = content3.Placer(np.ones(W.shape, bool))
     yard.free = placer.free.copy() | (court & (pav == 0) & (face == 0))
     yard.free &= ~blocked_stamps
-    trees = content3.catalogue('Objects_Trees_Castle', r'Tree_(Light|Emerald)_[1-6]')
+    # One kind of tree, planted the way a castle garden is: mirrored pairs about the south gate's
+    # axis (x 199): two along the south wall either side of the gate, and a pair framing the
+    # fountain in the garden bastion.
+    formal = content3.catalogue('Objects_Trees_Castle', r'Tree_Emerald_4')
     import random as _r; rr = _r.Random(3)
-    for (x, y) in [(181, 160), (181, 185), (190, 185), (208, 185), (216, 185)]:
-        yard.put(rr.choice(trees), x, y, clear=1)
+    if formal:
+        for (x, y) in [(184, 185), (190, 185), (208, 185), (214, 185),
+                       (225, 165), (230, 165)]:
+            if not yard.put(formal[0], x, y, clear=1): log(f'  no room for the courtyard tree at {x},{y}')
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')
     lamp = content3.catalogue('Objects_Props_Castle', r'LampPost(_\d+)?')
@@ -318,6 +323,7 @@ def main():
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
     placer.free &= yard.free
+    placer.free &= ~d.castle          # inside the walls only the planted garden: no wild bushes or rocks
     log('decor')
     n_arena = decor3.arena(placer)
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)

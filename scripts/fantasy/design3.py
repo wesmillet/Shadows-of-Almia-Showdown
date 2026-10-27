@@ -45,6 +45,7 @@ CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
 FINAL_ARENA = (150, 106, 171, 119)   # the last two's battlefield round the crystal (x0, y0, x1, y1, exclusive ends)
 PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
+BLIGHT = (160.5, 112.5, 41, 33)     # the blighted ground round the crystal (centre and radii): dead grass, bare trees, bones
 TIDE_LAKE = (219, 98, 16, 9)        # Tide Lake (Lugia's): centre and radii
 
 
@@ -65,6 +66,12 @@ def noise(seed, scale, shape=(H, W)):
 def ellipse(cx, cy, rx, ry):
     yy, xx = np.mgrid[0:H, 0:W]
     return ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2
+
+
+def blight():
+    """Tiles on the blighted plain round the crystal (the grass there is drained grey by
+    scripts/mapgen/center_blend.py; only dead things are planted on it)."""
+    return ellipse(*BLIGHT) < 1
 
 
 class Design:

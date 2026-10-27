@@ -365,12 +365,22 @@ def main():
     open_mask = clearing | (d.biome == D.CASTLE) | (D.ellipse(px, py, prx - 10, pry - 8) < 1)
     open_mask |= D.ellipse(D.CASTLE_CENTER[0], D.CASTLE_CENTER[1], 40, 30) < 1   # the castle's clearing
     n_summit = decor3.summit(placer)
+    # The blighted plain round the crystal: bare trees, stumps, bones and grey rocks, nothing green.
+    # It is kept from the woods below (its grass stays free for the tall grass, so wilds still spawn).
+    blight = D.blight() & (d.biome == D.MEADOW)
+    dead = {D.MEADOW: content3.DEAD_TREES}
+    n_dead = content3.scatter(d, placer, dead, 0.035, seed=15, clear=2, where=blight)
+    n_dead += content3.scatter(d, placer, {D.MEADOW: content3.DEAD_ROCKS}, 0.02, seed=16, clear=1, where=blight)
+    n_dead += content3.scatter(d, placer, {D.MEADOW: content3.DEAD_BITS}, 0.03, seed=17, clear=0, where=blight)
+    blight_free = placer.free & blight
+    placer.free &= ~blight
     n_trees = content3.woods(d, placer, open_mask)
     n_bush = content3.scatter(d, placer, content3.BUSHES, 0.014, seed=12)
     n_rock = content3.scatter(d, placer, content3.ROCKS, 0.006, seed=13, clear=1)
+    placer.free |= blight_free
     # boulders and ice up the mountain, where the trees give out
     n_rock += content3.scatter(d, placer, content3.ROCKS, 0.012, seed=14, clear=2, where=d.level >= 2)
-    log(f'  summit {n_summit}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
+    log(f'  summit {n_summit}, blight {n_dead}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
     objects += placer.objects
     tg, tall = paint3.tall_grass(d, placer.free & ~occupied & ~(d.biome == D.CASTLE))
     stack.insert([n for n, _ in stack].index('Road') + 1, ('Tall grass', tg))
@@ -383,6 +393,8 @@ def main():
     for pool in list(content3.BUSHES.values()):
         see_through |= {(k[0], k[1]) for k in pool}
     see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props', r'Plant_.*|Crate_Small_Flowers|TreeLog|TreeStump_.*|Sign_.*')}
+    see_through |= {(k[0], k[1]) for k in content3.DEAD_BITS}
+    see_through |= {(k[0], k[1]) for k in content3.DEAD_ROCKS if max(content3.size(k)) <= 32}
     see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props_Snow', r'Sign_.*')}
     for pool in content3.ROCKS.values():
         see_through |= {(k[0], k[1]) for k in pool if max(content3.size(k)) <= 32}

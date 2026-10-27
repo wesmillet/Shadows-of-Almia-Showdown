@@ -73,6 +73,25 @@ for k, c in enumerate(cls):
     own = np.where(bp == c, pd[..., k], own)
 w = np.where(own > 0.30, 0, w)[..., None]
 mult = 1 + w * (R - 1)
+
+# ---- the blighted plain: round the Shadow Crystal the grass is drained to an ashen grey, fully so
+# near the crystal and fading back to green towards the plain's edge. Only green pixels change
+# (paths, stone, water and the arena keep their own colour), so the grass reads as dead, not dyed.
+c = m['center']
+CX, CY = c['x'] * 16, c['y'] * 16
+R0, R1 = 22, 42                # tiles from the crystal: fully grey inside R0, green again past R1
+ASH = np.array([0.96, 0.96, 1.0], dtype=np.float32) * 0.52   # the dead grass's brightness and cast
+yy, xx = np.mgrid[0:H, 0:W]
+r = np.sqrt(((xx + 0.5 - CX) / 16) ** 2 + ((yy + 0.5 - CY) / 16 * 1.27) ** 2)
+t = np.clip((R1 - r) / (R1 - R0), 0, 1)
+t = t * t * (3 - 2 * t)
+green = (G[..., 1] > G[..., 0] * 1.06) & (G[..., 1] > G[..., 2] * 1.15)
+Y = (G * [0.3, 0.59, 0.11]).sum(-1, keepdims=True)
+ash = np.clip(Y / 0.55 * ASH, 0, 1)
+s = (t * 0.95 * green)[..., None]
+target = G * (1 - s) + ash * s
+mult = mult * np.where(G > 0.02, target / np.maximum(G, 0.02), 1)
+
 enc = np.clip(np.round(mult * 85), 0, 255).astype(np.uint8)
 touched = np.any(enc != 85, -1)
 ys, xs = np.nonzero(touched)

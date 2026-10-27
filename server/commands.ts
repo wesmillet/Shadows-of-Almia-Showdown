@@ -220,6 +220,9 @@ function interact(m: Match): string {
   const who = m.visitors.near();
   if (who === 'ace') return m.visitors.challengeAce();
   if (who === 'hoopa') return m.visitors.askHoopa();
+  const folkCrew = m.visitors.folk;
+  const folk = folkCrew?.near();
+  if (folkCrew && folk) return folkCrew.talk(folk);
   const s = m.nearService();
   if (s?.kind === 'challenge') return m.startChallenge();
   if (s?.kind === 'healer') return m.healAtHealer();

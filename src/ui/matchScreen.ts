@@ -480,7 +480,7 @@ export class MatchScreen implements Screen {
         else this.chestOpen = svc.index;
         return true;
       }
-      if (this.match.fishing || this.match.visitors.near() || svc || this.match.nearestItem() || canFish(this.match)) {
+      if (this.match.fishing || this.match.visitors.near() || this.nearTalker() || svc || this.match.nearestItem() || canFish(this.match)) {
         this.online.cmd('interact');
         return true;
       }
@@ -501,6 +501,12 @@ export class MatchScreen implements Screen {
       this.say(this.match.visitors.askHoopa(), 3);
       return true;
     }
+    const folkCrew = this.match.visitors.folk;
+    const folk = folkCrew?.near();
+    if (folkCrew && folk) {
+      this.say(folkCrew.talk(folk), 4);
+      return true;
+    }
     const s = this.match.nearService();
     if (s?.kind === 'shop') this.shopOpen = s.shop;
     else if (s?.kind === 'chest') this.chestOpen = s.index;
@@ -512,6 +518,22 @@ export class MatchScreen implements Screen {
       if (msg) this.say(msg, 1.4);
     } else return this.match.pickUp();
     return true;
+  }
+
+  /** The townsperson or Breeder within talking reach (works from the synced npc list, so online too). */
+  private nearTalker(): { name: string; role: string } | null {
+    const p = this.match.player;
+    let best: { name: string; role: string } | null = null;
+    let bd = Infinity;
+    for (const n of this.match.npcs) {
+      if (!n.role.startsWith('villager') && n.role !== 'breeder') continue;
+      const d = Math.hypot(n.x - p.x, n.y - p.y);
+      if (d <= 1.8 && d < bd) {
+        bd = d;
+        best = n;
+      }
+    }
+    return best;
   }
 
   /** The player's side of the battle in progress, if any. */
@@ -1965,6 +1987,8 @@ export class MatchScreen implements Screen {
     const who = this.match.visitors.near();
     if (who === 'ace') return 'Space · Battle Ace Trainer Celeste (win a rare Pokémon)';
     if (who === 'hoopa') return 'Space · Talk to Hoopa';
+    const talker = this.nearTalker();
+    if (talker) return talker.role === 'breeder' ? `Space · Trade with ${talker.name}` : `Space · Talk to ${talker.name}`;
     const s = this.match.nearService();
     if (!s) {
       if (this.match.nearestItem()) return 'Space · Pick up';

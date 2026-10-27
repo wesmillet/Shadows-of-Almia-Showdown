@@ -268,8 +268,8 @@ const scaleCache = new Map<string, number>();
  * trainer (1 = the sprite's native pixel size). See scripts/measure_species.py.
  */
 /**
- * The height a Pokémon is drawn at. Pokédex sizes hold from 1.2 m up; smaller Pokémon are
- * lifted on a gentle ramp (0.3 m Eevee draws as about 0.8 m, 0.4 m Pikachu as about 0.85 m) so they stay
+ * The height a Pokémon is drawn at. Pokédex sizes hold from smallFloorM up; smaller Pokémon are
+ * lifted on a gentle ramp (0.3 m Eevee draws as about 0.95 m, 0.4 m Pikachu as about 1.0 m) so they stay
  * readable next to a 1.6 m trainer while keeping their order: smaller is still smaller.
  */
 export function shownHeight(heightM: number): number {
@@ -298,9 +298,15 @@ export function drawScale(s: SpeciesDef): number {
   return k;
 }
 
-/** Half the drawn body width, in tiles (16 sprite pixels per tile). */
+/**
+ * Half the drawn body width, in tiles (16 sprite pixels per tile). Width is clamped against the
+ * core body height so spread wings, gel arms or a carried hammer don't become a huge hit body
+ * (Salamence, Reuniclus, Tinkaton, Hoopa Unbound).
+ */
 export function bodyRadius(s: SpeciesDef): number {
-  return ((s.body?.[0] ?? 16) * drawScale(s)) / 32;
+  const [w, h] = s.body ?? [16, 16];
+  const core = Math.min(w, 2.2 * (s.bodyPx ?? h));
+  return (core * drawScale(s)) / 32;
 }
 
 /** Extra reach for hits on a body bigger than a trainer-sized one (0 for ordinary Pokémon). */

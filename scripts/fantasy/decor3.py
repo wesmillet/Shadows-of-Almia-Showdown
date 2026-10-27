@@ -350,3 +350,72 @@ def waterfalls(d, anim, blocked):
         blocked[y_lip:y_lip + 4, x - 1:x + 2] = True
         n += 1
     return n
+
+
+# ---------------------------------------------------------------------------- the desert ruins and the shores
+
+def ruins(d, placer, anim, centre=(86, 186), seed=41):
+    """A ruined temple in the desert: fallen walls, pillars and arches from the desert props,
+    rune rocks glowing among them, braziers still burning, a brazier-lit way in."""
+    import animprops
+    rng = random.Random(seed)
+    cx, cy = centre
+    P = lambda rx: catalogue('Objects_Props_Desert', rx)
+    n = 0
+    site = (D.ellipse(cx, cy, 17, 13) < 1) & placer.free & (d.biome == D.DESERT) & (d.paths == 0) & ~d.water
+    placer.free &= ~((D.ellipse(cx, cy, 19, 15) < 1) & ~site)       # nothing wild creeps in
+    plan = [(P(r'Ruins_Arch_1_Desert'), (0, -8)), (P(r'Ruins_Wall_Ruined_1_Desert'), (-12, -3)), (P(r'Ruins_Wall_Ruined_2_Desert'), (11, 0)),
+            (P(r'Ruins_Pillar_1_Desert'), (-6, 4)), (P(r'Ruins_Pillar_2_Desert'), (6, 4)), (P(r'Ruins_Pillar_4_Desert'), (-8, -7)), (P(r'Ruins_Pillar_3_Desert'), (9, -7)),
+            (P(r'Ruins_Pillar_5_Desert'), (12, 6)), (P(r'Ruins_Arch_2_Desert'), (0, 9)), (P(r'Vase_[345]_Destroyed_Desert'), (-2, 0)), (P(r'Vase_[345]_Desert'), (3, -2)),
+            (P(r'Skull_Animal_2_Desert'), (-9, 8)), (P(r'Skull_1_Desert'), (6, 8)), (P(r'Vase_[12]_Desert'), (-4, -4))]
+    for pool, (dx, dy) in plan:
+        if pool and _big(placer, rng.choice(pool), cx + dx, cy + dy): n += 1
+    runes = [k for k, (w, h, c) in animprops.blocks('Animation_Rock_Gray_Desert').items() if w <= 2]
+    for (dx, dy) in [(-3, 5), (3, 5), (0, -2)]:
+        x, y = cx + dx, cy + dy
+        w, h, cells = animprops.block('Animation_Rock_Gray_Desert', rng.choice(runes))
+        want = [(y - h + 1 + yy, x + xx) for xx, yy, _ in cells]
+        if all(placer.free[yy, xx] and anim[yy, xx] is None for (yy, xx) in want):
+            animprops.place(anim, 'Animation_Rock_Gray_Desert', rng.choice(runes), x, y)
+            for (yy, xx) in want: placer.free[yy, xx] = False
+            n += 1
+    for (dx, dy) in [(-4, 9), (3, 9)]:
+        x, y = cx + dx, cy + dy
+        w, h, cells = animprops.block('Animation_Ruins_Brazier', 24)
+        want = [(y - h + 1 + yy, x + xx) for xx, yy, _ in cells]
+        if all(placer.free[yy, xx] and anim[yy, xx] is None for (yy, xx) in want):
+            animprops.place(anim, 'Animation_Ruins_Brazier', 24, x, y)
+            for (yy, xx) in want: placer.free[yy, xx] = False
+            n += 1
+    return n
+
+
+def shores(d, placer, seed=43):
+    """Boats pulled up on the beaches, nets and cleats, a fisherman's barrels: the island's edge
+    is lived on. Palms on the southern sands."""
+    rng = random.Random(seed)
+    n = 0
+    boat = catalogue('Objects_Props', r'Boat_Sand') + catalogue('Objects_Props_Desert', r'Boat_Sand_Desert')
+    bits = catalogue('Objects_Props', r'(FishingNet_Exterior|Barrel_Medium_Fish|Crate_Small_Fish|Cleat_1)')
+    palms = catalogue('Objects_Trees_Desert', r'Palm_(Emerald|Light|Dark)_\d+')
+    from scipy import ndimage
+    beach = d.beach & d.land & placer.free & (d.paths == 0)
+    near_sea = beach & ndimage.binary_dilation(~d.land, iterations=2)
+    cells = list(zip(*np.nonzero(near_sea)))
+    rng.shuffle(cells)
+    spots = 0
+    for (y, x) in cells:
+        if spots >= 9: break
+        if any(abs(x - sx) + abs(y - sy) < 40 for (sx, sy) in getattr(shores, 'used', [])): continue
+        if boat and placer.put(rng.choice(boat), x, y, clear=1, shadow=False):
+            shores.used = getattr(shores, 'used', []) + [(x, y)]
+            spots += 1; n += 1
+            for j in range(3):
+                bx, by = x + rng.randint(-4, 4), y + rng.randint(-3, 3)
+                if 0 <= by < d.land.shape[0] and 0 <= bx < d.land.shape[1] and beach[by, bx] and placer.free[by, bx] and bits and placer.put(rng.choice(bits), bx, by, clear=0, shadow=False): n += 1
+    south = beach & (np.arange(d.land.shape[0])[:, None] > 150)
+    cells = list(zip(*np.nonzero(south)))
+    rng.shuffle(cells)
+    for (y, x) in cells[:4000]:
+        if rng.random() < 0.02 and palms and placer.put(rng.choice(palms), x, y, clear=1, shadow=False): n += 1
+    return n

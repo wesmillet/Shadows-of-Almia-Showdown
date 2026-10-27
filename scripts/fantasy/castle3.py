@@ -74,6 +74,12 @@ def generated(d):
         pave.append(('rect', fx - 1, fy - 1, fx + 7, fy + 7, 1))
         W[fy + 1:fy + 6, fx:fx + 6] = True                     # the basin
     layers = []
+    # the lawns, as the pack's Forest Castle has them: grass with a stone kerb (Tileset_Castle_Grass)
+    import wang
+    pav0 = rasterize(pave, shape)
+    Cg = wang.WangSet('Tileset_Castle_Grass', seed=5)
+    lawn_cells = np.where(hall_full & (pav0 == 0), Cg.color('Emerald Grass'), np.where(hall_full, Cg.color('Empty'), 0)).astype(np.int32)
+    layers.append(('Castle Grass', Cg.paint(lawn_cells, fill=Cg.color('Empty')), 1.0))
     for n, arr in c_layers:
         full = np.full(shape, None, dtype=object)
         full[oy0 - T:oy1, ox0:ox1] = arr

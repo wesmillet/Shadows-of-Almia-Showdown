@@ -12,7 +12,7 @@
  * one capped cache (chunkCanvas) so memory stays flat over a long match.
  */
 import type { View } from '../render/view';
-import type { Assets } from '../sprites/assets';
+import { imagePixels, type Assets } from '../sprites/assets';
 import type { Biome, DecorItem, GroundRenderer } from './types';
 
 const CHUNK = 8;
@@ -102,6 +102,11 @@ export class FanGround implements GroundRenderer {
   private chunkCols: number;
   private chunkRows: number;
   private time = 0;
+  /**
+   * The centre blend (scripts/mapgen/center_blend.py): per-pixel colour multipliers (byte / 85) over
+   * one rectangle of the map, in map pixels, applied when ground chunks bake; null without one.
+   */
+  private blend: { x: number; y: number; w: number; h: number; px: Uint8ClampedArray } | null = null;
 
   private constructor(readonly map: FanMapFile, private readonly atlas: CanvasImageSource, private readonly sheets: CanvasImageSource[]) {
     this.cols = map.cols;
@@ -145,12 +150,24 @@ export class FanGround implements GroundRenderer {
     for (const item of map.stack) this.layers.push(item.kind === 'tiles' && item.rle ? decodeRle(item.rle, n) : null);
   }
 
-  static async load(assets: Assets, name: string, onProgress?: (p: number) => void): Promise<FanGround | null> {
+  static async load(assets: Assets, name: string, onProgress?: (p: number) => void, withBlend = true): Promise<FanGround | null> {
     const map = await assets.json<FanMapFile>(`maps/${name}.json`);
     if (!map || map.version !== 3) return null;
     const [atlas, ...sheets] = await Promise.all([assets.loadImage(map.atlas.src), ...map.sheets.map((s) => assets.loadImage(s))]);
     const ph = assets.placeholder('map', 16, 16);
     const g = new FanGround(map, atlas ?? ph, sheets.map((s) => s ?? ph));
+    // The centre blend is optional: a map without one draws as it is.
+    const [rect, blendImg] = await Promise.all([
+      assets.json<{ x: number; y: number; w: number; h: number }>(`maps/${name}_blend.json`),
+      assets.loadImage(`maps/${name}_blend.png`),
+    ]);
+    if (withBlend && rect && blendImg && blendImg.naturalWidth === rect.w && blendImg.naturalHeight === rect.h) {
+      try {
+        g.blend = { ...rect, px: imagePixels(blendImg) };
+      } catch {
+        g.blend = null;
+      }
+    }
     g.indexChunks();
     g.buildDecor();
     const total = g.chunkCols * g.chunkRows;
@@ -267,7 +284,53 @@ export class FanGround implements GroundRenderer {
       }
     });
     ctx.globalAlpha = 1;
+    this.applyBlend(ctx, cc * CHUNK * 16, cr * CHUNK * 16, c.width, c.height);
     return c;
+  }
+
+  /** Multiplies a freshly baked chunk (map pixels x0, y0) by the centre blend where they overlap. */
+  private applyBlend(ctx: CanvasRenderingContext2D, x0: number, y0: number, w: number, h: number): void {
+    const b = this.blend;
+    if (!b) return;
+    const ix0 = Math.max(x0, b.x);
+    const iy0 = Math.max(y0, b.y);
+    const ix1 = Math.min(x0 + w, b.x + b.w);
+    const iy1 = Math.min(y0 + h, b.y + b.h);
+    if (ix1 <= ix0 || iy1 <= iy0) return;
+    // Skip chunks the blend leaves unchanged (most of the rectangle).
+    let any = false;
+    for (let y = iy0; y < iy1 && !any; y += 2) {
+      let o = ((y - b.y) * b.w + (ix0 - b.x)) * 4;
+      for (let x = ix0; x < ix1; x += 2, o += 8) {
+        if (b.px[o] !== 85 || b.px[o + 1] !== 85 || b.px[o + 2] !== 85) {
+          any = true;
+          break;
+        }
+      }
+    }
+    if (!any) return;
+    let img: ImageData;
+    try {
+      img = ctx.getImageData(ix0 - x0, iy0 - y0, ix1 - ix0, iy1 - iy0);
+    } catch {
+      return;
+    }
+    const d = img.data;
+    const rw = ix1 - ix0;
+    for (let y = iy0; y < iy1; y++) {
+      let o = ((y - b.y) * b.w + (ix0 - b.x)) * 4;
+      let q = (y - iy0) * rw * 4;
+      for (let x = ix0; x < ix1; x++, o += 4, q += 4) {
+        const mr = b.px[o] as number;
+        const mg = b.px[o + 1] as number;
+        const mb = b.px[o + 2] as number;
+        if (mr === 85 && mg === 85 && mb === 85) continue;
+        d[q] = Math.min(255, ((d[q] as number) * mr) / 85);
+        d[q + 1] = Math.min(255, ((d[q + 1] as number) * mg) / 85);
+        d[q + 2] = Math.min(255, ((d[q + 2] as number) * mb) / 85);
+      }
+    }
+    ctx.putImageData(img, ix0 - x0, iy0 - y0);
   }
 
   /**

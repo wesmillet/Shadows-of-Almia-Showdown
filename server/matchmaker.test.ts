@@ -73,4 +73,16 @@ describe('matchmaker', () => {
     expect(started.length).toBe(0);
     expect(mm.waiting).toEqual({ casual: 1, ranked: 1 });
   });
+
+  it('waits for half the lobby to be real players before starting with bots', () => {
+    const started: Array<unknown> = [];
+    const mm = new Matchmaker({ size: 8, wait: { casual: 10, ranked: 30 }, fullSeconds: 2, start: (players) => started.push(players) });
+    for (const k of ['a', 'b', 'c']) mm.join({ tickets: [{ peer: peer(k), starter: '0001' }], party: false }, 'casual', 0);
+    mm.startNow('a', 0);
+    mm.tick(60_000);
+    expect(started.length).toBe(0);
+    mm.join({ tickets: [{ peer: peer('d'), starter: '0001' }], party: false }, 'casual', 60_000);
+    mm.tick(60_000 + 11_000);
+    expect(started.length).toBe(1);
+  });
 });

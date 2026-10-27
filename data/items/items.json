@@ -118,6 +118,14 @@
       "desc": "Works from the bag: your Pokémon last 2 minutes in the storm before falling asleep"
     },
     {
+      "id": "styler",
+      "name": "Capture Styler",
+      "short": "Styler",
+      "kind": "charm",
+      "rare": true,
+      "desc": "Works from the bag: hold C and draw loops round a wild Pokémon to calm it (calmed ones stop fighting and are far easier to catch)"
+    },
+    {
       "id": "capture-styler",
       "name": "Snag Machine",
       "short": "Snag",

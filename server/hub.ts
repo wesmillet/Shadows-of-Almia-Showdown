@@ -128,6 +128,7 @@ export class Hub {
       size: o.size,
       wait: o.wait,
       fullSeconds: 3,
+      minPlayers: process.env.MIN_PLAYERS ? Number(process.env.MIN_PLAYERS) : undefined,
       start: (players, mode) => this.startRoom(players, mode, {}),
     });
     o.accounts.presence = (id) => this.presence(id);

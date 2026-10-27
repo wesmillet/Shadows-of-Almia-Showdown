@@ -161,6 +161,10 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
     case 'stylerBreak': {
       const mon = monById(m, a[0]);
       if (!mon || !mon.wild) return '';
+      if (!m.hasStyler(p)) {
+        flag('styler-none', 'styler loop without a Capture Styler');
+        return '';
+      }
       const d = Math.hypot(mon.x - p.x, mon.y - p.y);
       if (d > CONFIG.styler.maxRange + 2) {
         flag('styler-range', `${d.toFixed(1)} tiles`);

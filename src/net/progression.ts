@@ -151,9 +151,13 @@ export function lookRequirement(look: string): { level?: number; achievement?: A
 }
 
 /** Can a trainer at this level with these achievements wear this look? */
+/** Trainer levels and XP: off for now (nothing shows them, and no look waits on a level). */
+export const LEVELS_ON = false;
+
 export function canWear(look: string, level: number, earned: Iterable<string>): boolean {
   const req = lookRequirement(look);
   if (!req) return true;
-  if (req.level !== undefined) return level >= req.level;
+  // Trainer levels are switched off for now (LEVELS_ON): looks that needed a level are free.
+  if (req.level !== undefined) return !LEVELS_ON || level >= req.level;
   return !!req.achievement && new Set(earned).has(req.achievement.id);
 }

@@ -17,6 +17,8 @@ import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
+import { DEV_CHEST } from '../src/dev';
+import { CONFIG } from '../src/sim/data';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { DEFAULT_RATING, decay, PLACEMENT_GAMES, seasonAt, seasonReset, tierOf, type Rating } from './rating';
@@ -215,6 +217,18 @@ export class Accounts {
     for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    }
+    // v1: the rare-item chest was on for everyone until now and was saved into every account's
+    // chest, so those items come out once (what players stored themselves stays), and chests are
+    // cut to their ten slots.
+    if ((this.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version < 1) {
+      const rare = new Set(DEV_CHEST.map(([id]) => id));
+      const rows = this.db.prepare('SELECT user_id, chest FROM profiles').all() as Array<{ user_id: number; chest: string }>;
+      for (const r of rows) {
+        const list = (JSON.parse(r.chest || '[]') as Array<{ id: string; count: number }>).filter((e) => e && !rare.has(e.id)).slice(0, CONFIG.items.storageSlots);
+        this.db.prepare('UPDATE profiles SET chest = ? WHERE user_id = ?').run(JSON.stringify(list), r.user_id);
+      }
+      this.db.exec('PRAGMA user_version = 1');
     }
     const gid = process.env.GOOGLE_CLIENT_ID;
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;

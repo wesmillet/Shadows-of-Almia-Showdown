@@ -89,7 +89,7 @@ export function openOptions(): Promise<void> {
 
       // Display.
       box.appendChild(el('h3', '', 'Display'));
-      box.appendChild(toggleLine('Camera shake on big hits', settings.shake, () => {
+      box.appendChild(toggleLine('Camera shake (legendary moments)', settings.shake, () => {
         settings.shake = !settings.shake;
         saveSettings();
         draw();

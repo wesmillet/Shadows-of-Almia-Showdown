@@ -40,6 +40,9 @@ export interface MatchmakerOptions {
   wait: Record<QueueMode, number>;
   /** Seconds to wait once a lobby is full. */
   fullSeconds: number;
+  /** Real players a lobby needs before it starts with computer trainers in the empty seats
+   * (default half the lobby, rounded up). Below that it keeps waiting. */
+  minPlayers?: number;
   start: (players: Lineup[], mode: QueueMode) => void;
 }
 
@@ -59,6 +62,11 @@ export class Matchmaker {
   private lastStatus = 0;
 
   constructor(private readonly o: MatchmakerOptions) {}
+
+  /** Real players needed to start (the rest are computer trainers). */
+  get minPlayers(): number {
+    return Math.min(this.o.size, this.o.minPlayers ?? Math.ceil(this.o.size / 2));
+  }
 
   /** Players waiting, by queue. */
   get waiting(): Record<QueueMode, number> {
@@ -96,6 +104,7 @@ export class Matchmaker {
     for (const l of this.lobbies) {
       if (l.mode !== 'casual') continue;
       if (!l.groups.some((g) => g.tickets.some((t) => t.peer.key === key))) continue;
+      if (count(l) < this.minPlayers) return;
       l.startAt = Math.min(l.startAt, now + 2000);
       this.status(now, true);
       return;
@@ -120,6 +129,11 @@ export class Matchmaker {
   tick(now: number): void {
     for (const l of [...this.lobbies]) {
       if (now < l.startAt) continue;
+      // Not enough real players yet: keep waiting (the wait starts over once there are).
+      if (count(l) < this.minPlayers) {
+        l.startAt = now + this.o.wait[l.mode] * 1000;
+        continue;
+      }
       this.lobbies.splice(this.lobbies.indexOf(l), 1);
       // Parties are squads (team 1, 2, ...); everyone else plays alone.
       let team = 0;
@@ -138,9 +152,11 @@ export class Matchmaker {
     if (!force && now - this.lastStatus < 1000) return;
     this.lastStatus = now;
     for (const l of this.lobbies) {
-      const startsIn = Math.max(0, Math.ceil((l.startAt - now) / 1000));
       const players = l.groups.flatMap((g) => g.tickets.map((t) => t.peer.name));
-      for (const g of l.groups) for (const t of g.tickets) t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode });
+      // null: waiting for more players (`need` of them) before any countdown
+      const need = Math.max(0, this.minPlayers - players.length);
+      const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
+      for (const g of l.groups) for (const t of g.tickets) t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need });
     }
   }
 }

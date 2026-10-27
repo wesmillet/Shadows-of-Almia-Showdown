@@ -10,6 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
+import { LEVELS_ON } from '../net/progression';
 import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
 import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
@@ -38,6 +39,39 @@ function loadHubLogo(): void {
   const im = new Image();
   im.src = `${ASSET_ROOT}ui/logo.png`;
   im.onload = () => (hubLogo = im);
+}
+
+/** A piece of the island (the castle and the forest lake, assets/ui/hub_bg.png) behind the hub. */
+let hubBg: HTMLImageElement | null = null;
+let hubBgAsked = false;
+function hubBackdrop(v: GameContext['view'], t: number): void {
+  if (!hubBgAsked) {
+    hubBgAsked = true;
+    const im = new Image();
+    im.src = `${ASSET_ROOT}ui/hub_bg.png`;
+    im.onload = () => (hubBg = im);
+  }
+  const h = v.hud;
+  if (!hubBg) return backdrop(v);
+  // Cover the screen at a whole-number scale (crisp pixels), drifting slowly side to side.
+  const k = Math.max(1, Math.ceil(Math.max(v.width / hubBg.width, v.height / hubBg.height) * 1.15));
+  const w = hubBg.width * k;
+  const hh = hubBg.height * k;
+  const spare = Math.max(0, w - v.width);
+  const x = -spare / 2 - Math.sin(t * 0.05) * spare * 0.4;
+  const y = -(hh - v.height) / 2;
+  h.save();
+  h.imageSmoothingEnabled = false;
+  h.drawImage(hubBg, Math.round(x), Math.round(y), w, hh);
+  // dusk over it, darker toward the edges, so the cream panel reads
+  h.fillStyle = 'rgba(20,12,40,0.38)';
+  h.fillRect(0, 0, v.width, v.height);
+  const g = h.createRadialGradient(v.width / 2, v.height * 0.45, Math.min(v.width, v.height) * 0.25, v.width / 2, v.height * 0.5, Math.max(v.width, v.height) * 0.75);
+  g.addColorStop(0, 'rgba(8,4,18,0)');
+  g.addColorStop(1, 'rgba(8,4,18,0.6)');
+  h.fillStyle = g;
+  h.fillRect(0, 0, v.width, v.height);
+  h.restore();
 }
 
 /**
@@ -208,7 +242,7 @@ export class OnlineScreen implements Screen {
     const v = this.ctx.view;
     const s = v.baseScale;
     const h = v.hud;
-    backdrop(v);
+    hubBackdrop(v, this.t);
     const L = this.layout();
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
@@ -240,7 +274,7 @@ export class OnlineScreen implements Screen {
     const cx = L.cx;
     if (me.signedIn && me.user) {
       const pr = me.progress;
-      text(v, `${me.user.username}${pr ? `  ·  Lv ${pr.level}` : ''}`, cx, card.y + 36 * s, 22, { align: 'center', color: INK.text, shadow: false });
+      text(v, `${me.user.username}${pr && LEVELS_ON ? `  ·  Lv ${pr.level}` : ''}`, cx, card.y + 36 * s, 22, { align: 'center', color: INK.text, shadow: false });
       if (me.title) text(v, me.title, cx, card.y + 16 * s, 11, { align: 'center', color: INK.accent, shadow: false });
       if (pr && pr.next) {
         const bw = 220 * s;
@@ -261,7 +295,7 @@ export class OnlineScreen implements Screen {
     // One way in: everyone fills the same matches.
     const f = this.findState();
     button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
-    text(v, 'Eight trainers, one island, one winner. Empty seats get computer trainers.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
+    text(v, 'Eight trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
     if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
     const sy = r.options.y + r.options.h + 34 * s;
@@ -424,6 +458,7 @@ export class LobbyScreen implements Screen {
   private chat: ChatPanel | null = null;
   private players: string[] = [];
   private startsIn: number | null = null;
+  private need = 0;
   private size = 8;
   private mode: QueueMode | undefined;
   private unsub: (() => void) | null = null;
@@ -441,6 +476,7 @@ export class LobbyScreen implements Screen {
       if (m.t === 'lobby') {
         this.players = m.players;
         this.startsIn = m.startsIn;
+        this.need = m.need ?? 0;
         this.size = m.size;
         this.mode = m.mode;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
@@ -485,12 +521,18 @@ export class LobbyScreen implements Screen {
   render(): void {
     const v = this.ctx.view;
     const s = v.baseScale;
-    backdrop(v);
+    hubBackdrop(v, this.t);
     const dots = '.'.repeat(1 + (Math.floor(this.t * 2) % 3));
     const party = this.net.social.party;
     const waitingParty = this.startsIn === null && party && party.members.length > 1;
     const picked = party?.members.filter((m) => m.picked).length ?? 0;
-    const sub = waitingParty ? `Your party is picking starters (${picked}/${party.members.length})` : this.startsIn === null ? 'Joining the queue' : `Starting in ${Math.ceil(this.startsIn)}s · empty spots get computer trainers`;
+    const sub = waitingParty
+      ? `Your party is picking starters (${picked}/${party.members.length})`
+      : this.need > 0
+        ? `Waiting for ${this.need} more trainer${this.need === 1 ? '' : 's'} (a match needs at least ${Math.ceil(this.size / 2)})`
+        : this.startsIn === null
+          ? 'Joining the queue'
+          : `Starting in ${Math.ceil(this.startsIn)}s`;
     heading(v, `${this.mode === 'ranked' ? 'Ranked · ' : ''}Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
@@ -613,7 +655,7 @@ export class OnlineEndScreen implements Screen {
     text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 50 * s, 40, { align: 'center', color: win ? INK.accent : INK.bad, shadow: false });
     text(v, win ? (this.place === 1 && this.net.social.party ? 'Your squad is the last standing!' : 'Last trainer standing!') : `You placed #${this.place}`, v.width / 2, py + 86 * s, 16, { align: 'center', color: INK.dim, shadow: false });
     const prog = this.net.progress;
-    if (prog && this.net.me.signedIn) {
+    if (prog && this.net.me.signedIn && LEVELS_ON) {
       const total = prog.xp.reduce((n, x) => n + x.xp, 0);
       const up = prog.after.level > prog.before.level;
       text(v, `+${total} XP${up ? `  ·  Level ${prog.after.level}!` : `  ·  Level ${prog.after.level}`}`, v.width / 2, py + 134 * s, 15, { align: 'center', color: up ? INK.accent : INK.text, shadow: false });

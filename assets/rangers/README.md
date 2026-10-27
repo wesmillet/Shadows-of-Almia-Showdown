@@ -20,3 +20,4 @@ Frame order in every sheet (15 frames, left to right, sprite anchored bottom-cen
 | 12-14 | walk_up |
 
 Right-facing frames are mirrored from the left-facing ones. No named Ranger characters are used.
+- `civ_13`: a nurse, recoloured from civ_03 (pink hair, white apron) for the healers

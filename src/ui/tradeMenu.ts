@@ -5,6 +5,7 @@
  */
 import type { Connection } from '../net/connection';
 import { el, overlayRoot } from './overlay';
+import { LEVELS_ON } from '../net/progression';
 
 interface Card {
   pcId: number;
@@ -314,7 +315,7 @@ export function openTrainerCard(net: Connection, name: string): Promise<void> {
       } else {
         box.appendChild(el('div', 'big', p.name));
         const since = new Date(p.joined).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-        box.appendChild(el('div', 'sub', `Lv ${p.progress.level}${p.title ? ` · ${p.title}` : ''} · ${p.online ? 'Online now' : `Trainer since ${since}`}`));
+        box.appendChild(el('div', 'sub', `${LEVELS_ON ? `Lv ${p.progress.level} · ` : ''}${p.title ? `${p.title} · ` : ''}${p.online ? 'Online now' : `Trainer since ${since}`}`));
         const stats = el('div', 'stats');
         for (const [label, n] of [['Wins', p.stats.wins ?? 0], ['Eliminations', p.stats.eliminations ?? 0], ['Matches', p.stats.matches ?? 0], ['In PC', p.pc]] as Array<[string, number]>) {
           const d = el('div');

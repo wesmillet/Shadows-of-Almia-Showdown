@@ -90,6 +90,8 @@ export class MatchScreen implements Screen {
   private stylerLine: Array<{ x: number; y: number }> = [];
   private stylerFlash: Array<{ pts: Array<{ x: number; y: number }>; t: number }> = [];
   private stylerSeen = new Map<number, { x: number; y: number }>();
+  /** C held with a Capture Styler: the disc follows the cursor. */
+  private stylerHeld = false;
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
   private teach: { slot: number } | null = null;
@@ -143,7 +145,7 @@ export class MatchScreen implements Screen {
     // Scene effects the events use (Lugia's burst, the lake's rings, landings, portals).
     for (const id of SCENE_FX) ids.add(id);
     this.fx.preload(ids);
-    this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard']);
+    this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard', 'styler']);
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
@@ -692,7 +694,10 @@ export class MatchScreen implements Screen {
     this.stylerFlash = this.stylerFlash.filter((f) => f.t > 0);
     const p = this.match.player;
     const a = this.match.aim;
-    const holding = input.down('KeyC') && !p.duelId && !!a;
+    // Only with a Capture Styler in the bag (a rare find in item balls).
+    if (input.pressed('KeyC') && !this.match.hasStyler(p)) this.say('You need a Capture Styler (a rare find in item balls)', 2);
+    const holding = input.down('KeyC') && !p.duelId && !!a && this.match.hasStyler(p);
+    this.stylerHeld = holding;
     if (!holding || !a) {
       this.stylerLine = [];
       this.stylerSeen.clear();
@@ -775,13 +780,26 @@ export class MatchScreen implements Screen {
       ctx.lineWidth = 3 * s;
       ctx.stroke();
     }
-    // The styler's tip at the cursor.
+    // The Capture Disc at the cursor while C is held, spinning, like the Ranger games.
     const a = this.match.aim;
-    if (this.stylerLine.length && a) {
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(v.toScreenX(a.x), v.toScreenY(a.y), 4 * s, 0, Math.PI * 2);
-      ctx.fill();
+    const disc = this.stylerHeld ? this.icons.get('styler') : null;
+    if (this.stylerHeld && a) {
+      const k = Math.max(1, Math.round(v.spriteScale / 2));
+      const x = Math.round(v.toScreenX(a.x));
+      const y = Math.round(v.toScreenY(a.y));
+      ctx.save();
+      ctx.translate(x, y);
+      if (disc) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.rotate((Math.floor(this.match.time * 12) % 8) * (Math.PI / 4));
+        ctx.drawImage(disc, -disc.width * k / 2, -disc.height * k / 2, disc.width * k, disc.height * k);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4 * s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
     // Progress rings over Pokémon being styled; a soft pink ring under calmed ones.
     for (const w of this.match.wilds) {
@@ -1219,7 +1237,8 @@ export class MatchScreen implements Screen {
           const sh = this.fx.sheet(ev.id);
           if (sh) this.groundVfx.add(new FxAnim(sh, { x: ev.x, y: ev.y, lift: 0, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint }));
         } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: ev.lift ?? 0.6, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint });
-        if (ev.shake) this.shake = Math.max(this.shake, ev.shake);
+        // The camera shakes only for Lugia, Darkrai and Shadow Mewtwo.
+        if (ev.shake && ev.epic) this.shake = Math.max(this.shake, ev.shake);
         break;
       case 'extracted': {
         // Into the PC for keeps (this browser's storage, or the server's online): a beam of light takes it away.
@@ -1337,13 +1356,11 @@ export class MatchScreen implements Screen {
         if (ev.mon.owner?.isPlayer) this.say(`${ev.mon.name}'s ${ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'} is reacting!`, 1.6);
         else if (ev.mon.owner) this.say(`${ev.mon.owner.name}'s ${ev.mon.name} is Mega Evolving!`, 2);
         this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2.6, fps: 12 });
-        this.shake = Math.max(this.shake, 0.6);
         break;
       case 'evolved':
         if (ev.mon.mega && ev.mon.megaFrom?.name === ev.from) {
           if (ev.mon.owner?.isPlayer) this.say(`${ev.from} Mega Evolved into ${ev.mon.name}!`, 3);
           this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 4, fps: 18 });
-          this.shake = Math.max(this.shake, 1);
           break;
         }
         if (ev.mon.owner?.isPlayer) this.say(`${ev.from} evolved into ${ev.mon.name}!`, 2.6);
@@ -1554,7 +1571,8 @@ export class MatchScreen implements Screen {
   private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[]): void {
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
       this.spawnFx(attacker, m.fx, area, hits);
-      if (m.shake && (attacker.owner === this.match.player || hits.some((h) => h.owner === this.match.player) || Math.hypot(attacker.x - this.match.player.x, attacker.y - this.match.player.y) < 10)) {
+      // Moves never shake the camera, except the three great legends' own (Aeroblast, Dark Void...).
+      if (m.shake && isEpic(attacker) && (attacker.owner === this.match.player || hits.some((h) => h.owner === this.match.player) || Math.hypot(attacker.x - this.match.player.x, attacker.y - this.match.player.y) < 10)) {
         this.shake = Math.max(this.shake, m.shake);
       }
       return;
@@ -1768,26 +1786,43 @@ export class MatchScreen implements Screen {
     }
   }
 
+  /**
+   * The healer's flag beside every heal station: a white flag with a red cross on a wooden pole,
+   * drawn in whole art pixels at the sprites' scale, rippling gently (brighter while someone heals).
+   */
   private drawOutpostPost(v: View, o: { x: number; y: number; users: unknown[] }): void {
     const ctx = v.ctx;
-    const sx = v.toScreenX(o.x);
-    const sy = v.toScreenY(o.y - 0.9);
-    const h = 1.3 * v.pxPerTile;
-    const s = v.baseScale;
+    const k = v.spriteScale; // screen pixels per art pixel
+    const bx = Math.round(v.toScreenX(o.x + 1.15) / k) * k;
+    const by = Math.round(v.toScreenY(o.y - 0.35) / k) * k;
+    const POLE = 30;
+    const FW = 14;
+    const FH = 10;
+    const t = this.match.time;
+    const px = (x: number, y: number, w: number, h: number, c: string) => {
+      ctx.fillStyle = c;
+      ctx.fillRect(bx + x * k, by + y * k, w * k, h * k);
+    };
     ctx.save();
-    ctx.fillStyle = '#6b4a2b';
-    ctx.fillRect(sx - 3 * s, sy - h, 6 * s, h);
-    ctx.fillStyle = o.users.length ? '#7dffc0' : '#2fbf86';
-    ctx.beginPath();
-    ctx.moveTo(sx + 3 * s, sy - h);
-    ctx.lineTo(sx + 3 * s + 0.45 * v.pxPerTile, sy - h + 0.16 * v.pxPerTile);
-    ctx.lineTo(sx + 3 * s, sy - h + 0.32 * v.pxPerTile);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = uiFont(0.12 * v.pxPerTile);
-    ctx.textAlign = 'center';
-    ctx.fillText('R', sx + 3 * s + 0.16 * v.pxPerTile, sy - h + 0.21 * v.pxPerTile);
+    // pole, with a dark outline and a small brass cap
+    px(-1, -POLE, 3, POLE, '#3a2618');
+    px(0, -POLE, 1, POLE, '#8a6040');
+    px(-1, -POLE - 2, 3, 2, '#c8a040');
+    px(-2, -1, 5, 1, '#3a2618');
+    // the cloth: each column waves a little, more toward the free end
+    const lit = o.users.length > 0;
+    for (let c = 0; c < FW; c++) {
+      const dy = Math.round(Math.sin(t * 4 - c * 0.55) * (c / FW) * 1.6);
+      const x = 2 + c;
+      const y0 = -POLE + 1 + dy;
+      for (let r = 0; r < FH; r++) {
+        const edge = r === 0 || r === FH - 1 || c === FW - 1;
+        const cross = (r >= 3 && r <= 6 && c >= 5 && c <= 8) && (r === 4 || r === 5 || c === 6 || c === 7);
+        const shade = Math.sin(t * 4 - c * 0.55) < -0.4;
+        const col = edge ? '#5a4a5a' : cross ? (lit ? '#ff3848' : '#d8283a') : shade ? '#dcdce6' : '#fafaff';
+        px(x, y0 + r, 1, 1, col);
+      }
+    }
     ctx.restore();
   }
 
@@ -1879,6 +1914,7 @@ export class MatchScreen implements Screen {
     if (finale && this.crystalWhole === true) {
       this.vfx.add(new ShardBurst(this.match.centerX, this.match.centerY, 2.4, ['#e8ceff', '#b080ff', '#7a3ad6', '#ff7ae6']));
       this.vfx.add(new RingPulse(this.match.centerX, this.match.centerY, 4, '#b46bff', 1.2));
+      this.shake = Math.max(this.shake, 1);     // Darkrai wakes
     }
     this.crystalWhole = !finale;
     const img = finale ? this.crystalBroken : this.crystalImg;
@@ -2005,7 +2041,7 @@ export class MatchScreen implements Screen {
   protected drawExtraWorld(v: View): Array<{ y: number; draw: () => void }> {
     const list: Array<{ y: number; draw: () => void }> = [];
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
-    for (const o of this.match.outposts) list.push({ y: o.y - 0.9, draw: () => this.drawOutpostPost(v, o) });
+    for (const o of this.match.outposts) list.push({ y: o.y - 0.35, draw: () => this.drawOutpostPost(v, o) });
     this.match.chests.forEach((c, i) => list.push({ y: c.y - 0.4, draw: () => this.drawChest(v, c, this.chestLid.get(i) ?? 0) }));
     for (const th of this.match.throws) list.push({ y: th.y + 0.02, draw: () => this.drawThrow(v, th) });
     list.push({ y: this.match.centerY, draw: () => this.drawCrystal(v) });
@@ -2482,4 +2518,9 @@ function darkPortal(img: HTMLImageElement): CanvasImageSource {
   }
   g.putImageData(d, 0, 0);
   return c;
+}
+
+/** Lugia, Shadow Lugia, Darkrai and Shadow Mewtwo: the Pokémon whose moves may shake the camera. */
+function isEpic(m: Mon): boolean {
+  return m.dex.startsWith('0249') || m.dex.startsWith('0491') || (m.dex.startsWith('0150') && !!m.shadow);
 }

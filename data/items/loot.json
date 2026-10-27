@@ -90,6 +90,10 @@
           "weight": 8
         },
         {
+          "id": "styler",
+          "weight": 2
+        },
+        {
           "id": "rare-tm",
           "weight": 5
         },

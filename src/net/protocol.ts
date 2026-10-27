@@ -100,7 +100,7 @@ export type ServerMsg =
   | { t: 'hello'; name: string; guest: boolean; server: 'live' | 'demo' | 'dev'; build: string }
   /** The starter roll: the browser animates the reels from this seed (src/sim/starters.ts) and the server knows what it offered. */
   | { t: 'roll'; seed: number; pool: string[] }
-  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode }
+  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode; /** Players still needed before the countdown starts. */ need?: number }
   /** Friends (with what they are doing), your party, and party invites waiting for an answer. */
   | { t: 'social'; friends: FriendEntry[]; party: PartyState | null; invites: string[] }
   /** Your trade offers changed (one came in, was answered or cancelled): fetch /api/trades again. */

@@ -5,7 +5,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ACHIEVEMENTS } from '../src/net/progression';
+import { ACHIEVEMENTS, LEVELS_ON } from '../src/net/progression';
 import type { PublicProfile } from './accounts';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
@@ -53,7 +53,7 @@ export function profilePage(p: PublicProfile, assetsDir: string): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(p.name)} · Shadows of Almia Showdown</title>
-<meta name="description" content="${esc(`${p.name}: level ${p.progress.level} trainer${p.title ? `, ${p.title}` : ''}. ${s.wins} wins in ${s.matches} matches.`)}">
+<meta name="description" content="${esc(`${p.name}: ${LEVELS_ON ? `level ${p.progress.level} ` : ''}trainer${p.title ? `, ${p.title}` : ''}. ${s.wins} wins in ${s.matches} matches.`)}">
 <style>
 @font-face { font-family: BoldPixels; src: url('/assets/fonts/BoldPixels.ttf'); }
 :root { --cream: #f4ecdc; --ink: #4a3424; --dim: #8a6a4a; --accent: #c2611a; --bg: #17112a; }
@@ -91,9 +91,9 @@ a { color: var(--accent); }
 <div class="panel head">${portrait}<div>
 <h1>${esc(p.name)}</h1>
 ${p.title ? `<div class="title">${esc(p.title)}</div>` : ''}
-<div>Trainer level ${p.progress.level}</div>
+${LEVELS_ON ? `<div>Trainer level ${p.progress.level}</div>
 <div class="bar"><i style="width:${pct}%"></i></div>
-<div class="dim">${p.progress.next ? `${p.progress.into} / ${p.progress.next} XP to level ${p.progress.level + 1}` : 'Top level'}</div>
+<div class="dim">${p.progress.next ? `${p.progress.into} / ${p.progress.next} XP to level ${p.progress.level + 1}` : 'Top level'}</div>` : ''}
 <div class="dim">${p.online ? '<span class="online">Online now</span> · ' : ''}Trainer since ${new Date(p.joined).toISOString().slice(0, 10)} · ${p.pc} Pokémon in their PC</div>
 ${ranked}
 </div></div>

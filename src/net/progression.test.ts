@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACHIEVEMENTS, canWear, levelOf, matchXp, titlesFor, xpToNext, type AchievementContext, type MatchFacts } from './progression';
+import { ACHIEVEMENTS, canWear, LEVELS_ON, levelOf, matchXp, titlesFor, xpToNext, type AchievementContext, type MatchFacts } from './progression';
 
 const facts = (over: Partial<MatchFacts> = {}): MatchFacts => ({
   mode: 'casual', place: 4, field: 8, outcome: 'loss', squad: false,
@@ -52,7 +52,8 @@ describe('achievements, titles and looks', () => {
   it('keeps Ranger looks for levels and the named ones for achievements', () => {
     expect(canWear('civ_03', 50, [])).toBe(false);
     expect(canWear('union_00', 1, [])).toBe(true);
-    expect(canWear('union_05', 9, [])).toBe(false);
+    // trainer levels are off for now (LEVELS_ON): level-locked looks are free
+    expect(canWear('union_05', 9, [])).toBe(!LEVELS_ON);
     expect(canWear('union_05', 10, [])).toBe(true);
   });
 

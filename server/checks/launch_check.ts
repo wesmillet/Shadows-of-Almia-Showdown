@@ -1,6 +1,6 @@
 /**
  * Launch-readiness check against a running server (MATCH_SIZE=2 LOBBY_WAIT=3 npm run server):
- * a solo queue fills with bots and starts; queueing without a roll answers instead of hanging;
+ * a lobby with the real players it needs (half the match) fills with bots and starts; queueing without a roll answers instead of hanging;
  * a dropped connection rejoins inside the reconnect window with the room still alive; a second
  * tab takes the session over (the first is closed with 4000) and resumes the same match.
  *
@@ -47,13 +47,31 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
   const roll = await a.got('roll');
   check(typeof roll.seed === 'number', 'roll came back');
   a.send({ t: 'queue', pick: 0, mode: 'casual' });
-  await a.got('lobby');
+  const lobby = await a.got('lobby');
   check(true, 'lobby joined');
+  // a match needs `need` more real players before it starts: bring them in (they leave once it starts)
+  const extra: Array<ReturnType<typeof client>> = [];
+  for (let i = 0; i < Number(lobby.need ?? 0); i++) {
+    const c = client('check-fill-' + i + Math.random().toString(36).slice(2, 8));
+    await c.got('hello');
+    c.send({ t: 'roll' });
+    await c.got('roll');
+    c.send({ t: 'queue', pick: 0, mode: 'casual' });
+    extra.push(c);
+  }
+  if (extra.length) {
+    await sleep(800);
+    check(true, `${extra.length} more trainer${extra.length === 1 ? '' : 's'} joined (a match needs half its seats)`);
+  }
   const t0 = Date.now();
   a.send({ t: 'startNow' });
   const start = await a.got('start', 10000);
   check(Date.now() - t0 < 6000, `start now pulled the match forward (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   check(typeof start.matchId === 'string' || typeof start.matchId === 'number', 'match started with bot fill');
+  for (const c of extra) {
+    c.send({ t: 'leave' });
+    c.ws.close();
+  }
   await a.got('s', 5000);
   check(true, 'state updates flowing');
   // queue with no roll: must answer, not hang

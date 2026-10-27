@@ -224,7 +224,7 @@ ROADS = [
     # (each road meets the crystal arena square on, in the middle of its west, east, north or south side)
     ('1', [(84, 112), (118, 109), (136, 112), (142, 112), (160, 112), (178, 112), (184, 112), (203, 115), (238, 119), (262, 128)]),
     # north-south through the crystal, from the north coast to the south of the plain
-    ('1', [(160, 30), (165, 58), (160, 88), (160, 95), (160, 101), (160, 112), (160, 124), (160, 130), (157, 140), (160, 160)]),
+    ('1', [(160, 30), (165, 58), (160, 88), (160, 95), (160, 101), (160, 112), (160, 124), (160, 130), (157, 140)]),
     # climbing the plateau to the snow town (CLIMB: straight, no flattening round this one)
     ('1', [(84, 112), (104, 112), (104, 72)]),
     # the mountain trail: off Frostmere's road just south of the town, west along the foothills, then

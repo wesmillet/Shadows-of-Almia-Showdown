@@ -97,7 +97,12 @@ export class Lighting {
   readonly mode: 'webgl' | 'canvas';
 
   constructor(private readonly view: View) {
-    const gl = view.outputCanvas.getContext('webgl', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
+    // preserveDrawingBuffer: Firefox shows a blank (black) buffer for any animation frame in which
+    // the WebGL canvas was not redrawn: screens that only paint the HUD, a dropped frame, a screen
+    // change. Keeping the buffer means a skipped frame shows the last picture instead of flashing.
+    // ?gl=0 forces the Canvas 2D path (for drivers that still misbehave).
+    const noGl = typeof location !== 'undefined' && new URLSearchParams(location.search).get('gl') === '0';
+    const gl = noGl ? null : view.outputCanvas.getContext('webgl', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
     if (gl && this.setup(gl)) {
       this.gl = gl;
       this.mode = 'webgl';

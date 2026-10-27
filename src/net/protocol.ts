@@ -73,6 +73,7 @@ export type ClientMsg =
   /** Ask the server for a starter roll (it rolls; the browser only shows it). */
   | { t: 'roll' }
   | { t: 'leaveQueue' }
+  | { t: 'startNow' }
   /**
    * Movement keys, one frame per simulation step as [number, x, y] (sent a few at a time), and the
    * cursor in tiles. `mx`/`my` alone (no frames) holds the keys until the next message.

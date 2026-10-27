@@ -354,6 +354,7 @@ export class Room implements RoomHandle {
     if (!p) return;
     p.peer = peer;
     p.goneAt = null;
+    p.seat.trainer.away = false;
     p.enc = new SyncEncoder(this.ids, p.seat.trainer);
     peer.send({ t: 'start', matchId: this.id, seed: this.seed, you: p.seat.trainer.id, roster: this.roster, mode: this.mode });
   }
@@ -364,6 +365,7 @@ export class Room implements RoomHandle {
     p.peer = null;
     p.goneAt = this.match.time;
     p.seat.moveX = p.seat.moveY = 0;
+    p.seat.trainer.away = true;
   }
 
   /** A message from a player in this room. */

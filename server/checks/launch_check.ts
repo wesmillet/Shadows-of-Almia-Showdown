@@ -49,7 +49,10 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
   a.send({ t: 'queue', pick: 0, mode: 'casual' });
   await a.got('lobby');
   check(true, 'lobby joined');
+  const t0 = Date.now();
+  a.send({ t: 'startNow' });
   const start = await a.got('start', 10000);
+  check(Date.now() - t0 < 6000, `start now pulled the match forward (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   check(typeof start.matchId === 'string' || typeof start.matchId === 'number', 'match started with bot fill');
   await a.got('s', 5000);
   check(true, 'state updates flowing');

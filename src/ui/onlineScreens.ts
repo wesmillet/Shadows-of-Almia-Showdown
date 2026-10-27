@@ -444,12 +444,24 @@ export class LobbyScreen implements Screen {
     return { x: v.width / 2 - 110 * s, y: v.height / 2 + 200 * s, w: 220 * s, h: 50 * s };
   }
 
+  /** Casual queues only: done waiting, start with computer trainers filling the rest. */
+  private startNowRect(): Rect | null {
+    if (this.mode === 'ranked' || this.startsIn === null || this.startsIn < 4) return null;
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 142 * s, w: 220 * s, h: 50 * s };
+  }
+
   step(dt: number, input: Input): void {
     this.t += dt;
     if (this.startsIn !== null) this.startsIn = Math.max(0, this.startsIn - dt);
     const b = this.leaveRect();
+    const sn = this.startNowRect();
     for (const c of input.takeClicks()) {
-      if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) {
+      if (sn && hit(c.x, c.y, sn.x, sn.y, sn.w, sn.h)) {
+        this.net.send({ t: 'startNow' });
+        this.startsIn = Math.min(this.startsIn ?? 2, 2);
+      } else if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) {
         this.net.send({ t: 'leaveQueue' });
         return this.onLeave(party(this.net) ? 'You left the queue (your party too)' : undefined);
       }
@@ -477,6 +489,8 @@ export class LobbyScreen implements Screen {
       text(v, name ?? (i < this.players.length ? '' : 'waiting...'), v.width / 2, y, 15, { align: 'center', color: name ? INK.text : INK.dim, shadow: false });
     }
     const b = this.leaveRect();
+    const sn = this.startNowRect();
+    if (sn) button(v, 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
     button(v, 'Leave queue', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), '#f4e6c8');
   }
 }

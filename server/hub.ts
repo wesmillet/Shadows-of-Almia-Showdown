@@ -187,6 +187,9 @@ export class Hub {
         this.leaveQueue(c, `${c.name} left the queue`);
         this.cancelPick(c, `${c.name} left`);
         return;
+      case 'startNow':
+        this.matchmaker.startNow(c.key, Date.now());
+        return;
       case 'party':
         return this.partyMsg(c, msg);
       case 'private':

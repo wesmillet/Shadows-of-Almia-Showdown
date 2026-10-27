@@ -91,6 +91,17 @@ export class Matchmaker {
     this.status(now, true);
   }
 
+  /** A queued player is done waiting: their casual lobby starts in two seconds (bots fill the rest). */
+  startNow(key: string, now: number): void {
+    for (const l of this.lobbies) {
+      if (l.mode !== 'casual') continue;
+      if (!l.groups.some((g) => g.tickets.some((t) => t.peer.key === key))) continue;
+      l.startAt = Math.min(l.startAt, now + 2000);
+      this.status(now, true);
+      return;
+    }
+  }
+
   /** Takes a player (and the rest of their party) out of the queue. */
   leave(key: string, notify = true): Peer[] {
     const gone: Peer[] = [];

@@ -271,8 +271,19 @@ def main():
     log('cliffs')
     cl_layers, cliff_block, stair_cells = build_cliffs(d)
     for i, L in enumerate(cl_layers): stack.append((f'Cliffs {i + 1}', L))
-    stack.append(('Castle walk', F.paint(W.astype(np.int32) * F.color('Slab Floor'))))
     wl, face = walls.paint(W)
+    # The walls cast a shadow (light from the top-left, like all the art): two tiles to the right
+    # of every wall, so a wall stands up off the ground.
+    SH = wang.WangSet('Tileset_Shadow', seed=13)
+    solid = W | (face > 0)
+    cast = np.zeros_like(solid)
+    cast[:, 1:] |= solid[:, :-1]
+    cast[:, 2:] |= solid[:, :-2]
+    cast &= ~solid & d.land
+    stack.append(('Wall shadow', SH.paint(cast.astype(np.int32) * SH.color('Shadow (25%)'))))
+    # The walkway on top of the walls is planked (the pack's barracks do the same), so a wall never
+    # reads as one more paved path beside the courtyard's slabs.
+    stack.append(('Castle walk', F.paint(W.astype(np.int32) * F.color('Wood Floor'))))
     if walls.unknown: log('  castle contexts without a learned tile:', sum(walls.unknown.values()))
     stack.append(('Castle walls', wl))
 

@@ -8,8 +8,7 @@
 import type { Input } from '../core/input';
 import { loadPc, type PcEntry } from '../pc';
 import type { Assets } from '../sprites/assets';
-import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
-import { SPECIES } from '../sim/data';
+import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 const COLS = 6;
@@ -35,7 +34,8 @@ export class PcScreen implements Screen {
   ) {
     // Oldest first, like filling a box.
     this.list = list ?? loadPc();
-    void this.sprites.preload(this.list.map((e) => e.dex), undefined, true);
+    // Shiny ones load their recoloured set (key `dex*`), so they are ready when the box opens too.
+    void this.sprites.preload(this.list.map((e) => (e.shiny && SpriteRegistry.hasShiny(e.dex) ? `${e.dex}*` : e.dex)), undefined, true);
   }
 
   private get boxes(): number {
@@ -157,8 +157,9 @@ export class PcScreen implements Screen {
       }
       if (!e) continue;
       // Hovered (and every icon now and then) hops like a box icon.
-      const hop = over ? Math.abs(Math.sin(this.t * 9)) * 4 * s : 0;
-      this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 4 * s - hop, L.slot - 8 * s);
+      const hop = over ? Math.abs(Math.sin(this.t * 9)) * 3 * s : 0;
+      // Centred in the well (which itself rises by `up` when pointed at), with room left for the hop.
+      this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 1.5 * s - up - hop, L.slot - 22 * s);
       if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s, 12, { align: 'center', weight: '900', color: '#ffd36b' });
       if (e.shadow) text(v, '◆', x + 14 * s, y + 18 * s, 11, { align: 'center', weight: '900', color: '#c48bff' });
     }
@@ -168,26 +169,27 @@ export class PcScreen implements Screen {
   }
 
   /**
-   * The Pokémon's own sprite, standing and facing out of the box. Its body (measured from the idle
-   * frames, species.json `body`) fills the slot at a whole-number scale so pixels stay square (or a
-   * clean half for the very big ones), centred on the body rather than the frame.
+   * The Pokémon's own sprite, standing and facing out of the box. Every frame of its idle loop is
+   * measured (the union of their opaque pixels), and that whole area is what gets fitted and
+   * centred: so the still icon sits in the middle of its slot, and the idle animation that plays on
+   * hover stays inside the slot and never jumps when it starts. Frames are drawn at one fixed
+   * origin, so the animation moves exactly as the sheet does.
    */
   private drawIcon(e: PcEntry, cx: number, cy: number, room: number): void {
     const h = this.ctx.view.hud;
     const a = this.anim(e);
     const f = a.current();
     if (f.placeholder) return;
-    const [bw, bh] = (SPECIES.get(e.dex)?.body as [number, number] | undefined) ?? [f.w * 0.6, f.h * 0.6];
-    const want = (room * 0.86) / Math.max(bw, bh, 1);
-    // Twice the art size or more: whole steps (square pixels). Below that a whole step would leave
-    // some Pokémon half the size of their neighbours, so the scale is exact.
-    const k = want >= 2 ? Math.floor(want) : want;
-    const [gx, gy] = a.ground();
-    // The frame's ground point, placed so the body sits in the middle of the slot.
-    const groundX = cx;
-    const groundY = cy + (bh * k) / 2;
-    const dx = Math.round(groundX - (f.w / 2 + gx) * k);
-    const dy = Math.round(groundY - (f.h / 2 + gy) * k);
+    const box = this.idleBounds(e, f);
+    if (!box) return;
+    const bw = box.x1 - box.x0;
+    const bh = box.y1 - box.y0;
+    const want = room / Math.max(bw, bh, 1);
+    // A whole-number scale keeps pixels square, but only when it still fills most of the slot;
+    // otherwise small Pokémon would look much smaller than their neighbours, so the scale is exact.
+    const k = want >= 2 && Math.floor(want) >= want * 0.8 ? Math.floor(want) : want;
+    const dx = Math.round(cx - ((box.x0 + box.x1) / 2) * k);
+    const dy = Math.round(cy - ((box.y0 + box.y1) / 2) * k);
     h.save();
     h.imageSmoothingEnabled = false;
     if (e.shadow) {
@@ -196,6 +198,45 @@ export class PcScreen implements Screen {
     }
     h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     h.restore();
+  }
+
+  /** Per species: the opaque area of all its front-facing idle frames, in frame pixels. */
+  private static bounds = new Map<string, { x0: number; y0: number; x1: number; y1: number } | null>();
+
+  private idleBounds(e: PcEntry, f: FrameRect): { x0: number; y0: number; x1: number; y1: number } | null {
+    const key = `${e.dex}:${f.w}x${f.h}`;
+    const known = PcScreen.bounds.get(key);
+    if (known !== undefined) return known;
+    const img = f.image as HTMLImageElement | HTMLCanvasElement;
+    const sheetW = 'naturalWidth' in img ? img.naturalWidth : img.width;
+    const frames = Math.max(1, Math.floor(sheetW / f.w));
+    const c = document.createElement('canvas');
+    c.width = frames * f.w;
+    c.height = f.h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    if (!g) return null;
+    // Row 0 of the sheet is the facing-down (towards you) direction, the one the box shows.
+    g.drawImage(img, 0, f.sy, frames * f.w, f.h, 0, 0, frames * f.w, f.h);
+    let px: Uint8ClampedArray;
+    try {
+      px = g.getImageData(0, 0, c.width, c.height).data;
+    } catch {
+      return null;
+    }
+    let x0 = f.w, y0 = f.h, x1 = 0, y1 = 0;
+    for (let y = 0; y < f.h; y++) {
+      for (let x = 0; x < c.width; x++) {
+        if ((px[(y * c.width + x) * 4 + 3] ?? 0) < 24) continue;
+        const fx = x % f.w;
+        if (fx < x0) x0 = fx;
+        if (fx + 1 > x1) x1 = fx + 1;
+        if (y < y0) y0 = y;
+        if (y + 1 > y1) y1 = y + 1;
+      }
+    }
+    const r = x1 > x0 && y1 > y0 ? { x0, y0, x1, y1 } : null;
+    if (r) PcScreen.bounds.set(key, r);
+    return r;
   }
 
   /** The side panel: the hovered Pokémon (its portrait, level, tags and how it got here). */
@@ -228,7 +269,7 @@ export class PcScreen implements Screen {
     const y = r.y + 30 * s + ps + 40 * s;
     text(v, `${e.shiny ? '★ ' : ''}${e.name}`, r.x + r.w / 2, y, 20, { align: 'center', color: e.shiny ? INK.blue : INK.text, shadow: false, maxWidth: r.w - 24 * s });
     text(v, `Lv ${e.level}`, r.x + r.w / 2, y + 26 * s, 15, { align: 'center', color: INK.accent, shadow: false });
-    const tags = [e.shadow ? 'Shadow' : '', e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
+    const tags = [(e as PcEntry & { wonder?: boolean }).wonder ? 'On Wonder Trade' : '', e.shadow ? 'Shadow' : '', e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
     if (tags) text(v, tags, r.x + r.w / 2, y + 48 * s, 12, { align: 'center', color: e.shadow ? INK.storm : INK.gold, shadow: false });
     text(v, e.via === 'win' ? 'Victory prize' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? INK.gold : INK.blue, shadow: false });
     if (e.moves?.length) text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + r.w / 2, y + 94 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });

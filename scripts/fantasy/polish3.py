@@ -145,7 +145,10 @@ yy, xx = np.mgrid[0:rows, 0:cols]
 keep_out |= ((xx - lk['x']) / (lk['rx'] + 2.5)) ** 2 + ((yy - lk['y']) / (lk['ry'] + 2.5)) ** 2 <= 1
 # the castle stands in its own clearing: nothing planted against its walls or before its gates
 from scipy import ndimage as _nd
-keep_out |= _nd.binary_dilation(biome == 7, iterations=5)
+keep_out |= _nd.binary_dilation(biome == 7, iterations=8)
+# and the crystal arena's oval stands clear too
+_c = m['center']
+keep_out |= ((xx - _c['x']) / 21) ** 2 + ((yy - _c['y']) / 15.5) ** 2 <= 1
 keep_out[:2, :] = keep_out[-2:, :] = True
 keep_out[:, :2] = keep_out[:, -2:] = True
 

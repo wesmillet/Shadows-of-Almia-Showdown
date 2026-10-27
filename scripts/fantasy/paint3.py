@@ -46,6 +46,7 @@ def ground(d, seed=2):
     sizes = ndimage.sum(dirt, lbl, range(1, n + 1))
     for i, sz in enumerate(sizes, 1):
         if sz > 60: dirt[lbl == i] = False
+    dirt &= ~ndimage.binary_dilation(d.castle, iterations=14)     # no bare patches round the castle
     patch[dirt] = G.color('Dirt')
     light = (noise(seed + 42, 5) > 1.0) & np.isin(d.biome, [MEADOW, CASTLE]) & green & (patch == 0)
     patch[ndimage.binary_opening(light, structure=np.ones((3, 3)))] = G.color('Light Grass')

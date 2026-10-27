@@ -38,12 +38,12 @@ WATER, MEADOW, FOREST, SHORE, SNOW, DESERT, AUTUMN, CASTLE = range(8)
 CASTLE_RECTS = [
     (176, 154, 224, 190),   # the main ward
     (189, 144, 210, 158),   # the keep's spur on the north wall
-    (153, 159, 178, 181),   # the west gate yard (barbican)
-    (221, 144, 235, 170),   # the garden bastion, north-east
+    (153, 159, 178, 190),   # the west gate yard (barbican); its south wall runs on as the ward's
+    (221, 144, 235, 165),   # the garden bastion, north-east
 ]
 CASTLE_CUTS = []
 # walls inside the castle region (the union has none where the rects meet): the gate yard's inner wall
-CASTLE_INNER_WALLS = [(176, 159, 179, 181)]
+CASTLE_INNER_WALLS = []
 CASTLE_WALL = 3
 CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
@@ -207,9 +207,8 @@ TOWNS = {
 # gates in the castle wall: (x, y) of the gap's middle, and whether the gap is in a N/S wall
 GATES = {
     'W': (165, 160, True),       # the gate yard's outer gate, in its north wall
-    'Wi': (177, 170, False),     # the inner gate, from the yard east into the ward
     'S': (199, 188, True),
-    'E': (222, 177, False),      # the postern towards Greenhollow
+    'E': (222, 172, False),      # the postern towards Greenhollow, on the plaza's east-west axis
 }
 GATE_W = 5
 
@@ -222,9 +221,10 @@ ROADS = [
     # Roads follow the land rather than a grid: diagonal legs between waypoints, then a gentle
     # wind and rounded corners (road_path). Each still ends square on its town, gate or stairs.
     # east-west across the plain, on east to the forest town
-    ('1', [(84, 112), (118, 109), (160, 112), (203, 115), (238, 119), (262, 128)]),
+    # (each road meets the crystal arena square on, in the middle of its west, east, north or south side)
+    ('1', [(84, 112), (118, 109), (136, 112), (142, 112), (160, 112), (178, 112), (184, 112), (203, 115), (238, 119), (262, 128)]),
     # north-south through the crystal, from the north coast to the south of the plain
-    ('1', [(160, 30), (165, 58), (160, 86), (160, 112), (157, 140), (160, 160)]),
+    ('1', [(160, 30), (165, 58), (160, 88), (160, 95), (160, 101), (160, 112), (160, 124), (160, 130), (157, 140), (160, 160)]),
     # climbing the plateau to the snow town (CLIMB: straight, no flattening round this one)
     ('1', [(84, 112), (104, 112), (104, 72)]),
     # the mountain trail: off Frostmere's road just south of the town, west along the foothills, then
@@ -240,7 +240,7 @@ ROADS = [
     # (the castle paves its own approaches with the courtyard's slabs: build3.py)
     ('1', [(186, 115), (182, 128), (168, 142), (165, 155)]),
     ('1', [(158, 134), (168, 142)]),
-    ('1', [(229, 177), (243, 168), (252, 150), (262, 128)]),
+    ('1', [(229, 172), (243, 166), (252, 150), (262, 128)]),
     ('1', [(199, 196), (199, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
 ]
 

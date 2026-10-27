@@ -18,8 +18,21 @@ export class GameLoop {
   private accumulator = 0;
   private last = 0;
   private running = false;
+  private complaints = 0;
 
   constructor(private readonly client: LoopClient) {}
+
+  /** One bad frame must never kill the loop: the error is logged (the first few) and play goes on. */
+  private guard(what: 'step' | 'render', fn: () => void): void {
+    try {
+      fn();
+    } catch (e) {
+      if (this.complaints < 5) {
+        this.complaints++;
+        console.error(`[showdown] ${what} failed this frame (the game carries on):`, e);
+      }
+    }
+  }
 
   start(): void {
     this.running = true;
@@ -40,12 +53,12 @@ export class GameLoop {
     this.accumulator += frameDt;
     let steps = 0;
     while (this.accumulator >= STEP && steps < MAX_STEPS_PER_FRAME) {
-      this.client.step(STEP);
+      this.guard('step', () => this.client.step(STEP));
       this.accumulator -= STEP;
       steps++;
     }
     if (steps === MAX_STEPS_PER_FRAME) this.accumulator = 0;
-    this.client.render(this.accumulator / STEP, frameDt);
+    this.guard('render', () => this.client.render(this.accumulator / STEP, frameDt));
     requestAnimationFrame(this.frame);
   };
 }

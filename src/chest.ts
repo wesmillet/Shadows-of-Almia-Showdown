@@ -6,7 +6,9 @@
  */
 import type { InventorySlot } from './sim/entities';
 
-const KEY = 'almia.chest.v1';
+// v2: the rare-item chest used to be on for everyone and filled every chest with every rare item,
+// so chests start fresh once.
+const KEY = 'almia.chest.v2';
 
 export function loadChest(): InventorySlot[] | null {
   try {

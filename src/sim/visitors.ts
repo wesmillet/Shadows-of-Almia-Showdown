@@ -287,7 +287,7 @@ export class Visitors {
     const dex = storm ? SHADOW_MEWTWO : (pool[m.rng.int(0, pool.length - 1)] as string);
     this.portal = { x: at.x, y: at.y, t: 0, dex, out: null, shadow: storm };
     h.anim.play('Charge', { restart: true });
-    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#5b8cff', shake: storm ? 0.5 : 0 });
+    m.battle.events.push({ type: 'scene-fx', id: 'fx_190', x: at.x, y: at.y, scale: 3, ground: true, tint: storm ? '#5a1f8f' : '#5b8cff', shake: storm ? 0.5 : 0, epic: storm });
     if (storm) return 'Hoopa: "Out here in the storm? Let\'s see what the dark is hiding!" A black ring tears open...';
     return 'Hoopa: "Ta-da! Want to see something AMAZING?" A ring portal opens!';
   }
@@ -314,7 +314,7 @@ export class Visitors {
       // right now it stays out as a wild boss anyone can wear down.
       const bout = m.startLegendBout(L);
       if (po.shadow) {
-        m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.6, ground: true, fps: 12, tint: '#3a1458', shake: 0.6 });
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.6, ground: true, fps: 12, tint: '#3a1458', shake: 0.6, epic: true });
         m.battle.events.push({ type: 'notice', text: bout ? `${L.name} tears out of the dark portal and attacks!` : `${L.name} tears out of the dark portal!`, seconds: 3.5 });
         this.shadowBoutNotice(true, bout);
       } else m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
@@ -495,7 +495,7 @@ export class Visitors {
     } else if (s.stage === 1 && s.t >= 1.1) {
       // Lugia bursts out of the lake (Guardian Signs' own Lugia sheet), in a column of spray.
       const ink = s.shadow ? '#5a1f8f' : undefined;
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7, tint: ink });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7, tint: ink, epic: true });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3.2, tint: ink });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.6, ground: true, tint: ink });
       m.battle.events.push({ type: 'notice', text: s.shadow ? 'SHADOW LUGIA rises from the storm-black lake!' : 'Lugia bursts out of the lake!', seconds: 3 });
@@ -519,7 +519,7 @@ export class Visitors {
         return;
       }
       this.shadowBoutNotice(s.shadow, bout);
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5, epic: true });
       this.lugiaIntro = null;
     } else if (s.stage === 4) {
       // Waiting on the player: the bout starts the moment they are free; gone if they fall or take too long.
@@ -532,7 +532,7 @@ export class Visitors {
       }
       if (m.startLegendBout(L)) {
         this.shadowBoutNotice(true, true);
-        m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5 });
+        m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5, epic: true });
         this.lugiaIntro = null;
       } else L.calm = 1e9;
     }

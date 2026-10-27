@@ -287,8 +287,9 @@ export class Match {
     if (t.storage) return t.storage;
     // The player's chest is kept between games in this browser (src/chest.ts).
     const kept = (t.isPlayer ? loadChest() ?? [] : []).filter((e) => ITEMS[e.id]);
-    const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, kept.length)).fill(null);
-    kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+    // Ten slots (CONFIG.items.storageSlots), each stacking any number of one item.
+    const box = new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null);
+    kept.slice(0, CONFIG.items.storageSlots).forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
     // The rare-item chest (src/dev.ts): every rare thing is there, topped back up at the start of
     // each match, beside whatever the player stored themselves.
     if (t.isPlayer && rareChest()) {
@@ -302,11 +303,11 @@ export class Match {
           else box.push({ id, count });
         }
       }
-      // And room to store things too.
-      while (box.filter((e) => !e).length < 6) box.push(null);
+      // (the tester chest may run past ten slots; it is never saved, see below)
     }
     t.storage = box;
-    if (t.isPlayer) saveChest(box);
+    // The tester chest's extra items are not kept: only a normal chest is saved.
+    if (t.isPlayer && !rareChest()) saveChest(box);
     return box;
   }
 
@@ -766,6 +767,7 @@ export class Match {
       case 'rod':
         return t.isPlayer ? startFishing(this, def.id) : '';
       case 'charm': {
+        if (def.id === 'styler') return 'The Capture Styler works from your bag: hold C and draw loops round a wild Pokémon';
         const secs = (CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120;
         return `The ${def.name} works from your bag: your Pokémon last ${maskTime(secs)} in the storm before falling asleep`;
       }
@@ -2537,6 +2539,11 @@ export class Match {
     if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = this.rng.range(0.8, 1.6);
   }
 
+  /** Whether a trainer carries a Capture Styler (a rare find: in the bag or the gear). */
+  hasStyler(t: Trainer): boolean {
+    return t.items.some((e) => e?.id === 'styler') || t.held.some((e) => e?.id === 'styler');
+  }
+
   /** Loops of the Capture Styler a wild Pokémon needs before it calms down. */
   stylerLoopsNeeded(m: Mon): number {
     const c = CONFIG.styler;
@@ -2636,7 +2643,7 @@ export class Match {
           else {
             ev.mon.captured = true;
             this.wilds = this.wilds.filter((w) => w !== ev.mon);
-            this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: ev.mon.x, y: ev.mon.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5 });
+            this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: ev.mon.x, y: ev.mon.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5, epic: true });
             this.battle.events.push({ type: 'notice', text: `${ev.mon.name} dissolved into the storm...`, seconds: 3.5 });
           }
           continue;
@@ -3104,7 +3111,7 @@ export class Match {
     p.party.push(L);
     p.stats.catches++;
     if (p.duelId) L.stowed = true;
-    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.6 });
+    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.6, epic: true });
     this.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: L.x, y: L.y, scale: 2.6, lift: 1, fps: 10, tint: '#b04dff' });
     this.battle.events.push({ type: 'caught', mon: L, by: p });
     this.endDuel(d, p);
@@ -3119,7 +3126,7 @@ export class Match {
     L.channel = null;
     this.battle.interrupt(L);
     if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
-    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5 });
+    this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5, epic: true });
     this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm... you needed to snag it under 10% HP`, seconds: 4 });
     if (d) this.endDuel(d, this.player);
     this.endLegendBout(host);
@@ -3145,7 +3152,7 @@ export class Match {
         // Each phase Shadow Lugia shakes off its status and gets faster.
         this.battle.cureStatus(m);
         this.battle.changeStage(m, 'spe', 1);
-        this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: m.x, y: m.y, scale: 3.6, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.4 });
+        this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: m.x, y: m.y, scale: 3.6, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.4, epic: true });
       }
       if (phase === 1) this.battle.events.push({ type: 'notice', text: m.shadow ? `${m.name}'s aura thickens: it shook off its status and moves faster!` : `${m.name} is getting serious!`, seconds: 2.2 });
       else {
@@ -3153,7 +3160,7 @@ export class Match {
         this.battle.changeStage(m, 'spe', 1);
         m.flash = 0.4;
         this.battle.events.push({ type: 'notice', text: `${m.name} is enraged!`, seconds: 2.4 });
-        this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: m.x, y: m.y, scale: 2.4, ground: true, shake: 0.6, tint: '#ff6b6b' });
+        this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: m.x, y: m.y, scale: 2.4, ground: true, shake: 0.6, tint: '#ff6b6b', epic: m.dex.startsWith('0249') || m.dex.startsWith('0491') || (m.dex.startsWith('0150') && !!m.shadow) });
       }
     }
     // It recovers faster the lower it gets.

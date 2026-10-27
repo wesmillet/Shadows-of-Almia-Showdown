@@ -1,7 +1,7 @@
 /**
  * Tester mode, for the game's owner while it is being built: open the site once with ?dev=1 and
  * it stays on in that browser (?dev=0 turns it off). Hoopa visits every match and the Storm Mask is
- * always in the shop. (The rare-item chest is separate and on for everyone: rareChest below.)
+ * always in the shop. (The rare-item chest is separate, and off unless asked for: rareChest below.)
  */
 const KEY = 'almia.dev';
 
@@ -35,19 +35,20 @@ export function rareChest(): boolean {
   try {
     if (typeof location !== 'undefined') {
       const q = new URLSearchParams(location.search).get('rare');
-      if (q === '0') localStorage.setItem(RARE_KEY, '0');
-      if (q === '1') localStorage.removeItem(RARE_KEY);
+      if (q === '1') localStorage.setItem(RARE_KEY, '1');
+      if (q === '0') localStorage.removeItem(RARE_KEY);
     }
-    rareCached = typeof localStorage === 'undefined' || localStorage.getItem(RARE_KEY) !== '0';
+    // Off unless this browser asked for it (?rare=1); always off on the game server.
+    rareCached = typeof localStorage !== 'undefined' && localStorage.getItem(RARE_KEY) === '1';
   } catch {
-    rareCached = true;
+    rareCached = false;
   }
   return rareCached;
 }
 
 /** What the rare-item chest holds (every rare thing), topped back up at the start of each match: [item id, count]. */
 export const DEV_CHEST: Array<[string, number]> = [
-  ['capture-styler', 5], ['super-rod', 1], ['storm-mask', 1], ['extraction-voucher', 5], ['master-ball', 3],
+  ['capture-styler', 5], ['styler', 1], ['super-rod', 1], ['storm-mask', 1], ['extraction-voucher', 5], ['master-ball', 3],
   ['charizardite-x', 1], ['gengarite', 1], ['steelixite', 1], ['tyranitarite', 1], ['gardevoirite', 1],
   ['absolite', 1], ['glalitite', 1], ['latiosite', 1], ['lucarionite', 1], ['galladite', 1],
   ['ultra-ball', 10], ['quick-ball', 5], ['net-ball', 5], ['dusk-ball', 5], ['rare-candy', 10], ['max-revive', 5],

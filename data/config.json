@@ -178,7 +178,7 @@
     "pickupRadius": 0.8,
     "playerReach": 1.4,
     "_storageComment": "Every town has a storage chest beside its healer. They share one store per trainer (storageSlots slots, each stacking any number of one item) that keeps items safe when you are wiped out.",
-    "storageSlots": 12,
+    "storageSlots": 10,
     "_alphaMegaStoneComment": "The chance an Alpha of a Mega-capable line drops its Mega Stone (item balls also hold one now and then, loot.json).",
     "alphaMegaStoneChance": 0.3
   },

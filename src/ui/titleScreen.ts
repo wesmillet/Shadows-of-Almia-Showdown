@@ -26,9 +26,9 @@ const CRESSELIA = '0488';
 /** Small Pokémon that wander in (all in the title's preload). */
 const SMALL = ['0025', '0387', '0133', '0393', '0390', '0447', '0092'];
 /** The camera zoom: the island's own art at twice the match scale at 720p, a whole step more on big screens. */
-const ZOOM = 2;
+const ZOOM = 1.35;
 function titleZoom(baseScale: number): number {
-  return Math.max(ZOOM, Math.round(ZOOM * baseScale));
+  return Math.max(ZOOM, ZOOM * baseScale);
 }
 /** Where the scene plays, as fractions of the screen: between the logo and the buttons along the bottom. */
 const BAND = { y0: 0.55, y1: 0.74 };
@@ -1000,19 +1000,20 @@ export class TitleScreen implements Screen {
     if (this.logo) {
       const lw = this.logo.width;
       const lh = this.logo.height;
-      const k = Math.min((v.width - 60 * s) / lw, (v.height * 0.26) / lh, 2.2 * s);
+      const k = Math.min((v.width - 60 * s) / lw, (v.height * 0.3) / lh);
       const bob = Math.sin(this.t * 1.1) * 3 * s;
       const x = Math.round(v.width / 2 - (lw * k) / 2);
       const y = Math.round(v.height * 0.2 - (lh * k) / 2 + bob);
       h.save();
-      h.imageSmoothingEnabled = false;
-      // a breathing glow behind the logo
-      h.globalAlpha = 0.5 + 0.25 * Math.sin(this.t * 1.7);
-      h.drawImage(this.logo, x - 2 * s, y, lw * k + 4 * s, lh * k);
-      h.globalAlpha = 1;
+      // The logo is a high-resolution piece: scaled down smoothly, not by nearest neighbour.
+      h.imageSmoothingEnabled = true;
+      h.imageSmoothingQuality = 'high';
+      // a breathing violet glow behind it
+      h.shadowColor = `rgba(150,90,255,${0.45 + 0.25 * Math.sin(this.t * 1.7)})`;
+      h.shadowBlur = 28 * s;
       h.drawImage(this.logo, x, y, lw * k, lh * k);
       h.restore();
-      subY = y + lh * k + 16 * s;
+      subY = y + lh * k + 26 * s;
     } else {
       text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.22, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
       text(v, 'SHOWDOWN', v.width / 2, v.height * 0.22 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });

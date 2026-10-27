@@ -109,15 +109,20 @@ class Design:
         # ---------------------------------------------------------------- levels
         level = np.zeros((H, W), np.int32)
         inland = land & (dist_sea > 9)
-        # snow mountain: a foothill plateau over the far north-west (the town's), a ridge on it and
-        # a summit on the ridge, each tier set well back from the edge of the one below
-        r_snow = ellipse(70, 58, 62, 44) + 0.12 * noise(seed + 6, 8)
+        # the snow mountain, the way the pack's Frost Peak is built: a foothill plateau over the
+        # far north-west (the town's), and above it tier on tier of ice, each set back from the one
+        # below (seven rows at the south faces, where the stairs climb; four at the north), up to
+        # the summit lookout
+        r_snow = ellipse(70, 62, 62, 48) + 0.12 * noise(seed + 6, 8)
         level[(r_snow < 1) & inland & (biome == SNOW)] = 1
-        town = ellipse(TOWNS['Frostmere'][0], TOWNS['Frostmere'][1], 27, 17) < 1
-        r_ridge = ellipse(54, 68, 30, 24) + 0.13 * noise(seed + 7, 6)
-        level[(r_ridge < 1) & (level == 1) & ~town] = 2
-        r_peak = ellipse(50, 64, 15, 11) + 0.12 * noise(seed + 16, 5)
-        level[(r_peak < 1) & (level == 2)] = 3
+        town = ellipse(TOWNS['Frostmere'][0], TOWNS['Frostmere'][1], 22, 15) < 1
+        # the tiers are ragged, lobed shapes (as the pack's are), except round the trail's column,
+        # where the faces stay where the stairs need them
+        trail_x = STAIR_SITES[1][0]
+        damp = np.clip((np.abs(xx - trail_x) - 7) / 9.0, 0, 1)
+        for k, (mx, my, rx, ry) in enumerate(MOUNTAIN):
+            r = ellipse(mx, my, rx, ry) + (0.04 + 0.16 * damp) * noise(seed + 20 + k, 7) + 0.05 * noise(seed + 40 + k, 3) * damp
+            level[(r < 1) & (level == k + 1) & ~town] = k + 2
         # desert mesas
         for (mx, my, rx, ry, s) in [(48, 150, 18, 12, 8), (140, 198, 10, 6, 9)]:
             r = ellipse(mx, my, rx, ry) + 0.15 * noise(seed + s, 5)
@@ -150,7 +155,7 @@ class Design:
                         level[y:y + 8, x] = np.minimum(level[y:y + 8, x], lo)
                         level[y - 5:y, x] = np.maximum(level[y - 5:y, x], hi)
                     self.stair_rows.setdefault(sx, []).append(y)
-                    y -= 6
+                    y -= 3
                     continue
                 y -= 1
         self.level = level
@@ -160,7 +165,7 @@ class Design:
         water |= lake
         oasis = ellipse(64, 182, 7, 5) + 0.15 * noise(seed + 13, 3) < 1
         water |= oasis
-        frozen = ellipse(50, 106, 8, 5) + 0.15 * noise(seed + 14, 3) < 1
+        frozen = ellipse(36, 106, 8, 6) + 0.15 * noise(seed + 14, 3) < 1
         water |= frozen
         # Tide Lake: a big lake on the lowland between the plain and the autumn wood, where Lugia sleeps
         tide = ellipse(*TIDE_LAKE) + 0.12 * noise(seed + 15, 5) < 1
@@ -168,13 +173,38 @@ class Design:
         water |= tide
         self.lake, self.oasis, self.frozen, self.tide = lake, oasis, frozen, tide
         self.water = water & land & (self.level == 0) & ~self.beach
+        # a river out of Tide Lake to the north coast, three tiles wide, winding a little; the road
+        # to the autumn town crosses it on a stone bridge (build3 finds the crossing)
+        self.rivers = []
+        pts = [(219.0, 90.0), (213.0, 78.0), (206.0, 64.0), (203.0, 50.0), (204.0, 12.0)]
+        line = road_path(pts, 777, wind=True)
+        river = np.zeros((H, W), bool)
+        for (x, y) in line:
+            xi, yi = int(round(x)), int(round(y))
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    if 0 <= yi + dy < H and 0 <= xi + dx < W: river[yi + dy, xi + dx] = True
+        river &= land & (self.level == 0)
+        self.river = river
+        self.water |= river
+        self.rivers.append(line)
+        # a stream across the foothill plateau that spills over its south face into the frozen
+        # lake as a waterfall (build3 draws the fall; the lip is the plateau's edge row)
+        self.falls = []
+        fx = 36
+        col = self.level[:, fx]
+        edge = [y for y in range(60, 115) if col[y] == 1 and col[y + 1] == 0]
+        if edge:
+            y_lip = edge[0]
+            self.water[y_lip - 10:y_lip + 1, fx - 1:fx + 2] = True
+            self.falls.append((fx, y_lip))
         self.paths = np.zeros((H, W), np.int32)       # filled by the road network (1 road, 2 brick, 3 dark brick)
         self.stairs = []                              # (x, y, width, kind)
 
     def _clean_levels(self, level):
         """Plateaus are compact: no slivers, no holes, each level inside the one below."""
         out = np.zeros_like(level)
-        for lv in (1, 2, 3):
+        for lv in range(1, int(level.max()) + 1):
             m = level >= lv
             m = ndimage.binary_opening(m, structure=np.ones((5, 5)))
             m = ndimage.binary_closing(m, structure=np.ones((5, 5)))
@@ -216,9 +246,11 @@ GATES = {
 GATE_W = 5
 
 # (x, y): a road climbing north from row y meets south-facing plateau edges in column x
-STAIR_SITES = [(104, 112), (56, 97), (122, 100)]
+STAIR_SITES = [(104, 112), (56, 104), (122, 100)]
 # the mountain trail's top: the summit lookout
-SUMMIT = (56, 64)
+SUMMIT = (56, 70)
+# the mountain's tiers above the foothill plateau (level 2 up): centre and radii of each
+MOUNTAIN = [(54, 68, 30, 32), (54, 67, 26, 26), (54, 66, 22, 20), (54, 68, 15, 10)]
 
 ROADS = [
     # Roads follow the land rather than a grid: diagonal legs between waypoints, then a gentle
@@ -232,7 +264,7 @@ ROADS = [
     ('1', [(84, 112), (104, 112), (104, 72)]),
     # the mountain trail: off Frostmere's road just south of the town, west along the foothills, then
     # straight up the ridge's and the summit's south faces (a flight of stairs at each)
-    ('1', [(104, 97), (90, 103), (72, 104), (56, 98), (56, 64)]),   # bows south, clear of the cliff
+    ('1', [(104, 97), (90, 101), (74, 104), (56, 104), (56, 70)]),   # west along the plateau, then straight up the faces
     # north-east to the autumn town
     ('1', [(194, 114), (196, 99), (205, 85), (226, 79), (246, 82)]),   # round the west and north of Tide Lake
     # south-west to the desert town

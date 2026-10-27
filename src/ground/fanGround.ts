@@ -293,8 +293,26 @@ export class FanGround implements GroundRenderer {
     ctx.imageSmoothingEnabled = false;
     const ac = this.map.atlas.columns;
     const chunk = this.chunks[i] as Chunk;
+    const drawOverlay = () => {
+      const o = this.overlay;
+      if (!o) return;
+      const x0 = cc * CHUNK * 16;
+      const y0 = cr * CHUNK * 16;
+      const ix0 = Math.max(x0, o.x);
+      const iy0 = Math.max(y0, o.y);
+      const ix1 = Math.min(x0 + c.width, o.x + o.w);
+      const iy1 = Math.min(y0 + c.height, o.y + o.h);
+      if (ix1 > ix0 && iy1 > iy0) ctx.drawImage(o.img, ix0 - o.x, iy0 - o.y, ix1 - ix0, iy1 - iy0, ix0 - x0, iy0 - y0, ix1 - ix0, iy1 - iy0);
+    };
+    let overlayDrawn = false;
     this.map.stack.forEach((item, li) => {
       if (this.skip.size && this.skip.has(item.name)) return;
+      // the paving overlay goes under the animated props (torches and braziers stand on the paving)
+      if (item.name === 'Animations' && !overlayDrawn) {
+        ctx.globalAlpha = 1;
+        drawOverlay();
+        overlayDrawn = true;
+      }
       ctx.globalAlpha = item.opacity;
       const layer = this.layers[li];
       if (layer) {
@@ -318,16 +336,7 @@ export class FanGround implements GroundRenderer {
       }
     });
     ctx.globalAlpha = 1;
-    const o = this.overlay;
-    if (o) {
-      const x0 = cc * CHUNK * 16;
-      const y0 = cr * CHUNK * 16;
-      const ix0 = Math.max(x0, o.x);
-      const iy0 = Math.max(y0, o.y);
-      const ix1 = Math.min(x0 + c.width, o.x + o.w);
-      const iy1 = Math.min(y0 + c.height, o.y + o.h);
-      if (ix1 > ix0 && iy1 > iy0) ctx.drawImage(o.img, ix0 - o.x, iy0 - o.y, ix1 - ix0, iy1 - iy0, ix0 - x0, iy0 - y0, ix1 - ix0, iy1 - iy0);
-    }
+    if (!overlayDrawn) drawOverlay();
     this.applyBlend(ctx, cc * CHUNK * 16, cr * CHUNK * 16, c.width, c.height);
     return c;
   }

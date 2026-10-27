@@ -112,14 +112,18 @@ def woods(d, placer, open_mask, seed=11):
         if not trees: continue
         forest_here = dens[y, x] > {FOREST: -0.2, AUTUMN: 0.1, SNOW: 0.4, MEADOW: 0.9, CASTLE: 1.4, DESERT: 1.0}[b]
         p = 0.22 if forest_here else 0.012
-        # Up the snow mountain the trees thin out: few on the ridge, almost none on the summit.
-        if b == SNOW: p *= {2: 0.35, 3: 0.08}.get(int(d.level[y, x]), 1.0)
+        # Up the snow mountain the tiers are wooded like the pack's Frost Peak; only the summit is bare.
+        tier = False
+        if b == SNOW:
+            lv = int(d.level[y, x])
+            if 2 <= lv < d.level.max(): p = max(p, 0.12); tier = True
+            elif lv >= d.level.max(): p *= 0.3
         if rng.random() > p: continue
         pool = trees
         if b == AUTUMN and rng.random() < 0.12: pool = CHERRY
         k = rng.choice(pool)
         # desert trees (bare trees, palms, cacti) have no canopy to cast a round shadow
-        if placer.put(k, x, y, clear=1 if forest_here else 2, shadow=b != DESERT): n += 1
+        if placer.put(k, x, y, clear=1 if (forest_here or tier) else 2, shadow=b != DESERT): n += 1
     return n
 
 

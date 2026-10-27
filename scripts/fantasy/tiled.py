@@ -17,6 +17,18 @@ FLIP_H, FLIP_V, FLIP_D = 0x80000000, 0x40000000, 0x20000000
 GID_MASK = 0x0FFFFFFF
 
 
+def _resolve(source):
+    """An image path from a .tsx, relative to the Tilesets folder; a path that points at another
+    copy of the pack (one .tsx does) is found again by its tail under Art/."""
+    p = os.path.normpath(os.path.join(TSX_DIR, source.replace('\\', '/')))
+    if os.path.exists(p): return p
+    parts = source.replace('\\', '/').split('/')
+    if 'Art' in parts:
+        q = os.path.join(LIB, *parts[parts.index('Art'):])
+        if os.path.exists(q): return q
+    return p
+
+
 class Tile:
     __slots__ = ('id', 'image', 'w', 'h', 'shapes', 'anim', 'prob', 'type')
 
@@ -33,14 +45,14 @@ class Tileset:
         self.tw = int(r.get('tilewidth')); self.th = int(r.get('tileheight'))
         self.count = int(r.get('tilecount')); self.columns = int(r.get('columns') or 0)
         img = r.find('image')
-        self.image = os.path.normpath(os.path.join(TSX_DIR, img.get('source'))) if img is not None else None
+        self.image = _resolve(img.get('source')) if img is not None else None
         self.tiles = {}
         for t in r.findall('tile'):
             tl = Tile(int(t.get('id')))
             tl.prob = float(t.get('probability', 1)); tl.type = t.get('type') or t.get('class')
             im = t.find('image')
             if im is not None:
-                tl.image = os.path.normpath(os.path.join(TSX_DIR, im.get('source')))
+                tl.image = _resolve(im.get('source'))
                 tl.w = int(im.get('width')); tl.h = int(im.get('height'))
             og = t.find('objectgroup')
             if og is not None:
@@ -85,8 +97,13 @@ def _img(path):
     return np.array(Image.open(path).convert('RGBA'))
 
 
+# tilesets renamed between pack versions (the automap rules still use the old names)
+RENAMED = {'Tileset_BrickWalls': 'Tileset_CityWalls'}
+
+
 @functools.lru_cache(maxsize=None)
 def tileset(name):
+    if name in RENAMED and not os.path.exists(os.path.join(TSX_DIR, name + '.tsx')): name = RENAMED[name]
     return Tileset(name)
 
 

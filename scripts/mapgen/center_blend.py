@@ -88,7 +88,14 @@ t = t * t * (3 - 2 * t)
 green = (G[..., 1] > G[..., 0] * 1.06) & (G[..., 1] > G[..., 2] * 1.15)
 Y = (G * [0.3, 0.59, 0.11]).sum(-1, keepdims=True)
 ash = np.clip(Y / 0.55 * ASH, 0, 1)
-s = (t * 0.95 * green)[..., None]
+# tall grass (where the wilds hide) only sickens: it keeps some of its green, so it still reads as grass
+tg = next((it for it in m['stack'] if it.get('name') == 'Tall grass'), None)
+strength = np.full((H, W), 0.95, dtype=np.float32)
+if tg and 'rle' in tg:
+    flat = np.repeat(np.array(tg['rle'][0::2]), np.array(tg['rle'][1::2]))
+    tall = (flat.reshape(m['rows'], m['cols']) > 0)[:th, :tw]
+    strength[np.repeat(np.repeat(tall, 16, 0), 16, 1)] = 0.62
+s = (t * strength * green)[..., None]
 target = G * (1 - s) + ash * s
 mult = mult * np.where(G > 0.02, target / np.maximum(G, 0.02), 1)
 

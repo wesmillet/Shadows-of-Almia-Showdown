@@ -45,7 +45,7 @@ CASTLE_CENTER = (199, 170)
 CRYSTAL = (160, 112)
 FINAL_ARENA = (150, 106, 171, 119)   # the last two's battlefield round the crystal (x0, y0, x1, y1, exclusive ends)
 PLAIN = (160, 112, 44, 32)          # the open plain round the crystal: centre and radii
-BLIGHT = (160.5, 112.5, 41, 33)     # the blighted ground round the crystal (centre and radii): dead grass, bare trees, bones
+BLIGHT = (160.5, 112.5, 32, 25)     # the blighted ground round the crystal (centre and radii): where the grass is grey, only dead things grow
 TIDE_LAKE = (219, 98, 16, 9)        # Tide Lake (Lugia's): centre and radii
 
 

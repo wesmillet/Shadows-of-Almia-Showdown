@@ -22,6 +22,10 @@ on:
         options: [friends, launch]
         default: friends
 
+permissions:
+  contents: read
+  issues: write
+
 concurrency:
   group: launch-online
   cancel-in-progress: false
@@ -70,7 +74,16 @@ jobs:
       - name: Deploy
         run: |
           if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"; else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
-          flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7}
+          set -o pipefail
+          flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7} 2>&1 | tee deploy.log
+      - name: On failure, post the log tail as an issue (readable without the Actions log viewer)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          touch deploy.log
+          { echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; echo; echo '```'; tail -n 150 deploy.log; echo '```'; } > body.md
+          gh issue create --repo "${{ github.repository }}" --title "Launch failed (run ${{ github.run_id }})" --body-file body.md
       - name: Where to play
         run: |
           echo "### The online game is up: https://$APP.fly.dev" >> "$GITHUB_STEP_SUMMARY"

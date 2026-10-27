@@ -124,7 +124,8 @@ export class ChatPanel {
   private menu: HTMLDivElement | null = null;
   private keyHandler: (e: KeyboardEvent) => void;
 
-  constructor(private readonly net: Connection, opts: { compact?: boolean; collapsed?: boolean; side?: boolean } = {}) {
+  constructor(private readonly net: Connection, opts: { compact?: boolean; collapsed?: boolean; side?: boolean; onName?: (name: string) => void } = {}) {
+    this.onName = opts.onName;
     this.el = el('div', `almia-panel almia-chat${opts.compact ? ' compact' : ''}${opts.side ? ' side' : ''}${opts.collapsed ? ' collapsed' : ''}`);
     const head = el('div', 'almia-chat-head');
     head.append(el('span', '', 'Global chat'), el('span', '', 'Enter to talk'));
@@ -185,11 +186,23 @@ export class ChatPanel {
     if (atBottom) this.log.scrollTop = this.log.scrollHeight;
   }
 
+  /** Clicking a name: view that trainer's card (and trade from it), when the screen offers it. */
+  private readonly onName?: (name: string) => void;
+
   private openMenu(m: Extract<ServerMsg, { t: 'chat' }>, x: number, y: number): void {
     this.menu?.remove();
     const menu = el('div', 'almia-panel almia-menu');
-    menu.style.left = `${x}px`;
-    menu.style.top = `${Math.max(8, y - 90)}px`;
+    // Kept on screen: the chat sits at the right edge, so the menu opens leftwards there.
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 190))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y - 20, window.innerHeight - 190))}px`;
+    if (this.onName) {
+      const card = el('button', 'almia-btn', 'View card');
+      card.onclick = () => {
+        menu.remove();
+        this.onName?.(m.from);
+      };
+      menu.appendChild(card);
+    }
     const mute = el('button', 'almia-btn alt', `Mute ${m.from}`);
     mute.onclick = () => {
       this.muted.add(m.from);

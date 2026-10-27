@@ -10,7 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
-import { incomingTrades, openTrades } from './tradeMenu';
+import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
 import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
 
@@ -63,7 +63,7 @@ export class OnlineScreen implements Screen {
 
   enter(): void {
     loadHubLogo();
-    this.chat = new ChatPanel(this.net, { side: true, collapsed: window.innerWidth < 900 });
+    this.chat = new ChatPanel(this.net, { side: true, collapsed: window.innerWidth < 900, onName: (n) => void openTrainerCard(this.net, n).then(() => this.checkTrades()) });
     void this.net.refreshMe().then(() => this.checkTrades());
     this.unsubTrades = this.net.on((m) => {
       if (m.t === 'trades') void this.checkTrades();
@@ -88,8 +88,8 @@ export class OnlineScreen implements Screen {
       return;
     }
     const n = await incomingTrades(this.net);
-    if (n > this.tradesWaiting) this.message = `You have ${n} trade offer${n === 1 ? '' : 's'} waiting`;
-    else if (!n && this.message.includes('trade offer')) this.message = '';
+    if (n > this.tradesWaiting) this.message = `You have ${n} trade update${n === 1 ? '' : 's'} waiting`;
+    else if (!n && this.message.includes('trade update')) this.message = '';
     this.tradesWaiting = n;
   }
 
@@ -187,7 +187,7 @@ export class OnlineScreen implements Screen {
     if (ok) {
       this.message = `Welcome, ${this.net.me.user?.username}!`;
       this.chat?.dispose();
-      this.chat = new ChatPanel(this.net, { side: true });
+      this.chat = new ChatPanel(this.net, { side: true, onName: (n) => void openTrainerCard(this.net, n) });
       void this.checkTrades();
     }
   }
@@ -200,7 +200,7 @@ export class OnlineScreen implements Screen {
     this.busy = false;
     this.message = 'Signed out';
     this.chat?.dispose();
-    this.chat = new ChatPanel(this.net, { side: true });
+    this.chat = new ChatPanel(this.net, { side: true, onName: (n) => void openTrainerCard(this.net, n) });
     this.tradesWaiting = 0;
   }
 
@@ -436,7 +436,7 @@ export class LobbyScreen implements Screen {
   ) {}
 
   enter(): void {
-    this.chat = new ChatPanel(this.net, { side: true });
+    this.chat = new ChatPanel(this.net, { side: true, onName: (n) => void openTrainerCard(this.net, n) });
     this.unsub = this.net.on((m) => {
       if (m.t === 'lobby') {
         this.players = m.players;

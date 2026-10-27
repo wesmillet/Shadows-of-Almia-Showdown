@@ -157,6 +157,13 @@ export class Accounts {
       );
       CREATE INDEX IF NOT EXISTS trades_to ON trades(to_user, status);
       CREATE INDEX IF NOT EXISTS trades_from ON trades(from_user, status);
+      CREATE TABLE IF NOT EXISTS wonder (
+        id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        pc_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'waiting', got_pc INTEGER, partner TEXT,
+        seen INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, closed_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS wonder_wait ON wonder(status, created_at);
+      CREATE INDEX IF NOT EXISTS wonder_user ON wonder(user_id, status);
       CREATE TABLE IF NOT EXISTS matches (id TEXT PRIMARY KEY, ended_at INTEGER NOT NULL, summary TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS match_players (
         match_id TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, place INTEGER NOT NULL,
@@ -238,13 +245,26 @@ export class Accounts {
       const u = this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(name) as UserRow | undefined;
       if (!u || u.banned) return send(404, { error: 'No player with that name' });
       if (u.id === me.id) return send(400, { error: "That's you!" });
-      const rows = this.db.prepare('SELECT id FROM pc WHERE user_id = ? ORDER BY id').all(u.id) as Array<{ id: number }>;
+      const pooled = this.pooledIds(u.id);
+      const rows = (this.db.prepare('SELECT id FROM pc WHERE user_id = ? ORDER BY id').all(u.id) as Array<{ id: number }>).filter((r) => !pooled.has(r.id));
       return send(200, { name: u.username, pc: rows.map((r) => card(r.id)) });
     }
     if (req.method === 'GET' && path === '/api/trades') {
       const rows = this.db.prepare("SELECT * FROM trades WHERE status = 'open' AND (from_user = ? OR to_user = ?) ORDER BY id DESC").all(me.id, me.id) as Array<{ id: number; from_user: number; to_user: number; give_pc: number; want_pc: number; created_at: number }>;
       const offers = rows.map((t) => ({ id: t.id, from: nameOf(t.from_user), to: nameOf(t.to_user), incoming: t.to_user === me.id, give: card(t.give_pc), want: card(t.want_pc), at: t.created_at }));
-      return send(200, { offers });
+      const waiting = this.db.prepare("SELECT pc_id FROM wonder WHERE user_id = ? AND status = 'waiting'").get(me.id) as { pc_id: number } | undefined;
+      const news = (this.db.prepare("SELECT id, got_pc, partner, pc_id FROM wonder WHERE user_id = ? AND status = 'done' AND seen = 0 ORDER BY id").all(me.id) as Array<{ id: number; got_pc: number; partner: string; pc_id: number }>)
+        .map((w) => ({ id: w.id, got: card(w.got_pc), gave: card(w.pc_id), partner: w.partner }));
+      return send(200, { offers, wonder: { waiting: waiting ? card(waiting.pc_id) : null, news } });
+    }
+    if (req.method === 'POST' && path === '/api/wonder') return this.wonderSend(req, me, send, card, nameOf);
+    if (req.method === 'POST' && path === '/api/wonder/cancel') {
+      const r = this.db.prepare("UPDATE wonder SET status = 'cancelled', closed_at = ? WHERE user_id = ? AND status = 'waiting'").run(Date.now(), me.id);
+      return send(200, r.changes ? { ok: true, text: 'Taken back. It is in your PC as before' } : { error: 'Nothing is out on Wonder Trade' });
+    }
+    if (req.method === 'POST' && path === '/api/wonder/seen') {
+      this.db.prepare("UPDATE wonder SET seen = 1 WHERE user_id = ? AND status = 'done'").run(me.id);
+      return send(200, { ok: true });
     }
     if (req.method !== 'POST') return send(404, { error: 'Not found' });
     const b = await readJson(req);
@@ -254,6 +274,7 @@ export class Accounts {
       const want = card(Number(b.want));
       if (!give || give.owner !== me.id) return send(400, { error: 'Pick one of your own Pokémon to give' });
       if (!want || want.owner === me.id) return send(400, { error: "Pick one of the other trainer's Pokémon" });
+      if (this.isPooled(give.pcId as number) || this.isPooled(want.pcId as number)) return send(400, { error: 'That Pokémon is out on Wonder Trade' });
       const other = want.owner as number;
       const target = this.db.prepare('SELECT banned FROM users WHERE id = ?').get(other) as { banned: number } | undefined;
       if (!target || target.banned) return send(400, { error: 'That trainer can not trade' });
@@ -286,7 +307,7 @@ export class Accounts {
       try {
         const g = this.db.prepare('SELECT user_id, entry FROM pc WHERE id = ?').get(t.give_pc) as { user_id: number; entry: string } | undefined;
         const w = this.db.prepare('SELECT user_id, entry FROM pc WHERE id = ?').get(t.want_pc) as { user_id: number; entry: string } | undefined;
-        if (!g || !w || g.user_id !== t.from_user || w.user_id !== t.to_user) {
+        if (!g || !w || g.user_id !== t.from_user || w.user_id !== t.to_user || this.isPooled(t.give_pc) || this.isPooled(t.want_pc)) {
           this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
           this.db.exec('COMMIT');
           return send(400, { error: 'One of those Pokémon is not there any more, so the offer was closed' });
@@ -307,6 +328,67 @@ export class Accounts {
       return send(200, { ok: true, text: `Trade complete! ${gName} is in your PC` });
     }
     return send(404, { error: 'Not found' });
+  }
+
+  private pooledIds(userId: number): Set<number> {
+    return new Set((this.db.prepare("SELECT pc_id FROM wonder WHERE user_id = ? AND status = 'waiting'").all(userId) as Array<{ pc_id: number }>).map((r) => r.pc_id));
+  }
+
+  private isPooled(pcId: number): boolean {
+    return !!this.db.prepare("SELECT 1 FROM wonder WHERE pc_id = ? AND status = 'waiting'").get(pcId);
+  }
+
+  /**
+   * Wonder Trade: send one Pokémon off without choosing who gets it. If another trainer has one
+   * waiting, the two swap at once (oldest waiting first); otherwise it waits (still in your PC,
+   * marked, and you can take it back) until the next trainer sends one. One out at a time each.
+   */
+  private async wonderSend(
+    req: IncomingMessage,
+    me: UserRow,
+    send: (status: number, body: unknown) => void,
+    card: (id: number) => Record<string, unknown> | null,
+    nameOf: (id: number) => string,
+  ): Promise<void> {
+    const b = await readJson(req);
+    if (this.limited(`wonder:${me.id}`, 30, 3600_000)) return send(429, { error: 'Too many Wonder Trades. Try again later' });
+    const give = card(Number(b.give));
+    if (!give || give.owner !== me.id) return send(400, { error: 'Pick one of your own Pokémon' });
+    if (this.db.prepare("SELECT 1 FROM wonder WHERE user_id = ? AND status = 'waiting'").get(me.id)) return send(400, { error: 'You already have one out on Wonder Trade' });
+    this.fail(`wonder:${me.id}`);
+    const now = Date.now();
+    let partnerId = 0;
+    let got: Record<string, unknown> | null = null;
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const waiting = this.db.prepare("SELECT w.id, w.user_id, w.pc_id FROM wonder w JOIN pc p ON p.id = w.pc_id AND p.user_id = w.user_id JOIN users u ON u.id = w.user_id WHERE w.status = 'waiting' AND w.user_id != ? AND u.banned = 0 ORDER BY w.created_at LIMIT 1").get(me.id) as { id: number; user_id: number; pc_id: number } | undefined;
+      if (!waiting) {
+        this.db.prepare('INSERT INTO wonder (user_id, pc_id, created_at) VALUES (?, ?, ?)').run(me.id, give.pcId as number, now);
+      } else {
+        partnerId = waiting.user_id;
+        const stamp = (id: number, from: number): string => {
+          const e = (this.db.prepare('SELECT entry FROM pc WHERE id = ?').get(id) as { entry: string }).entry;
+          return JSON.stringify({ ...JSON.parse(e), tradedFrom: nameOf(from), tradedAt: new Date().toISOString(), wonderTrade: true });
+        };
+        const mine = give.pcId as number;
+        const theirs = waiting.pc_id;
+        const a = stamp(mine, me.id);
+        const c = stamp(theirs, partnerId);
+        this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(partnerId, a, mine);
+        this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(me.id, c, theirs);
+        this.db.prepare("UPDATE wonder SET status = 'done', got_pc = ?, partner = ?, closed_at = ? WHERE id = ?").run(mine, me.username, now, waiting.id);
+        this.db.prepare("INSERT INTO wonder (user_id, pc_id, status, got_pc, partner, seen, created_at, closed_at) VALUES (?, ?, 'done', ?, ?, 1, ?, ?)").run(me.id, mine, theirs, nameOf(partnerId), now, now);
+        this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc IN (?, ?) OR want_pc IN (?, ?))").run(now, mine, theirs, mine, theirs);
+        got = card(theirs);
+      }
+      this.db.exec('COMMIT');
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
+    if (!got) return send(200, { ok: true, waiting: true, text: `${give.name} is out on Wonder Trade. It swaps with the next trainer who sends one` });
+    this.onTradesChanged([partnerId]);
+    return send(200, { ok: true, got, partner: nameOf(partnerId), text: `Wonder Trade! ${nameOf(partnerId)} sent you ${got.name}` });
   }
 
   /** Set by main.ts: tell these accounts (when online) their trade offers changed. */
@@ -759,9 +841,10 @@ export class Accounts {
       }
       if (req.method === 'GET' && path === '/api/pc') {
         const rows = this.db.prepare('SELECT id, entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ id: number; entry: string }>;
-        return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id })) });
+        const pooled = this.pooledIds(me.id);
+        return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id, ...(pooled.has(r.id) ? { wonder: true } : {}) })) });
       }
-      if (path.startsWith('/api/trade')) return this.tradeApi(req, path, me, send);
+      if (path.startsWith('/api/trade') || path.startsWith('/api/wonder')) return this.tradeApi(req, path, me, send);
       if (req.method === 'GET' && path === '/api/extract') {
         const row = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 1').get(me.id) as { match_id: string; party: string; picks_left: number; outcome: string } | undefined;
         return send(200, row ? { match: row.match_id, party: JSON.parse(row.party), picks: row.picks_left, outcome: row.outcome } : { match: null });

@@ -192,7 +192,9 @@ def place(r, tx, ty, block):
         walk[ty, tx] = False
         blocked_tiles.append((tx, ty))
     added_objs.append([sh, sx, sy, w, h, px, py, round((py + h) / 16, 3)])
-    if h >= 28:
+    # a round canopy shadow under leafy trees only: a bare desert tree or a thin palm has no
+    # canopy to cast one, so it gets none (the blob looked wrong under them)
+    if h >= 28 and int(biome[min(rows - 1, int((py + h - 2) // 16)), min(cols - 1, int((px + w / 2) // 16))]) not in (3, 5):
         dsh, dsx, dsy, dw, dh = SHADOW
         dpx = int(px + w / 2 + SH_OFF[0] - dw / 2)
         dpy = int(py + h + SH_OFF[1] - dh)

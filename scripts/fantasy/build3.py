@@ -252,6 +252,14 @@ def main():
     # animated props (torches, fires, banners, flowers...) live in a tile layer the game animates
     anim = np.full(W.shape, None, dtype=object)
     anim_block = np.zeros(W.shape, bool)
+    # torches burning at the corners of every town plaza
+    import animprops
+    for name, (tx, ty, b) in D.TOWNS.items():
+        px0, px1, py0, py1 = tx - 11, tx + 11, ty - 4, ty + 7
+        for (x, y) in [(px0 - 1, py0 - 1), (px1 + 1, py0 - 1), (px0 - 1, py1 + 1), (px1 + 1, py1 + 1)]:
+            if placer.free[y - 1:y + 1, x].all() and anim[y - 1, x] is None and anim[y, x] is None:
+                animprops.place(anim, 'Animation_Torch_1', 32, x, y)
+                placer.free[y - 1:y + 1, x] = False
     log('bridges')
     # a stone bridge wherever a road reaches both banks of a river
     bridge_deck = np.zeros(W.shape, bool)
@@ -279,10 +287,43 @@ def main():
     farm_fence = np.full(W.shape, None, dtype=object)
     farm_field = np.full(W.shape, None, dtype=object)
     farm_block = np.zeros(W.shape, bool)
+    # every town inside its own fence or low wall, open where the roads come in
+    rings = np.zeros(W.shape, bool)
+    import random as _rnd
+    for name, (tx, ty, b) in D.TOWNS.items():
+        lyr, ring = towns3.enclosure(d, tx, ty, b)
+        farm_fence = np.where(lyr != None, lyr, farm_fence)
+        farm_block |= ring
+        rings |= ring
+        placer.free &= ~ndimage.binary_dilation(ring, iterations=1)
+        # inside the walls: the town's own trees, a watchtower by a corner, props about the yards
+        rr = _rnd.Random(sum(map(ord, name)))
+        inside = ndimage.binary_fill_holes(ring) & ~ring & placer.free & ~town_foot & (d.paths == 0)
+        inside &= ~ndimage.binary_dilation(d.paths > 0, iterations=1) & ~ndimage.binary_dilation(town_foot, iterations=1)
+        kit = towns3.KITS[b]
+        tower = content3.catalogue(kit['build'], r'Watchtower_1_.*(Blue|Red|Green)')
+        cells = list(zip(*np.nonzero(inside)))
+        rr.shuffle(cells)
+        placed = 0
+        for (y, x) in cells:
+            if tower and placed == 0 and y > ty + 9 and decor3._big(placer, rr.choice(tower), x, y, farm_block): placed += 1; continue
+            if placed >= 1: break
+        trees = content3.TREES.get(b, [])
+        n_t = 0
+        for (y, x) in cells:
+            if n_t >= 7: break
+            if trees and placer.free[y, x] and placer.put(rr.choice(trees), x, y, clear=1, shadow=b != D.DESERT): n_t += 1
+        props = [content3.catalogue(kit['propset'], pat) for pat in kit['props']]
+        props = [p for p in props if p]
+        n_p = 0
+        for (y, x) in cells:
+            if n_p >= 8: break
+            if props and placer.free[y, x] and placer.put(rr.choice(rr.choice(props)), x, y, clear=0, shadow=False): n_p += 1
     for (town, near, seed) in [('Greenhollow', (284, 142), 7), ('Emberwood', (268, 70), 8)]:
         tx, ty, _ = D.TOWNS[town]
         ok = d.land & ~d.water & ~d.beach & (d.level == d.level[near[1], near[0]]) & (d.paths == 0) & ~town_area & ~d.castle & ~cliff_block & ~stair_cells
         ok &= ~ndimage.binary_dilation(d.paths > 0, iterations=2)
+        ok &= ~ndimage.binary_dilation(rings, iterations=2)
         f = farm3.build(d, placer, ok, (tx, ty), near, seed=seed)
         if f is None: log(f'  no room for a farm by {town}'); continue
         farm_fence = np.where(f['fence'] != None, f['fence'], farm_fence)
@@ -315,7 +356,8 @@ def main():
     log('decor')
     n_arena = decor3.arena(placer)
     n_mountain = decor3.mountain(d, placer, anim, anim_block)
-    log(f'  mountain {n_mountain}')
+    n_ruins = decor3.ruins(d, placer, anim)
+    log(f'  mountain {n_mountain}, ruins {n_ruins}')
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)
     water_plants = decor3.lakes(d)
     objects += water_plants
@@ -341,6 +383,10 @@ def main():
     placer.free |= blight_free
     # boulders and ice up the mountain, where the trees give out
     n_rock += content3.scatter(d, placer, content3.ROCKS, 0.012, seed=14, clear=2, where=d.level >= 2)
+    shore_placer = content3.Placer(d.beach & d.land & ~d.water & (d.paths == 0) & ~town_area & ~ndimage.binary_dilation(d.paths > 0, iterations=1))
+    n_shore = decor3.shores(d, shore_placer)
+    objects += shore_placer.objects
+    log(f'  shores {n_shore}')
     n_life = decor3.life(d, placer, anim)
     n_falls = decor3.waterfalls(d, anim, anim_block)
     log(f'  life {n_life}, waterfalls {n_falls}')

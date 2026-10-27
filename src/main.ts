@@ -52,7 +52,7 @@ function withEvolutions(dexes: Iterable<string>): Set<string> {
  * The starter roll's pool is not in here (it is large): the roll loads its own reel, and a match loads its starter's line.
  */
 function matchCast(): Set<string> {
-  const out = new Set<string>(['0491', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
+  const out = new Set<string>(['0491', '0491-final', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
   for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
   for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
   return withEvolutions(out);

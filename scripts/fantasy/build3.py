@@ -35,7 +35,7 @@ def log(*a):
 def build_cliffs(d):
     """One automapped layer per level; returns the layers, the blocked body and the stair cells."""
     layers, blocked, stairs = [], np.zeros(d.land.shape, bool), np.zeros(d.land.shape, bool)
-    H = d.land.shape[0]
+    H, Wd_ = d.land.shape
     sets = {}
     for lv in (1, 2, 3):
         up_all = d.level >= lv
@@ -90,6 +90,32 @@ def build_cliffs(d):
                     cliffs.add_stairs_h(g, mid, 3)
                     used += [mid, mid + 1, mid + 2]
                     added += 1
+            # The snow mountain's tiers also get flights through their west, east and north faces
+            # (the pack draws side and north stairs too): one in the middle of every straight
+            # stretch at least eight cells long, so no tier is a fortress with one way out.
+            if b == D.SNOW:
+                side = 0
+                land_ok = d.land & ~d.water
+                for (dx, dy) in ((1, 0), (-1, 0), (0, -1)):
+                    # body cells with the plateau on one side and open lower ground on the other
+                    plat = np.roll(comp, (dy, dx), (0, 1))                      # the plateau behind the cell
+                    out_ = np.roll(land_ok & ~up_all, (-dy, -dx), (0, 1))        # open lower ground ahead
+                    cand = (g == cliffs.BODY) & plat & out_
+                    # straight runs along the face (vertical for east/west faces, horizontal for north)
+                    lbl_, n_ = ndimage.label(cand, structure=np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]]) if dx else np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]]))
+                    for j in range(1, n_ + 1):
+                        ys, xs = np.nonzero(lbl_ == j)
+                        L = len(ys)
+                        if L < 8: continue
+                        k = max(1, (L + 8) // 24)
+                        order = np.argsort(ys if dx else xs)
+                        for q in range(k):
+                            mid = (q + 1) * L // (k + 1)
+                            for t in (-1, 0, 1):
+                                yy, xx = ys[order[mid + t]], xs[order[mid + t]]
+                                g[yy, xx] = cliffs.STAIRS
+                        side += k
+                if side: log(f'  level {lv} plateau {i}: {side} side flights')
             if not runs and not added:
                 log(f'  level {lv} plateau {i}: no straight south face for stairs')
             elif added:
@@ -125,10 +151,14 @@ def castle_walls(d):
     """The wall walkway: the castle region's outer CASTLE_WALL tiles, open at the gates."""
     R = d.castle
     W = R & ~ndimage.binary_erosion(R, iterations=D.CASTLE_WALL)
+    for (x0, y0, x1, y1) in getattr(D, 'CASTLE_INNER_WALLS', []):
+        W[y0:y1, x0:x1] = True
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():
         if horiz: W[gy - 3:gy + 4, gx - half:gx + half + 1] = False
-        else: W[gy - half:gy + half + 1, gx - 3:gx + 4] = False
+        # a side gate: the wall above the gap hangs its brick face (FACE_ROWS) down into it, so
+        # the gap is cut that much taller and a tower stands on the face (see the towers)
+        else: W[gy - half - castle.FACE_ROWS:gy + half + 1, gx - 3:gx + 4] = False
     return W
 
 
@@ -169,10 +199,12 @@ def main():
     bx0, bx1, by0, by1 = 186, 211, 166, 179
     pav[by0 - 3:by1 + 4, bx0 - 4:bx1 + 4] = F.color('Slab Floor')
     pav[by0:by1 + 1, bx0:bx1 + 1] = F.color('Mid Slab Floor')
-    pav[157:162, 192:207] = F.color('Slab Floor')               # the keep's forecourt
+    pav[151:157, 192:207] = F.color('Slab Floor')               # the keep's forecourt
+    pav[162:179, 156:176] = F.color('Slab Floor')               # the gate yard
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
-        pav[gy - 1:gy + 6, gx - half - 1:gx + half + 2] = F.color('Slab Floor')
+        if horiz: pav[gy - 1:gy + 6, gx - half - 1:gx + half + 2] = F.color('Slab Floor')
+        else: pav[gy - half - castle.FACE_ROWS - 1:gy + half + 2, gx - 4:gx + 5] = F.color('Slab Floor')
     # the crystal's arena in the middle of the plain: the last two trainers fight it out here,
     # a paved field with the crystal in its centre circle, on a terrace of darker slabs
     cx, cy = D.CRYSTAL
@@ -183,7 +215,7 @@ def main():
     pav[fy0:fy1, fx0:fx1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
     # one fountain on a paved pad east of the battlefield
-    fountains = [(216, 158)]
+    fountains = [(225, 156)]   # in the garden bastion
     for (fx, fy) in fountains:
         pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
     pav[W] = 0
@@ -208,13 +240,18 @@ def main():
     occupied |= ndimage.binary_dilation(d.paths > 0, iterations=1)
     occupied |= ndimage.binary_dilation(stair_cells, iterations=2)
     occupied |= town_area
+    # keep the ground before every castle gate clear (no trees or cacti crowding an entrance)
+    for (gx, gy, horiz) in D.GATES.values():
+        r0, r1 = (gy - 9, gy + 10) if horiz else (gy - 9, gy + 6)
+        c0, c1 = (gx - 7, gx + 8) if horiz else (gx - 9, gx + 10)
+        occupied[max(0, r0):r1, max(0, c0):c1] = True
     placer = content3.Placer(~occupied)
     objects = list(town_objects)
     blocked_stamps = np.zeros(W.shape, bool)
     # the keep in the castle's north wing, its door on the forecourt
     img, foot = stamps.stamp('keep_red')
     kh, kw = img.shape[0] // 16, img.shape[1] // 16
-    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2, 157
+    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2, 151   # on the spur's north wall
     objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16})
     blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
     placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
@@ -223,17 +260,41 @@ def main():
     # pokes out under it; corner and gate towers cover the wall ends completely.
     timg, tfoot = stamps.stamp('tower_cone')
     th, tw = timg.shape[0] // 16, timg.shape[1] // 16
-    (cx0, cy0, cx1, cy1) = D.CASTLE_RECTS[0]
+    # A tower on every outer corner of the castle, squared to the walls the way the first hold's
+    # were: left corners overhang one column out, top corners stand on the north wall's inner
+    # face, bottom corners on the outer face. Then either side of every gate.
     wl_ = D.CASTLE_WALL
-    north_base = cy0 + wl_ + castle.FACE_ROWS          # under the north wall's inner face
-    south_base = cy1 + castle.FACE_ROWS                # under the south wall's outer face
-    spots = [(cx0 - 1, north_base), (cx1 - tw + 1, north_base), (cx0 - 1, south_base), (cx1 - tw + 1, south_base),
-             (cx0 - 1, (cy0 + cy1) // 2 + 3), (cx1 - tw + 1, (cy0 + cy1) // 2 + 3)]
+    R = d.castle
+    Rp = np.pad(R, 1)
+    spots = []
+    for (y, x) in zip(*np.nonzero(R)):
+        up, dn, lf, rt = not Rp[y, x + 1], not Rp[y + 2, x + 1], not Rp[y + 1, x], not Rp[y + 1, x + 2]
+        if (up or dn) and (lf or rt):
+            tx = x - 1 if lf else x - tw + 2
+            yb = y + wl_ + castle.FACE_ROWS if up else y + 1 + castle.FACE_ROWS
+            spots.append((tx, yb))
     half = D.GATE_W // 2
+    gate_spots = []
     for (gx, gy, horiz) in D.GATES.values():
         if horiz:
             base = gy + 2 + castle.FACE_ROWS
-            spots += [(gx - half - tw, base), (gx + half + 1, base)]
+            gate_spots += [(gx - half - tw, base), (gx + half + 1, base)]
+        else:
+            # a side gate: one tower, standing on the wall end's face just north of the gap (a
+            # tower south of the gap would be drawn over the doorway, towers being tall)
+            gate_spots += [(gx - 2, gy - half)]
+    # where two walls meet on the inside of a bend, a tower covers the join
+    for (y, x) in zip(*np.nonzero(~R)):
+        if 0 < y < R.shape[0] - 1 and 0 < x < R.shape[1] - 1:
+            if (R[y, x + 1] or R[y, x - 1]) and R[y + 1, x] and not R[y - 1, x]:
+                if R[y + 1, x - 1] and R[y + 1, x + 1] and (R[y, x + 1] != R[y, x - 1]):
+                    tx = x - 1 if R[y, x + 1] else x - tw + 2
+                    spots.append((tx, y + 1 + wl_ + castle.FACE_ROWS))
+    # gate towers win over a corner tower crowding them; no two towers on top of each other
+    kept = list(gate_spots)
+    for sp in spots:
+        if all(abs(sp[0] - k[0]) >= tw or abs(sp[1] - k[1]) >= 10 for k in kept): kept.append(sp)
+    spots = kept
     for (tx, yb) in spots:
         objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})
         blocked_stamps[yb - th:yb, tx:tx + tw] |= tfoot
@@ -244,7 +305,7 @@ def main():
     yard.free &= ~blocked_stamps
     trees = content3.catalogue('Objects_Trees_Castle', r'Tree_(Light|Emerald)_[1-6]')
     import random as _r; rr = _r.Random(3)
-    for (x, y) in [(178, 162), (177, 172), (178, 185), (190, 185), (208, 185), (220, 185), (220, 174)]:
+    for (x, y) in [(181, 160), (181, 185), (190, 185), (208, 185), (216, 185)]:
         yard.put(rr.choice(trees), x, y, clear=1)
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')
@@ -253,7 +314,7 @@ def main():
         if banner: yard.put(rr.choice(banner), x, y, clear=0, shadow=False)
     for x in range(bx0 + 3, bx1 - 2, 7):
         if bench: yard.put(bench[0], x, by1 + 3, clear=0, shadow=False)
-    for (x, y) in [(191, 161), (207, 161)]:
+    for (x, y) in [(191, 155), (207, 155), (158, 166), (172, 166)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)
     objects += yard.objects; placer.decals += yard.decals
     placer.free &= yard.free

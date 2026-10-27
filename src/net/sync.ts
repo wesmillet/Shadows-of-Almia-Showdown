@@ -193,6 +193,9 @@ export class SyncEncoder {
     for (const k of Object.keys(o)) {
       if (mon && MON_SKIP.has(k)) continue;
       if (trainer && (TRAINER_SKIP.has(k) || (!mine && TRAINER_PRIVATE.has(k)))) continue;
+      // A field set to undefined is a field that is not there (t.downUntil = undefined after a
+      // respawn): it travels as a deletion, never as null (null would read as still set).
+      if ((o as Record<string, unknown>)[k] === undefined) continue;
       const v = ref((o as Record<string, unknown>)[k]);
       if (v !== undefined) out[k] = v;
     }

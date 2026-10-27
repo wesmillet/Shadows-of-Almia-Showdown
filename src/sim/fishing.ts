@@ -95,7 +95,7 @@ export function castSpot(m: Match, t: Trainer): { bx: number; by: number; fx: nu
 /** Can the player start fishing right now? (A rod, water in reach, nothing else going on.) */
 export function canFish(m: Match): boolean {
   const p = m.player;
-  if (m.fishing || p.duelId || p.downUntil !== undefined || m.controlled || p.mount) return false;
+  if (m.fishing || p.duelId || p.downUntil != null || m.controlled || p.mount) return false;
   return !!bestRod(p) && !!castSpot(m, p);
 }
 
@@ -139,7 +139,7 @@ export function stepFishing(m: Match, dt: number): void {
   const f = m.fishing;
   if (!f) return;
   const p = m.player;
-  if (p.duelId || p.downUntil !== undefined || m.controlled || m.moveX !== 0 || m.moveY !== 0) {
+  if (p.duelId || p.downUntil != null || m.controlled || m.moveX !== 0 || m.moveY !== 0) {
     m.fishing = null;
     if (f.stage === 'bite') m.battle.events.push({ type: 'notice', text: 'It got away...', seconds: 1.4 });
     return;

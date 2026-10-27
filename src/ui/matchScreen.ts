@@ -272,7 +272,7 @@ export class MatchScreen implements Screen {
   protected handleInput(input: Input): void {
     const v = this.ctx.view;
     // Wiped out and waiting to respawn: nothing to do but wait.
-    if (this.match.player.downUntil !== undefined) {
+    if (this.match.player.downUntil != null) {
       input.takeClicks();
       return;
     }
@@ -1982,7 +1982,7 @@ export class MatchScreen implements Screen {
   }
 
   private servicePrompt(): string | null {
-    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.match.player.downUntil !== undefined) return null;
+    if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.match.player.downUntil != null) return null;
     const f = this.match.fishing;
     if (f) return f.stage === 'bite' ? 'Space · Reel it in!' : f.stage === 'reel' ? null : 'Waiting for a bite... (move or Space to reel in)';
     const who = this.match.visitors.near();
@@ -2162,7 +2162,7 @@ export class MatchScreen implements Screen {
   /** Wiped out by wild Pokémon: a dark screen with the respawn countdown. */
   private drawDowned(v: View): void {
     const p = this.match.player;
-    if (p.downUntil === undefined) return;
+    if (p.downUntil == null) return;
     const h = v.hud;
     const s = v.baseScale;
     const left = Math.max(0, Math.ceil(p.downUntil - this.match.time));
@@ -2283,7 +2283,7 @@ export class MatchScreen implements Screen {
     if (this.shopOpen || this.chestOpen !== null || this.match.snagOffer || this.teach || this.extractPick) return;
     const px = Math.max(2, Math.round(v.baseScale * 3));
     // Your own storm meter over your head while you stand in the storm (you last twice as long as your Pokémon).
-    if (p.alive && p.downUntil === undefined && (p.stormT ?? 0) > 0) {
+    if (p.alive && p.downUntil == null && (p.stormT ?? 0) > 0) {
       const frac = Math.min(1, (p.stormT ?? 0) / this.match.trainerStormSeconds(p));
       const x = p.px + (p.x - p.px) * alpha;
       const y = p.py + (p.y - p.py) * alpha;

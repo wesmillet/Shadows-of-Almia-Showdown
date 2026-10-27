@@ -424,7 +424,7 @@ export class MirrorMatch {
   private pickAvatar(): Obj | null {
     const m = this.match;
     const p = m.player;
-    if (!p.alive || p.downUntil !== undefined || m.seat.outcome) return null;
+    if (!p.alive || p.downUntil != null || m.seat.outcome) return null;
     let mon: Mon | null = null;
     const d = m.playerDuel;
     if (d && d.state !== 'over') mon = (d.a.trainer === p ? d.a : d.b).mon;

@@ -1505,7 +1505,7 @@ export class Match {
    */
   private stepTrainerStorm(dt: number): void {
     for (const t of this.allTrainers) {
-      if (!t.alive || t.downUntil !== undefined || t.visitor || t.hidden || t.challenger) continue;
+      if (!t.alive || t.downUntil != null || t.visitor || t.hidden || t.challenger) continue;
       if (t.duelId) continue;
       if (this.isDark(t.x, t.y)) {
         t.stormT = (t.stormT ?? 0) + dt;
@@ -2288,7 +2288,7 @@ export class Match {
     const p = this.player;
     if (p.mount) return this.dismount(p);
     if (p.duelId) return "You can't ride during a battle";
-    if (p.downUntil !== undefined) return '';
+    if (p.downUntil != null) return '';
     const mon = p.party.find((m) => !m.fainted && !m.captured && !m.evolving && Match.mountOf(m.dex));
     if (!mon) return '';
     if (this.controlled) this.releaseControl();
@@ -2458,7 +2458,7 @@ export class Match {
         this.stepAutoLead(dt);
       });
     }
-    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil === undefined) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
+    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil == null) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     this.buildGrid();
     const pw = this.partyWorld();
@@ -2563,7 +2563,7 @@ export class Match {
 
   private stepPlayer(dt: number): void {
     const p = this.player;
-    if (p.downUntil !== undefined) {
+    if (p.downUntil != null) {
       p.moving = false;
       return;
     }
@@ -2959,7 +2959,7 @@ export class Match {
     const pl = ch?.human ?? this.player;
     if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
     for (const t of this.allTrainers) {
-      if (t.alive && t.downUntil !== undefined) {
+      if (t.alive && t.downUntil != null) {
         if (this.time >= t.downUntil) this.respawn(t);
         continue;
       }
@@ -3267,7 +3267,7 @@ export class Match {
    */
   startLegendBout(L: Mon): boolean {
     const p = this.player;
-    if (p.duelId || !p.alive || p.downUntil !== undefined || !this.canBattle(p) || this.finalStarted) return false;
+    if (p.duelId || !p.alive || p.downUntil != null || !this.canBattle(p) || this.finalStarted) return false;
     if (p.mount && !canStand(this.ground, p.x, p.y, CONFIG.player.radius)) return false;
     const host = this.makeTrainer(L.name, 'legend', false, L.x, L.y);
     host.visitor = true;

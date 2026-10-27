@@ -40,7 +40,7 @@ const DEMO_PARTY = ['0392', '0384-shiny', '0381', '0385-shiny', '0959'];
 const DEMO_LEVEL = 100;
 
 /** Pokémon on the title screen: Darkrai, Cresselia, and the small ones that wander in. */
-export const TITLE_CAST = ['0491', '0488', '0025', '0387', '0133', '0393', '0390', '0447'];
+export const TITLE_CAST = ['0491', '0488', '0025', '0387', '0133', '0393', '0390', '0447', '0092'];
 
 /** A set of species plus everything they can evolve into. */
 function withEvolutions(dexes: Iterable<string>): Set<string> {

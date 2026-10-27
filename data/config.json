@@ -58,7 +58,10 @@
     "spawnClearance": 12,
     "_eliteComment": "eliteChance of wild spawns are elites: eliteLevels more levels (evolved if that passes an evolution), marked with a gold star.",
     "eliteChance": 0.12,
-    "eliteLevels": [5, 9],
+    "eliteLevels": [
+      5,
+      9
+    ],
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
     "shinyChance": 0.002,
     "alphaChance": 0.07,
@@ -66,7 +69,10 @@
     "alphaLevelBonus": 10,
     "alphaLevelMax": 65,
     "alphaScale": 1.5,
-    "centerLevelSpread": [0.72, 1.08],
+    "centerLevelSpread": [
+      0.72,
+      1.08
+    ],
     "bossAggroRange": 4,
     "bossWanderRadius": 2
   },
@@ -86,14 +92,37 @@
   "battle": {
     "_channelComment": "Channelled beams: these moves keep firing for channel.seconds after they go off, a pulse every channel.tick seconds, and the user steers the beam (the player with the cursor, others at their target) turning at most channel.turnDegPerSec. The user stands still meanwhile. The whole channel deals powerMult x the move's power, spread over the pulses.",
     "channel": {
-      "moves": ["flamethrower", "ice-beam", "thunderbolt", "dragon-pulse", "hydro-pump", "solar-beam", "flash-cannon", "aeroblast", "psybeam", "aurora-beam", "signal-beam", "dark-pulse"],
+      "moves": [
+        "flamethrower",
+        "ice-beam",
+        "thunderbolt",
+        "dragon-pulse",
+        "hydro-pump",
+        "solar-beam",
+        "flash-cannon",
+        "aeroblast",
+        "psybeam",
+        "aurora-beam",
+        "signal-beam",
+        "dark-pulse"
+      ],
       "seconds": 2,
       "tick": 0.25,
       "powerMult": 1.3,
       "turnDegPerSec": 140
     },
     "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at lungeSpeed tiles a second (times its Speed multiplier), at most lungeMaxSeconds, and strikes on arrival. A contact hit shoves the target knockTiles (times power / 80, within knockScale) unless it is a boss, a legend, an Alpha or much bigger than the attacker.",
-    "lunge": { "speed": 16, "maxSeconds": 0.45, "minTiles": 0.3, "knockTiles": 0.45, "knockSeconds": 0.14, "knockScale": [0.6, 1.6] },
+    "lunge": {
+      "speed": 16,
+      "maxSeconds": 0.45,
+      "minTiles": 0.3,
+      "knockTiles": 0.45,
+      "knockSeconds": 0.14,
+      "knockScale": [
+        0.6,
+        1.6
+      ]
+    },
     "castSeconds": 0.3,
     "rangeScale": 1.6,
     "hitStopMs": 60,
@@ -104,11 +133,24 @@
     "burnDamageFraction": 0.0625,
     "_statusComment": "poison ticks poisonDamageFraction of max HP every 2 s until cured (Poison and Steel types are immune); freeze stops a Pokémon for freezeSeconds (a Fire hit thaws it; Ice and Fire types are immune); confusion lasts confusionSeconds and sends each move off in a random direction confusionMissChance of the time.",
     "poisonDamageFraction": 0.07,
-    "freezeSeconds": [2.5, 4],
-    "confusionSeconds": [4, 6],
+    "freezeSeconds": [
+      2.5,
+      4
+    ],
+    "confusionSeconds": [
+      4,
+      6
+    ],
     "confusionMissChance": 0.4,
     "_speedComment": "Movement speed from the Speed stat: a Pokémon with base Speed slowBase moves at slowMult of the normal pace, one with fastBase at fastMult, in a straight line between (clamped to that range). Speed stages add stagePerStep each (Agility), paralysis multiplies by paralysisSpeed. Following its trainer a Pokémon never drops below followFloor tiles a second when hurrying, so slow ones still keep up.",
-    "speed": { "slowBase": 20, "fastBase": 150, "slowMult": 0.7, "fastMult": 1.4, "stagePerStep": 0.1, "followFloor": 6.2 },
+    "speed": {
+      "slowBase": 20,
+      "fastBase": 150,
+      "slowMult": 0.7,
+      "fastMult": 1.4,
+      "stagePerStep": 0.1,
+      "followFloor": 6.2
+    },
     "paralysisSkipChance": 0.25,
     "paralysisSpeed": 0.5,
     "sleepSeconds": [
@@ -122,7 +164,16 @@
   "items": {
     "inventorySize": 6,
     "_startingKitComment": "What every trainer (you and every rival) carries at the start of a match.",
-    "startingKit": [["poke-ball", 3], ["potion", 1]],
+    "startingKit": [
+      [
+        "poke-ball",
+        3
+      ],
+      [
+        "potion",
+        1
+      ]
+    ],
     "groundItems": 120,
     "pickupRadius": 0.8,
     "playerReach": 1.4,
@@ -191,13 +242,20 @@
   "shadowLugia": {
     "_comment": "Once Tide Lake is inside the darkness, a Super Rod cast there draws Shadow Lugia (once a match): a long wait, then a hook window of biteWindow seconds. It fights at level (a full-strength Lv 100), with hpMult times its HP like every legendary and damageScale on its hits; its beam lasts beamSeconds and turns at beamTurnScale of the usual rate. Shadow Storm (a ring of dark gusts) every stormEvery[phase] seconds. Balls bounce off: under snagBelow of its HP a Snag Machine takes it; worn to nothing or winning the bout, it vanishes.",
     "level": 100,
-    "waitSeconds": [16, 28],
+    "waitSeconds": [
+      16,
+      28
+    ],
     "biteWindow": 0.5,
     "hpMult": 3,
     "damageScale": 1,
     "beamSeconds": 3,
     "beamTurnScale": 0.6,
-    "stormEvery": [6.5, 5, 3.5],
+    "stormEvery": [
+      6.5,
+      5,
+      3.5
+    ],
     "snagBelow": 0.1
   },
   "riding": {
@@ -205,9 +263,37 @@
     "rideSpeed": 1.7,
     "flySpeed": 2.1,
     "flyLift": 1.2,
-    "_mountsComment": "Only Latios is a mount for now. Tuned values for the others, to add back later: 0243 ride seat 0.52 back -0.02; 1007 ride seat 0.42 back 0.15; 1008 ride seat 0.34 back 0.06; 0398 fly seat 0.5 back 0.2 scale 1.8.",
+    "_mountsComment": "Mounts and their saddle points. seat: rider height as a fraction of body height (side views); seatDown/seatUp override it facing the camera and away; back: toward the tail in side views; scale: the mount draws this much bigger while ridden. Latios, Raikou, Flygon and Torterra carry trainers.",
     "mounts": {
-      "0381": { "kind": "fly", "seat": 0.42, "back": 0.05 }
+      "0381": {
+        "kind": "fly",
+        "seat": 0.42,
+        "back": 0.05
+      },
+      "0243": {
+        "kind": "ride",
+        "seat": 0.48,
+        "seatDown": 0.55,
+        "seatUp": 0.32,
+        "back": 0.22,
+        "scale": 1.6
+      },
+      "0330": {
+        "kind": "fly",
+        "seat": 0.62,
+        "seatDown": 0.56,
+        "seatUp": 0.45,
+        "back": 0.18,
+        "scale": 1.15
+      },
+      "0389": {
+        "kind": "ride",
+        "seat": 0.58,
+        "seatDown": 0.34,
+        "seatUp": 0.32,
+        "back": 0.06,
+        "scale": 1.15
+      }
     }
   },
   "respawn": {

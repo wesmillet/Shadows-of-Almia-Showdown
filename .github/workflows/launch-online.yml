@@ -1,0 +1,74 @@
+# Launch (or update) the ONLINE game server on Fly.io, entirely from the browser:
+#   GitHub -> Actions -> "Launch online server" -> Run workflow.
+# It checks out the `online` branch (where the server code lives), creates the Fly app and its
+# save disk the first time, and deploys. Running it again later just deploys the latest `online`.
+# Needs one repository secret: FLY_API_TOKEN (an organization token from the Fly.io dashboard).
+name: Launch online server
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Fly app name (becomes <name>.fly.dev)
+        default: almia-showdown
+        required: true
+      region:
+        description: Fly region (iad = Virginia)
+        default: iad
+        required: true
+
+concurrency:
+  group: launch-online
+  cancel-in-progress: false
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: ${{ github.event.inputs.app }}
+      REGION: ${{ github.event.inputs.region }}
+    steps:
+      - name: Check the Fly token is set
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::Add the FLY_API_TOKEN secret first (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: online
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Create the app (first time only)
+        run: |
+          if flyctl status --app "$APP" >/dev/null 2>&1; then
+            echo "App $APP already exists"
+          else
+            flyctl apps create "$APP" || { echo "::error::Could not create $APP. The name may be taken: run again with another app name."; exit 1; }
+          fi
+      - name: Create the save disk (first time only)
+        run: |
+          if flyctl volumes list --app "$APP" 2>/dev/null | grep -q almia_data; then
+            echo "Volume almia_data already exists"
+          else
+            flyctl volumes create almia_data --app "$APP" --region "$REGION" --size 1 --yes
+          fi
+      - name: Deploy password (first time only)
+        run: |
+          if flyctl secrets list --app "$APP" 2>/dev/null | grep -q OPS_TOKEN; then
+            echo "OPS_TOKEN already set"
+          else
+            flyctl secrets set OPS_TOKEN="$(openssl rand -hex 24)" --app "$APP" --stage
+          fi
+      - name: Deploy
+        run: flyctl deploy --config fly.toml --app "$APP" --primary-region "$REGION" --remote-only --ha=false --build-arg BUILD_ID=${GITHUB_SHA::7}
+      - name: Where to play
+        run: |
+          echo "### The online game is up: https://$APP.fly.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "Health: https://$APP.fly.dev/health" >> "$GITHUB_STEP_SUMMARY"
+          for i in $(seq 1 12); do
+            if curl -sf "https://$APP.fly.dev/health" >/dev/null; then echo "Server answering"; exit 0; fi
+            sleep 10
+          done
+          echo "Deployed, but /health did not answer yet; give it a minute."

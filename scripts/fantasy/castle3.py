@@ -2,7 +2,7 @@
 dict, whichever way it was made.
 
 Two makers produce the same shape of dict: `generated(d)` below builds the castle from the pack's
-Bosk Barracks sample (castle2.py) with a garden courtyard, and areas.load() reads one drawn in
+Atlas_Castle_Building kit (castlekit.py) with a garden courtyard, and areas.load() reads one drawn in
 Tiled (scripts/fantasy/areas/<name>.tmx). build3 applies the dict to the map and, with
 --export-castle, writes the generated one out as a Tiled map to start editing from.
 
@@ -27,46 +27,31 @@ An area (all masks are full-map, tile units, (rows, cols)):
 import random
 import numpy as np
 import design3 as D
-import castle2, stamps, content3
+import stamps, content3
 
 
 def generated(d):
-    """The castle from the pack's Bosk Barracks (the red castle), stretched to size, with a garden
-    courtyard round a paved plaza and the battlefield's light oval."""
+    """The castle composed from the Atlas_Castle_Building kit (castlekit.py): a walled ward with
+    round towers on the corners, the gatehouse in the south wall, red-roofed towers either side
+    of the side gates, the keep on the north wall; inside, a garden courtyard round a paved
+    plaza and the battlefield's light oval."""
+    import castlekit
     (ox0, oy0, ox1, oy1) = D.CASTLE_RECTS[0]
-    c_layers, (cw, ch), c_hall, c_gate, c_stairs, c_cols, c_rows = castle2.compose(*D.CASTLE_STRETCH)
-    assert (cw, ch) == (ox1 - ox0, oy1 - oy0), f'castle is {cw}x{ch}, the rect {ox1 - ox0}x{oy1 - oy0}'
+    cw, ch = ox1 - ox0, oy1 - oy0
     shape = d.land.shape
-    # the courtyard: everything inside the walls (the sample's hall and the strip above it, bar the
-    # little doorway piece at the strip's west end)
-    hx0, hy0, hx1, hy1 = c_hall
-    hall = np.zeros((ch, cw), bool)
-    hall[hy0:hy1, hx0:hx1] = True
-    walls_arr = dict(c_layers)['Castle Walls']
-    hall[hy0:c_rows[21][0], hx0:hx1] &= walls_arr[hy0:c_rows[21][0], hx0:hx1] == None
-    # gates: the gatehouse passage, and gaps cut in the side walls (towers cover their ends)
-    gx0, gy0, gx1, gy1 = c_gate
-    passage = np.zeros((ch, cw), bool)
-    passage[c_rows[26][0]:gy1, gx0:gx1] = True
-    side_gaps = []
     half = D.GATE_W // 2
+    side_gates = []
     for (gx, gy, horiz) in D.GATES.values():
         if horiz: continue
-        r0, r1 = gy - half - oy0, gy + half + 1 - oy0
-        c0, c1 = (0, 4) if gx < (ox0 + ox1) / 2 else (cw - 4, cw)
-        passage[r0:r1, c0:c1] = True
-        side_gaps.append((r0, r1, c0, c1))
-    # the hall's own wall opens where a passage meets it; the side gaps are cleared from every layer
-    # (the gatehouse keeps its arch and doors, which are walked through)
-    cut = np.zeros((ch, cw), bool)
-    cut[c_rows[25][0]:c_rows[25][-1] + 1, gx0:gx1] = True           # the hall's south wall at the gate
-    for (r0, r1, c0, c1) in side_gaps:
-        cut[r0:r1, c0:c1] = True
-    for n, arr in c_layers:
-        arr[cut] = None
-        if n == 'Castle Floor': arr[hall] = None                      # the courtyard is lawn and paving
+        side_gates.append(('W' if gx < (ox0 + ox1) / 2 else 'E', gy - half - oy0, gy + half + 1 - oy0))
+    c_layers, c_hall, c_gate, c_stairs, c_solid, T, (kx, kw, kh) = castlekit.compose(cw, ch, gate_x=D.GATES['S'][0] - 2 - ox0, side_gates=side_gates)
+    hx0, hy0, hx1, hy1 = c_hall
+    gx0, gy0, gx1, gy1 = c_gate
+    hall = np.zeros((ch, cw), bool)
+    hall[hy0:hy1, hx0:hx1] = True
+    side_gaps = [(y0, y1, 0, 4) if side == 'W' else (y0, y1, cw - 4, cw) for (side, y0, y1) in side_gates]
     W = np.zeros(shape, bool)                                 # the castle's solid parts (walls, towers, walkways)
-    W[oy0:oy1, ox0:ox1] = ~hall & ~passage
+    W[oy0:oy1, ox0:ox1] = c_solid
     hall_full = np.zeros(shape, bool)
     hall_full[oy0:oy1, ox0:ox1] = hall
     ocx = ox0 + (gx0 + gx1) / 2
@@ -80,7 +65,7 @@ def generated(d):
     for (r0, r1, c0, c1) in side_gaps:
         c_lo, c_hi = (0, px0 - ox0) if c0 == 0 else (px1 + 1 - ox0, cw)      # the gap's rows, wall to plaza
         pave.append(('rect', ox0 + c_lo, oy0 + r0, ox0 + c_hi, oy0 + r1, 1))
-    pave.append(('rect', ox0 + gx0, py1 + 1, ox0 + gx1, oy0 + hy1, 1))                    # south gate
+    pave.append(('rect', ox0 + gx0, py1 + 1, ox0 + gx1, oy0 + hy1 + 1, 1))                # south gate (through the gatehouse)
     pave.append(('rect', ox0 + c_stairs[0], oy0 + hy0, ox0 + c_stairs[2], py0, 1))      # the keep's stairs
     pave.append(('ellipse', ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2))
     # the fountain on the north-west lawn, its pad touching the west walk, with the Celebi statue in its basin
@@ -91,46 +76,24 @@ def generated(d):
     layers = []
     for n, arr in c_layers:
         full = np.full(shape, None, dtype=object)
-        full[oy0:oy1, ox0:ox1] = arr
-        layers.append((f'Castle {n.split("/")[-1]}' if not n.startswith('Castle') else n, full, 0.25 if 'Shadows' in n else 1.0))
+        full[oy0 - T:oy1, ox0:ox1] = arr
+        layers.append((n, full, 1.0))
     fountain_layer = np.full(shape, None, dtype=object)
     for (fx, fy) in fountains:
         for L in stamps.tile_stamp('Forest Castle', 37, 54, 43, 60, ['Animations']):
             sub = fountain_layer[fy:fy + 6, fx:fx + 6]
             fountain_layer[fy:fy + 6, fx:fx + 6] = np.where(L != None, L, sub)
     layers.append(('Fountains', fountain_layer, 1.0))
-    # the wooden store on the north wall, beside the keep
-    store = castle2.store_stamp()
-    sx0, sy0 = ox0 + c_cols[18][0], oy0 - 3
-    by_name = {n: a for n, a, _ in layers}
-    for n, arr in store:
-        name = f'Castle {n.split("/")[-1]}' if not n.startswith('Castle') else n
-        sub = by_name[name][sy0:sy0 + arr.shape[0], sx0:sx0 + arr.shape[1]]
-        by_name[name][sy0:sy0 + arr.shape[0], sx0:sx0 + arr.shape[1]] = np.where(arr != None, arr, sub)
     objects = []
     blocked = np.zeros(shape, bool)
     claimed = np.zeros(shape, bool)
-    W[sy0:sy0 + 3, sx0:sx0 + 7] = True                        # the store's own walls
-    claimed[sy0 - 1:sy0 + 3, sx0 - 1:sx0 + 8] = True
-    # the keep on the north wall, over the stairs down into the courtyard
-    img, foot = stamps.stamp('keep_red')
-    kh, kw = img.shape[0] // 16, img.shape[1] // 16
-    kx0, ky1 = ox0 + (c_stairs[0] + c_stairs[2]) // 2 - kw // 2, oy0 - 1     # on the wall's top edge, as in the sample
-    objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16, 'foot': 3})
-    blocked[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
-    claimed[max(0, ky1 + 1 - kh):ky1 + 3, kx0 - 1:kx0 + kw + 1] = True
-    # a tower above and below each side gate, standing on the wall band
-    timg, tfoot = stamps.stamp('tower_cone')
-    th, tw = timg.shape[0] // 16, timg.shape[1] // 16
-    spots = []
-    for (r0, r1, c0, c1) in side_gaps:
-        spots += [(ox0 + c0, oy0 + r0), (ox0 + c0, oy0 + r1 + th)]
-    for i, (tx, yb) in enumerate(spots):
-        objects.append({'img': timg, 'name': f'tower_{i + 1}', 'x': tx * 16, 'y': yb * 16, 'foot': 4})
-        blocked[yb - th:yb, tx:tx + tw] |= tfoot
-        claimed[max(0, yb - th):yb + 1, max(0, tx - 1):tx + tw + 1] = True
+    # the keep's footprint on the wall's top edge (its rows above the wall are drawn as tiles, so
+    # nothing is planted before it) and the ground outside the gates
+    claimed[oy0 - kh:oy0 + 2, ox0 + kx - 1:ox0 + kx + kw + 1] = True
+    W[oy0 - kh + 1:oy0, ox0 + kx:ox0 + kx + kw] = True
     # a stone Celebi on a plinth in the middle of the fountain's basin
     statues = [('0251', fx + 3, fy + 3) for (fx, fy) in fountains]
+    c_rows_hall = hy0
     # ---- the garden and the hall's life
     yy_, xx_ = np.mgrid[0:shape[0], 0:shape[1]]
     pav = rasterize(pave, shape)
@@ -153,7 +116,7 @@ def generated(d):
     hedge, topiary = T(r'Bush_Emerald_1[01]'), T(r'Bush_Emerald_[56]')
     flowers = G(r'Plant_RoseBush_1_Red') + G(r'Plant_SaffronFlower_[123]') + G(r'Plant_Madder_1_Yellow') + G(r'Plant_Sunflower_[12]')
     rr = random.Random(3)
-    hx0_, hy0_, hx1_, hy1_ = ox0 + c_cols[24][0], oy0 + c_rows[21][0], ox0 + hx1, oy0 + hy1
+    hx0_, hy0_, hx1_, hy1_ = ox0 + hx0, oy0 + hy0, ox0 + hx1, oy0 + hy1
     lx0, ly0, lx1, ly1 = ox0 + hx0, oy0 + hy0, ox0 + hx1 - 1, oy0 + hy1 - 1     # the lawn's outer box (inclusive)
     def tree(pool, x, y, shadow=True):
         # a tree wants a free tile each side (the castle's walls count as room: they stand behind it)

@@ -16,7 +16,7 @@ import paint3, cliffs, castle, castle2, stamps, content3, towns3, collide, expor
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NAME = 'almia3'
 CLIFF_SETS = {
-    D.SNOW: ('Tileset_RockSlope_2_Brown_Snow', 'RockSlopes_2_Brown_Snow_Rules'),
+    D.SNOW: ('Tileset_RockSlope_2_Ice', 'RockSlopes_2_Ice_Rules'),       # the whole mountain is ice, as the pack's Frost Peak
     D.DESERT: ('Tileset_RockSlope_2_Gray_Sand', 'RockSlopes_2_Gray_Sand_Rules'),
     D.AUTUMN: ('Tileset_RockSlope_2_Brown', 'RockSlopes_2_Brown_Rules'),
     D.FOREST: ('Tileset_RockSlope_2_Gray', 'RockSlopes_2_Gray_Rules'),
@@ -37,7 +37,7 @@ def build_cliffs(d):
     layers, blocked, stairs = [], np.zeros(d.land.shape, bool), np.zeros(d.land.shape, bool)
     H, Wd_ = d.land.shape
     sets = {}
-    for lv in (1, 2, 3):
+    for lv in range(1, int(d.level.max()) + 1):
         up_all = d.level >= lv
         lbl, n = ndimage.label(up_all)
         out = np.full(d.land.shape, None, dtype=object)
@@ -249,6 +249,51 @@ def main():
         c0, c1 = (gx - 7, gx + 8) if horiz else (gx - 9, gx + 10)
         occupied[max(0, r0):r1, max(0, c0):c1] = True
     placer = content3.Placer(~occupied)
+    # animated props (torches, fires, banners, flowers...) live in a tile layer the game animates
+    anim = np.full(W.shape, None, dtype=object)
+    anim_block = np.zeros(W.shape, bool)
+    log('bridges')
+    # a stone bridge wherever a road reaches both banks of a river
+    bridge_deck = np.zeros(W.shape, bool)
+    bridge = content3.catalogue('Objects_Buildings', r'Bridge_Stone_4')
+    n_bridges = 0
+    for line in getattr(d, 'rivers', []):
+        rows_hit = []
+        for (x, y) in line:
+            xi, yi = int(round(x)), int(round(y))
+            if 0 <= yi < H and 4 <= xi < Wd - 4 and d.river[yi, xi] and (d.paths[yi, xi - 3] > 0 or d.paths[yi, xi - 2] > 0) and (d.paths[yi, xi + 3] > 0 or d.paths[yi, xi + 2] > 0):
+                rows_hit.append((yi, xi))
+        while rows_hit:
+            yi, xi = rows_hit[0]
+            group = [p for p in rows_hit if abs(p[0] - yi) <= 4]
+            rows_hit = [p for p in rows_hit if p not in group]
+            yi = sorted(g[0] for g in group)[len(group) // 2]
+            xi = int(round(sum(g[1] for g in group) / len(group)))
+            if bridge:
+                town_objects = list(town_objects) + [{'key': bridge[0] + (0,), 'x': (xi - 2) * 16 - 8, 'y': (yi + 2) * 16, 'sort': yi + 1.5}]
+                bridge_deck[yi - 1:yi + 2, xi - 2:xi + 3] = True
+                n_bridges += 1
+    log(f'  bridges {n_bridges}')
+    log('farms')
+    import farm3
+    farm_fence = np.full(W.shape, None, dtype=object)
+    farm_field = np.full(W.shape, None, dtype=object)
+    farm_block = np.zeros(W.shape, bool)
+    for (town, near, seed) in [('Greenhollow', (284, 142), 7), ('Emberwood', (268, 70), 8)]:
+        tx, ty, _ = D.TOWNS[town]
+        ok = d.land & ~d.water & ~d.beach & (d.level == d.level[near[1], near[0]]) & (d.paths == 0) & ~town_area & ~d.castle & ~cliff_block & ~stair_cells
+        ok &= ~ndimage.binary_dilation(d.paths > 0, iterations=2)
+        f = farm3.build(d, placer, ok, (tx, ty), near, seed=seed)
+        if f is None: log(f'  no room for a farm by {town}'); continue
+        farm_fence = np.where(f['fence'] != None, f['fence'], farm_fence)
+        farm_field = np.where(f['field'] != None, f['field'], farm_field)
+        farm_block |= f['blocked']
+        placer.free &= ~f['claimed']
+        objects_farm = f['objects']
+        town_objects = list(town_objects) + objects_farm
+        log(f'  farm by {town} at {f["rect"]}, {len(objects_farm)} things')
+    stack.append(('Farm field', farm_field))
+    stack.append(('Fences', farm_fence))
     objects = list(town_objects)
     blocked_stamps = A['blocked'].copy()
     placer.free &= ~A['claimed']
@@ -269,6 +314,8 @@ def main():
     placer.free &= ~d.castle          # inside the walls nothing wild
     log('decor')
     n_arena = decor3.arena(placer)
+    n_mountain = decor3.mountain(d, placer, anim, anim_block)
+    log(f'  mountain {n_mountain}')
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)
     water_plants = decor3.lakes(d)
     objects += water_plants
@@ -294,10 +341,14 @@ def main():
     placer.free |= blight_free
     # boulders and ice up the mountain, where the trees give out
     n_rock += content3.scatter(d, placer, content3.ROCKS, 0.012, seed=14, clear=2, where=d.level >= 2)
+    n_life = decor3.life(d, placer, anim)
+    n_falls = decor3.waterfalls(d, anim, anim_block)
+    log(f'  life {n_life}, waterfalls {n_falls}')
     log(f'  summit {n_summit}, blight {n_dead}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
     objects += placer.objects
     tg, tall = paint3.tall_grass(d, placer.free & ~occupied & ~(d.biome == D.CASTLE))
     stack.insert([n for n, _ in stack].index('Road') + 1, ('Tall grass', tg))
+    stack.append(('Animations', anim))
 
     log('collisions')
     ras = collide.Raster(Wd, H)
@@ -310,12 +361,16 @@ def main():
     see_through |= {(k[0], k[1]) for k in content3.DEAD_BITS}
     see_through |= {(k[0], k[1]) for k in content3.DEAD_ROCKS if max(content3.size(k)) <= 32}
     see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props_Snow', r'Sign_.*')}
+    see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Buildings', r'Bridge_Stone_\d')}    # the deck is walked; the water either side is not
+    for ts in ('Objects_Grass', 'Objects_Grass_Snow', 'Objects_Grass_Desert'):
+        see_through |= {(k[0], k[1]) for k in content3.catalogue(ts, r'.*')}
+    see_through |= {(k[0], k[1]) for k in content3.catalogue('Objects_Props', r'Plant_(Corn|Cabbage|Pumpkin|Tomato|Carrot|Eggplant|Potatoe|Radish|Cotton).*')}
     for pool in content3.ROCKS.values():
         see_through |= {(k[0], k[1]) for k in pool if max(content3.size(k)) <= 32}
     for o in objects:
         if 'key' in o and (o['key'][0], o['key'][1]) not in see_through: ras.picture(o['key'], o['x'], o['y'])
-    blocked = ras.blocked() | blocked_stamps
-    walk = d.land & ~d.water & ~cliff_block & ~W & ~(face > 0) & ~blocked
+    blocked = ras.blocked() | blocked_stamps | anim_block | farm_block
+    walk = d.land & (~d.water | bridge_deck) & ~cliff_block & ~W & ~(face > 0) & ~blocked
     walk |= stair_cells
     lbl, n = ndimage.label(walk)
     reach = lbl == lbl[D.CRYSTAL[1] + 6, D.CRYSTAL[0]]

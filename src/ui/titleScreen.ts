@@ -6,6 +6,7 @@
  * two fight until one of them is driven off. Everyone is drawn at the island's
  * own scale (the camera is zoomed in) and depth-sorted with the trees.
  */
+import { music } from '../audio/music';
 import { loadPc } from '../pc';
 import type { Input } from '../core/input';
 import { dirFromVector, type Dir8 } from '../core/math';
@@ -23,7 +24,7 @@ import { button, hit, INK, strip, text, type GameContext, type Screen } from './
 const DARKRAI = '0491';
 const CRESSELIA = '0488';
 /** Small Pokémon that wander in (all in the title's preload). */
-const SMALL = ['0025', '0387', '0133', '0393', '0390', '0447'];
+const SMALL = ['0025', '0387', '0133', '0393', '0390', '0447', '0092'];
 /** The camera zoom: the island's own art at twice the match scale at 720p, a whole step more on big screens. */
 const ZOOM = 2;
 function titleZoom(baseScale: number): number {
@@ -96,6 +97,9 @@ export class TitleScreen implements Screen {
   private flashColor = '40,0,70';
   private readonly cx: number;
   private readonly cy: number;
+  private logo: HTMLImageElement | null = null;
+  private readonly fogTile: HTMLCanvasElement;
+  private readonly wisps: Array<{ fx: number; fy: number; phase: number; speed: number; teal: boolean }> = [];
   /** Tiles a Pokémon can stand on in view: reachable and clear of trees, rocks and buildings. */
   private readonly openSet = new Set<number>();
 
@@ -125,6 +129,102 @@ export class TitleScreen implements Screen {
     this.darkrai.scale = DARKRAI_SCALE;
     this.cresselia = this.actor(CRESSELIA, this.cx, this.cy);
     this.cresselia.hover = 0.1;
+    void assets.loadImage('ui/logo.png').then((im) => {
+      this.logo = im;
+    });
+    this.fogTile = TitleScreen.makeFog();
+    for (let i = 0; i < 13; i++) {
+      this.wisps.push({ fx: Math.random(), fy: 0.4 + Math.random() * 0.45, phase: Math.random() * 10, speed: 0.006 + Math.random() * 0.012, teal: i % 3 === 0 });
+    }
+  }
+
+  /** A soft fog tile, drawn twice with drift for the ground mist. */
+  private static makeFog(): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = c.height = 320;
+    const ctx = c.getContext('2d')!;
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 320;
+      const y = Math.random() * 320;
+      const r = 30 + Math.random() * 60;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(188,178,220,0.16)');
+      g.addColorStop(1, 'rgba(188,178,220,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      // wrap-around copies keep the tile seamless
+      for (const [dx, dy] of [[-320, 0], [320, 0], [0, -320], [0, 320]] as const) {
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        ctx.restore();
+      }
+    }
+    return c;
+  }
+
+  /** Ground mist: two layers drifting opposite ways across the lower half of the screen. */
+  private fogBuf: HTMLCanvasElement | null = null;
+
+  private drawFog(front: boolean, ctx2?: CanvasRenderingContext2D): void {
+    const v = this.ctx.view;
+    const ctx = ctx2 ?? v.ctx;
+    const tile = this.fogTile;
+    if (!this.fogBuf) this.fogBuf = document.createElement('canvas');
+    const buf = this.fogBuf;
+    if (buf.width !== v.width || buf.height !== v.height) {
+      buf.width = v.width;
+      buf.height = v.height;
+    }
+    const b = buf.getContext('2d')!;
+    b.clearRect(0, 0, buf.width, buf.height);
+    const y0 = v.height * (front ? 0.45 : 0.4);
+    const k = front ? 1.4 : 2.2;
+    const w = tile.width * k;
+    const off = ((this.t * (front ? 14 : -9)) % w + w) % w;
+    for (let x = -off; x < v.width; x += w) {
+      for (let y = y0 - tile.height * k * 0.4; y < v.height; y += tile.height * k) {
+        b.drawImage(tile, x, y + Math.sin(this.t * 0.4 + x * 0.01) * 6, w, tile.height * k);
+      }
+    }
+    // the mist fades in from nothing well above the ground line
+    b.globalCompositeOperation = 'destination-in';
+    const fade = b.createLinearGradient(0, y0 - 60, 0, v.height * 0.9);
+    fade.addColorStop(0, 'rgba(0,0,0,0)');
+    fade.addColorStop(1, 'rgba(0,0,0,1)');
+    b.fillStyle = fade;
+    b.fillRect(0, 0, buf.width, buf.height);
+    b.globalCompositeOperation = 'source-over';
+    ctx.save();
+    ctx.globalAlpha = front ? 0.85 : 0.45;
+    ctx.drawImage(buf, 0, 0);
+    ctx.restore();
+  }
+
+  /** Drifting wisps of lost light; they carry small halos through the dark. */
+  private drawWisps(ctx2?: CanvasRenderingContext2D): void {
+    const v = this.ctx.view;
+    const ctx = ctx2 ?? v.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const wp of this.wisps) {
+      const t = this.t * wp.speed * 60;
+      const x = ((wp.fx + t * 0.004) % 1) * v.width;
+      const y = (wp.fy + 0.05 * Math.sin(this.t * 0.7 + wp.phase)) * v.height;
+      const r = (2.2 + 1.3 * Math.sin(this.t * 2 + wp.phase * 3)) * v.baseScale;
+      const a = 0.35 + 0.3 * Math.sin(this.t * 1.3 + wp.phase);
+      const col = wp.teal ? '140,220,255' : '186,140,255';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4);
+      g.addColorStop(0, `rgba(${col},${0.8 * a})`);
+      g.addColorStop(0.3, `rgba(${col},${0.35 * a})`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------- the stage
@@ -281,6 +381,8 @@ export class TitleScreen implements Screen {
 
   step(dt: number, input: Input): void {
     this.t += dt;
+    music.want('darkrai');
+    if (input.pressed('KeyN')) music.toggleMute();
     this.stepScene(dt);
     const b = this.buttonRect();
     for (const c of input.takeClicks()) {
@@ -305,6 +407,7 @@ export class TitleScreen implements Screen {
   /** The other screens set their own zoom; the title hands the camera back at 1. */
   private leave(fn: () => void): void {
     this.ctx.view.zoom = this.ctx.view.targetZoom = 1;
+    music.want(null);
     fn();
   }
 
@@ -837,13 +940,14 @@ export class TitleScreen implements Screen {
     list.push({ y: this.darkrai.y, draw: () => this.drawActor(this.darkrai) });
     list.push({ y: this.cresselia.y, draw: () => this.drawActor(this.cresselia) });
     list.sort((a, b) => a.y - b.y);
+    this.drawFog(false);
     for (const d of list) d.draw();
     this.drawBlast();
     this.vfx.draw(v);
     this.drawOrb();
     // Lights: dusk that deepens while Darkrai is out; Cresselia carries a circle of moonlight.
     v.beginLights();
-    v.lightCtx.fillStyle = 'rgba(255,220,170,0.08)';
+    v.lightCtx.fillStyle = 'rgba(150,170,255,0.05)';
     v.lightCtx.fillRect(0, 0, v.width, v.height);
     this.vfx.drawLights(v);
     this.groundVfx.drawLights(v);
@@ -851,14 +955,24 @@ export class TitleScreen implements Screen {
     const cr = this.cresselia;
     const moon = cr.alpha > 0.05;
     this.lighting.render({
-      cold: 0.75,
-      darkCx: v.width / 2, darkCy: v.height * 0.62, darkRadius: v.width * 0.42, darkFeather: v.width * 0.35, darkAmount: 0.3 + 0.3 * dk.alpha,
+      cold: 0.85,
+      darkCx: v.width / 2, darkCy: v.height * 0.62, darkRadius: v.width * 0.42, darkFeather: v.width * 0.35, darkAmount: 0.32 + 0.26 * dk.alpha,
       clearCx: moon ? v.toScreenX(cr.x) : 0, clearCy: moon ? v.toScreenY(cr.y) - cr.hover * v.pxPerTile : 0, clearRadius: moon ? v.pxPerTile * 3 * cr.alpha : 0,
       time: this.t,
     });
     // Overlay
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);
+    // Night falls on the hud layer: a purple-blue tint, a soft vignette, the ground mist and the wisps.
+    h.fillStyle = 'rgba(14,8,34,0.30)';
+    h.fillRect(0, 0, v.width, v.height);
+    const vg = h.createRadialGradient(v.width / 2, v.height * 0.55, v.height * 0.35, v.width / 2, v.height * 0.55, v.height * 0.95);
+    vg.addColorStop(0, 'rgba(6,2,16,0)');
+    vg.addColorStop(1, 'rgba(6,2,16,0.55)');
+    h.fillStyle = vg;
+    h.fillRect(0, 0, v.width, v.height);
+    this.drawFog(true, h);
+    this.drawWisps(h);
     if (this.flash > 0) {
       h.fillStyle = `rgba(${this.flashColor},${0.45 * this.flash})`;
       h.fillRect(0, 0, v.width, v.height);
@@ -868,9 +982,28 @@ export class TitleScreen implements Screen {
     grad.addColorStop(1, 'rgba(8,4,20,0)');
     h.fillStyle = grad;
     h.fillRect(0, 0, v.width, v.height * 0.55);
-    text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.22, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
-    text(v, 'SHOWDOWN', v.width / 2, v.height * 0.22 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
-    text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, v.height * 0.22 + 104 * s, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
+    let subY = v.height * 0.22 + 104 * s;
+    if (this.logo) {
+      const lw = this.logo.width;
+      const lh = this.logo.height;
+      const k = Math.min((v.width - 60 * s) / lw, (v.height * 0.26) / lh, 2.2 * s);
+      const bob = Math.sin(this.t * 1.1) * 3 * s;
+      const x = Math.round(v.width / 2 - (lw * k) / 2);
+      const y = Math.round(v.height * 0.2 - (lh * k) / 2 + bob);
+      h.save();
+      h.imageSmoothingEnabled = false;
+      // a breathing glow behind the logo
+      h.globalAlpha = 0.5 + 0.25 * Math.sin(this.t * 1.7);
+      h.drawImage(this.logo, x - 2 * s, y, lw * k + 4 * s, lh * k);
+      h.globalAlpha = 1;
+      h.drawImage(this.logo, x, y, lw * k, lh * k);
+      h.restore();
+      subY = y + lh * k + 16 * s;
+    } else {
+      text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.22, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
+      text(v, 'SHOWDOWN', v.width / 2, v.height * 0.22 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
+    }
+    text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, subY, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const b = this.buttonRect();

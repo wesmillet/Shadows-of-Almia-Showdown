@@ -160,6 +160,7 @@ async function boot(): Promise<void> {
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
       track('match-finished', 'Match finished');
+      if (match.outcome === 'win') track('match-won', 'Match won');
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
     });
     debug.showdown.screen = screen;

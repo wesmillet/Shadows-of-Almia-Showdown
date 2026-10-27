@@ -208,6 +208,8 @@ export interface Trainer {
   roamTimer: number;
   /** Poké Dollars (data/shops.json). */
   money: number;
+  /** An online player inside their reconnect window: their lead fights for them, even in a duel. */
+  away?: boolean;
   /** A vendor's market stand: drawn in front of the stand with the stand's counter redrawn over its legs. */
   counter?: DecorItem | null;
   /** The castle challenger: not one of the battle royale's rivals. */

@@ -190,6 +190,11 @@ export class MirrorMatch {
     void this.rangers.setRole(role, look).then(() => (t.role = role));
   }
 
+  /** Seconds since the last state update arrived (staleness check after a reconnect). */
+  staleFor(): number {
+    return this.lastUpdateAt ? performance.now() / 1000 - this.lastUpdateAt : Infinity;
+  }
+
   private onMessage(msg: ServerMsg): void {
     if (msg.t === 's') this.applyUpdate(msg.p, msg.e, msg.ack ?? 0);
     else if (msg.t === 'start' && !this.observe) {

@@ -344,8 +344,9 @@ async function boot(): Promise<void> {
       toaster?.show(m.text, 4);
       if (watchingId) showOnline();
     } else if (m.t === 'unqueued') {
-      // Picking a starter for a party that broke up: back to the hub.
-      if (screen instanceof RollScreen) showOnline(m.text);
+      // A broken-up party pick, an expired roll, a queue that could not take this player: back to
+      // the hub with the reason, from the roll or the lobby alike.
+      if (screen instanceof RollScreen || screen instanceof LobbyScreen) showOnline(m.text);
     }
   });
 
@@ -357,15 +358,21 @@ async function boot(): Promise<void> {
     net.progress = null;
     game.setScreen(loadingScreen(() => 'Heading out'));
     const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(start.seed), sprites }, net, start.you, start.roster, rangers);
-    await mirror.ready;
+    // The first full state normally arrives within a second; nothing after ten means the match is gone.
+    const ready = await Promise.race([mirror.ready.then(() => true), new Promise<false>((res) => setTimeout(() => res(false), 10_000))]);
+    if (!ready) {
+      mirror.dispose();
+      playingId = null;
+      showOnline('Could not join the match, sorry. Try again');
+      return;
+    }
     const chat = new ChatPanel(net, { compact: true, collapsed: true });
     debug.showdown.match = mirror.match;
     debug.showdown.mirror = mirror;
     const screen: MatchScreen = new MatchScreen(game, mirror.match, rangers, assets, ui, () => {
       const end = mirror.ended ?? { outcome: mirror.match.outcome ?? 'loss', place: 0 };
-      chat.dispose();
       const leave = () => {
-        mirror.dispose();
+        cleanup();
         net.send({ t: 'leave' });
         playingId = null;
       };
@@ -381,15 +388,41 @@ async function boot(): Promise<void> {
     });
     screen.online = { cmd: net.cmd.bind(net) };
     mirror.onReply = (text, seconds) => screen.say(text, seconds);
+    // The connection drops: say so on screen; back up, give the room three seconds to resume the
+    // match (the server replays a 'start' and fresh state on rejoin); silence means it is gone.
+    let staleTimer: number | null = null;
+    const offStatus = net.onStatus((st) => {
+      if (playingId !== start.matchId) return;
+      if (st === 'down') screen.say('Connection lost... reconnecting', 3);
+      if (st === 'takenOver') {
+        bail('This account started playing in another tab');
+        return;
+      }
+      if (st === 'up') {
+        screen.say('Reconnected', 1.5);
+        if (staleTimer !== null) clearTimeout(staleTimer);
+        staleTimer = window.setTimeout(() => {
+          if (playingId === start.matchId && mirror.staleFor() > 4) bail('Your match ended while you were away');
+        }, 4000);
+      }
+    });
+    const bail = (why: string): void => {
+      cleanup();
+      playingId = null;
+      showOnline(why);
+    };
     // Called off (the server is updating): back to the hub, nothing lost.
     const offAbort = net.on((m) => {
       if (m.t !== 'aborted' || playingId !== start.matchId) return;
+      bail(m.text);
+    });
+    const cleanup = (): void => {
       offAbort();
+      offStatus();
+      if (staleTimer !== null) clearTimeout(staleTimer);
       chat.dispose();
       mirror.dispose();
-      playingId = null;
-      showOnline(m.text);
-    });
+    };
     debug.showdown.screen = screen;
     game.setScreen(screen);
   };
@@ -411,8 +444,9 @@ async function boot(): Promise<void> {
     };
     setupSpectate(screen, mirror, net, h, leave);
     const off = net.on((m) => {
-      if (m.t === 'spectateEnd' || (m.t === 'spectate' && m.matchId !== h.matchId)) {
+      if (m.t === 'spectateEnd' || (m.t === 'spectate' && m.matchId !== h.matchId) || m.t === 'start' || m.t === 'pick') {
         off();
+        watchingId = null;
         chat.dispose();
         mirror.dispose();
       }

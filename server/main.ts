@@ -372,6 +372,11 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     },
     sendRaw(data: string) {
       if (ws.readyState !== ws.OPEN) return;
+      // A stalled client never draining its socket would pile up 20 updates a second in memory.
+      if (ws.bufferedAmount > 2 * 1024 * 1024) {
+        ws.terminate();
+        return;
+      }
       metrics.sent(data.length);
       if (LAG) setTimeout(() => ws.readyState === ws.OPEN && ws.send(data), LAG);
       else ws.send(data);
@@ -381,7 +386,11 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   chat.history(c);
   hub.connect(c);
   metrics.counters.connections++;
+  ws.on('pong', () => {
+    (c as Conn & { heartbeatDue?: boolean }).heartbeatDue = false;
+  });
   ws.on('message', (data) => {
+    (c as Conn & { heartbeatDue?: boolean }).heartbeatDue = false;
     metrics.received();
     if (++c.msgs > MSG_RATE) {
       ws.close(4001, 'Too many messages');
@@ -431,6 +440,22 @@ setInterval(() => {
 setInterval(() => {
   for (const c of hub.clients.values()) (c as Conn).msgs = 0;
 }, 1000);
+// Dead connections (sleep, dropped wifi) never fire 'close' on their own: ping every 15 s and
+// terminate whoever missed the last one. The client pings every 3 s anyway, so a live line always
+// has traffic; this is the backstop.
+setInterval(() => {
+  for (const c of hub.clients.values()) {
+    const conn = c as Conn & { heartbeatDue?: boolean };
+    const ws = conn.ws;
+    if (ws.readyState !== ws.OPEN) continue;
+    if (conn.heartbeatDue) {
+      ws.terminate();
+      continue;
+    }
+    conn.heartbeatDue = true;
+    ws.ping();
+  }
+}, 15_000).unref();
 setInterval(() => events.tick(), 5000).unref();
 // Every 10 s: a sample for the dashboard, and a word if the server keeps falling behind.
 let slowSamples = 0;

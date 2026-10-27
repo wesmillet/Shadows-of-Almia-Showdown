@@ -88,13 +88,20 @@ function guestKey(): string {
   }
 }
 
+export type ConnStatus = 'up' | 'down' | 'takenOver';
+
 export class Connection {
   private ws: WebSocket | null = null;
   private listeners = new Set<Listener>();
+  private statusListeners = new Set<(s: ConnStatus) => void>();
+  private helloWaiters: Array<() => void> = [];
+  private lastMsgAt = 0;
   private queue: ClientMsg[] = [];
   private retry = 0;
   private closedByUs = false;
   private cmdNo = 0;
+  /** Another tab or device took this session over (close code 4000). */
+  takenOver = false;
   /** Latest hello from the server. */
   hello: Extract<ServerMsg, { t: 'hello' }> | null = null;
   connected = false;
@@ -119,10 +126,12 @@ export class Connection {
 
   constructor(readonly base: string) {}
 
-  /** Opens the connection (again); resolves once the server says hello. */
+  /** Opens the connection (again); resolves once the server says hello (this attempt's or a retry's). */
   open(): Promise<void> {
     this.closedByUs = false;
+    this.takenOver = false;
     return new Promise((resolve) => {
+      this.helloWaiters.push(resolve);
       const look = this.look ? `&look=${encodeURIComponent(this.look)}` : '';
       const device = deviceId();
       const wsUrl = `${this.base.replace(/^http/, 'ws')}/ws?guest=${encodeURIComponent(guestKey())}${look}${device ? `&device=${device}` : ''}`;
@@ -132,8 +141,13 @@ export class Connection {
       ws.onopen = () => {
         this.connected = true;
         this.retry = 0;
+        this.lastMsgAt = performance.now();
         for (const m of this.queue.splice(0)) ws.send(JSON.stringify(m));
-        pinger = window.setInterval(() => this.send({ t: 'ping', at: performance.now() }), 3000);
+        pinger = window.setInterval(() => {
+          this.send({ t: 'ping', at: performance.now() });
+          // The server answers every ping; a silent line this long is dead. Closing it starts the retries.
+          if (performance.now() - this.lastMsgAt > 9000) ws.close();
+        }, 3000);
       };
       ws.onmessage = (e) => {
         let msg: ServerMsg;
@@ -142,9 +156,12 @@ export class Connection {
         } catch {
           return;
         }
+        this.lastMsgAt = performance.now();
         if (msg.t === 'hello') {
           this.hello = msg;
           resolve();
+          for (const w of this.helloWaiters.splice(0)) w();
+          for (const l of this.statusListeners) l('up');
         } else if (msg.t === 'pong') this.ping = Math.round(performance.now() - msg.at);
         else if (msg.t === 'social') this.social = { friends: msg.friends, party: msg.party, invites: msg.invites };
         else if (msg.t === 'private') this.privateLobby = msg.lobby;
@@ -165,13 +182,20 @@ export class Connection {
       };
       ws.onclose = (e) => {
         this.connected = false;
-        // Banned, or a moderator's kick: no reconnecting.
+        // Banned, or a moderator's kick: no reconnecting. 4000: another tab or device took over,
+        // and reconnecting would only kick it back out, so this one stands down until asked.
         if (e.code === 4003) this.closedByUs = true;
+        if (e.code === 4000) {
+          this.closedByUs = true;
+          this.takenOver = true;
+          for (const l of this.statusListeners) l('takenOver');
+        }
         // The server forgets parties and lobbies of a dropped connection.
         this.social = { ...this.social, party: null, invites: [] };
         this.privateLobby = null;
         if (pinger !== null) clearInterval(pinger);
         if (this.closedByUs) return;
+        for (const l of this.statusListeners) l('down');
         // Back off a little each time, up to 10 s.
         const wait = Math.min(10_000, 500 * 2 ** this.retry++);
         window.setTimeout(() => void this.open(), wait);
@@ -187,6 +211,12 @@ export class Connection {
   on(l: Listener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
+  }
+
+  /** Connection state changes: 'down' (retrying), 'up' (hello again), 'takenOver' (another tab). */
+  onStatus(l: (s: ConnStatus) => void): () => void {
+    this.statusListeners.add(l);
+    return () => this.statusListeners.delete(l);
   }
 
   send(msg: ClientMsg): void {

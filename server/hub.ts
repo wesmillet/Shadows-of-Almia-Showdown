@@ -232,11 +232,12 @@ export class Hub {
   }
 
   private queue(c: Client, pick: unknown, mode: QueueMode): void {
-    if (c.room || c.rollSeed === null) return;
+    if (c.room) return;
+    if (c.rollSeed === null) return c.send({ t: 'unqueued', text: 'Your roll expired, roll again' });
     if (this.draining && !c.pick) return c.send({ t: 'notice', text: DRAIN_TEXT });
     const choices = starterChoices(c.rollSeed, c.rollPool);
     const starter = typeof pick === 'number' && Number.isInteger(pick) ? choices[pick] : undefined;
-    if (!starter) return c.send({ t: 'error', text: 'Pick one of the starters you rolled' });
+    if (!starter) return c.send({ t: 'unqueued', text: 'Pick one of the starters you rolled' });
     // Part of a party or a private lobby that is picking: this is that pick.
     if (c.pick) {
       c.pick.picks.set(c.key, starter);

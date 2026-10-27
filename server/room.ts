@@ -459,7 +459,9 @@ export class Room implements RoomHandle {
       for (const p of this.players.values()) p.commands = Math.max(0, p.commands - COMMAND_RATE / 20);
       this.broadcast();
     }
-    const anyone = [...this.players.values()].some((p) => p.peer && !p.ended);
+    // A room stays open while anyone is still playing OR inside their reconnect window, so a
+    // dropped solo player (or the last human standing) is not instantly handed a loss.
+    const anyone = [...this.players.values()].some((p) => !p.ended && (p.peer !== null || (p.goneAt !== null && m.time - p.goneAt <= RECONNECT_SECONDS)));
     if (m.over || !anyone) this.close();
   }
 

@@ -386,7 +386,7 @@ export function joinCodeDialog(): Promise<string | null> {
 interface Profile {
   name: string;
   joined: number;
-  stats: { matches: number; wins: number; catches: number; knockouts: number; damage: number; bestPlace: number | null };
+  stats: { matches: number; wins: number; catches: number; knockouts: number; eliminations?: number; damage: number; bestPlace: number | null };
   ranked?: { rating: number; tier: { name: string; color: string } | null; placementLeft: number; games: number; wins: number; peak: number; rank: number | null; season: number };
   recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; ratingDelta: number | null; xp: number | null; replay: boolean }>;
   pc: number;

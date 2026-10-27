@@ -99,7 +99,7 @@ ${ranked}
 </div></div>
 <div class="panel"><h2>Stats</h2><div class="stats">
 <div><b>${s.matches}</b>matches</div><div><b>${s.wins}</b>wins</div><div><b>${s.bestPlace ?? '-'}</b>best place</div>
-<div><b>${s.catches}</b>catches</div><div><b>${s.knockouts}</b>knockouts</div><div><b>${s.damage.toLocaleString('en')}</b>damage</div>
+<div><b>${s.catches}</b>catches</div><div><b>${s.eliminations ?? 0}</b>eliminations</div><div><b>${s.knockouts}</b>knockouts</div><div><b>${s.damage.toLocaleString('en')}</b>damage</div>
 </div></div>
 <div class="panel"><h2>Achievements · ${p.achievements.length}/${ACHIEVEMENTS.length}</h2><div class="badges">${badges}</div></div>
 <div class="panel"><h2>Recent matches</h2><table>${recent}</table></div>

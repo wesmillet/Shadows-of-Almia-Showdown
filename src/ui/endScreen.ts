@@ -120,6 +120,7 @@ export class EndScreen implements Screen {
     const t = Math.floor(st.timeSurvived);
     const rows: Array<[string, string]> = [
       ['Catches', String(st.catches)],
+      ['Eliminations', String(st.eliminations ?? 0)],
       ['Knockouts', String(st.knockouts)],
       ['Damage dealt', String(st.damage)],
       ['Time survived', `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`],

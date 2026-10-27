@@ -50,7 +50,7 @@ const CSS = `
 .almia-card { width: min(380px, calc(100vw - 24px)) !important; text-align: center; }
 .almia-card .big { font-size: 22px; margin: 4px 0; }
 .almia-card .sub { color: #8a6a4a; font-size: 13px; margin-bottom: 10px; }
-.almia-card .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
+.almia-card .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 12px 0; }
 .almia-card .stats div { border: 2px solid #d8c7a6; padding: 8px 4px; background: #fffaf0; }
 .almia-card .stats b { display: block; font-size: 18px; font-weight: normal; color: #c2611a; }
 .almia-card .row { justify-content: center; }
@@ -271,7 +271,7 @@ export async function incomingTrades(net: Connection): Promise<number> {
 interface Profile {
   name: string;
   joined: number;
-  stats: { wins?: number; matches?: number; catches?: number };
+  stats: { wins?: number; eliminations?: number; matches?: number; catches?: number };
   pc: number;
   online: boolean;
   progress: { level: number };
@@ -316,7 +316,7 @@ export function openTrainerCard(net: Connection, name: string): Promise<void> {
         const since = new Date(p.joined).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
         box.appendChild(el('div', 'sub', `Lv ${p.progress.level}${p.title ? ` · ${p.title}` : ''} · ${p.online ? 'Online now' : `Trainer since ${since}`}`));
         const stats = el('div', 'stats');
-        for (const [label, n] of [['Wins', p.stats.wins ?? 0], ['Matches', p.stats.matches ?? 0], ['In PC', p.pc]] as Array<[string, number]>) {
+        for (const [label, n] of [['Wins', p.stats.wins ?? 0], ['Eliminations', p.stats.eliminations ?? 0], ['Matches', p.stats.matches ?? 0], ['In PC', p.pc]] as Array<[string, number]>) {
           const d = el('div');
           d.append(el('b', '', String(n)), document.createTextNode(label));
           stats.appendChild(d);

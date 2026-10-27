@@ -107,11 +107,12 @@ interface Stats {
   wins: number;
   catches: number;
   knockouts: number;
+  eliminations: number;
   damage: number;
   bestPlace: number | null;
 }
 
-const EMPTY_STATS: Stats = { matches: 0, wins: 0, catches: 0, knockouts: 0, damage: 0, bestPlace: null };
+const EMPTY_STATS: Stats = { matches: 0, wins: 0, catches: 0, knockouts: 0, eliminations: 0, damage: 0, bestPlace: null };
 
 export class Accounts {
   readonly db: DatabaseSync;
@@ -491,6 +492,7 @@ export class Accounts {
       if (r.outcome === 'win') s.wins++;
       s.catches += r.stats.catches;
       s.knockouts += r.stats.knockouts;
+      s.eliminations += r.stats.eliminations ?? 0;
       s.damage += Math.round(r.stats.damage);
       s.bestPlace = s.bestPlace === null ? r.place : Math.min(s.bestPlace, r.place);
       this.db.prepare('UPDATE profiles SET stats = ? WHERE user_id = ?').run(JSON.stringify(s), userId);
@@ -534,7 +536,7 @@ export class Accounts {
     const st = this.profile(userId).stats;
     const card = this.rankedCard(userId);
     const ctx = {
-      match, life: { matches: st.matches, wins: st.wins, catches: st.catches, knockouts: st.knockouts, damage: st.damage },
+      match, life: { matches: st.matches, wins: st.wins, catches: st.catches, knockouts: st.knockouts, eliminations: st.eliminations, damage: st.damage },
       level: levelOf(this.xp(userId)).level, tier: card.tier?.id ?? null, rankedWins: card.wins,
       pc: (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(userId) as { n: number }).n,
     };

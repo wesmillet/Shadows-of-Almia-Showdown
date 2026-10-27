@@ -130,7 +130,7 @@ export class MirrorMatch {
           if (!Array.isArray(t.items)) t.items = [];
           if (!Array.isArray(t.held)) t.held = [];
           if (typeof t.money !== 'number') t.money = 0;
-          if (!t.stats) t.stats = { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 };
+          if (!t.stats) t.stats = { catches: 0, knockouts: 0, eliminations: 0, damage: 0, timeSurvived: 0 };
           this.dressTrainer(t);
         }
       },

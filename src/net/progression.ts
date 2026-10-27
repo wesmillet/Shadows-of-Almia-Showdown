@@ -35,7 +35,7 @@ export interface MatchFacts {
   outcome: 'win' | 'loss';
   /** Won as part of a squad. */
   squad: boolean;
-  stats: { catches: number; knockouts: number; damage: number; timeSurvived: number };
+  stats: { catches: number; knockouts: number; eliminations?: number; damage: number; timeSurvived: number };
   /** The party at the end. */
   party: Array<{ dex: string; level: number; shiny: boolean; alpha: boolean; legend: boolean; shadow: boolean }>;
 }
@@ -47,6 +47,7 @@ export function matchXp(f: MatchFacts): Array<{ what: string; xp: number }> {
   const beaten = Math.max(0, f.field - f.place);
   if (beaten) out.push({ what: `Outlasted ${beaten} trainer${beaten === 1 ? '' : 's'}`, xp: beaten * 12 });
   if (f.outcome === 'win') out.push({ what: f.squad ? 'Squad victory' : 'Victory', xp: 150 });
+  if (f.stats.eliminations) out.push({ what: `${f.stats.eliminations} elimination${f.stats.eliminations === 1 ? '' : 's'}`, xp: f.stats.eliminations * 25 });
   if (f.stats.knockouts) out.push({ what: `${f.stats.knockouts} knockout${f.stats.knockouts === 1 ? '' : 's'}`, xp: f.stats.knockouts * 10 });
   if (f.stats.catches) out.push({ what: `${f.stats.catches} catch${f.stats.catches === 1 ? '' : 'es'}`, xp: f.stats.catches * 15 });
   const dmg = Math.floor(f.stats.damage / 60);
@@ -65,7 +66,7 @@ export function matchXp(f: MatchFacts): Array<{ what: string; xp: number }> {
 /** What an achievement can look at: this match, and the player's totals after it. */
 export interface AchievementContext {
   match: MatchFacts | null;
-  life: { matches: number; wins: number; catches: number; knockouts: number; damage: number };
+  life: { matches: number; wins: number; catches: number; knockouts: number; eliminations?: number; damage: number };
   level: number;
   /** Ranked tier id this season (null before placement). */
   tier: string | null;

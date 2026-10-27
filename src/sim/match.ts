@@ -1551,7 +1551,7 @@ export class Match {
       id: nextId++, name, role, isPlayer, x, y, px: x, py: y, dir: 4 as Dir8, moving: false, walkPhase: 0,
       party: [], items: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null),
       held: new Array<InventorySlot | null>(CONFIG.items.inventorySize).fill(null), alive: true,
-      stats: { catches: 0, knockouts: 0, damage: 0, timeSurvived: 0 },
+      stats: { catches: 0, knockouts: 0, eliminations: 0, damage: 0, timeSurvived: 0 },
       ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0, money: SHOPS.startMoney,
     };
   }
@@ -2867,7 +2867,10 @@ export class Match {
         this.placeBall('cherish', [{ id: 'black-glasses', count: 1 }], ev.mon.x, ev.mon.y + 0.6, true);
         this.battle.events.push({ type: 'notice', text: 'Darkrai is down! It left a Cherish Ball behind', seconds: 3 });
       }
-      if (ev.type === 'faint' && ev.mon.owner) ev.mon.owner.lastKo = !ev.by ? 'other' : ev.by.wild && !ev.by.boss ? 'wild' : ev.by.owner ? 'trainer' : 'other';
+      if (ev.type === 'faint' && ev.mon.owner) {
+        ev.mon.owner.lastKo = !ev.by ? 'other' : ev.by.wild && !ev.by.boss ? 'wild' : ev.by.owner ? 'trainer' : 'other';
+        ev.mon.owner.lastKoBy = ev.by?.owner && ev.by.owner !== ev.mon.owner ? ev.by.owner : undefined;
+      }
       if (ev.type !== 'faint' || !ev.by || ev.by.boss) continue;
       const owner = ev.by.owner;
       if (owner) {
@@ -3969,7 +3972,11 @@ export class Match {
   }
 
   eliminate(t: Trainer): void {
+    if (!t.alive) return;
     t.alive = false;
+    // Credit the trainer whose Pokémon landed the last knockout.
+    const by = t.lastKo === 'trainer' ? t.lastKoBy : undefined;
+    if (by && by !== t) by.stats.eliminations = (by.stats.eliminations ?? 0) + 1;
     // The trainer's whole inventory drops as one Premier Ball.
     const bag = [...t.items, ...t.held].filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }));
     if (bag.length) this.placeBall('premier', bag, t.x + 0.8, t.y + 0.4);

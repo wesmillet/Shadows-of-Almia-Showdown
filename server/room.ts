@@ -92,7 +92,7 @@ export interface RoomResult {
   outcome: 'win' | 'loss';
   place: number;
   team?: number;
-  stats: { catches: number; knockouts: number; damage: number; timeSurvived: number };
+  stats: { catches: number; knockouts: number; eliminations?: number; damage: number; timeSurvived: number };
   /** The player's Pokémon at the end (what an extraction can keep). */
   party: PcFields[];
   /** Extraction Vouchers still in the bag (each is one more Pokémon to keep). */

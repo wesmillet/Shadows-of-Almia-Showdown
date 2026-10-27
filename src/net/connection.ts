@@ -33,7 +33,7 @@ export interface Me {
   google: boolean;
   user?: { id: number; username: string; role: string; google: boolean; password?: boolean };
   look?: string | null;
-  stats?: { matches: number; wins: number; catches: number; knockouts: number; damage: number; bestPlace: number | null };
+  stats?: { matches: number; wins: number; catches: number; knockouts: number; eliminations?: number; damage: number; bestPlace: number | null };
   progress?: { xp: number; level: number; into: number; next: number };
   title?: string | null;
   /** Titles earned (to wear one). */

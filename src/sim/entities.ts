@@ -155,6 +155,8 @@ export interface Mon {
 export interface TrainerStats {
   catches: number;
   knockouts: number;
+  /** Other trainers knocked out of the match by this trainer's Pokémon. */
+  eliminations?: number;
   damage: number;
   timeSurvived: number;
 }
@@ -190,6 +192,8 @@ export interface Trainer {
   stormT?: number;
   /** What knocked out the trainer's latest Pokémon: a wild one, a trainer's, or anything else. */
   lastKo?: 'wild' | 'trainer' | 'other';
+  /** The trainer whose Pokémon made that knockout (credited if it ends this trainer's match). */
+  lastKoBy?: Trainer;
   stats: TrainerStats;
   /** AI brain. */
   ai: TrainerAi;

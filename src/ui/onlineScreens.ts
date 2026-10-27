@@ -250,7 +250,7 @@ export class OnlineScreen implements Screen {
         h.fillRect(cx - bw / 2, card.y + 46 * s, (bw * pr.into) / pr.next, 4 * s);
       }
       const st = me.stats;
-      text(v, st ? `${st.wins} wins · ${st.matches} matches · ${st.catches} catches` : '', cx, card.y + 74 * s, 13, { align: 'center', color: INK.dim, shadow: false });
+      text(v, st ? `${st.wins} wins · ${st.eliminations ?? 0} eliminations · ${st.matches} matches · ${st.catches} catches` : '', cx, card.y + 74 * s, 13, { align: 'center', color: INK.dim, shadow: false });
       button(v, 'Sign out', r.signout.x, r.signout.y, r.signout.w, r.signout.h, over('signout'), '#f4e6c8');
     } else {
       text(v, this.net.hello?.name ?? 'Guest', cx, card.y + 38 * s, 22, { align: 'center', color: INK.text, shadow: false });

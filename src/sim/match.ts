@@ -232,7 +232,7 @@ export class Match {
     const g = this.ground;
     const cx = Math.floor((a.x0 + a.x1) / 2);
     let best: { x: number; y: number; d: number } | null = null;
-    for (let y = a.y1 + 5; y <= a.y1 + 12; y++) {
+    for (let y = a.y1 + 8; y <= a.y1 + 15; y++) {
       for (let x = cx - 8; x <= cx + 8; x++) {
         if (!g.reachable(x, y) || !g.walkable(x, y) || !g.walkable(x, y - 1)) continue;
         const d = Math.hypot(x - cx, (y - a.y1) * 1.5);

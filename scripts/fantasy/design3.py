@@ -237,11 +237,11 @@ ROADS = [
     # another way off the snow plateau: south-east down to the plain road
     ('1', [(118, 109), (122, 100), (122, 77)]),
     # to the castle: the gate yard's north gate, the south gate and the east postern
-    ('1', [(186, 115), (182, 128), (168, 142), (165, 153)]),
+    # (the castle paves its own approaches with the courtyard's slabs: build3.py)
+    ('1', [(186, 115), (182, 128), (168, 142), (165, 155)]),
     ('1', [(158, 134), (168, 142)]),
-    ('2', [(165, 151), (165, 164)]), ('2', [(199, 182), (199, 196)]),
-    ('2', [(219, 177), (230, 177)]),
-    ('1', [(230, 177), (243, 168), (252, 150), (262, 128)]),
+    ('1', [(229, 177), (243, 168), (252, 150), (262, 128)]),
+    ('1', [(199, 196), (199, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
 ]
 
 

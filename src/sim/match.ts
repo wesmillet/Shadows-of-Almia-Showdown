@@ -230,7 +230,8 @@ export class Match {
     const cost = (CONFIG.outpost as { centerCost?: number }).centerCost ?? 0;
     if (!a || cost <= 0) return;
     const g = this.ground;
-    const cx = Math.floor((a.x0 + a.x1) / 2);
+    // beside the south road (which runs down the arena's axis), not on it
+    const cx = Math.floor((a.x0 + a.x1) / 2) + 6;
     let best: { x: number; y: number; d: number } | null = null;
     for (let y = a.y1 + 8; y <= a.y1 + 15; y++) {
       for (let x = cx - 8; x <= cx + 8; x++) {

@@ -196,7 +196,7 @@ def main():
     court = ndimage.binary_erosion(d.castle, iterations=D.CASTLE_WALL)
     # the courtyard: slab paving round a battlefield of lighter slabs
     pav = np.zeros(W.shape, np.int32)
-    bx0, bx1, by0, by1 = 186, 211, 166, 179
+    bx0, bx1, by0, by1 = 186, 212, 166, 178    # centred on the south gate (x 199) and the east gate (y 172)
     # A planned court: lawn, with an oval plaza round the battlefield (light slabs inside a ring of
     # slabs), and walks of one width (the gates' passages, 7 tiles) running straight from every
     # gate and from the keep's door into the ring. The west wing, the gate yard, is all stone.
@@ -214,14 +214,9 @@ def main():
     walks[int(ocy):D.GATES['S'][1] + 6, kx - wh:kx + wh + 1] = True     # plaza -> south gate
     ex, ey, _ = D.GATES['E']
     walks[ey - wh:ey + wh + 1, int(ocx):ex + 5] = True                  # plaza -> east postern
-    wx, wy, _ = D.GATES['Wi']
-    walks[wy - wh:wy + wh + 1, wx - 4:int(ocx)] = True                  # inner gate -> plaza
-    # the fountain garden joins the east walk
-    fx_, fy_ = 225, 156
-    walks[fy_ + 1:fy_ + 6, 209:fx_] = True                # west out of the bastion to the plaza
+    walks[ey - wh:ey + wh + 1, 176:int(ocx)] = True                      # west wing -> plaza (same axis)
     # outside every gate, the same slabs run out to meet the road (no brick stubs of another stone)
     for (gx, gy, horiz) in D.GATES.values():
-        if gx == wx and gy == wy: continue
         if horiz:
             out_up = not d.castle[gy - 4, gx]          # the gap opens to the north (gate yard) or south
             if out_up: walks[gy - 6:gy + 1, gx - wh:gx + wh + 1] = True
@@ -235,23 +230,26 @@ def main():
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
         if horiz: pav[gy - 1:gy + 6, gx - wh:gx + wh + 1] = F.color('Slab Floor')
-        else: pav[gy - half - castle.FACE_ROWS - 1:gy + half + 2, gx - 4:gx + 5] = F.color('Slab Floor')
+        else: pav[gy - wh:gy + wh + 1, gx - 4:gx + 5] = F.color('Slab Floor')   # side gates: the walk's own width
     # the crystal's arena in the middle of the plain: the last two trainers fight it out here,
     # a paved field with the crystal in its centre circle, on a terrace of darker slabs
     cx, cy = D.CRYSTAL
     fx0, fy0, fx1, fy1 = D.FINAL_ARENA
     # an oval: a ring of slabs round a light oval that holds the whole battlefield (its pillars
     # stand on the light oval's rim)
-    terrace = (D.ellipse(cx + 0.5, cy + 0.5, 17.5, 12) < 1)
+    terrace = (D.ellipse(cx, cy, 17.5, 12) < 1)             # centred on the crystal's tile
     pav[terrace] = F.color('Slab Floor')
-    pav[D.ellipse(cx + 0.5, cy + 0.5, 14.5, 9.5) < 1] = F.color('Mid Slab Floor')
+    pav[D.ellipse(cx, cy, 14.5, 9.5) < 1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
-    # one fountain on a paved pad east of the battlefield
-    fountains = [(225, 156)]   # in the garden bastion
-    for (fx, fy) in fountains:
-        pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
+    # one fountain on the lawn of the garden bastion (no paving round it)
+    fountains = [(225, 151)]   # centred in the bastion's garden
+    # under the walls' walkway edges, stone where the court beside them is paved (their edge pixels
+    # are see-through, and grass showed through in a thin line)
+    under = W & ndimage.binary_dilation(pav > 0, structure=np.ones((3, 3)))
+    pav_wall = np.where(under, F.color('Slab Floor'), 0)
     pav[W] = 0
-    stack.append(('Courtyard', F.paint(pav)))
+    pav_draw = np.where(under, pav_wall, pav)
+    stack.append(('Courtyard', F.paint(pav_draw)))
     # for scripts/mapgen/pave_smooth.py: the paving per tile (0 none, 1 slab, 2 light slab) and
     # where it may be reshaped (court and approaches, not the walls, faces or fountain)
     _fixed = W.copy()
@@ -259,7 +257,7 @@ def main():
     os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out'), exist_ok=True)
     # true ovals (tile units: cx, cy, rx, ry, class) that the stepped tiles stand for
     _ovals = np.array([(ocx + 0.5, ocy + 0.5, 19, 11, 1), (ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2),
-                       (cx + 1.0, cy + 1.0, 17.5, 12, 1), (cx + 1.0, cy + 1.0, 14.5, 9.5, 2)], np.float32)
+                       (cx + 0.5, cy + 0.5, 17.5, 12, 1), (cx + 0.5, cy + 0.5, 14.5, 9.5, 2)], np.float32)
     np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=(walks & d.land) | west_wing)
     fountain_layer = np.full(W.shape, None, dtype=object)
     for (fx, fy) in fountains:
@@ -281,6 +279,7 @@ def main():
     occupied |= ndimage.binary_dilation(d.paths > 0, iterations=1)
     occupied |= ndimage.binary_dilation(stair_cells, iterations=2)
     occupied |= town_area
+    occupied |= ndimage.binary_dilation(d.castle, iterations=8)    # the castle stands in its own clearing
     # keep the ground before every castle gate clear (no trees or cacti crowding an entrance)
     for (gx, gy, horiz) in D.GATES.values():
         r0, r1 = (gy - 9, gy + 10) if horiz else (gy - 9, gy + 6)
@@ -292,8 +291,14 @@ def main():
     # the keep in the castle's north wing, its door on the forecourt
     img, foot = stamps.stamp('keep_red')
     kh, kw = img.shape[0] // 16, img.shape[1] // 16
-    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2, 151   # on the spur's north wall
+    kx0, ky1 = D.CASTLE_CENTER[0] - kw // 2 + 1, 151   # on the spur's north wall, its door on the walk's axis (x 199)
     objects.append({'img': img, 'name': 'keep', 'x': kx0 * 16, 'y': ky1 * 16 + 16})
+    # a stone Celebi on a plinth in the middle of the fountain's basin
+    import statue as _statue
+    st = _statue.statue('0251')
+    for (fx, fy) in fountains:
+        bcx, bcy = (fx + 2.9) * 16, (fy + 3.0) * 16 + 10      # the basin's centre (the stamp is 6x6 tiles)
+        objects.append({'img': st, 'name': 'statue_celebi', 'x': int(bcx - st.shape[1] / 2), 'y': int(bcy)})
     blocked_stamps[ky1 + 1 - kh:ky1 + 1, kx0:kx0 + kw] |= foot
     placer.free[ky1 + 1 - kh:ky1 + 3, kx0 - 1:kx0 + kw + 1] = False
     # towers on the four corners, halfway down the long sides, and either side of each gate.
@@ -324,17 +329,21 @@ def main():
             # a side gate: one tower, standing on the wall end's face just north of the gap (a
             # tower south of the gap would be drawn over the doorway, towers being tall)
             gate_spots += [(gx - 2, gy - half)]
-    # where two walls meet on the inside of a bend, a tower covers the join
-    for (y, x) in zip(*np.nonzero(~R)):
-        if 0 < y < R.shape[0] - 1 and 0 < x < R.shape[1] - 1:
-            if (R[y, x + 1] or R[y, x - 1]) and R[y + 1, x] and not R[y - 1, x]:
-                if R[y + 1, x - 1] and R[y + 1, x + 1] and (R[y, x + 1] != R[y, x - 1]):
-                    tx = x - 1 if R[y, x + 1] else x - tw + 2
-                    spots.append((tx, y + 1 + wl_ + castle.FACE_ROWS))
+    # Where two walls meet on the inside of a bend (a concave corner of the outline: three of the
+    # four cells round a lattice point are castle), a tower stands on the join, as on a real
+    # curtain wall; the wall tiles have no clean picture for that corner.
+    for Y in range(1, R.shape[0]):
+        for X in range(1, R.shape[1]):
+            q = R[Y - 1:Y + 1, X - 1:X + 1]
+            if q.sum() != 3: continue
+            oy, ox = np.argwhere(~q)[0]                 # the outside quadrant
+            tx = X - 1 if ox == 0 else X - tw + 1
+            yb = Y + wl_ + castle.FACE_ROWS if oy == 0 else Y + castle.FACE_ROWS
+            spots.insert(0, (tx, yb))
     # gate towers win over a corner tower crowding them; no two towers on top of each other
     kept = list(gate_spots)
     for sp in spots:
-        if all(abs(sp[0] - k[0]) >= tw or abs(sp[1] - k[1]) >= 10 for k in kept): kept.append(sp)
+        if all(abs(sp[0] - k[0]) >= tw or abs(sp[1] - k[1]) >= 9 for k in kept): kept.append(sp)
     spots = kept
     for (tx, yb) in spots:
         objects.append({'img': timg, 'name': 'tower_cone', 'x': tx * 16, 'y': yb * 16})

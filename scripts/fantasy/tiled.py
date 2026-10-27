@@ -99,9 +99,11 @@ def apply_flips(a, gid):
 
 class Map:
     """A sample map: layers in draw order (tile layers and object groups)."""
-    def __init__(self, name):
+    def __init__(self, name, path=None):
+        """A map by sample name (from the pack's Tilemaps folder) or by `path` to any .tmx."""
         self.name = name
-        r = ET.parse(os.path.join(TMX_DIR, name + '.tmx')).getroot()
+        self.path = path or os.path.join(TMX_DIR, name + '.tmx')
+        r = ET.parse(self.path).getroot()
         self.w = int(r.get('width')); self.h = int(r.get('height'))
         self.sets = []
         for t in r.findall('tileset'):
@@ -109,7 +111,8 @@ class Map:
             self.sets.append((int(t.get('firstgid')), src))
         self.sets.sort()
         self.layers = []
-        self.meta = {}      # layer name -> {'visible': bool, 'opacity': float}
+        self.meta = {}      # layer name -> {'visible': bool, 'opacity': float, 'props': {...}}
+        self.shapes = {}    # object layer name -> every object (points, rectangles, ellipses, tiles), see _object
         def walk(node, prefix='', vis=True, op=1.0):
             for c in node:
                 v = vis and c.get('visible', '1') != '0'
@@ -119,16 +122,19 @@ class Map:
                     vals = [int(x) for x in d.text.replace('\n', '').split(',') if x.strip()]
                     name = prefix + c.get('name')
                     self.layers.append(('tiles', name, np.array(vals, dtype=np.uint32).reshape(self.h, self.w)))
-                    self.meta[name] = {'visible': v, 'opacity': o}
+                    self.meta[name] = {'visible': v, 'opacity': o, 'props': properties(c)}
                 elif c.tag == 'objectgroup':
                     objs = []
+                    allobjs = []
                     for ob in c.findall('object'):
+                        allobjs.append(_object(ob))
                         if ob.get('gid') and ob.get('visible', '1') != '0':
                             objs.append({'gid': int(ob.get('gid')), 'x': float(ob.get('x')), 'y': float(ob.get('y')),
                                          'w': float(ob.get('width', 0)), 'h': float(ob.get('height', 0))})
                     name = prefix + c.get('name')
                     self.layers.append(('objects', name, objs))
-                    self.meta[name] = {'visible': v, 'opacity': o}
+                    self.meta[name] = {'visible': v, 'opacity': o, 'props': properties(c)}
+                    self.shapes[name] = allobjs
                 elif c.tag == 'group':
                     walk(c, prefix + c.get('name') + '/', v, o)
         walk(r)
@@ -174,6 +180,33 @@ class Map:
                         a = np.array(Image.fromarray(a).resize((int(o['w']), int(o['h'])), Image.NEAREST))
                     blit(img, a, int(round(o['x'])), int(round(o['y'] - a.shape[0])), op)
         return Image.fromarray(img.clip(0, 255).astype(np.uint8))
+
+
+def properties(node):
+    """A Tiled element's custom properties as a dict (bool/int/float parsed, the rest strings)."""
+    out = {}
+    ps = node.find('properties')
+    if ps is None: return out
+    for p in ps.findall('property'):
+        v = p.get('value') if p.get('value') is not None else (p.text or '')
+        t = p.get('type', 'string')
+        if t == 'bool': v = v == 'true'
+        elif t == 'int': v = int(v)
+        elif t == 'float': v = float(v)
+        out[p.get('name')] = v
+    return out
+
+
+def _object(ob):
+    """One object of an object layer: {name, cls, kind: point|ellipse|rect|tile|polygon, x, y, w, h, gid, props}."""
+    kind = 'rect'
+    if ob.find('point') is not None: kind = 'point'
+    elif ob.find('ellipse') is not None: kind = 'ellipse'
+    elif ob.find('polygon') is not None: kind = 'polygon'
+    elif ob.get('gid'): kind = 'tile'
+    return {'name': ob.get('name') or '', 'cls': ob.get('class') or ob.get('type') or '', 'kind': kind,
+            'x': float(ob.get('x', 0)), 'y': float(ob.get('y', 0)), 'w': float(ob.get('width', 0)), 'h': float(ob.get('height', 0)),
+            'gid': int(ob.get('gid', 0)), 'visible': ob.get('visible', '1') != '0', 'props': properties(ob)}
 
 
 def blit(dst, a, x, y, opacity=1.0):

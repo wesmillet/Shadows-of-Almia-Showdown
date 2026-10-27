@@ -110,7 +110,8 @@ def woods(d, placer, open_mask, seed=11):
         pool = trees
         if b == AUTUMN and rng.random() < 0.12: pool = CHERRY
         k = rng.choice(pool)
-        if placer.put(k, x, y, clear=1 if forest_here else 2): n += 1
+        # desert trees (bare trees, palms, cacti) have no canopy to cast a round shadow
+        if placer.put(k, x, y, clear=1 if forest_here else 2, shadow=b != DESERT): n += 1
     return n
 
 

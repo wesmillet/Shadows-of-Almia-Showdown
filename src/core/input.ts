@@ -1,4 +1,6 @@
 /** Keyboard and pointer state, polled by the fixed-step simulation. */
+import { logicalKey } from '../settings';
+
 export class Input {
   private held = new Set<string>();
   private pressedThisStep = new Set<string>();
@@ -11,6 +13,9 @@ export class Input {
   rightDown = false;
   private clicks: Array<{ x: number; y: number; button: number }> = [];
 
+  /** Set by the Options screen while it waits for a key to bind. */
+  static capture: ((code: string) => void) | null = null;
+
   /** True for a text box the player is typing in. */
   static typing(target: EventTarget | null): boolean {
     const el = target as HTMLElement | null;
@@ -22,13 +27,24 @@ export class Input {
       if (e.repeat) return;
       // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys.
       if (Input.typing(e.target)) return;
-      this.held.add(e.code);
-      this.pressedThisStep.add(e.code);
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
+      // While the Options screen listens for a new key, the game sees nothing.
+      if (Input.capture) {
+        e.preventDefault();
+        Input.capture(e.code);
+        return;
+      }
+      // Rebound keys (Options) arrive as the default code the game listens for.
+      const code = logicalKey(e.code);
+      if (!code) return;
+      this.held.add(code);
+      this.pressedThisStep.add(code);
     });
     window.addEventListener('keyup', (e) => {
-      this.held.delete(e.code);
-      this.releasedThisStep.add(e.code);
+      const code = logicalKey(e.code);
+      if (!code) return;
+      this.held.delete(code);
+      this.releasedThisStep.add(code);
     });
     window.addEventListener('blur', () => this.held.clear());
     canvas.addEventListener('pointermove', (e) => this.updateMouse(e));

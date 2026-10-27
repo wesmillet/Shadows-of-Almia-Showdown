@@ -7,6 +7,7 @@
  * own scale (the camera is zoomed in) and depth-sorted with the trees.
  */
 import { music } from '../audio/music';
+import { openOptions } from './optionsMenu';
 import { loadPc } from '../pc';
 import type { Input } from '../core/input';
 import { dirFromVector, type Dir8 } from '../core/math';
@@ -368,10 +369,10 @@ export class TitleScreen implements Screen {
   private rowRect(i: number): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    const w = Math.round(168 * s);
+    const w = Math.round(152 * s);
     const h = Math.round(52 * s);
     const gap = Math.round(12 * s);
-    const total = 3 * w + 2 * gap;
+    const total = 4 * w + 3 * gap;
     return { x: Math.round(v.width / 2 - total / 2 + i * (w + gap)), y: Math.round(v.height - 112 * s), w, h };
   }
 
@@ -387,8 +388,20 @@ export class TitleScreen implements Screen {
     return this.rowRect(2);
   }
 
+  private optionsRect(): { x: number; y: number; w: number; h: number } {
+    return this.rowRect(3);
+  }
+
+  /** The Options dialog is up: the title ignores the keyboard and clicks under it. */
+  private optionsOpen = false;
+
   step(dt: number, input: Input): void {
     this.t += dt;
+    if (this.optionsOpen) {
+      input.takeClicks();
+      this.stepScene(dt);
+      return;
+    }
     music.want('darkrai');
     if (input.pressed('KeyN')) music.toggleMute();
     this.stepScene(dt);
@@ -405,7 +418,12 @@ export class TitleScreen implements Screen {
         else if (hit(c.x, c.y, p.x, p.y, p.w, p.h)) this.leave(this.onPc);
         else {
           const ch = this.characterRect();
+          const op = this.optionsRect();
           if (hit(c.x, c.y, ch.x, ch.y, ch.w, ch.h)) this.leave(this.onCharacter);
+          else if (hit(c.x, c.y, op.x, op.y, op.w, op.h)) {
+            this.optionsOpen = true;
+            void openOptions().then(() => (this.optionsOpen = false));
+          }
         }
       }
     }
@@ -1028,9 +1046,9 @@ export class TitleScreen implements Screen {
       ['Move Gallery (M)', this.galleryRect()],
       [`My PC (P) · ${this.pcCount}`, this.pcRect()],
       ['Trainer (C)', this.characterRect()],
+      ['Options', this.optionsRect()],
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
-    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler · N music', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     const sm = strip(v, stamp, 0, -9999, 11);

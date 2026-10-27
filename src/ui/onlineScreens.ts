@@ -9,8 +9,9 @@ import type { Connection } from '../net/connection';
 import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
+import { openOptions } from './optionsMenu';
 import { ASSET_ROOT } from '../sprites/assets';
-import { backdrop, button, heading, hit, INK, panel, text, uiFont, wrapText, type GameContext, type Screen } from './screens';
+import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
@@ -27,7 +28,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'back' | 'me' | 'privacy';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'options' | 'back' | 'me' | 'privacy';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -36,102 +37,6 @@ function loadHubLogo(): void {
   const im = new Image();
   im.src = `${ASSET_ROOT}ui/logo.png`;
   im.onload = () => (hubLogo = im);
-}
-
-const GOLD = '#f2c24a';
-const EMBER = '#ff8a3d';
-const VIOLET = '#9b7bff';
-
-/** A rounded rectangle path. */
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-/** Text drawn straight on the HUD in the game font. */
-function label(ctx: CanvasRenderingContext2D, v: { baseScale: number }, s: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = 'center', maxW?: number): void {
-  ctx.save();
-  let px = size * v.baseScale;
-  ctx.font = uiFont(px);
-  if (maxW) while (ctx.measureText(s).width > maxW && px > 8) ctx.font = uiFont((px -= 1));
-  ctx.textAlign = align;
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(6,2,16,0.75)';
-  ctx.fillText(s, x + v.baseScale * 1.5, y + v.baseScale * 1.5);
-  ctx.fillStyle = color;
-  ctx.fillText(s, x, y);
-  ctx.restore();
-}
-
-/**
- * A hub button. `primary` glows ember-gold (the one big action); `ghost` is a quiet outline;
- * `on` is a selected segment; `off` is disabled.
- */
-function hubButton(ctx: CanvasRenderingContext2D, v: { baseScale: number }, r: Rect, text_: string, kind: 'primary' | 'ghost' | 'on' | 'off', hover: boolean, t: number, size = 14): void {
-  const s = v.baseScale;
-  const lift = hover && kind !== 'off' ? -2 * s : 0;
-  const x = r.x;
-  const y = r.y + lift;
-  const rad = Math.min(r.h / 2, 12 * s);
-  ctx.save();
-  if (kind === 'primary') {
-    const pulse = 0.55 + 0.25 * Math.sin(t * 2.4);
-    ctx.shadowColor = `rgba(255,140,60,${hover ? 0.9 : pulse})`;
-    ctx.shadowBlur = (hover ? 30 : 22) * s;
-    const g = ctx.createLinearGradient(0, y, 0, y + r.h);
-    g.addColorStop(0, hover ? '#ffd27a' : '#ffc45c');
-    g.addColorStop(0.55, '#ff8a3d');
-    g.addColorStop(1, '#d9531f');
-    ctx.fillStyle = g;
-    rr(ctx, x, y, r.w, r.h, rad);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255,240,200,0.85)';
-    ctx.lineWidth = 2 * s;
-    rr(ctx, x + 1 * s, y + 1 * s, r.w - 2 * s, r.h - 2 * s, rad);
-    ctx.stroke();
-    // a sheen sweeping across now and then
-    const k = (t * 0.35) % 1.6;
-    if (k < 1) {
-      ctx.save();
-      rr(ctx, x, y, r.w, r.h, rad);
-      ctx.clip();
-      const sx = x - r.w * 0.3 + k * r.w * 1.6;
-      const sh = ctx.createLinearGradient(sx - 40 * s, 0, sx + 40 * s, 0);
-      sh.addColorStop(0, 'rgba(255,255,255,0)');
-      sh.addColorStop(0.5, 'rgba(255,255,255,0.35)');
-      sh.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = sh;
-      ctx.fillRect(x, y, r.w, r.h);
-      ctx.restore();
-    }
-    ctx.restore();
-    label(ctx, v, text_, x + r.w / 2, y + r.h / 2 + 1 * s, size, '#2a0f04', 'center', r.w - 24 * s);
-    return;
-  }
-  if (kind === 'on') {
-    const g = ctx.createLinearGradient(0, y, 0, y + r.h);
-    g.addColorStop(0, '#8f6cff');
-    g.addColorStop(1, '#5a3cc8');
-    ctx.fillStyle = g;
-  } else if (kind === 'off') {
-    ctx.fillStyle = 'rgba(70,64,96,0.6)';
-  } else {
-    ctx.fillStyle = hover ? 'rgba(155,123,255,0.22)' : 'rgba(30,22,58,0.7)';
-  }
-  rr(ctx, x, y, r.w, r.h, rad);
-  ctx.fill();
-  ctx.strokeStyle = kind === 'on' ? 'rgba(220,206,255,0.9)' : kind === 'off' ? 'rgba(120,112,150,0.6)' : hover ? 'rgba(220,206,255,0.9)' : 'rgba(155,123,255,0.55)';
-  ctx.lineWidth = 1.5 * s;
-  rr(ctx, x + 0.75 * s, y + 0.75 * s, r.w - 1.5 * s, r.h - 1.5 * s, rad);
-  ctx.stroke();
-  ctx.restore();
-  label(ctx, v, text_, x + r.w / 2, y + r.h / 2 + 1 * s, size, kind === 'off' ? '#8c85a8' : '#f4eeff', 'center', r.w - 16 * s);
 }
 
 /**
@@ -145,7 +50,6 @@ export class OnlineScreen implements Screen {
   private message = '';
   /** When a dialog or text box last had the keyboard. */
   private dialogAt = -1;
-  private readonly stars: Array<{ x: number; y: number; r: number; p: number }> = [];
 
   constructor(
     private readonly ctx: GameContext,
@@ -154,7 +58,6 @@ export class OnlineScreen implements Screen {
     message = '',
   ) {
     this.message = message;
-    for (let i = 0; i < 90; i++) this.stars.push({ x: Math.random(), y: Math.random() * 0.75, r: Math.random() * 1.4 + 0.4, p: Math.random() * 10 });
   }
 
   enter(): void {
@@ -174,11 +77,11 @@ export class OnlineScreen implements Screen {
   private layout(): { cx: number; w: number; logoY: number; logoH: number; cardY: number; cardH: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    const w = Math.min(600 * s, v.width - 32 * s);
-    const logoH = Math.min(v.height * 0.2, 150 * s);
-    const logoY = 26 * s;
-    const cardY = logoY + logoH + 18 * s;
-    const cardH = 236 * s;
+    const w = Math.min(520 * s, v.width - 32 * s);
+    const logoH = Math.min(v.height * 0.22, 160 * s);
+    const logoY = 24 * s;
+    const cardY = logoY + logoH + 16 * s;
+    const cardH = 150 * s;
     return { cx: v.width / 2, w, logoY, logoH, cardY, cardH };
   }
 
@@ -187,18 +90,16 @@ export class OnlineScreen implements Screen {
     const s = v.baseScale;
     const L = this.layout();
     const x0 = L.cx - L.w / 2;
-    const pad = 24 * s;
-    const inner = L.w - 2 * pad;
     const y = L.cardY;
-    const findY = y + 128 * s;
     const signedIn = this.net.me.signedIn;
     return {
-      me: { x: x0 + pad, y: y + 18 * s, w: inner, h: 84 * s },
-      signin: { x: x0 + L.w - pad - 250 * s, y: y + 40 * s, w: 118 * s, h: 38 * s },
-      register: { x: x0 + L.w - pad - 124 * s, y: y + 40 * s, w: 124 * s, h: 38 * s },
-      signout: signedIn ? { x: x0 + L.w - pad - 96 * s, y: y + 22 * s, w: 96 * s, h: 30 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      find: { x: x0 + pad, y: findY, w: inner, h: 76 * s },
-      back: { x: 20 * s, y: 20 * s, w: 110 * s, h: 40 * s },
+      me: { x: x0, y, w: L.w, h: L.cardH },
+      signin: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx - 228 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
+      register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
+      signout: signedIn ? { x: L.cx - 80 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
+      options: { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
     };
   }
@@ -207,7 +108,7 @@ export class OnlineScreen implements Screen {
   private findState(): { label: string; ok: boolean; why?: string } {
     const net = this.net;
     if (!net.connected) return { label: 'Connecting...', ok: false };
-    return { label: 'FIND A MATCH', ok: true };
+    return { label: 'Find a Match (Space)', ok: true };
   }
 
   private find(): void {
@@ -235,6 +136,11 @@ export class OnlineScreen implements Screen {
     for (const c of input.takeClicks()) {
       if (on(c, 'find')) return this.find();
       if (on(c, 'back')) return this.actions.back();
+      if (on(c, 'options')) {
+        this.busy = true;
+        void openOptions().then(() => (this.busy = false));
+        return;
+      }
       if (on(c, 'privacy')) window.open(`${this.net.base}/privacy`, '_blank', 'noopener');
       else if (!signedIn && on(c, 'signin')) void this.account('signin');
       else if (!signedIn && on(c, 'register')) void this.account('register');
@@ -267,153 +173,71 @@ export class OnlineScreen implements Screen {
     this.chat = new ChatPanel(this.net);
   }
 
-  /** Night sky: a deep gradient, two slow violet nebulae, twinkling stars, a horizon glow. */
-  private drawSky(): void {
-    const v = this.ctx.view;
-    const h = v.hud;
-    const W = v.width;
-    const H = v.height;
-    const g = h.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#0b0718');
-    g.addColorStop(0.55, '#1a1036');
-    g.addColorStop(1, '#2a1238');
-    h.fillStyle = g;
-    h.fillRect(0, 0, W, H);
-    const neb = (cx: number, cy: number, r: number, col: string) => {
-      const n = h.createRadialGradient(cx, cy, 0, cx, cy, r);
-      n.addColorStop(0, col);
-      n.addColorStop(1, 'rgba(0,0,0,0)');
-      h.fillStyle = n;
-      h.fillRect(cx - r, cy - r, r * 2, r * 2);
-    };
-    neb(W * (0.22 + 0.03 * Math.sin(this.t * 0.07)), H * 0.3, W * 0.42, 'rgba(120,70,220,0.22)');
-    neb(W * (0.8 + 0.03 * Math.cos(this.t * 0.05)), H * 0.62, W * 0.38, 'rgba(60,110,230,0.16)');
-    neb(W * 0.5, H * 1.05, W * 0.6, 'rgba(255,120,60,0.18)');
-    for (const st of this.stars) {
-      const a = 0.35 + 0.45 * Math.sin(this.t * 1.6 + st.p);
-      h.fillStyle = `rgba(230,220,255,${a})`;
-      h.fillRect(st.x * W, st.y * H, st.r * v.baseScale, st.r * v.baseScale);
-    }
-  }
-
   render(): void {
     const v = this.ctx.view;
     const s = v.baseScale;
     const h = v.hud;
-    // The world layers stay dark under the hub.
-    v.ctx.fillStyle = '#0b0718';
-    v.ctx.fillRect(0, 0, v.width, v.height);
-    h.clearRect(0, 0, v.width, v.height);
-    this.drawSky();
+    backdrop(v);
     const L = this.layout();
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const r = this.rects();
     const over = (k: HubButton) => hit(mx, my, r[k].x, r[k].y, r[k].w, r[k].h);
-    // The logo.
+    // The game's logo, as on the title.
     if (hubLogo) {
-      const k = Math.min(L.w * 1.1 / hubLogo.width, L.logoH / hubLogo.height);
+      const k = Math.min((L.w * 1.15) / hubLogo.width, L.logoH / hubLogo.height);
       const lw = hubLogo.width * k;
       const lh = hubLogo.height * k;
       h.save();
       h.imageSmoothingEnabled = true;
       h.imageSmoothingQuality = 'high';
-      h.shadowColor = `rgba(150,90,255,${0.45 + 0.2 * Math.sin(this.t * 1.5)})`;
-      h.shadowBlur = 26 * s;
-      h.drawImage(hubLogo, L.cx - lw / 2, L.logoY + (L.logoH - lh) / 2 + Math.sin(this.t * 1.1) * 2 * s, lw, lh);
+      h.drawImage(hubLogo, L.cx - lw / 2, L.logoY + (L.logoH - lh) / 2, lw, lh);
       h.restore();
-    } else label(h, v, 'SHADOWS OF ALMIA SHOWDOWN', L.cx, L.logoY + L.logoH / 2, 28, GOLD);
-    // Events on now, as a ribbon under the logo.
+    } else heading(v, 'Play Online', null, L.logoY + L.logoH / 2);
     const ev = this.net.events;
     if (ev.length) {
       const left = (t: number) => {
         const m = Math.max(0, Math.round((t - Date.now()) / 60000));
         return m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
       };
-      label(h, v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 8 * s, 12, GOLD, 'center', L.w);
+      text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
     }
-    // The card: dark glass with a violet rim.
-    const x0 = L.cx - L.w / 2;
-    h.save();
-    h.shadowColor = 'rgba(0,0,0,0.6)';
-    h.shadowBlur = 30 * s;
-    const cg = h.createLinearGradient(0, L.cardY, 0, L.cardY + L.cardH);
-    cg.addColorStop(0, 'rgba(34,24,66,0.92)');
-    cg.addColorStop(1, 'rgba(18,12,38,0.94)');
-    h.fillStyle = cg;
-    rr(h, x0, L.cardY, L.w, L.cardH, 20 * s);
-    h.fill();
-    h.restore();
-    h.save();
-    h.strokeStyle = 'rgba(155,123,255,0.55)';
-    h.lineWidth = 2 * s;
-    rr(h, x0 + 1 * s, L.cardY + 1 * s, L.w - 2 * s, L.cardH - 2 * s, 20 * s);
-    h.stroke();
-    h.restore();
-    // Trainer card.
+    // Your trainer card.
     const me = this.net.me;
-    const signedIn = !!(me.signedIn && me.user);
-    const name = signedIn ? (me.user as { username: string }).username : this.net.hello?.name ?? 'Guest';
-    const av = { x: r.me.x + 36 * s, y: r.me.y + 42 * s, r: 30 * s };
-    h.save();
-    const ag = h.createLinearGradient(av.x - av.r, av.y - av.r, av.x + av.r, av.y + av.r);
-    ag.addColorStop(0, VIOLET);
-    ag.addColorStop(1, EMBER);
-    h.fillStyle = ag;
-    h.beginPath();
-    h.arc(av.x, av.y, av.r, 0, Math.PI * 2);
-    h.fill();
-    h.fillStyle = '#1a1036';
-    h.beginPath();
-    h.arc(av.x, av.y, av.r - 3 * s, 0, Math.PI * 2);
-    h.fill();
-    h.restore();
-    label(h, v, name.slice(0, 1).toUpperCase(), av.x, av.y + 1 * s, 26, '#f4eeff');
-    const tx = av.x + av.r + 16 * s;
-    const textW = (signedIn ? r.signout.x : r.signin.x) - tx - 12 * s;
-    const pr = me.progress;
-    label(h, v, name, tx, r.me.y + 22 * s, 20, '#fff3d6', 'left', textW);
-    if (signedIn) {
-      if (me.title) label(h, v, me.title, tx, r.me.y + 44 * s, 11, GOLD, 'left', textW);
-      if (pr) {
-        const bw = Math.min(220 * s, textW);
-        const by = r.me.y + 58 * s;
-        h.fillStyle = 'rgba(255,255,255,0.1)';
-        rr(h, tx, by, bw, 6 * s, 3 * s);
-        h.fill();
-        h.fillStyle = GOLD;
-        rr(h, tx, by, Math.max(6 * s, (bw * (pr.next ? pr.into / pr.next : 1))), 6 * s, 3 * s);
-        h.fill();
-        label(h, v, `Lv ${pr.level}`, tx + bw + 10 * s, by + 3 * s, 11, GOLD, 'left');
+    const card = r.me;
+    panel(v, card.x, card.y, card.w, card.h, 18, 'rgba(18,14,34,0.9)');
+    const cx = L.cx;
+    if (me.signedIn && me.user) {
+      const pr = me.progress;
+      text(v, `${me.user.username}${pr ? `  ·  Lv ${pr.level}` : ''}`, cx, card.y + 36 * s, 22, { align: 'center', color: INK.text, shadow: false });
+      if (me.title) text(v, me.title, cx, card.y + 16 * s, 11, { align: 'center', color: INK.accent, shadow: false });
+      if (pr && pr.next) {
+        const bw = 220 * s;
+        h.fillStyle = 'rgba(74,52,36,0.25)';
+        h.fillRect(cx - bw / 2, card.y + 46 * s, bw, 4 * s);
+        h.fillStyle = '#f2c24a';
+        h.fillRect(cx - bw / 2, card.y + 46 * s, (bw * pr.into) / pr.next, 4 * s);
       }
       const st = me.stats;
-      if (st) label(h, v, `${st.wins} wins · ${st.matches} matches · ${st.catches} catches`, tx, r.me.y + 78 * s, 11, '#b9aee0', 'left', textW + 120 * s);
-      hubButton(h, v, r.signout, 'Sign out', 'ghost', over('signout'), this.t, 11);
+      text(v, st ? `${st.wins} wins · ${st.matches} matches · ${st.catches} catches` : '', cx, card.y + 74 * s, 13, { align: 'center', color: INK.dim, shadow: false });
+      button(v, 'Sign out', r.signout.x, r.signout.y, r.signout.w, r.signout.h, over('signout'), '#f4e6c8');
     } else {
-      label(h, v, 'Playing as a guest', tx, r.me.y + 46 * s, 12, '#b9aee0', 'left', textW);
-      label(h, v, 'Sign in to keep the Pokémon you win', tx, r.me.y + 66 * s, 10, '#8f84b8', 'left', textW);
-      hubButton(h, v, r.signin, 'Sign in', 'ghost', over('signin'), this.t, 12);
-      hubButton(h, v, r.register, 'Create account', 'on', over('register'), this.t, 12);
+      text(v, this.net.hello?.name ?? 'Guest', cx, card.y + 38 * s, 22, { align: 'center', color: INK.text, shadow: false });
+      wrapText(v, 'Playing as a guest: sign in to keep the Pokémon you win.', cx, card.y + 64 * s, 12, card.w - 40 * s, 16 * s, 2, { align: 'center', color: INK.dim, shadow: false });
+      button(v, 'Sign in', r.signin.x, r.signin.y, r.signin.w, r.signin.h, over('signin'), '#f4e6c8');
+      button(v, 'Create account', r.register.x, r.register.y, r.register.w, r.register.h, over('register'), '#f4e6c8');
     }
-    // Divider.
-    h.fillStyle = 'rgba(155,123,255,0.25)';
-    h.fillRect(x0 + 24 * s, r.find.y - 18 * s, L.w - 48 * s, 1.5 * s);
-    // Find a Match.
+    // One way in: everyone fills the same matches.
     const f = this.findState();
-    hubButton(h, v, r.find, f.label, f.ok ? 'primary' : 'off', f.ok && over('find'), this.t, 20);
-    label(h, v, 'Eight trainers · one island · one winner · empty seats filled by bots', L.cx, r.find.y + r.find.h + 14 * s, 10, '#a99bd6', 'center', L.w - 48 * s);
-    // Status under the card: connection and ping, then any message.
-    const sy = L.cardY + L.cardH + 20 * s;
-    const live = this.net.connected;
-    h.fillStyle = live ? '#5dff9b' : '#ffcc55';
-    h.beginPath();
-    h.arc(L.cx - 70 * s, sy, 4 * s * (live ? 1 + 0.15 * Math.sin(this.t * 4) : 1), 0, Math.PI * 2);
-    h.fill();
-    label(h, v, live ? `Connected${this.net.ping ? ` · ${this.net.ping} ms` : ''}` : 'Connecting...', L.cx - 58 * s, sy, 11, live ? '#c9ffe0' : '#ffe2a0', 'left');
-    if (this.message) label(h, v, this.message, L.cx, sy + 24 * s, 12, '#fff3d6', 'center', v.width - 60 * s);
-    if (this.net.hello?.server === 'demo') label(h, v, 'DEMO SERVER · progress here is separate', L.cx, sy + 44 * s, 10, '#ff9a9a');
-    hubButton(h, v, r.back, '← Back', 'ghost', over('back'), this.t, 12);
-    label(h, v, 'Privacy', L.cx, r.privacy.y + 11 * s, 10, over('privacy') ? '#f4eeff' : '#7d72a6');
+    button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
+    text(v, 'Eight trainers, one island, one winner. Empty seats get computer trainers.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
+    button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
+    const sy = r.options.y + r.options.h + 34 * s;
+    text(v, this.net.connected ? `Connected${this.net.ping ? ` · ${this.net.ping} ms` : ''}` : 'Connecting...', cx, sy, 12, { align: 'center', color: this.net.connected ? '#9fe8b8' : '#ffe2a0' });
+    if (this.message) text(v, this.message, cx, sy + 22 * s, 13, { align: 'center', color: '#f4ecdc', maxWidth: v.width - 60 * s });
+    if (this.net.hello?.server === 'demo') text(v, 'DEMO SERVER: progress here is separate', cx, sy + 42 * s, 11, { align: 'center', color: '#ff9a9a' });
+    button(v, 'Back (Esc)', r.back.x, r.back.y, r.back.w, r.back.h, over('back'), '#f4e6c8');
+    text(v, 'Privacy', cx, r.privacy.y + 15 * s, 11, { align: 'center', color: over('privacy') ? '#f4ecdc' : '#9f97bb' });
   }
 }
 

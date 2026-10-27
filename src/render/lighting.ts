@@ -10,6 +10,7 @@
  * Canvas 2D (the dither becomes a plain hard edge).
  */
 import type { View } from './view';
+import { settings } from '../settings';
 
 export interface LightingParams {
   /** 0 = warm midday, 1 = cold dusk. */
@@ -101,7 +102,7 @@ export class Lighting {
     // the WebGL canvas was not redrawn: screens that only paint the HUD, a dropped frame, a screen
     // change. Keeping the buffer means a skipped frame shows the last picture instead of flashing.
     // ?gl=0 forces the Canvas 2D path (for drivers that still misbehave).
-    const noGl = typeof location !== 'undefined' && new URLSearchParams(location.search).get('gl') === '0';
+    const noGl = settings.simpleGraphics || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('gl') === '0');
     const gl = noGl ? null : view.outputCanvas.getContext('webgl', { antialias: false, alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: true });
     if (gl && this.setup(gl)) {
       this.gl = gl;

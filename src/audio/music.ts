@@ -7,6 +7,7 @@
  * AudioContext exists) until then. N mutes or unmutes; the choice is kept in this browser.
  */
 import { ASSET_ROOT } from '../sprites/assets';
+import { onSettings, settings } from '../settings';
 
 export type TrackId = 'abyss' | 'trainer' | 'shadow_lugia' | 'mewtwo' | 'darkrai';
 
@@ -41,7 +42,7 @@ class MusicPlayer {
   private wanted: TrackId | null = null;
   private starting: TrackId | null = null;
   muted = loadMuted();
-  volume = 0.8;
+  volume = settings.music;
 
   constructor() {
     if (typeof window === 'undefined') return;
@@ -88,6 +89,12 @@ class MusicPlayer {
     if (id === this.wanted) return;
     this.wanted = id;
     this.apply();
+  }
+
+  /** Music volume 0..1 (Options). */
+  setVolume(v: number): void {
+    this.volume = Math.max(0, Math.min(1, v));
+    if (this.ctx && this.master && !this.muted) this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05);
   }
 
   toggleMute(): boolean {
@@ -137,3 +144,5 @@ class MusicPlayer {
 }
 
 export const music = new MusicPlayer();
+
+onSettings(() => music.setVolume(settings.music));

@@ -9,21 +9,18 @@ const CSS = `
 .almia-ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: "BoldPixels", "Segoe UI", system-ui, sans-serif; }
 .almia-ui * { box-sizing: border-box; }
 .almia-panel { pointer-events: auto; background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; image-rendering: pixelated; }
-.almia-chat { position: absolute; left: 16px; bottom: 16px; width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }
-.almia-chat.almia-panel { background: rgba(22,15,46,0.9); color: #e9e2ff; border: 2px solid rgba(155,123,255,0.55); border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.5); overflow: hidden; image-rendering: auto; }
+.almia-chat { position: absolute; left: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }
 .almia-chat.compact { opacity: 0.88; top: 96px; bottom: auto; width: min(300px, calc(100vw - 32px)); }
 .almia-chat.compact .almia-chat-log { height: 120px; }
-.almia-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: linear-gradient(#3a2a72, #2a1d58); color: #f4eeff; font-size: 14px; letter-spacing: 0.5px; cursor: pointer; }
+.almia-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #4a3424; color: #f4ecdc; font-size: 14px; letter-spacing: 0.5px; cursor: pointer; }
 .almia-chat-log { height: 180px; overflow-y: auto; padding: 6px 10px; line-height: 1.35; overflow-wrap: anywhere; }
 .almia-chat.collapsed .almia-chat-log, .almia-chat.collapsed .almia-chat-row { display: none; }
-.almia-chat-log .who { color: #ffb36b; cursor: pointer; }
-.almia-chat-log .sys { color: #a99bd6; font-style: italic; }
-.almia-chat-log .announce { display: block; color: #ffc45c; font-style: normal; border: 2px solid #ff8a3d; border-radius: 8px; padding: 3px 6px; margin: 3px 0; }
+.almia-chat-log .who { color: #c2611a; cursor: pointer; }
+.almia-chat-log .sys { color: #8a6a4a; font-style: italic; }
+.almia-chat-log .announce { display: block; color: #c2611a; font-style: normal; border: 2px solid #c2611a; padding: 3px 6px; margin: 3px 0; }
 .almia-chat-log .modbadge { color: #fff; background: #1f6aa0; font-size: 11px; padding: 0 4px; margin-right: 4px; }
-.almia-chat-row { display: flex; border-top: 1px solid rgba(155,123,255,0.4); }
-.almia-chat-row input { flex: 1; min-width: 0; border: 0; padding: 8px 12px; font: inherit; background: rgba(10,6,24,0.7); color: #f4eeff; outline: none; }
-.almia-chat-row input::placeholder { color: #8f84b8; }
-.almia-chat-row button { background: linear-gradient(#ffb84d, #ff7a2e); color: #2a0f04; text-shadow: none; }
+.almia-chat-row { display: flex; border-top: 2px solid #4a3424; }
+.almia-chat-row input { flex: 1; min-width: 0; border: 0; padding: 7px 10px; font: inherit; background: #fffaf0; color: #4a3424; outline: none; }
 .almia-chat-row button, .almia-btn { font: inherit; border: 0; background: #c2611a; color: #fff; padding: 7px 12px; cursor: pointer; text-shadow: 0 1px 0 #8a3a0a; }
 .almia-btn.alt { background: #e9dcc2; color: #4a3424; text-shadow: none; }
 .almia-btn:disabled { background: #b8ad98; cursor: default; }

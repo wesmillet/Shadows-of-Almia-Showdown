@@ -11,6 +11,7 @@ import { Lighting } from '../render/lighting';
 import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { music, type TrackId } from '../audio/music';
+import { settings } from '../settings';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
@@ -2107,7 +2108,7 @@ export class MatchScreen implements Screen {
     v.follow(fx, fy, frameDt, this.match.ground.cols, this.match.ground.rows);
     // Heavy hits shake the camera for a moment (offset undone after the frame is drawn).
     this.shake = Math.max(0, this.shake - frameDt * 2.2);
-    const shk = this.shake * this.shake * 0.22;
+    const shk = settings.shake ? this.shake * this.shake * 0.22 : 0;
     const ox = (Math.random() - 0.5) * shk;
     const oy = (Math.random() - 0.5) * shk;
     v.camX += ox;

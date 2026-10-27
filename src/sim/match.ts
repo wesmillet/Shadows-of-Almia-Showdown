@@ -3062,7 +3062,7 @@ export class Match {
 
   private spawnDarkrai(): void {
     // When the darkness has closed on the crystal, Darkrai comes out at level 100.
-    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY + 1.6);
+    const d = this.makeMon('0491-final', 100, null, this.centerX, this.centerY + 1.6);
     d.boss = true;
     d.wild = false;
     // Its boss kit: slot 0 Dark Void (sleep ring), slot 1 Dark Pulse (stepDarkrai relies on the order).

@@ -1,0 +1,43 @@
+# Checks the live online server end to end (server/checks/launch_check.ts on the online branch):
+# a queue with bots, Start now, a dropped connection rejoining, a second tab taking over.
+# The result is posted as an issue so it can be read anywhere.
+name: Smoke test online server
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Server address
+        default: https://almia-showdown.fly.dev
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: online
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Health
+        run: curl -s --max-time 20 "${{ github.event.inputs.url }}/health" | tee health.json || true
+      - name: Launch check
+        run: |
+          set +e
+          npx tsx server/checks/launch_check.ts "${{ github.event.inputs.url }}" 2>&1 | tee check.log
+          echo "exit ${PIPESTATUS[0]}" | tee -a check.log
+      - name: Post the result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          { echo "Server: ${{ github.event.inputs.url }}"; echo; echo '**/health**'; echo '```'; cat health.json 2>/dev/null; echo; echo '```'; echo '**launch check**'; echo '```'; cat check.log 2>/dev/null; echo '```'; } > body.md
+          gh issue create --repo "${{ github.repository }}" --title "Smoke test (run ${{ github.run_id }})" --body-file body.md

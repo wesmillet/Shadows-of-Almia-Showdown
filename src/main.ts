@@ -1,3 +1,4 @@
+import { track } from './stats';
 import { GameLoop } from './core/loop';
 import { Input } from './core/input';
 import { hashSeed, Rng } from './core/rng';
@@ -158,11 +159,13 @@ async function boot(): Promise<void> {
     void sprites.preload(withEvolutions(starters), undefined, true);
     debug.showdown.match = match;
     const screen: MatchScreen = new MatchScreen(game, match, rangers, assets, ui, () => {
+      track('match-finished', 'Match finished');
       game.setScreen(new EndScreen(game, match, screen, () => void showTitle(true)));
     });
     debug.showdown.screen = screen;
     game.setScreen(screen);
     console.info(`[showdown] match started with ${starters.join(', ')}`);
+    track('match-started', 'Match started');
   };
 
   /** Demo mode: a max-level showcase team, no starter roll (title button, D, or ?demo=1). */

@@ -16,6 +16,11 @@ on:
         description: Fly region (iad = Virginia)
         default: iad
         required: true
+      size:
+        description: "Machine: friends (shared, 1 GB, about $7/mo) or launch (dedicated core, 2 GB, about $33/mo)"
+        type: choice
+        options: [friends, launch]
+        default: friends
 
 concurrency:
   group: launch-online
@@ -29,6 +34,7 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       APP: ${{ github.event.inputs.app }}
       REGION: ${{ github.event.inputs.region }}
+      SIZE: ${{ github.event.inputs.size }}
     steps:
       - name: Check the Fly token is set
         run: |
@@ -62,7 +68,9 @@ jobs:
             flyctl secrets set OPS_TOKEN="$(openssl rand -hex 24)" --app "$APP" --stage
           fi
       - name: Deploy
-        run: flyctl deploy --config fly.toml --app "$APP" --primary-region "$REGION" --remote-only --ha=false --build-arg BUILD_ID=${GITHUB_SHA::7}
+        run: |
+          if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"; else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
+          flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7}
       - name: Where to play
         run: |
           echo "### The online game is up: https://$APP.fly.dev" >> "$GITHUB_STEP_SUMMARY"

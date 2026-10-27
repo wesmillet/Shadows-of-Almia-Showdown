@@ -92,7 +92,7 @@ export interface StorageChest {
 }
 
 /** Something the player can use with Space when standing by it. */
-export type Service = { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer' } | { kind: 'chest'; index: number };
+export type Service = { kind: 'shop'; shop: Shop } | { kind: 'challenge' } | { kind: 'healer'; index: number } | { kind: 'chest'; index: number };
 
 /** Chest spots per island (the ground is shared by every match played on it). */
 const CHEST_SPOTS = new WeakMap<object, StorageChest[]>();
@@ -112,7 +112,8 @@ export class Match {
   trainers: Trainer[] = [];
   wilds: Mon[] = [];
   items: GroundItem[] = [];
-  outposts: Array<{ x: number; y: number; users: Trainer[]; beacon: number }> = [];
+  /** Healing spots. `cost`: the paid one by the Shadow Crystal charges this much per heal. */
+  outposts: Array<{ x: number; y: number; users: Trainer[]; beacon: number; cost?: number }> = [];
   /** Market stall vendors (maps with towns). */
   shops: Shop[] = [];
   /** The castle challenger and his battlefield (maps with one). */
@@ -215,7 +216,32 @@ export class Match {
         this.challenge = { npc, arena: this.ground.features.arena, state: 'idle', foe: null, readyAt: 0 };
       }
     }
+    this.placeCrystalHealer();
     this.placeChests(npcs);
+  }
+
+  /**
+   * A paid healer just south of the Shadow Crystal arena (the island's centre), for teams fighting
+   * far from the towns: CONFIG.outpost.centerCost Poké Dollars a heal. The spot is the open,
+   * reachable tile closest below the arena's south edge.
+   */
+  private placeCrystalHealer(): void {
+    const a = this.ground.features?.finalArena;
+    const cost = (CONFIG.outpost as { centerCost?: number }).centerCost ?? 0;
+    if (!a || cost <= 0) return;
+    const g = this.ground;
+    const cx = Math.floor((a.x0 + a.x1) / 2);
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let y = a.y1 + 5; y <= a.y1 + 12; y++) {
+      for (let x = cx - 8; x <= cx + 8; x++) {
+        if (!g.reachable(x, y) || !g.walkable(x, y) || !g.walkable(x, y - 1)) continue;
+        const d = Math.hypot(x - cx, (y - a.y1) * 1.5);
+        if (!best || d < best.d) best = { x: x + 0.5, y: y + 0.5, d };
+      }
+    }
+    if (!best) return;
+    this.outposts.push({ x: best.x, y: best.y, users: [], beacon: 0, cost });
+    this.npcs.push(this.makeTrainer('Crystal Healer', 'healer', false, best.x, best.y - 0.6));
   }
 
   /**
@@ -325,7 +351,7 @@ export class Match {
     // Vendors stand behind their counters, so the stall answers from a little further away.
     for (const sh of this.shops) consider(sh.npc.x, sh.npc.y, { kind: 'shop', shop: sh }, sh.npc.counter ? 0.8 : 0);
     if (this.challenge?.state === 'idle') consider(this.challenge.npc.x, this.challenge.npc.y, { kind: 'challenge' });
-    for (const o of this.outposts) consider(o.x, o.y, { kind: 'healer' });
+    this.outposts.forEach((o, i) => consider(o.x, o.y, { kind: 'healer', index: i }));
     this.chests.forEach((c, i) => consider(c.x, c.y - 0.3, { kind: 'chest', index: i }, 0.3));
     return best ? (best as { s: Service }).s : null;
   }
@@ -1015,13 +1041,19 @@ export class Match {
     return true;
   }
 
-  /** Space beside a healer: the whole party is restored (once every 20 s). */
+  /** Space beside a healer: the whole party is restored (once every 20 s; the Crystal Healer charges). */
   healAtHealer(): string {
     const t = this.player;
+    const s = this.nearService();
+    const o = s?.kind === 'healer' ? this.outposts[s.index] : undefined;
+    const cost = o?.cost ?? 0;
     if (t.duelId) return "The healer can't help mid-battle";
     if (this.time < t.outpostReady) return `The healer needs a moment (${Math.ceil(t.outpostReady - this.time)}s)`;
     const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
     if (!needs) return 'Your party is already in top shape';
+    if (cost > 0 && this.finalStarted) return 'Crystal Healer: "Not during the final showdown!"';
+    if (cost > 0 && t.money < cost) return `Crystal Healer: "A full heal is ₽${cost}." You have ₽${t.money}`;
+    t.money -= cost;
     t.outpostReady = this.time + 20;
     for (const m of t.party) {
       if (isRoaming(m)) continue;
@@ -1033,7 +1065,7 @@ export class Match {
       m.x = t.x;
       m.y = t.y;
     }
-    return 'Your Pokémon are fully healed!';
+    return cost > 0 ? `Paid ₽${cost}. Your Pokémon are fully healed!` : 'Your Pokémon are fully healed!';
   }
 
   private stepItems(dt: number): void {
@@ -1078,11 +1110,14 @@ export class Match {
         }
         const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
         if (!needs) continue;
+        // Rivals pay at the Crystal Healer too (and pass it by when they can't).
+        if ((o.cost ?? 0) > t.money || (o.cost && this.finalStarted)) continue;
         o.users.push(t);
         if (t.healing === 0 && !t.isPlayer) this.battle.events.push({ type: 'notice', text: `Beacon: ${t.name} is healing at an outpost`, seconds: 2 });
         t.healing += dt;
         if (t.healing >= CONFIG.outpost.healSeconds) {
           t.healing = 0;
+          t.money -= o.cost ?? 0;
           t.outpostReady = this.time + 20;
           for (const m of t.party) {
             if (isRoaming(m)) continue;

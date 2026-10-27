@@ -229,7 +229,9 @@
   },
   "outpost": {
     "healSeconds": 3,
-    "radius": 1.8
+    "radius": 1.8,
+    "_centerCost": "Poké Dollars per heal at the Crystal Healer, the paid healer just south of the centre arena (0 removes it).",
+    "centerCost": 600
   },
   "visitors": {
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address, or turn on tester mode with ?dev=1, to force it).",

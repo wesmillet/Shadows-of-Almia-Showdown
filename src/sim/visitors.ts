@@ -110,7 +110,7 @@ export class Visitors {
       h.npc = 'hoopa';
       h.calm = 1e9;
       h.busy = 1e9;
-      // Never worn down: the first hit from a Pokémon you steer unbinds it instead (hoopaStruck).
+      // Never worn down: the third hit from a Pokémon you steer unbinds it instead (hoopaStruck).
       h.maxHp = h.hp = 99999;
       m.wilds.push(h);
       this.hoopa = h;
@@ -338,16 +338,32 @@ export class Visitors {
     L.shadowStormT = (sl.stormEvery[0] as number) * 0.6;
   }
 
+  /** Hits Hoopa has taken (see hoopaStruck), and when the last one counted. */
+  private hoopaHits = 0;
+  private hoopaHitAt = -Infinity;
+
   /**
    * A Pokémon the player steers hit Hoopa (match.ts calls this with the step's battle events; only
-   * a steered Pokémon can hit it, battle.ts isEnemy): it unbinds into Hoopa Unbound at level 100
-   * and battles the player one-on-one. Once a match, and Hoopa is gone afterwards.
+   * a steered Pokémon can hit it, battle.ts isEnemy). It shrugs off the first two hits with a
+   * warning; the third unbinds it into Hoopa Unbound at level 100, which battles that player
+   * one-on-one. Hits under half a second apart (one multi-hit move, a beam) count once. Once a
+   * match, and Hoopa is gone afterwards.
    */
   hoopaStruck(events: readonly BattleEvent[]): void {
     const h = this.hoopa;
     if (!h || this.hoopaUsed || !SPECIES.has(HOOPA_UNBOUND)) return;
     const hit = events.find((e) => e.type === 'hit' && e.target === h);
-    if (!hit) return;
+    if (!hit || hit.type !== 'hit') return;
+    h.hp = h.maxHp;
+    if (this.m.time - this.hoopaHitAt < 0.5) return;
+    this.hoopaHitAt = this.m.time;
+    this.hoopaHits++;
+    if (this.hoopaHits < 3) {
+      h.visual.flash = 1;
+      const text = this.hoopaHits === 1 ? 'Hoopa: "Hey! Quit it!"' : 'Hoopa: "One more and you\'ll be sorry!"';
+      this.m.battle.events.push({ type: 'notice', text, seconds: 2.5 });
+      return;
+    }
     const m = this.m;
     this.hoopaUsed = true;
     this.portal = null;

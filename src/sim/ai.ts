@@ -13,7 +13,7 @@ export interface AiWorld {
   ground: GroundRenderer;
   rng: Rng;
   items: GroundItem[];
-  outposts: Array<{ x: number; y: number }>;
+  outposts: Array<{ x: number; y: number; cost?: number }>;
   /** Trainers this one may fight (alive, not itself). */
   rivals: Trainer[];
   /** Safe radius of the darkness in tiles, centre of the map. */
@@ -139,6 +139,8 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
   let outpostIdx = -1;
   w.outposts.forEach((o, i) => {
     if (banned(`o${i}`)) return;
+    // A paid healer is only worth the walk with the money for it.
+    if ((o.cost ?? 0) > (t.money ?? 0)) return;
     const best = w.outposts[outpostIdx];
     if (!best || Math.hypot(o.x - t.x, o.y - t.y) < Math.hypot(best.x - t.x, best.y - t.y)) outpostIdx = i;
   });

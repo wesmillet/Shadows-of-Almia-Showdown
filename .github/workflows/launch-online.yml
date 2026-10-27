@@ -74,8 +74,29 @@ jobs:
       - name: Deploy
         run: |
           if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"; else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
-          set -o pipefail
-          flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7} 2>&1 | tee deploy.log
+          : > deploy.log
+          # Fly can be out of room on the host that holds an (empty) save disk. Then: replace the
+          # unattached disk with a fresh one and try again; the last try moves to a second region.
+          for attempt in 1 2 3; do
+            region="$REGION"
+            if [ "$attempt" = "3" ]; then region="ord"; fi
+            sed -i "s/^primary_region = .*/primary_region = \"$region\"/" fly.toml
+            echo "== attempt $attempt in $region" | tee -a deploy.log
+            set +e
+            flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7} 2>&1 | tee -a deploy.log
+            ok=${PIPESTATUS[0]}
+            set -e
+            if [ "$ok" = "0" ]; then exit 0; fi
+            if ! tail -n 40 deploy.log | grep -q "insufficient resources"; then exit 1; fi
+            echo "== no room next to the disk: replacing the empty disk" | tee -a deploy.log
+            for id in $(flyctl volumes list --app "$APP" --json | jq -r '.[] | select(.name=="almia_data" and (.attached_machine_id==null or .attached_machine_id=="")) | .id'); do
+              flyctl volumes destroy "$id" --app "$APP" --yes || true
+            done
+            next="$REGION"
+            if [ "$attempt" = "2" ]; then next="ord"; fi
+            flyctl volumes create almia_data --app "$APP" --region "$next" --size 1 --yes
+          done
+          exit 1
       - name: On failure, post the log tail as an issue (readable without the Actions log viewer)
         if: failure()
         env:

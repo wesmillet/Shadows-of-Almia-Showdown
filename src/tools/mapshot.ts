@@ -2,7 +2,8 @@
  * Dev tool: the whole island drawn at one scale into one PNG (window.shot, base64), for map
  * previews and for scripts/mapgen/center_blend.py. Open tools/mapshot.html on the dev server:
  * `?k=16` pixels per tile (16 = the art's own size), `?layer=ground|decor|all`, `?blend=0` to
- * draw without the centre blend (the input center_blend.py needs).
+ * draw without the centre blend (the input center_blend.py needs), `?overlay=0` without the
+ * paving overlay, `?skip=Courtyard` leaving stack layers out (pave_smooth.py's inputs).
  */
 import { Assets } from '../sprites/assets';
 import { FanGround } from '../ground/fanGround';
@@ -14,7 +15,11 @@ import type { View } from '../render/view';
   const q = new URLSearchParams(location.search);
   const k = Number(q.get('k') ?? 16);
   const layer = q.get('layer') ?? 'all';
-  const g = await FanGround.load(new Assets(), CONFIG.map.name, undefined, q.get('blend') !== '0');
+  const g = await FanGround.load(new Assets(), CONFIG.map.name, undefined, {
+    blend: q.get('blend') !== '0',
+    overlay: q.get('overlay') !== '0',
+    skip: (q.get('skip') ?? '').split(',').filter(Boolean),
+  });
   if (!g) throw new Error('no map');
   const W = g.cols * k;
   const H = g.rows * k;

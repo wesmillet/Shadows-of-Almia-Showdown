@@ -107,6 +107,10 @@ export class FanGround implements GroundRenderer {
    * one rectangle of the map, in map pixels, applied when ground chunks bake; null without one.
    */
   private blend: { x: number; y: number; w: number; h: number; px: Uint8ClampedArray } | null = null;
+  /** The paving overlay (see load), in map pixels. */
+  private overlay: { x: number; y: number; w: number; h: number; img: CanvasImageSource } | null = null;
+  /** Stack layers left out (preview tool only). */
+  private skip = new Set<string>();
 
   private constructor(readonly map: FanMapFile, private readonly atlas: CanvasImageSource, private readonly sheets: CanvasImageSource[]) {
     this.cols = map.cols;
@@ -159,7 +163,17 @@ export class FanGround implements GroundRenderer {
     return new FanGround(map, null as unknown as CanvasImageSource, []);
   }
 
-  static async load(assets: Assets, name: string, onProgress?: (p: number) => void, withBlend = true): Promise<FanGround | null> {
+  /**
+   * `opts` (the map preview tool, src/tools/mapshot.ts): blend / overlay false draw without the
+   * centre blend or the paving overlay, skip leaves out stack layers by name.
+   */
+  static async load(
+    assets: Assets,
+    name: string,
+    onProgress?: (p: number) => void,
+    opts: { blend?: boolean; overlay?: boolean; skip?: string[] } = {},
+  ): Promise<FanGround | null> {
+    const withBlend = opts.blend !== false;
     const map = await assets.json<FanMapFile>(`maps/${name}.json`);
     if (!map || map.version !== 3) return null;
     const [atlas, ...sheets] = await Promise.all([assets.loadImage(map.atlas.src), ...map.sheets.map((s) => assets.loadImage(s))]);
@@ -177,6 +191,16 @@ export class FanGround implements GroundRenderer {
         g.blend = null;
       }
     }
+    // The paving overlay (scripts/mapgen/pave_smooth.py): smooth curved edges for the courtyard
+    // and arena paving, drawn over the tiles before the blend. Optional too.
+    if (opts.overlay !== false) {
+      const [orect, oimg] = await Promise.all([
+        assets.json<{ x: number; y: number; w: number; h: number }>(`maps/${name}_overlay.json`),
+        assets.loadImage(`maps/${name}_overlay.png`),
+      ]);
+      if (orect && oimg && oimg.naturalWidth === orect.w && oimg.naturalHeight === orect.h) g.overlay = { ...orect, img: oimg };
+    }
+    g.skip = new Set(opts.skip ?? []);
     g.indexChunks();
     g.buildDecor();
     const total = g.chunkCols * g.chunkRows;
@@ -270,6 +294,7 @@ export class FanGround implements GroundRenderer {
     const ac = this.map.atlas.columns;
     const chunk = this.chunks[i] as Chunk;
     this.map.stack.forEach((item, li) => {
+      if (this.skip.size && this.skip.has(item.name)) return;
       ctx.globalAlpha = item.opacity;
       const layer = this.layers[li];
       if (layer) {
@@ -293,6 +318,16 @@ export class FanGround implements GroundRenderer {
       }
     });
     ctx.globalAlpha = 1;
+    const o = this.overlay;
+    if (o) {
+      const x0 = cc * CHUNK * 16;
+      const y0 = cr * CHUNK * 16;
+      const ix0 = Math.max(x0, o.x);
+      const iy0 = Math.max(y0, o.y);
+      const ix1 = Math.min(x0 + c.width, o.x + o.w);
+      const iy1 = Math.min(y0 + c.height, o.y + o.h);
+      if (ix1 > ix0 && iy1 > iy0) ctx.drawImage(o.img, ix0 - o.x, iy0 - o.y, ix1 - ix0, iy1 - iy0, ix0 - x0, iy0 - y0, ix1 - ix0, iy1 - iy0);
+    }
     this.applyBlend(ctx, cc * CHUNK * 16, cr * CHUNK * 16, c.width, c.height);
     return c;
   }

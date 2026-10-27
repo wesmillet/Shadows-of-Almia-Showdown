@@ -197,22 +197,54 @@ def main():
     # the courtyard: slab paving round a battlefield of lighter slabs
     pav = np.zeros(W.shape, np.int32)
     bx0, bx1, by0, by1 = 186, 211, 166, 179
-    pav[by0 - 3:by1 + 4, bx0 - 4:bx1 + 4] = F.color('Slab Floor')
-    pav[by0:by1 + 1, bx0:bx1 + 1] = F.color('Mid Slab Floor')
-    pav[151:157, 192:207] = F.color('Slab Floor')               # the keep's forecourt
-    pav[162:179, 156:176] = F.color('Slab Floor')               # the gate yard
+    # A planned court: lawn, with an oval plaza round the battlefield (light slabs inside a ring of
+    # slabs), and walks of one width (the gates' passages, 7 tiles) running straight from every
+    # gate and from the keep's door into the ring. The west wing, the gate yard, is all stone.
+    yy_, xx_ = np.mgrid[0:W.shape[0], 0:W.shape[1]]
+    ocx, ocy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    def oval(rx, ry): return ((xx_ - ocx) / rx) ** 2 + ((yy_ - ocy) / ry) ** 2 < 1
+    ring = oval(19, 11)
+    pav[ring & court] = F.color('Slab Floor')
+    pav[oval(15.5, 8.5)] = F.color('Mid Slab Floor')
+    WALK = D.GATE_W + 2
+    wh = WALK // 2
+    walks = np.zeros(W.shape, bool)
+    kx = D.GATES['S'][0]
+    walks[146:int(ocy), kx - wh:kx + wh + 1] = True                     # keep door -> plaza
+    walks[int(ocy):D.GATES['S'][1] + 6, kx - wh:kx + wh + 1] = True     # plaza -> south gate
+    ex, ey, _ = D.GATES['E']
+    walks[ey - wh:ey + wh + 1, int(ocx):ex + 5] = True                  # plaza -> east postern
+    wx, wy, _ = D.GATES['Wi']
+    walks[wy - wh:wy + wh + 1, wx - 4:int(ocx)] = True                  # inner gate -> plaza
+    # the fountain garden joins the east walk
+    fx_, fy_ = 225, 156
+    walks[fy_ + 1:fy_ + 6, 209:fx_] = True                # west out of the bastion to the plaza
+    # outside every gate, the same slabs run out to meet the road (no brick stubs of another stone)
+    for (gx, gy, horiz) in D.GATES.values():
+        if gx == wx and gy == wy: continue
+        if horiz:
+            out_up = not d.castle[gy - 4, gx]          # the gap opens to the north (gate yard) or south
+            if out_up: walks[gy - 6:gy + 1, gx - wh:gx + wh + 1] = True
+            else: walks[gy:gy + 10, gx - wh:gx + wh + 1] = True
+        else:
+            walks[gy - wh:gy + wh + 1, gx:gx + 9] = True
+    yard_x1 = 179
+    west_wing = court & (xx_ < yard_x1)
+    pav[(walks & d.land) | west_wing] = F.color('Slab Floor')
+    pav[oval(15.5, 8.5)] = F.color('Mid Slab Floor')
     half = D.GATE_W // 2
     for (gx, gy, horiz) in D.GATES.values():                    # paved gate passages (wall and face rows)
-        if horiz: pav[gy - 1:gy + 6, gx - half - 1:gx + half + 2] = F.color('Slab Floor')
+        if horiz: pav[gy - 1:gy + 6, gx - wh:gx + wh + 1] = F.color('Slab Floor')
         else: pav[gy - half - castle.FACE_ROWS - 1:gy + half + 2, gx - 4:gx + 5] = F.color('Slab Floor')
     # the crystal's arena in the middle of the plain: the last two trainers fight it out here,
     # a paved field with the crystal in its centre circle, on a terrace of darker slabs
     cx, cy = D.CRYSTAL
     fx0, fy0, fx1, fy1 = D.FINAL_ARENA
-    terrace = (D.ellipse(cx + 0.5, cy + 0.5, 14, 9.5) < 1)
-    terrace[fy0 - 2:fy1 + 2, fx0 - 2:fx1 + 2] = True
+    # an oval: a ring of slabs round a light oval that holds the whole battlefield (its pillars
+    # stand on the light oval's rim)
+    terrace = (D.ellipse(cx + 0.5, cy + 0.5, 17.5, 12) < 1)
     pav[terrace] = F.color('Slab Floor')
-    pav[fy0:fy1, fx0:fx1] = F.color('Mid Slab Floor')
+    pav[D.ellipse(cx + 0.5, cy + 0.5, 14.5, 9.5) < 1] = F.color('Mid Slab Floor')
     d.paths[terrace] = 0
     # one fountain on a paved pad east of the battlefield
     fountains = [(225, 156)]   # in the garden bastion
@@ -220,6 +252,15 @@ def main():
         pav[fy - 1:fy + 7, fx - 1:fx + 7] = F.color('Slab Floor')
     pav[W] = 0
     stack.append(('Courtyard', F.paint(pav)))
+    # for scripts/mapgen/pave_smooth.py: the paving per tile (0 none, 1 slab, 2 light slab) and
+    # where it may be reshaped (court and approaches, not the walls, faces or fountain)
+    _fixed = W.copy()
+    for (fx, fy) in fountains: _fixed[fy - 1:fy + 7, fx - 1:fx + 7] = True
+    os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out'), exist_ok=True)
+    # true ovals (tile units: cx, cy, rx, ry, class) that the stepped tiles stand for
+    _ovals = np.array([(ocx + 0.5, ocy + 0.5, 19, 11, 1), (ocx + 0.5, ocy + 0.5, 15.5, 8.5, 2),
+                       (cx + 1.0, cy + 1.0, 17.5, 12, 1), (cx + 1.0, cy + 1.0, 14.5, 9.5, 2)], np.float32)
+    np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=(walks & d.land) | west_wing)
     fountain_layer = np.full(W.shape, None, dtype=object)
     for (fx, fy) in fountains:
         for L in stamps.tile_stamp('Forest Castle', 37, 54, 43, 60, ['Animations']):
@@ -309,8 +350,8 @@ def main():
     formal = content3.catalogue('Objects_Trees_Castle', r'Tree_Emerald_4')
     import random as _r; rr = _r.Random(3)
     if formal:
-        for (x, y) in [(184, 185), (190, 185), (208, 185), (214, 185),
-                       (225, 165), (230, 165)]:
+        # pairs mirrored about the south walk (x 199): by the south wall, and by the north wall
+        for (x, y) in [(188, 185), (210, 185), (183, 162), (214, 162)]:
             if not yard.put(formal[0], x, y, clear=1): log(f'  no room for the courtyard tree at {x},{y}')
     banner = content3.catalogue('Objects_Props_Castle', r'Banner_Large(_\d+)?')
     bench = content3.catalogue('Objects_Props_Castle', r'Bench(_\d+)?')

@@ -54,7 +54,8 @@ interface ShopsData {
   stalls: Array<{ name: string; stock: Array<[string, number]> }>;
   townItems: Record<string, string>;
   townItemPrice: number;
-  townStones?: Record<string, string>;
+  /** Each town's medicine stall sells its stones (one id or several). */
+  townStones?: Record<string, string | string[]>;
   townStonePrice?: number;
   challenger: {
     name: string;
@@ -74,9 +75,11 @@ export function stallStock(town: string, stand: number): { name: string; stock: 
   const stock = s.stock.filter(([id]) => ITEMS[id]).map(([id, price]) => ({ id, price }));
   const own = SHOPS.townItems[town];
   if (stand % SHOPS.stalls.length === 2 && own && ITEMS[own]) stock.push({ id: own, price: SHOPS.townItemPrice });
-  // The medicine stall also sells the town's evolution stone.
-  const stone = SHOPS.townStones?.[town];
-  if (stand % SHOPS.stalls.length === 1 && stone && ITEMS[stone]) stock.push({ id: stone, price: SHOPS.townStonePrice ?? 1800 });
+  // The medicine stall also sells the town's evolution stones (between them the towns carry all ten).
+  const stones = SHOPS.townStones?.[town];
+  if (stand % SHOPS.stalls.length === 1 && stones) {
+    for (const stone of Array.isArray(stones) ? stones : [stones]) if (ITEMS[stone]) stock.push({ id: stone, price: SHOPS.townStonePrice ?? 1800 });
+  }
   return { name: s.name, stock };
 }
 

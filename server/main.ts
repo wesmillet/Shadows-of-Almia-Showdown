@@ -35,14 +35,24 @@ import { timingSafeEqual } from 'node:crypto';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const PORT = Number(process.env.PORT ?? 8787);
+// On Fly the kind must be set: a missing SERVER_KIND would quietly run the live app as dev
+// (tester chest on, looser limits).
+if (process.env.FLY_APP_NAME && !process.env.SERVER_KIND) {
+  console.error('SERVER_KIND is not set (live, demo or dev): refusing to start on Fly without it.');
+  process.exit(1);
+}
 const KIND = (process.env.SERVER_KIND ?? 'dev') as 'live' | 'demo' | 'dev';
 const DIST = process.env.DIST_DIR ?? join(ROOT, 'dist');
 const ASSETS = process.env.ASSETS_DIR ?? join(ROOT, 'assets');
 const DATA = process.env.DATA_DIR ?? join(ROOT, '.data');
 const SIZE = Number(process.env.MATCH_SIZE ?? 8);
 const WAIT = Number(process.env.LOBBY_WAIT ?? (KIND === 'live' ? 60 : 15));
-/** Ranked waits longer for real players before filling up with computer trainers. */
-const RANKED_WAIT = Number(process.env.RANKED_WAIT ?? (KIND === 'live' ? 120 : WAIT * 2));
+/**
+ * Real players a public lobby needs before computer trainers fill the rest: half the lobby (four of
+ * eight). MIN_PLAYERS may lower it for testing, but never on the live server.
+ */
+const HALF = Math.ceil(SIZE / 2);
+const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAYERS ?? HALF)) : Number(process.env.MIN_PLAYERS ?? HALF);
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -103,7 +113,7 @@ const REPLAY_DIR = REPLAYS ? replayDir(DATA) : null;
 const metrics: Metrics = new Metrics(() => {
   const st = hub.stats();
   return {
-    players: st.players, rooms: st.rooms, queued: st.queued.casual + st.queued.ranked, watching: st.watching, errors: errors.total,
+    players: st.players, rooms: st.rooms, queued: st.queued.casual, watching: st.watching, errors: errors.total,
     dbBytes: fileSize(join(DATA, 'almia.db')) + fileSize(join(DATA, 'almia.db-wal')), replayBytes: replayBytes,
   };
 });
@@ -126,7 +136,7 @@ const pool: WorkerPool | null = WORKERS > 0
   : null;
 const hub: Hub = new Hub({
   makeRoom: pool?.factory(),
-  world, accounts, size: SIZE, wait: { casual: WAIT, ranked: RANKED_WAIT }, hooks: roomHooks,
+  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
   onMatchEnd: (_r, report) => {
@@ -134,6 +144,13 @@ const hub: Hub = new Hub({
     else metrics.counters.matchesEnded++;
   },
 });
+// A password change or a recovery closes the account's game connections (the browser signs in again).
+accounts.onSignedOut = (userId, reason) => {
+  const c = hub.clients.get(`u${userId}`) as Conn | undefined;
+  if (!c) return;
+  c.send({ t: 'error', text: reason });
+  c.ws.close(4003, reason.slice(0, 100));
+};
 const chat = new Chat((msg) => {
   for (const c of hub.clients.values()) c.send(msg);
 }, accounts);
@@ -314,12 +331,13 @@ const http = createServer((req, res) => {
   if (url.startsWith('/api/replay/') && req.method === 'GET') {
     // A replay file: gzipped JSON lines, which the browser unpacks on the way in.
     const id = decodeURIComponent(url.slice('/api/replay/'.length).split('?')[0] ?? '');
-    const file = REPLAY_DIR && accounts.hasReplay(id) ? replayFile(REPLAY_DIR, id) : null;
+    const viewer = accounts.userFromRequest(req);
+    const file = REPLAY_DIR && accounts.canWatchReplay(id, viewer?.id ?? null) ? replayFile(REPLAY_DIR, id) : null;
     if (!file) {
       res.writeHead(404, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'No such replay' }));
       return;
     }
-    res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Content-Encoding': 'gzip', 'Cache-Control': 'public, max-age=86400', 'Content-Length': statSync(file).size });
+    res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Content-Encoding': 'gzip', 'Cache-Control': 'private, max-age=86400', 'Content-Length': statSync(file).size });
     createReadStream(file).pipe(res);
     return;
   }
@@ -341,15 +359,52 @@ const wss = new WebSocketServer({
   maxPayload: 16 * 1024,
   perMessageDeflate: { zlibDeflateOptions: { level: 3, memLevel: 7 }, serverMaxWindowBits: 13, clientNoContextTakeover: true, threshold: 200, concurrencyLimit: 16 },
 });
+/** Game connections one address may hold at once (a family or a dorm shares one; a script does not need fifty). */
+const MAX_PER_IP = Number(process.env.MAX_PER_IP ?? (KIND === 'live' ? 12 : 64));
+const perIp = new Map<string, number>();
+
+/** On the live server a browser page from another site may not open a game connection. */
+function originOk(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (KIND !== 'live' || !origin) return true;
+  try {
+    const host = new URL(origin).host;
+    const allowed = new Set([req.headers.host, process.env.PUBLIC_URL ? new URL(process.env.PUBLIC_URL).host : undefined].filter(Boolean));
+    return allowed.has(host);
+  } catch {
+    return false;
+  }
+}
+
 http.on('upgrade', (req, socket, head) => {
-  if (!(req.url ?? '').startsWith('/ws')) {
+  if (!(req.url ?? '').startsWith('/ws') || !originOk(req)) {
     socket.destroy();
     return;
   }
-  wss.handleUpgrade(req, socket, head, (ws) => void connect(ws, req));
+  const ip = clientIp(req);
+  if ((perIp.get(ip) ?? 0) >= MAX_PER_IP) {
+    socket.end('HTTP/1.1 429 Too Many Requests\r\n\r\n');
+    return;
+  }
+  perIp.set(ip, (perIp.get(ip) ?? 0) + 1);
+  let counted = true;
+  const release = () => {
+    if (!counted) return;
+    counted = false;
+    const n = (perIp.get(ip) ?? 1) - 1;
+    if (n <= 0) perIp.delete(ip);
+    else perIp.set(ip, n);
+  };
+  socket.once('close', release);
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    ws.once('close', release);
+    void connect(ws, req);
+  });
 });
 
 async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
+  // A frame over maxPayload (or any socket error) closes this connection, and only this one.
+  ws.on('error', () => ws.terminate());
   const who = await accounts.identify(req);
   if (who.banned) {
     // A banned device or address: told why, and nothing else.
@@ -427,7 +482,7 @@ setInterval(() => {
         errors.record('match', e, { match: r.id, time: r.time });
         alerts.send(`crash:${r.id}`, `Match ${r.id} crashed and was called off: ${e instanceof Error ? e.message : e}`);
         try {
-          r.abort('Something went wrong in this match, so it was called off. Nothing was lost. Sorry!');
+          r.abort('Something went wrong in this match, so it was called off. It does not count as a loss, and anything you took out of your storage chest is back in it. Sorry!');
         } catch {
           hub.rooms.delete(r);
         }
@@ -497,7 +552,7 @@ async function shutdown(signal: string): Promise<void> {
   while (hub.rooms.size && Date.now() < until) await new Promise((r) => setTimeout(r, 1000));
   if (hub.rooms.size) {
     log(`Calling off ${hub.rooms.size} match(es)`);
-    hub.shutdown('The server is restarting for an update, so this match was called off. Nothing was lost: no loss, no rating change.');
+    hub.shutdown('The server is restarting for an update, so this match was called off. It does not count as a loss, and anything you took out of your storage chest is back in it.');
   }
   // Replays finishing, messages going out.
   await new Promise((r) => setTimeout(r, 1500));

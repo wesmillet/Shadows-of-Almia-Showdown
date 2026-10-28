@@ -1,25 +1,19 @@
 /**
- * Matchmaking: the casual and ranked queues.
+ * Matchmaking: the public queue (ranked play has been retired; every public match is casual).
  *
- * Players queue alone or as a party (which plays as a squad: one team, see Trainer.team). Each
- * queue keeps forming lobbies; a group goes into the first one with room for all of it (ranked: the
- * first whose players are close to its rating). A lobby starts the moment it is full (after a short
- * beat to see who is in), or `wait` seconds after it opened, with computer trainers in the empty
- * seats.
- *
- * Ranked is solo, signed-in players only, and matches by rating: a lobby takes players within
- * RANKED_WINDOW of its average, a window that widens the longer the lobby has waited, so a quiet
- * night still gets matches and a busy one gets fair ones.
+ * Players queue alone or as a party (which plays as a squad: one team, see Trainer.team). The
+ * queue keeps forming lobbies; a group goes into the first one with room for all of it. A lobby
+ * starts the moment it is full (after a short beat to see who is in), or `wait` seconds after it
+ * opened, with computer trainers in the empty seats, but never with fewer than minPlayers real
+ * players: neither the wait running out nor "Start now with bots" starts it before then.
  */
 import type { Peer } from './room';
 
-export type QueueMode = 'casual' | 'ranked';
+export type QueueMode = 'casual';
 
 export interface Ticket {
   peer: Peer;
   starter: string;
-  /** Ranked: the player's rating (casual: unused). */
-  rating?: number;
 }
 
 export interface Group {
@@ -46,10 +40,6 @@ export interface MatchmakerOptions {
   start: (players: Lineup[], mode: QueueMode) => void;
 }
 
-/** Ranked: a lobby takes players this close to its average rating, plus RANKED_WIDEN a second it has waited. */
-export const RANKED_WINDOW = 150;
-export const RANKED_WIDEN = 10;
-
 interface Forming {
   mode: QueueMode;
   groups: Group[];
@@ -70,7 +60,7 @@ export class Matchmaker {
 
   /** Players waiting, by queue. */
   get waiting(): Record<QueueMode, number> {
-    const out = { casual: 0, ranked: 0 };
+    const out = { casual: 0 };
     for (const l of this.lobbies) out[l.mode] += count(l);
     return out;
   }
@@ -83,13 +73,7 @@ export class Matchmaker {
     for (const t of group.tickets) this.leave(t.peer.key, false);
     const n = group.tickets.length;
     if (n > this.o.size) return;
-    const avg = mode === 'ranked' ? mean(group.tickets.map((t) => t.rating ?? 1500)) : 0;
-    let lobby = this.lobbies.find((l) => {
-      if (l.mode !== mode || count(l) + n > this.o.size) return false;
-      if (mode !== 'ranked') return true;
-      const window = RANKED_WINDOW + RANKED_WIDEN * Math.max(0, (now - l.openedAt) / 1000);
-      return Math.abs(lobbyRating(l) - avg) <= window;
-    });
+    let lobby = this.lobbies.find((l) => l.mode === mode && count(l) + n <= this.o.size);
     if (!lobby) {
       lobby = { mode, groups: [], openedAt: now, startAt: now + this.o.wait[mode] * 1000 };
       this.lobbies.push(lobby);
@@ -156,7 +140,7 @@ export class Matchmaker {
       // null: waiting for more players (`need` of them) before any countdown
       const need = Math.max(0, this.minPlayers - players.length);
       const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
-      for (const g of l.groups) for (const t of g.tickets) t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need });
+      for (const g of l.groups) for (const t of g.tickets) t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers });
     }
   }
 }
@@ -165,10 +149,3 @@ function count(l: Forming): number {
   return l.groups.reduce((n, g) => n + g.tickets.length, 0);
 }
 
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-}
-
-function lobbyRating(l: Forming): number {
-  return mean(l.groups.flatMap((g) => g.tickets.map((t) => t.rating ?? 1500)));
-}

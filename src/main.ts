@@ -355,7 +355,6 @@ async function boot(): Promise<void> {
     if (!net) return;
     playingId = start.matchId;
     watchingId = null;
-    net.rated = null;
     net.progress = null;
     game.setScreen(loadingScreen(() => 'Heading out'));
     const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(start.seed), sprites }, net, start.you, start.roster, rangers);

@@ -116,6 +116,10 @@
   "breeder": {
    "character": "civ_05",
    "name": "Breeder"
+  },
+  "disguise": {
+   "character": "civ_10",
+   "name": "Wandering Girl"
   }
  }
 }

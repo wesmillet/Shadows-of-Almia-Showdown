@@ -15,6 +15,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts, UserRow } from './accounts';
 import type { Events } from './events';
+import { archiveAccount } from './collectionLog';
 
 export interface ModHooks {
   /** The Server tab: samples, counters, errors, backups. */
@@ -92,6 +93,8 @@ export class ModApi {
           alts: (db.prepare(`SELECT DISTINCT u2.username, u2.banned FROM devices d JOIN devices d2 ON d2.device_id = d.device_id AND d2.user_id != d.user_id AND d2.user_id != 0
             JOIN users u2 ON u2.id = d2.user_id WHERE d.user_id = ? LIMIT 20`).all(u.id) as Array<{ username: string; banned: number }>),
           history: db.prepare('SELECT by_name, action, detail, at FROM mod_actions WHERE target = ? ORDER BY id DESC LIMIT 30').all(u.username),
+          // What happened to their PC and chest (for "my Pokémon is missing" reports).
+          collection: this.acc.collectionLog(u.id, 120),
         });
       }
       if (req.method === 'POST' && path === '/api/mod/action') {
@@ -131,6 +134,7 @@ export class ModApi {
           case 'delete': {
             if (!admin) return send(403, { error: 'Admins only' });
             this.hooks.kick(u.id, 'This account was deleted');
+            archiveAccount(db, u.id, by.name);
             db.prepare('DELETE FROM users WHERE id = ?').run(u.id);
             db.prepare("UPDATE chat SET name = '[deleted]', text = '[deleted]' WHERE user_id = ?").run(u.id);
             this.acc.logMod(by, 'delete', u.username, reason);

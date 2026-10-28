@@ -31,10 +31,12 @@ export const SPECTATE_DELAY = 4;
 /** Watching someone who was just knocked out: the camera moves on after this long. */
 const FOLLOW_ON_AFTER = 3;
 
-export type RoomMode = 'casual' | 'ranked' | 'private';
+export type RoomMode = 'casual' | 'private';
 
 export interface RoomOptions extends MatchRules {
   mode: RoomMode;
+  /** The match id (default from the seed; the hub gives every match a random 64-bit one, so ids never collide). */
+  id?: string;
   /** The rare-item chest (default: the server's setting). */
   rareChest?: boolean;
   /** Records the match (server/replays.ts), made once the match exists. */
@@ -122,7 +124,7 @@ export class Room implements RoomHandle {
   private events: BattleEvent[] = [];
   private eliminatedOrder: string[] = [];
   private readonly watchers = new Map<string, Watcher>();
-  /** Computer trainers' places as they go out (ranked counts them as opponents). */
+  /** Computer trainers' places as they go out. */
   readonly botPlaces = new Map<Trainer, number>();
   readonly roster: RosterEntry[];
   readonly mode: RoomMode;
@@ -139,11 +141,13 @@ export class Room implements RoomHandle {
     private readonly onEnd: (room: Room, report: EndReport) => void,
     opts: RoomOptions = { mode: 'casual' },
   ) {
-    this.id = `m${seed.toString(36)}`;
+    this.id = opts.id ?? `m${seed.toString(36)}`;
     this.mode = opts.mode;
     this.match = createMatch(world, entries, size, seed, opts);
     this.match.online = true;
     this.match.rareChest = opts.rareChest ?? hooks.rareChest;
+    // A private match keeps nothing: no Extraction Voucher reaches a PC and no chest change is saved.
+    this.match.keepsResults = this.mode !== 'private';
     // Testing (DEV_CLUSTER=1, never on the live server): every player starts beside the first.
     if (hooks.cluster && this.match.seats.length > 1) {
       const first = (this.match.seats[0] as Seat).trainer;
@@ -160,7 +164,7 @@ export class Room implements RoomHandle {
       },
       save: (t, box) => {
         const key = this.keyOf(t);
-        if (key) hooks.chestSave(key, box);
+        if (key && this.mode !== 'private') hooks.chestSave(key, box);
       },
     };
     this.match.seats.forEach((seat, i) => {
@@ -408,7 +412,7 @@ export class Room implements RoomHandle {
       const text = runCommand(this.match, p.seat, msg.c, msg.a, (kind, detail) => this.flag(key, kind, detail));
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
-        if (ev.type === 'extracted' && ev.via === 'voucher') this.hooks.extracted(key, pcFields(ev.mon), this.id);
+        if (ev.type === 'extracted' && ev.via === 'voucher' && this.mode !== 'private') this.hooks.extracted(key, pcFields(ev.mon), this.id);
       }
       if (text) p.peer?.send({ t: 'reply', n: msg.n, text, seconds: 1.8 });
       return;
@@ -504,6 +508,12 @@ export class Room implements RoomHandle {
   abort(text: string): void {
     if (this.closed) return;
     this.aborted = text;
+    // Items taken out of the storage chests for this match go back: the match never counted.
+    try {
+      this.match.refundChests();
+    } catch {
+      // A match that crashed may be in no state to say what it handed out: nothing more to put back.
+    }
     for (const p of this.players.values()) if (!p.ended) p.peer?.send({ t: 'aborted', text });
     this.close();
   }

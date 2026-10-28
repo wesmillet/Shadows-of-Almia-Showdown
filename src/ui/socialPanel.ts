@@ -238,66 +238,34 @@ function modal(build: (box: HTMLDivElement, close: () => void) => void, wide = t
   });
 }
 
-interface RankedRow {
-  name: string;
-  rating: number;
-  games: number;
-  wins: number;
-  tier: { name: string; color: string } | null;
-}
-
-/** Ranked (this season) and all-time wins. */
+/** All-time wins (ranked play has been retired, and with it the ranked board). */
 export function leaderboardDialog(net: Connection, onProfile: (name: string) => void): Promise<void> {
   return modal((box, close) => {
-    box.append(el('h2', '', 'Leaderboards'));
-    const tabs = el('div', 'almia-tabs');
+    box.append(el('h2', '', 'Leaderboard'));
     const list = el('div', 'list');
-    const show = async (which: 'ranked' | 'wins') => {
-      for (const b of tabs.children) (b as HTMLButtonElement).className = `almia-small${(b as HTMLElement).dataset.k === which ? '' : ' alt'}`;
-      list.replaceChildren(el('div', 'almia-note', 'Loading...'));
+    list.append(el('div', 'almia-note', 'Loading...'));
+    void net.api<{ players: Array<{ name: string; wins: number; matches: number }> }>('/api/leaderboard').then((r) => {
       const t = el('table', 'almia-board');
-      if (which === 'ranked') {
-        const r = await net.api<{ season: number; players: RankedRow[] }>('/api/leaderboard?mode=ranked');
-        t.innerHTML = '<tr><th>#</th><th>Trainer</th><th>Tier</th><th class="r">Rating</th><th class="r">Wins</th></tr>';
-        (r.players ?? []).forEach((p, i) => {
-          const tr = el('tr');
-          const tier = el('td', '', p.tier?.name ?? '');
-          if (p.tier) tier.style.color = p.tier.color;
-          const nm = el('td', '', p.name);
-          nm.style.cursor = 'pointer';
-          nm.onclick = () => {
-            close();
-            onProfile(p.name);
-          };
-          tr.append(el('td', '', String(i + 1)), nm, tier, el('td', 'r', String(p.rating)), el('td', 'r', `${p.wins}/${p.games}`));
-          t.appendChild(tr);
-        });
-        list.replaceChildren(el('div', 'almia-note', `Season ${r.season ?? 1} · five placement games before you are listed`), t);
-        if (!r.players?.length) list.append(el('div', 'almia-note', 'Nobody has finished their placement games yet.'));
-      } else {
-        const r = await net.api<{ players: Array<{ name: string; wins: number; matches: number }> }>('/api/leaderboard');
-        t.innerHTML = '<tr><th>#</th><th>Trainer</th><th class="r">Wins</th><th class="r">Matches</th></tr>';
-        (r.players ?? []).forEach((p, i) => {
-          const tr = el('tr');
-          tr.append(el('td', '', String(i + 1)), el('td', '', p.name), el('td', 'r', String(p.wins)), el('td', 'r', String(p.matches)));
-          t.appendChild(tr);
-        });
-        list.replaceChildren(t);
-        if (!r.players?.length) list.append(el('div', 'almia-note', 'No wins yet. Be the first!'));
-      }
-    };
-    for (const [k, label] of [['ranked', 'Ranked'], ['wins', 'All-time wins']] as const) {
-      const b = el('button', 'almia-small', label);
-      b.dataset.k = k;
-      b.onclick = () => void show(k);
-      tabs.append(b);
-    }
+      t.innerHTML = '<tr><th>#</th><th>Trainer</th><th class="r">Wins</th><th class="r">Matches</th></tr>';
+      (r.players ?? []).forEach((p, i) => {
+        const tr = el('tr');
+        const nm = el('td', '', p.name);
+        nm.style.cursor = 'pointer';
+        nm.onclick = () => {
+          close();
+          onProfile(p.name);
+        };
+        tr.append(el('td', '', String(i + 1)), nm, el('td', 'r', String(p.wins)), el('td', 'r', String(p.matches)));
+        t.appendChild(tr);
+      });
+      list.replaceChildren(t);
+      if (!r.players?.length) list.append(el('div', 'almia-note', 'No wins yet. Be the first!'));
+    });
     const done = el('button', 'almia-btn alt', 'Close');
     done.onclick = close;
     const row = el('div', 'row');
     row.append(done);
-    box.append(tabs, list, row);
-    void show('ranked');
+    box.append(list, row);
   });
 }
 
@@ -328,7 +296,7 @@ export function replaysDialog(net: Connection, onWatch: (r: ReplayInfo) => void)
         const row = el('div', 'almia-row');
         const humans = x.players.filter((p) => p.human).map((p) => p.name);
         const when = new Date(x.endedAt);
-        const nm = el('span', 'nm', `${x.mode === 'ranked' ? 'Ranked · ' : x.mode === 'private' ? 'Private · ' : ''}${humans.join(', ') || 'Computer trainers'}`);
+        const nm = el('span', 'nm', `${x.mode === 'private' ? 'Private · ' : ''}${humans.join(', ') || 'Computer trainers'}`);
         nm.append(el('span', 'sub', `${x.winner ? `${x.winner} won` : 'No winner'} · ${Math.floor(x.seconds / 60)}:${String(Math.floor(x.seconds % 60)).padStart(2, '0')} · ${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`));
         const w = el('button', 'almia-small', 'Watch');
         w.onclick = () => {
@@ -387,7 +355,6 @@ interface Profile {
   name: string;
   joined: number;
   stats: { matches: number; wins: number; catches: number; knockouts: number; eliminations?: number; damage: number; bestPlace: number | null };
-  ranked?: { rating: number; tier: { name: string; color: string } | null; placementLeft: number; games: number; wins: number; peak: number; rank: number | null; season: number };
   recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; ratingDelta: number | null; xp: number | null; replay: boolean }>;
   pc: number;
   online: boolean;
@@ -397,7 +364,7 @@ interface Profile {
 }
 
 /**
- * A trainer's profile: level, title, ranked standing, stats, achievements, recent matches (with
+ * A trainer's profile: level, title, stats, achievements, recent matches (with
  * their replays). Your own also has your account tools: the title you wear, a link to share,
  * changing your password, and new recovery codes.
  */
@@ -429,14 +396,6 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
         fill.style.cssText = `height:100%;background:#f2c24a;width:${pr.next ? Math.round((pr.into / pr.next) * 100) : 100}%`;
         bar.append(fill);
         body.append(lvl, bar, el('div', 'almia-note', `${pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level + 1} · ` : ''}${p.online ? 'Online now · ' : ''}trainer since ${new Date(p.joined).toLocaleDateString()} · ${p.pc} Pokémon in their PC`));
-        const r = p.ranked;
-        if (r) {
-          const line = el('div', '', r.tier ? `${r.tier.name} · ${r.rating}${r.rank ? ` · #${r.rank}` : ''}` : r.games ? `Ranked: ${r.placementLeft} placement game${r.placementLeft === 1 ? '' : 's'} left` : 'No ranked games this season');
-          if (r.tier) line.style.color = r.tier.color;
-          line.style.fontSize = '19px';
-          line.style.margin = '8px 0 2px';
-          body.append(line, el('div', 'almia-note', `Season ${r.season} · ${r.wins} wins in ${r.games} ranked · peak ${r.peak}`));
-        }
         const st = p.stats;
         const t = el('table', 'almia-board');
         t.innerHTML = '<tr><th>Matches</th><th>Wins</th><th>Best</th><th>Catches</th><th>Knockouts</th></tr>';
@@ -464,7 +423,7 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
           for (const m of p.recent.slice(0, 8)) {
             const row = el('div', 'almia-row');
             const what = m.outcome === 'win' ? 'Won' : `#${m.place}`;
-            const extra = [m.mode === 'ranked' ? `Ranked${m.ratingDelta !== null ? ` ${m.ratingDelta >= 0 ? '+' : ''}${m.ratingDelta}` : ''}` : 'Casual', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
+            const extra = [m.mode === 'private' ? 'Private' : 'Public', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
             const nm = el('span', 'nm', `${what} · ${extra}`);
             nm.append(el('span', 'sub', new Date(m.at).toLocaleString()));
             row.append(nm);

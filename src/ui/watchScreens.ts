@@ -48,7 +48,7 @@ export function setupSpectate(screen: MatchScreen, mirror: MirrorMatch, net: Mir
       if (input.pressed('ArrowLeft') || input.pressed('KeyA') || input.pressed('KeyQ')) net.send({ t: 'follow', step: -1 });
     },
     draw(v: View) {
-      const mode = header.mode === 'ranked' ? 'Ranked · ' : header.mode === 'private' ? 'Private · ' : '';
+      const mode = header.mode === 'private' ? 'Private · ' : '';
       bar(v, `${mode}Watching ${nameOf(mirror.roster, follow)} · ${header.delay} s behind`, '← → switch trainer   ·   Esc leave');
     },
   };
@@ -200,7 +200,7 @@ export class ReplayPlayer {
 
   private draw(v: View): void {
     const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-    const mode = this.header.mode === 'ranked' ? 'Ranked · ' : this.header.mode === 'private' ? 'Private · ' : '';
+    const mode = this.header.mode === 'private' ? 'Private · ' : '';
     const s = v.baseScale;
     const w = Math.min(v.width - 40 * s, 620 * s);
     const x = v.width / 2 - w / 2;

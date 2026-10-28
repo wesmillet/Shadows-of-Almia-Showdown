@@ -157,3 +157,40 @@
 0555  # Darmanitan
 0208  # Steelix
 0809
+# Wild additions, October 2026: desert
+0566  # Archen
+0567  # Archeops
+0561  # Sigilyph
+0343  # Baltoy
+0344  # Claydol
+0322  # Numel
+0323  # Camerupt
+0451  # Skorupi
+0452  # Drapion
+0694  # Helioptile
+0695  # Heliolisk
+0769  # Sandygast
+0770  # Palossand
+# (Orthworm 0968 and Iron Treads 0990 are sets SpriteCollab still marks unfinished:
+#  python3 scripts/fetch-sprites.py --allow-incomplete 0968 0990)
+# Wild additions, October 2026: snow
+0027:alola  # Alolan Sandshrew
+0028:alola  # Alolan Sandslash
+0582  # Vanillite
+0583  # Vanillish
+0584  # Vanilluxe
+0974  # Cetoddle
+0975  # Cetitan
+0554:galar  # Galarian Darumaka
+0555:galar  # Galarian Darmanitan
+0225  # Delibird
+0615  # Cryogonal
+0086  # Seel
+0087  # Dewgong
+# Stronger encounters
+0289  # Slaking
+0212  # Scizor
+0900  # Kleavor
+0478  # Froslass
+0903  # Sneasler
+0563  # Cofagrigus

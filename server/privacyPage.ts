@@ -31,7 +31,7 @@ a { color: #c2611a; }
 <ul>
 <li><b>Your trainer name</b> (please not your real name) and your password, stored only in a scrambled form we can not read back.</li>
 <li>If you sign in with Google: Google's number for your account and your first name (to suggest a trainer name). Not your email.</li>
-<li><b>Your game</b>: Pokémon in your PC, your storage chest, your look and title, levels, achievements, ranked rating, stats and match history.</li>
+<li><b>Your game</b>: Pokémon in your PC, your storage chest, your look and title, levels, achievements, stats and match history (and, from before ranked play was retired, any ranked ratings).</li>
 <li><b>Recovery codes</b>, scrambled like the password, so you can get back in without an email.</li>
 <li>A sign-in cookie, so you stay signed in (for 30 days, or until you sign out).</li>
 </ul>

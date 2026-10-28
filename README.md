@@ -47,7 +47,7 @@ coast away from you; the wild Pokémon round every starting point stay at
 their land's base levels. Last trainer standing wins.
 
 The island: the Shadow Crystal on a terrace in an open plain at the centre,
-and four lands round it, each with its own wild Pokémon, a boss, and a town
+and four lands round it, each with its own wild Pokémon, a few stronger ones, and a town
 with a healer and three market stalls: Frostmere in the snowfields,
 Emberwood in the red autumn wood, Sunreach in the desert, Greenhollow in the
 forest. The castle stands in a clearing in the south-east forest: a square
@@ -60,18 +60,37 @@ smaller than Riolu), long and coiled ones (Gyarados, Steelix, Milotic,
 Serperior, Dragonair) are measured along their length, and giants stop at
 6 m (Wailord). See `sizes` in `data/config.json`.
 
-Wild Pokémon by land (common, uncommon, rare, boss ♛). The outer lands
-start at levels 2-7 for training; levels climb steadily toward the crystal,
-up to about 24 extra at the centre (wild Pokémon there are met already evolved).
+Wild Pokémon by land: each land's own table is always used, plus five species drawn by weight from
+its rotation pool every match (`data/spawns.json`). The outer lands start at levels 2-7 for training;
+levels climb steadily toward the crystal (wild Pokémon there are met already evolved). Some live only
+in their habitat: the desert ruins (Baltoy, Sigilyph), its mesas (Archen) and the sandy beaches
+(Sandygast; Seel on the snowy shore).
 
-| Land | Common | Uncommon | Rare | Boss |
-| --- | --- | --- | --- | --- |
-| Forest | Grubbin, Starly, Applin, Budew, Wurmple | Tropius | Turtwig, Treecko, Ralts | Ursaring (Lv 20) |
-| Red forest | Solosis, Fomantis, Impidimp, Charcadet, Deerling | Musharna | Zorua | Gallade (Lv 26) |
-| Snow | Snover, Alolan Vulpix, Amaura, Spheal | Absol | Frigibax | Avalugg (Lv 28) |
-| Desert | Sandile, Trapinch, Darumaka, Hippowdon | | Larvitar | Steelix (Lv 36) |
+| Land | Always there | Habitat | Some matches (rotation) |
+| --- | --- | --- | --- |
+| Forest | Grubbin, Starly, Applin, Budew, Wurmple, Tropius; rare Turtwig, Treecko, Ralts, Munchlax | | Caterpie, Kricketot, Fomantis, Bidoof, Hoothoot, Sentret, Pikachu, Shinx; rare Eevee, Tyrogue, Goomy and the grass starters |
+| Red forest | Solosis, Fomantis, Impidimp, Charcadet, Deerling, Musharna; rare Zorua | | Vulpix, Teddiursa, Meowth, Munchlax, Honedge; rare Chimchar, Magby, Elekid, Dreepy, Deino and the fire starters |
+| Snow | Snover, Alolan Vulpix, Spheal, Snom, Cubchoo, Vanillite, Alolan Sandshrew, Absol, Sneasel; rare Frigibax | Seel (beaches) | Swinub, Amaura, Bronzor, Bergmite, Galarian Darumaka, Delibird, Cetoddle, Cryogonal; rare Smoochum, Beldum, Dratini and the water starters |
+| Desert | Sandile, Trapinch, Darumaka, Hippopotas, Numel, Skorupi, Helioptile, Orthworm (scarce); rare Larvitar | Baltoy, Sigilyph (ruins), Archen (mesas), Sandygast (beaches) | Sandshrew, Geodude, Cacnea, Bronzor; rare Gible, Bagon, Jangmo-o, Mudkip |
 
 The central plain and the beaches take the table of the nearest land.
+
+**Stronger encounters.** Deep in every land wait one to three stronger wild Pokémon (one 65% of the
+time, two 27%, three 8%), different every match. They look like any other wild Pokémon; they keep to
+a small patch, are slow to anger, need more Styler loops and pay 3x XP. Forest: Ursaring, Slaking,
+Snorlax, Scizor, Kleavor. Red forest: Gallade, Gardevoir, Gengar, and 10% of the time Dragapult. Snow:
+Avalugg, Abomasnow, Glalie, Froslass, Sneasler, and 10% of the time Baxcalibur. Desert: Steelix, Drapion,
+Cofagrigus, now and then Iron Treads (levels 30-40), and 10% of the time Tyranitar or Garchomp (5% each).
+
+**A stranger in the forest.** In about one match in twenty a girl wanders the forest. Talk to her.
+
+**Eggs.** In about a third of matches Breeder Maribel wanders the island wanting one common species.
+Bring her one and she trades you an Egg: it takes that Pokémon's party slot (a full party is fine), never
+fights and is never the lead, and it hatches after you walk 450 steps with it (counted by the server from
+your real movement: standing still or walking into a wall adds nothing; `eggs` in `data/config.json`).
+Most Eggs hold one of her rare lines (Dratini, Larvitar, Bagon, Beldum, Gible, Deino, Goomy or Dreepy,
+equally likely); 5% hold a small Mythical instead (Mew, Celebi, Jirachi, Manaphy, Shaymin, Victini,
+Marshadow or Meltan, 0.625% each). An Egg still unhatched when the match ends is lost with it.
 
 **One-on-one trainer battles.** When two trainers come within 6 tiles of
 each other in sight, both parties go back into their balls and each sends
@@ -84,12 +103,12 @@ works the same way (and a loss there is friendly).
 **Visitors.** Four things roam the island besides the rivals (`src/sim/visitors.ts`):
 
 - the **Wandering Merchant** (gold dot on the minimap): Space beside him opens a stall of rare things the
-  towns don't sell (Rare Candy, Exp. Share, Lucky Egg, a Master Ball, held items, a Crystal Shard and the
-  stone of the day);
+  towns don't sell (Rare Candy, a Super Rod, a Master Ball, an Extraction Voucher, Leftovers, a Life Orb,
+  a Max Revive, and in a few matches a Storm Mask);
 - **Ace Trainer Celeste** (pink dot): Space for a one-on-one battle with Garchomp, Lucario and Gyarados a
-  few levels above your best. Win and she gives you a shiny (Lucario, Garchomp, Dragonite, Tyranitar or
-  Gyarados) or a powerful Pokémon (Metagross, Salamence, Goodra, Dragapult...) at your level. Lose and she
-  patches your team up; try again a minute later;
+  few levels above your best. Win and she gives you a random shiny Pokémon at your level, drawn from every
+  ordinary species in the game (no legendaries or Mythicals). Lose and she patches your team up; try
+  again a minute later;
 - **Hoopa** (violet dot): Space and it opens a ring portal; a legendary (Ho-Oh, Suicune, Latios,
   Rayquaza or Raikou) comes through with triple HP and challenges you to a **legend bout**, fought like a trainer
   battle (see below). Hoopa only turns up in about one
@@ -115,8 +134,9 @@ Evolution stones (Fire, Water, Thunder, Leaf, Ice, Moon, Sun, Shiny, Dusk,
 Dawn) evolve the lead when its species has that stone evolution: Pikachu,
 Eevee (five of its forms; Espeon, Umbreon and Sylveon still come by level),
 Kirlia to Gallade, Roselia, Doublade, Charjabug, Vulpix and Alolan Vulpix.
-Each town's medicine stall sells its own stone and the Wandering Merchant has
-a stone of the day; stones are not found in item balls. Great and Ultra Balls
+Each town's medicine stall sells two stones, all ten between them (Frostmere: Ice
+and Water; Emberwood: Fire and Dusk; Sunreach: Sun and Thunder; Greenhollow: Leaf
+and Shiny; the castle: Moon and Dawn); stones are not found in item balls. Great and Ultra Balls
 can hold the **Snag Machine** (Shift+number beside a rival's fainted Pokémon
 to claim it), Mega Stones, Extraction Vouchers and **Max Revives** (a fainted
 Pokémon back at full HP; the Wandering Merchant sells them too).
@@ -132,7 +152,7 @@ higher levels): an even fight is worth about a level and a quarter early on,
 one level around level 25 and under a level by level 40. The partner out beside the dealer takes half, Pokémon in
 their balls 40%, and a catch gives the lead three quarters of a
 knockout. About one wild Pokémon in eight is an **Elite** (gold name): 5-9
-levels higher, often already evolved, worth 1.6x XP; land bosses pay 3x.
+levels higher, often already evolved, worth 1.6x XP; stronger encounters pay 3x.
 About one wild Pokémon in fifty is **shiny** (four times that for Alphas):
 real shiny colours from SpriteCollab, a light-blue "Shiny" name and a glint
 that twinkles on its body; it stays shiny when caught and when it evolves.
@@ -194,7 +214,6 @@ impact on the body, at most one aftershock.
 | hover a party card | a red X in its corner releases that Pokémon (click again on "Release?" to confirm): it walks off into the wild, calm for a while, and could be caught again. Not during a battle, and never your last one |
 | hover a bag slot | the item's name; the count sits in the slot's corner; the red X throws the item away |
 | item balls | Poké Ball = common, Great Ball = uncommon, Ultra Ball = rare; a Premier Ball holds an eliminated trainer's bag, the Master Ball appears by the crystal when the final darkness begins, Darkrai leaves a Cherish Ball (a Dark-type held item and a full party heal) |
-| Shift+number on a Crystal Shard | clears the darkness in a 5-tile circle around you for 10 s |
 | healers (one per town and one in the castle courtyard) | Space for a full party heal, every 20 s |
 
 Every 200 s the Shadow Crystal pulses (five pulses) and darkness creeps
@@ -269,8 +288,8 @@ serious" under two thirds of its HP), and under a third it is **enraged**
 (Attack and Speed up). Worn down to its last HP it joins you (or, with a full
 party, leaves an Extraction Voucher). If it beats your whole team it vanishes
 and your Pokémon are patched up; a legend bout never knocks you out of the
-match. If you are already battling when it appears, it stays out as a wild
-boss instead, and whoever wears it down gets it.
+match. If you are already battling when it appears, it stays out as a strong
+wild Pokémon instead, and whoever wears it down gets it.
 
 **Respawning.** If wild Pokémon knock out your whole party you are not
 out: every item you carry drops where you fell (one Premier Ball) and you
@@ -326,7 +345,7 @@ assets/
                           union_00-09) + manifest.json + README.md
   tiles/                  optional painted tileset + Tiled JSON map (see below)
   fx/guardian_signs/      256 Guardian Signs attack effects + manifest.json + contact_sheet.png (move VFX)
-  items/                  Gen 4 bag icons, TM discs, balls/ (every ball sprite and the Crystal Shard vial)
+  items/                  Gen 4 bag icons, TM discs, balls/ (every ball sprite)
   CREDITS.md              generated: SpriteCollab license and per-folder artists
 data/
   species.json            dex, name, types, base stats, starter tier, wild biome, kit

@@ -332,7 +332,6 @@ export class MirrorMatch {
     m.throws = (r.throws as Match['throws']) ?? [];
     m.duels = ((r.duels as Match['duels']) ?? []).filter(Boolean);
     Object.assign(m.darkness, r.darkness as object);
-    m.lightZones = (r.lightZones as Match['lightZones']) ?? [];
     m.outposts = (r.outposts as Match['outposts']) ?? [];
     m.chests = (r.chests as Match['chests']) ?? [];
     const ch = (r.challenge as Match['challenge']) ?? null;

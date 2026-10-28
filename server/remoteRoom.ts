@@ -87,7 +87,7 @@ export class RemoteRoom implements RoomHandle {
     spec: RoomSpec,
     readonly onEnd: (room: RoomHandle, report: EndReport) => void,
   ) {
-    this.id = roomId(spec.seed);
+    this.id = spec.opts.id ?? roomId(spec.seed);
     this.mode = spec.opts.mode;
     this.seed = spec.seed;
     this.players = new Set(spec.entries.map((e) => e.peer.key));
@@ -248,7 +248,7 @@ export class WorkerPool {
       const lost = [...pw.rooms.values()];
       if (lost.length || (code !== 0 && !pw.retiring && !this.stopping)) this.o.log(`Match worker ${n} stopped (code ${code}), ${lost.length} match(es) called off`);
       for (const r of lost) {
-        for (const key of r.everyone()) this.o.deliver(key, JSON.stringify({ t: 'aborted', text: 'Something went wrong on the server, so this match was called off. Nothing was lost. Sorry!' }));
+        for (const key of r.everyone()) this.o.deliver(key, JSON.stringify({ t: 'aborted', text: 'Something went wrong on the server, so this match was called off. It does not count as a loss, but items taken out of your storage chest during it could not be put back. Sorry!' }));
         r.finish({ ev: 'end', room: r.id, results: [], botPlaces: [], flags: [], aborted: 'worker stopped', replay: null });
       }
       pw.rooms.clear();

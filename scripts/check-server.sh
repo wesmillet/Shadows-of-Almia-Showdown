@@ -9,12 +9,14 @@ npx tsc --noEmit
 npm test --silent
 npm run build:client --silent
 npm run build:server --silent
-PORT=8787 SERVER_KIND=dev LOBBY_WAIT=4 MATCH_SIZE=4 DIST_DIR=dist \
+PORT=8787 SERVER_KIND=dev LOBBY_WAIT=4 MATCH_SIZE=4 MIN_PLAYERS=1 DIST_DIR=dist \
   node --disable-warning=ExperimentalWarning dist-server/main.js > "$DATA_DIR/server.log" 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 for i in $(seq 1 90); do curl -sf localhost:8787/health > /dev/null && break; sleep 1; done
 npx tsx server/checks/teams.ts
+npx tsx server/checks/gameplay.ts | tail -1
+npx tsx server/checks/online_events.ts | tail -1
 npx tsx server/checks/lagcomp.ts > /dev/null && echo "lag compensation ok"
 npx tsx server/checks/social.ts | tail -1
 npx tsx server/checks/moderation.ts | tail -1

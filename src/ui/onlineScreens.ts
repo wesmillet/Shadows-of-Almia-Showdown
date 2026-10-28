@@ -1,7 +1,7 @@
 /**
- * The online screens: the hub (your account, casual or ranked, friends and party, private lobbies,
+ * The online screens: the hub (your account, friends and party, private lobbies,
  * watching and replays), a private lobby, the lobby while a match fills up, and the end of a match
- * (the result, a ranked rating change, and for a win the Pokémon to keep; the server checks every
+ * (the result, and for a win the Pokémon to keep; the server checks every
  * pick and keeps the PC).
  */
 import type { Input } from '../core/input';
@@ -75,7 +75,7 @@ function hubBackdrop(v: GameContext['view'], t: number): void {
 }
 
 /**
- * The hub: the game's logo over a night sky, your trainer card, Casual or Ranked, one big Find a
+ * The hub: the game's logo over a night sky, your trainer card, one big Find a
  * Match, private matches with friends, and the leaderboard. Chat sits bottom left.
  */
 export class OnlineScreen implements Screen {
@@ -459,6 +459,8 @@ export class LobbyScreen implements Screen {
   private players: string[] = [];
   private startsIn: number | null = null;
   private need = 0;
+  /** Real players a match needs before computer trainers fill the rest (the server says). */
+  private min = 4;
   private size = 8;
   private mode: QueueMode | undefined;
   private unsub: (() => void) | null = null;
@@ -478,6 +480,7 @@ export class LobbyScreen implements Screen {
         this.startsIn = m.startsIn;
         this.need = m.need ?? 0;
         this.size = m.size;
+        this.min = m.min ?? Math.ceil(m.size / 2);
         this.mode = m.mode;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
     });
@@ -496,7 +499,7 @@ export class LobbyScreen implements Screen {
 
   /** Casual queues only: done waiting, start with computer trainers filling the rest. */
   private startNowRect(): Rect | null {
-    if (this.mode === 'ranked' || this.startsIn === null || this.startsIn < 4) return null;
+    if (this.startsIn === null || this.startsIn < 4) return null;
     const v = this.ctx.view;
     const s = v.baseScale;
     return { x: v.width / 2 - 110 * s, y: v.height / 2 + 142 * s, w: 220 * s, h: 50 * s };
@@ -529,11 +532,11 @@ export class LobbyScreen implements Screen {
     const sub = waitingParty
       ? `Your party is picking starters (${picked}/${party.members.length})`
       : this.need > 0
-        ? `Waiting for ${this.need} more trainer${this.need === 1 ? '' : 's'} (a match needs at least ${Math.ceil(this.size / 2)})`
+        ? `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'} (${this.min} needed before bots fill in)`
         : this.startsIn === null
           ? 'Joining the queue'
           : `Starting in ${Math.ceil(this.startsIn)}s`;
-    heading(v, `${this.mode === 'ranked' ? 'Ranked · ' : ''}Finding trainers${dots}`, sub, 80 * s);
+    heading(v, `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
     const py = v.height / 2 - 150 * s;
@@ -664,12 +667,6 @@ export class OnlineEndScreen implements Screen {
       prog.achievements.slice(0, 2).forEach((a, i) => {
         text(v, `★ ${a.name}${a.title ? ` · new title: ${a.title}` : ''}${a.look ? ' · new look' : ''}`, v.width / 2, py + 186 * s + i * 18 * s, 13, { align: 'center', color: '#c2611a', shadow: false, maxWidth: pw - 40 * s });
       });
-    }
-    const rated = this.net.rated;
-    if (rated) {
-      const d = rated.after - rated.before;
-      const tier = rated.tier ? `${rated.tier.name} · ` : rated.placementLeft ? `${rated.placementLeft} placement game${rated.placementLeft === 1 ? '' : 's'} left · ` : '';
-      text(v, `Ranked: ${tier}${rated.after} (${d >= 0 ? '+' : ''}${d})`, v.width / 2, py + 108 * s, 14, { align: 'center', color: rated.tier?.color ?? (d >= 0 ? INK.good : INK.bad), shadow: false });
     }
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;

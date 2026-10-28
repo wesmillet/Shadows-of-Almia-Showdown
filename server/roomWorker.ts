@@ -117,7 +117,7 @@ setInterval(() => {
         const err = e instanceof Error ? e : new Error(String(e));
         post({ ev: 'error', room: r.id, message: err.message, stack: err.stack ?? '', time: r.time });
         try {
-          r.abort('Something went wrong in this match, so it was called off. Nothing was lost. Sorry!');
+          r.abort('Something went wrong in this match, so it was called off. It does not count as a loss, and anything you took out of your storage chest is back in it. Sorry!');
         } catch {
           rooms.delete(r.id);
         }

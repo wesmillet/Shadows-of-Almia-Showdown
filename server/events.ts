@@ -1,5 +1,5 @@
 /**
- * Timed events, set up by the moderators (/mod -> Events): for a while every casual and ranked
+ * Timed events, set up by the moderators (/mod -> Events): for a while every public
  * match gets a boost, and everyone online is told when it starts and ends.
  *
  *   xp       XP from matches times `value` (Double XP: 2)

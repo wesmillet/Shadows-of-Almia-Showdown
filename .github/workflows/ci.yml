@@ -33,15 +33,19 @@ jobs:
       - name: Start a test server (the built one)
         run: |
           mkdir -p "$DATA_DIR"
-          PORT=8787 SERVER_KIND=dev LOBBY_WAIT=4 MATCH_SIZE=4 DIST_DIR=dist \
+          PORT=8787 SERVER_KIND=dev LOBBY_WAIT=4 MATCH_SIZE=4 MIN_PLAYERS=1 DIST_DIR=dist \
             node --disable-warning=ExperimentalWarning dist-server/main.js > "$DATA_DIR/server.log" 2>&1 &
           for i in $(seq 1 90); do curl -sf localhost:8787/health && exit 0; sleep 1; done
           cat "$DATA_DIR/server.log"; exit 1
+      - name: Gameplay (Eggs, Zoroark, private matches, chests, stronger encounters)
+        run: npx tsx server/checks/gameplay.ts
+      - name: Online events (sync, reconnects, movement validation)
+        run: npx tsx server/checks/online_events.ts
       - name: Squads
         run: npx tsx server/checks/teams.ts
       - name: Lag compensation
         run: npx tsx server/checks/lagcomp.ts
-      - name: Accounts, friends, parties, ranked, private lobbies, spectating, replays, progress
+      - name: Accounts, friends, parties, private lobbies, spectating, replays, progress
         run: npx tsx server/checks/social.ts
       - name: Anti-cheat and moderation
         run: npx tsx server/checks/moderation.ts

@@ -1,7 +1,7 @@
 /**
- * Everything outside a match: who is connected and what they are doing, the casual and ranked
+ * Everything outside a match: who is connected and what they are doing, the public
  * queues, parties, private lobbies, starter picks, spectating, and what happens when a match ends
- * (stats, ranked ratings, the replay). main.ts feeds it connections and messages; it runs the rest.
+ * (stats, progress, the replay). main.ts feeds it connections and messages; it runs the rest.
  *
  * Starter picks: every match starts with each player picking one of three starters the server
  * rolled for them (src/sim/starters.ts). Alone, a player rolls and then queues. A party or a private
@@ -14,7 +14,6 @@ import { starterChoices, unlockedFromPc } from '../src/sim/starters';
 import type { Accounts, Presence } from './accounts';
 import { Matchmaker, type Lineup } from './matchmaker';
 import { newCode, PrivateLobby } from './privateLobby';
-import { rateMatch, tierOf, PLACEMENT_GAMES, type Entrant } from './rating';
 import { deleteReplay, ReplayRecorder } from './replays';
 import type { EndReport, RoomHandle } from './roomHandle';
 import type { Events } from './events';
@@ -86,6 +85,8 @@ export interface HubOptions {
   accounts: Accounts;
   size: number;
   wait: Record<QueueMode, number>;
+  /** Real players a public lobby needs before computer trainers fill the rest (default half the lobby). */
+  minPlayers?: number;
   hooks: RoomHooks;
   /** Where replays go (null: not recorded). */
   replayDir: string | null;
@@ -128,7 +129,7 @@ export class Hub {
       size: o.size,
       wait: o.wait,
       fullSeconds: 3,
-      minPlayers: process.env.MIN_PLAYERS ? Number(process.env.MIN_PLAYERS) : undefined,
+      minPlayers: o.minPlayers,
       start: (players, mode) => this.startRoom(players, mode, {}),
     });
     o.accounts.presence = (id) => this.presence(id);
@@ -186,7 +187,8 @@ export class Hub {
         c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
         return;
       case 'queue':
-        return this.queue(c, msg.pick, msg.mode === 'ranked' ? 'ranked' : 'casual');
+        // Every public match is casual (ranked play has been retired; an old client asking for it plays casual).
+        return this.queue(c, msg.pick);
       case 'leaveQueue':
         this.leaveQueue(c, `${c.name} left the queue`);
         this.cancelPick(c, `${c.name} left`);
@@ -238,7 +240,7 @@ export class Hub {
     for (const r of [...this.rooms]) r.abort(text);
   }
 
-  private queue(c: Client, pick: unknown, mode: QueueMode): void {
+  private queue(c: Client, pick: unknown): void {
     if (c.room) return;
     if (c.rollSeed === null) return c.send({ t: 'unqueued', text: 'Your roll expired, roll again' });
     if (this.draining && !c.pick) return c.send({ t: 'notice', text: DRAIN_TEXT });
@@ -253,11 +255,7 @@ export class Hub {
     }
     if (c.party && c.party.members.length > 1) return c.send({ t: 'error', text: 'Your party leader starts the matches' });
     if (c.private) return c.send({ t: 'error', text: 'Leave your private lobby to queue' });
-    if (mode === 'ranked') {
-      if (c.accountId === null) return c.send({ t: 'error', text: 'Sign in to play ranked' });
-      const rating = this.o.accounts.rating(c.accountId).r.rating;
-      this.matchmaker.join({ tickets: [{ peer: c, starter, rating }], party: false }, 'ranked', Date.now());
-    } else this.matchmaker.join({ tickets: [{ peer: c, starter }], party: false }, 'casual', Date.now());
+    this.matchmaker.join({ tickets: [{ peer: c, starter }], party: false }, 'casual', Date.now());
     this.presenceChanged(c);
   }
 
@@ -387,7 +385,6 @@ export class Hub {
         if (!p || p.leader !== c) return;
         if (this.draining) return c.send({ t: 'notice', text: DRAIN_TEXT });
         if (p.members.length < 2) return c.send({ t: 'notice', text: 'Your party is just you: use Find a Match' });
-        if (msg.mode === 'ranked') return c.send({ t: 'notice', text: 'Ranked is solo. Parties play casual' });
         if (p.members.some((m) => m.room || m.pick)) return c.send({ t: 'notice', text: 'Someone in your party is still in a match' });
         for (const m of p.members) {
           m.watching?.unspectate(m.key);
@@ -564,13 +561,13 @@ export class Hub {
     }
     const seed = randomInt(1, 2 ** 31);
     const size = rules.size ?? this.o.size;
-    // Events boost casual and ranked matches; private ones keep their own rules.
+    // Events boost public matches; private ones keep their own rules.
     const ev = this.events;
     const boosts = mode !== 'private' && ev ? { shinyBoost: ev.boost('shiny'), storm: ev.storm() } : {};
     const make = this.o.makeRoom ?? localRoom(this.o.world);
     const spec: RoomSpec = {
       entries: live.map((q) => ({ name: q.peer.name, starter: q.starter, team: q.team, peer: q.peer })), size, seed,
-      opts: { mode, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts }, replayDir: this.o.replayDir,
+      opts: { mode, id: `m${randomBytes(8).toString('hex')}`, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts }, replayDir: this.o.replayDir,
     };
     const room = make(spec, this.o.hooks, (r, report) => this.endRoom(r, report));
     this.rooms.add(room);
@@ -604,32 +601,10 @@ export class Hub {
       void this.saveReplay(room, report);
       return;
     }
-    const deltas = room.mode === 'ranked' ? this.rate(report) : new Map<string, number>();
-    const progress = this.o.accounts.recordMatch(room.id, results, room.mode, deltas, room.roster.length, room.mode === 'private' ? 1 : (this.events?.boost('xp') ?? 1));
+    const progress = this.o.accounts.recordMatch(room.id, results, room.mode, new Map(), room.roster.length, room.mode === 'private' ? 1 : (this.events?.boost('xp') ?? 1));
     for (const [key, p] of progress) this.clients.get(key)?.send({ t: 'progress', ...p });
     this.o.log(`Match ${room.id} over: ${results.map((r) => `${r.name} #${r.place}`).join(', ')}`);
     void this.saveReplay(room, report);
-  }
-
-  /** Ranked: everyone's new rating (and each player is told theirs). */
-  private rate(report: EndReport): Map<string, number> {
-    const acc = this.o.accounts;
-    const entrants: Entrant[] = [];
-    for (const r of report.results) {
-      if (!r.key.startsWith('u')) continue;
-      entrants.push({ key: r.key, rating: acc.rating(Number(r.key.slice(1))).r, place: r.place, team: r.team });
-    }
-    const after = rateMatch(entrants, report.botPlaces);
-    const deltas = new Map<string, number>();
-    for (const e of entrants) {
-      const id = Number(e.key.slice(1));
-      const r = after.get(e.key) ?? e.rating;
-      acc.saveRating(id, r, e.place === 1);
-      deltas.set(e.key, r.rating - e.rating.rating);
-      const card = acc.rankedCard(id);
-      this.clients.get(e.key)?.send({ t: 'rated', before: Math.round(e.rating.rating), after: Math.round(r.rating), tier: tierOf(r.rating, card.games), placementLeft: Math.max(0, PLACEMENT_GAMES - card.games) });
-    }
-    return deltas;
   }
 
   private async saveReplay(room: RoomHandle, report: EndReport): Promise<void> {
@@ -656,7 +631,7 @@ export class Hub {
     let score = -1;
     for (const r of this.rooms) {
       if (r.mode === 'private' || r.closed) continue;
-      const s = r.humansIn * 10 + r.watcherCount + (r.mode === 'ranked' ? 5 : 0);
+      const s = r.humansIn * 10 + r.watcherCount;
       if (s > score) {
         score = s;
         best = r;

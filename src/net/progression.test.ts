@@ -23,17 +23,17 @@ describe('match XP', () => {
     expect(win).toBeGreaterThan(lose + 200);
   });
 
-  it('gives ranked a bonus and private matches nothing', () => {
+  it('gives private matches nothing, and no mode a bonus (ranked is retired)', () => {
     const casual = matchXp(facts()).reduce((n, x) => n + x.xp, 0);
     const ranked = matchXp(facts({ mode: 'ranked' })).reduce((n, x) => n + x.xp, 0);
-    expect(ranked).toBeGreaterThan(casual);
+    expect(ranked).toBe(casual);
     expect(matchXp(facts({ mode: 'private' }))).toEqual([]);
   });
 });
 
 describe('achievements, titles and looks', () => {
   const ctx = (over: Partial<AchievementContext> = {}): AchievementContext => ({
-    match: facts(), life: { matches: 1, wins: 0, catches: 0, knockouts: 0, damage: 0 }, level: 1, tier: null, rankedWins: 0, pc: 0, ...over,
+    match: facts(), life: { matches: 1, wins: 0, catches: 0, knockouts: 0, damage: 0 }, level: 1, pc: 0, ...over,
   });
   const earned = (c: AchievementContext) => ACHIEVEMENTS.filter((a) => a.check(c)).map((a) => a.id);
 
@@ -41,8 +41,7 @@ describe('achievements, titles and looks', () => {
     expect(earned(ctx())).toEqual(['first_match']);
     const big = earned(ctx({ match: facts({ outcome: 'win', place: 1, squad: true, party: [{ dex: '0006', level: 52, shiny: true, alpha: false, legend: false, shadow: false }] }), life: { matches: 3, wins: 1, catches: 0, knockouts: 0, damage: 0 } }));
     expect(big).toEqual(expect.arrayContaining(['first_win', 'squad_win', 'shiny', 'level_50_mon', 'top3']));
-    expect(earned(ctx({ tier: 'platinum' }))).toEqual(expect.arrayContaining(['tier_gold']));
-    expect(earned(ctx({ tier: 'platinum' }))).not.toContain('tier_diamond');
+    expect(ACHIEVEMENTS.some((a) => a.id.startsWith('tier_') || a.id === 'ranked_win')).toBe(false);
   });
 
   it('lists the titles earned', () => {

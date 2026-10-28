@@ -8,6 +8,7 @@
 import { gunzipSync } from 'node:zlib';
 import WebSocket from 'ws';
 import type { ClientMsg, ServerMsg } from '../../src/net/protocol';
+import { LEVELS_ON } from '../../src/net/progression';
 
 const BASE = process.argv[2] ?? 'http://localhost:8787';
 const WS = BASE.replace(/^http/, 'ws');
@@ -145,18 +146,19 @@ G.send({ t: 'spectate', name: A.name });
 check((await G.wait('notice')).text.includes('friends'), 'strangers can not watch by name');
 B.send({ t: 'unspectate' });
 
-// ---------------------------------------------------------------- ranked
+// ---------------------------------------------------------------- ranked is retired
+// (A lobby needs half its seats filled by real players: B asks for ranked, the guest for casual,
+// and they land in the same casual lobby.)
 const rStart = B.wait('start', () => true, 40);
+const gStart = G.wait('start', () => true, 40);
 await B.pick('ranked');
+await G.pick();
 const rs = await rStart;
-check(rs.mode === 'ranked', 'a ranked match (filled with computer trainers after the wait)');
-const rated = B.wait('rated', () => true, 20);
+await gStart;
+check(rs.mode === 'casual' && rs.roster.filter((r) => r.human).length === 2, 'asking for ranked (an old client) plays a casual match, with the casual queue');
 B.send({ t: 'leave' });
-const rr = await rated;
-check(rr.after < rr.before, `leaving a ranked match first costs rating (${rr.before} -> ${rr.after})`);
-check(rr.tier === null && rr.placementLeft === 4, 'placement games: no tier yet');
-const card = (await api(B.cookie, '/api/ranked')).json;
-check(card.games === 1 && card.rating === rr.after, 'the rating is saved');
+G.send({ t: 'leave' });
+check((await api(B.cookie, '/api/ranked')).status === 404, 'no ranked standing to fetch any more');
 
 // ---------------------------------------------------------------- a private lobby
 const lob = B.wait('private', (m) => !!m.lobby);
@@ -199,7 +201,8 @@ check(gained > 0 && prog.xp[0]?.what === 'Played a match', `a finished match ear
 check(prog.achievements.some((a) => a.id === 'first_match'), 'and the first achievement');
 const meA = (await api(A.cookie, '/api/me')).json as { progress: { xp: number; level: number }; achievements: string[] };
 check(meA.progress.xp === gained && meA.achievements.includes('first_match'), `kept on the account (level ${meA.progress.level})`);
-check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === 403, 'a Ranger look is locked at level 1');
+// (Trainer levels are off for now, LEVELS_ON: then every Ranger look is free.)
+check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === (LEVELS_ON ? 403 : 200), LEVELS_ON ? 'a Ranger look is locked at level 1' : 'Ranger looks are free while trainer levels are off');
 check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are locked');
 check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the first Ranger is free');
 check((await api(A.cookie, '/api/title', { title: 'Master Ranger' })).status === 400, 'titles must be earned');
@@ -233,7 +236,7 @@ const ch = await api(rec.cookie, '/api/password', { current: 'Brand-New-Lantern-
 check(ch.json.ok, 'changing the password needs the current one');
 const page = await fetch(`${BASE}/u/${encodeURIComponent(A.name)}`);
 const html = await page.text();
-check(page.status === 200 && html.includes(A.name) && html.includes('First Steps') && html.includes('Trainer level'), 'the public profile page');
+check(page.status === 200 && html.includes(A.name) && html.includes('First Steps') && html.includes('Trainer level') === LEVELS_ON, 'the public profile page');
 check((await fetch(`${BASE}/u/NoSuchTrainer9`)).status === 404, 'no page for nobody');
 check(!(await fetch(`${BASE}/u/%3Cscript%3E`).then((r) => r.text())).includes('<script>'), 'names are escaped');
 

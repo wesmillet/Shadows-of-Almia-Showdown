@@ -42,18 +42,6 @@ export interface Me {
   achievements?: string[];
 }
 
-/** A ranked standing (server/accounts.ts rankedCard). */
-export interface RankedCard {
-  season: number;
-  rating: number;
-  games: number;
-  wins: number;
-  peak: number;
-  tier: { id: string; name: string; color: string } | null;
-  placementLeft: number;
-  rank: number | null;
-}
-
 /** What only the browser needs to send messages (the replay player feeds a mirror without a server). */
 export interface MirrorNet {
   on(l: (msg: ServerMsg) => void): () => void;
@@ -116,11 +104,8 @@ export class Connection {
   social: { friends: FriendEntry[]; party: PartyState | null; invites: string[] } = { friends: [], party: null, invites: [] };
   /** The private lobby this player is in. */
   privateLobby: PrivateState | null = null;
-  /** The last ranked result (shown on the end screen). */
-  rated: Extract<ServerMsg, { t: 'rated' }> | null = null;
   /** The last match's XP, levels and achievements (shown on the end screen). */
   progress: Extract<ServerMsg, { t: 'progress' }> | null = null;
-  ranked: RankedCard | null = null;
   /** Events on now (double XP, shiny hour...). */
   events: Extract<ServerMsg, { t: 'events' }>['active'] = [];
 
@@ -165,7 +150,6 @@ export class Connection {
         } else if (msg.t === 'pong') this.ping = Math.round(performance.now() - msg.at);
         else if (msg.t === 'social') this.social = { friends: msg.friends, party: msg.party, invites: msg.invites };
         else if (msg.t === 'private') this.privateLobby = msg.lobby;
-        else if (msg.t === 'rated') this.rated = msg;
         else if (msg.t === 'events') this.events = msg.active;
         else if (msg.t === 'progress') {
           this.progress = msg;
@@ -247,10 +231,6 @@ export class Connection {
   async refreshMe(): Promise<Me> {
     const me = await this.api<Me>('/api/me');
     if (!me.error) this.me = me;
-    if (this.me.signedIn) {
-      const r = await this.api<RankedCard>('/api/ranked');
-      this.ranked = r.error ? null : r;
-    } else this.ranked = null;
     return this.me;
   }
 

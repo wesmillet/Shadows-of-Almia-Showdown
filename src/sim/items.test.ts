@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
 import { BALL_LIST, ITEMS, LOOT, rollLoot, rollTier, TM_LIST } from './items';
 import { MOVES, SPECIES } from './data';
+import { SHOPS, stallStock } from './town';
 
 describe('items and loot', () => {
   it('defines every loot entry, fifteen balls and at least ten TMs with real moves', () => {
@@ -14,7 +15,20 @@ describe('items and loot', () => {
     for (const tm of TM_LIST) expect(MOVES.has(tm.move ?? '')).toBe(true);
     expect(ITEMS['choice-band']?.kind).toBe('hold');
     expect(ITEMS['hyper-potion']?.amount).toBe(120);
-    expect(ITEMS['crystal-shard']?.kind).toBe('shard');
+    // The Crystal Shard is gone from the game, and Eggs live in party slots, not the bag.
+    expect(ITEMS['crystal-shard']).toBeUndefined();
+    expect(ITEMS['mystery-egg']).toBeUndefined();
+    for (const tier of Object.values(LOOT)) expect(tier.entries.some((e) => e.id === 'crystal-shard')).toBe(false);
+    // Every held item says what it does.
+    for (const it of Object.values(ITEMS)) if (it.kind === 'hold') expect(it.desc, it.id).toBeTruthy();
+  });
+
+  it('sells all ten evolution stones in the town markets between them', () => {
+    const stones = Object.values(ITEMS).filter((i) => i.kind === 'stone').map((i) => i.id).sort();
+    expect(stones.length).toBe(10);
+    const sold = new Set<string>();
+    for (const town of Object.keys(SHOPS.townItems)) for (const e of stallStock(town, 1).stock) if (ITEMS[e.id]?.kind === 'stone') sold.add(e.id);
+    expect([...sold].sort()).toEqual(stones);
   });
 
   it('gives every Mega form a held Mega Stone for its base form, and rolls stones from rare loot', () => {

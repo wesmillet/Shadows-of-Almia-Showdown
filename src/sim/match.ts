@@ -14,7 +14,7 @@ import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw 
 import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
-import { activeParty, incapable, lead } from './entities';
+import { activeParty, incapable, lead, partySize } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
 import { canStand, moveAround, tryMove } from './movement';
 import { DEV_CHEST, rareChest } from '../dev';
@@ -28,6 +28,7 @@ import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
 import { newSeat, type MatchOutcome, type Seat } from './seat';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
+import { pickStrong, weightedPicks, type SpawnRow, type StrongConfig, type StrongPool } from './spawning';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
@@ -46,6 +47,9 @@ export interface MatchDeps {
 }
 
 export type { MatchOutcome } from './seat';
+
+/** The most of one item a storage chest stack holds. */
+export const CHEST_STACK_MAX = 9999;
 
 let nextId = 1;
 
@@ -145,8 +149,6 @@ export class Match {
   }
   /** One-on-one trainer battles in progress (and just finished ones for endSeconds). */
   duels: Duel[] = [];
-  /** Crystal Shard clearings: circles the darkness leaves alone while `t` > 0. */
-  lightZones: Array<{ x: number; y: number; r: number; t: number }> = [];
   darkrai: Mon | null = null;
   get outcome(): MatchOutcome {
     return this.seat.outcome;
@@ -191,6 +193,14 @@ export class Match {
   readonly mirror: boolean;
   /** Run by the game server (no hit-stop; set by server/room.ts). */
   online = false;
+  /**
+   * Whether anything from this match is kept: Extraction Vouchers and storage-chest changes. Off in
+   * private matches (server/room.ts): a private match is a sandbox, so nothing it hands out (its
+   * rules, its rare-item chest) reaches a permanent PC or chest.
+   */
+  keepsResults = true;
+  /** Net items each trainer has taken out of their chest this match (by id), refunded if the match is called off. */
+  private chestOut = new Map<Trainer, Map<string, number>>();
 
   constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[]; team?: number }>; rivals?: number; mirror?: boolean; stormSpeed?: number; shinyBoost?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
@@ -380,8 +390,51 @@ export class Match {
     }
     t.storage = box;
     // The tester chest's extra items are not kept: only a normal chest is saved.
-    if (!(t.isPlayer && this.rareChest)) this.chestStore.save(t, box);
+    this.saveChest(t, box);
     return box;
+  }
+
+  /**
+   * Saves a trainer's chest, unless this match keeps nothing (private) or the rare-item chest is
+   * open (its tester items must never reach a saved chest: they would be kept for good).
+   */
+  private saveChest(t: Trainer, box: Array<InventorySlot | null>): void {
+    if (!this.keepsResults || (t.isPlayer && this.rareChest)) return;
+    this.chestStore.save(t, box);
+  }
+
+  /** Whether chest changes this match are saved (not in private matches or with the rare-item chest). */
+  chestKept(t: Trainer): boolean {
+    return this.keepsResults && !(t.isPlayer && this.rareChest);
+  }
+
+  /**
+   * The match was called off before it ended (a server restart): whatever the players took out of
+   * their chests this match goes back in, since the match it was taken out for never counted.
+   */
+  refundChests(): void {
+    for (const [t, out] of this.chestOut) {
+      if (!this.chestKept(t)) continue;
+      const box = this.storageOf(t);
+      for (const [id, n] of out) {
+        if (n <= 0 || !ITEMS[id]) continue;
+        const same = box.find((s) => s?.id === id);
+        if (same) same.count = Math.min(CHEST_STACK_MAX, same.count + n);
+        else {
+          const free = box.indexOf(null);
+          if (free < 0) continue;
+          box[free] = { id, count: Math.min(CHEST_STACK_MAX, n) };
+        }
+      }
+      this.chestStore.save(t, box);
+    }
+    this.chestOut.clear();
+  }
+
+  private noteChest(t: Trainer, id: string, n: number): void {
+    let m = this.chestOut.get(t);
+    if (!m) this.chestOut.set(t, (m = new Map()));
+    m.set(id, (m.get(id) ?? 0) + n);
   }
 
   /** Puts a whole bag (or gear) stack in the chest. Returns what happened. */
@@ -391,6 +444,8 @@ export class Match {
     if (!entry) return '';
     const box = this.storageOf(t);
     const same = box.find((s) => s?.id === entry.id);
+    // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest).
+    if (same && same.count + entry.count > CHEST_STACK_MAX) return 'That stack in the chest is full';
     if (same) same.count += entry.count;
     else {
       const free = box.indexOf(null);
@@ -398,9 +453,10 @@ export class Match {
       box[free] = { id: entry.id, count: entry.count };
     }
     list[slot] = null;
-    this.chestStore.save(t, box);
+    this.noteChest(t, entry.id, -entry.count);
+    this.saveChest(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
-    return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
+    return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}${this.chestKept(t) ? '' : ' (not kept after this match)'}`;
   }
 
   /** Takes a whole chest stack back into the bag (or gear). Returns what happened. */
@@ -410,7 +466,8 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
-    this.chestStore.save(t, box);
+    this.noteChest(t, entry.id, entry.count);
+    this.saveChest(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
   }
@@ -443,7 +500,7 @@ export class Match {
       const def = ITEMS[id];
       const byKind: Record<string, number> = {
         ball: 300, heal: 300, revive: 1200, cure: 300, boost: 350, hold: 2000, tm: def?.rare ? 3000 : 1500, styler: 3000,
-        shard: 1500, candy: 1200, stone: 1800, voucher: 6000, rod: 1500,
+        candy: 1200, stone: 1800, voucher: 6000, rod: 1500,
       };
       buy = def?.effect === 'mega' ? 4000 : byKind[def?.kind ?? ''] ?? 200;
     }
@@ -648,12 +705,19 @@ export class Match {
     if (!entry || !def || def.kind !== 'hold') return '';
     if (!m) return 'No Pokémon to hold it';
     const previous = m.heldItem;
+    // A Mega Evolved Pokémon (or one glowing on its way there) keeps its Mega Stone.
+    if (previous && ITEMS[previous]?.effect === 'mega' && (m.mega || m.evolving?.mega)) return `${m.name} needs its ${ITEMS[previous]?.name ?? 'Mega Stone'} while Mega Evolved`;
     m.heldItem = def.id;
     this.takeItem(t, slot, 'held');
     // Holding its Mega Stone: start loading the Mega's sprites now so the change is instant.
     const form = def.effect === 'mega' ? megaFormOf(m.dex) : null;
     if (form && form.stone === def.id) this.sprites.get(form.dex, !!m.shiny);
-    if (previous) this.giveItem(t, previous);
+    // The item it held goes back to the tab; with no room for it, nothing changes (it used to be lost).
+    if (previous && !this.giveItem(t, previous)) {
+      m.heldItem = previous;
+      this.giveItem(t, def.id);
+      return `No room in your Held & TMs tab for its ${ITEMS[previous]?.name ?? 'item'}`;
+    }
     return `${m.name} holds the ${def.name}`;
   }
 
@@ -851,16 +915,9 @@ export class Match {
         const secs = (CONFIG.darkness as { stormMaskSeconds?: number }).stormMaskSeconds ?? 120;
         return `The ${def.name} works from your bag: your Pokémon last ${maskTime(secs)} in the storm before falling asleep`;
       }
-      case 'shard': {
-        if (!Number.isFinite(this.darkness.radius)) return 'The darkness has not come yet';
-        this.lightZones.push({ x: t.x, y: t.y, r: def.radius ?? 5, t: def.seconds ?? 10 });
-        this.takeItem(t, slot);
-        this.battle.events.push({ type: 'notice', text: 'The shard blazes: the darkness pulls back', seconds: 2 });
-        return '';
-      }
       case 'styler': {
         if (t.isPlayer && this.shadowBoutFoe()) return this.snagShadow(slot);
-        if (t.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card to make room`;
+        if (partySize(t) >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card to make room`;
         let best: Mon | null = null;
         let bd = 3.5;
         for (const o of this.allTrainers) {
@@ -916,7 +973,7 @@ export class Match {
     const from = offer.from;
     const m = from.party.filter((x) => !x.captured)[index];
     if (!m) return '';
-    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}): hover a party card and click its X to release one, then pick again`;
+    if (partySize(p) >= this.partyCap) return `Your party is full (${this.partyCap}): hover a party card and click its X to release one, then pick again`;
     const slot = this.snagSlot(p);
     if (slot < 0) {
       this.snagOffer = null;
@@ -957,7 +1014,7 @@ export class Match {
     const entry = t.items[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
     if (!entry || !def || def.kind !== 'ball') return false;
-    if (t.party.length >= this.partyCap) {
+    if (partySize(t) >= this.partyCap) {
       this.battle.events.push({ type: 'notice', text: `Your party is full (${this.partyCap}). Release one from its card to make room`, seconds: 2.4 });
       return false;
     }
@@ -1191,9 +1248,10 @@ export class Match {
       // Leftovers regenerate the holder.
       for (const m of t.party) {
         if (m.fainted || m.heldItem !== 'leftovers' || m.hp >= m.maxHp) continue;
-        m.busy = (m.busy ?? 0) + dt;
-        if (m.owner && m.busy >= 3) {
-          m.busy = 0;
+        // Its own timer: `busy` is the Pokémon's attack pacing, which this used to reset and stall.
+        m.leftoversT = (m.leftoversT ?? 0) + dt;
+        if (m.owner && m.leftoversT >= 3) {
+          m.leftoversT = 0;
           m.hp = Math.min(m.maxHp, m.hp + Math.max(1, Math.floor(m.maxHp / 16)));
           this.battle.events.push({ type: 'text', mon: m, text: '+Leftovers' });
         }
@@ -1637,13 +1695,14 @@ export class Match {
         }
       }
     }
-    type Row = { dex: string; weight: number; levels?: number[] };
-    type Table = { count: number; levels?: number[]; table?: Row[]; use?: string };
+    type Row = SpawnRow;
+    type Table = { count: number; levels?: number[]; table?: Row[]; use?: string; habitatSlots?: Record<string, [number, number]> };
     // Every match differs: each land keeps its own table (weights jittered) plus a few species drawn
     // from its rotation pool for this match, and every line that can Mega Evolve is placed in its land.
     const extra = SPAWNS as unknown as {
       rotation?: Record<string, Row[]>; rotationPicks?: number; tableJitter?: [number, number];
       megaLines?: Array<{ dex: string; land: string }>;
+      habitats?: Record<string, { zones?: Array<[number, number, number, number]>; biome?: Biome }>;
     };
     const tables = {} as Record<Biome, Table>;
     for (const [b, t] of Object.entries(SPAWNS.biomes as unknown as Record<Biome, Table>) as Array<[Biome, Table]>) {
@@ -1654,8 +1713,10 @@ export class Match {
       const [j0, j1] = extra.tableJitter ?? [1, 1];
       const rows: Row[] = t.table.map((r) => ({ ...r, weight: r.weight * this.rng.range(j0, j1) }));
       const lv = t.levels ?? [3, 6];
-      for (const r of this.rng.shuffle([...(extra.rotation?.[b] ?? [])]).slice(0, extra.rotationPicks ?? 0)) {
-        if (rows.some((x) => x.dex === r.dex)) continue;
+      // The rotation picks: by weight, without repeats, never a species already in the table (a pick
+      // that duplicated the table used to be a wasted pick).
+      const pool = (extra.rotation?.[b] ?? []).filter((r) => !rows.some((x) => x.dex === r.dex));
+      for (const r of weightedPicks(this.rng, pool, extra.rotationPicks ?? 0)) {
         // Rare picks (starters, pseudo-legendaries) come a little stronger, like a table's rare entries.
         rows.push(r.weight <= 1.5 ? { ...r, levels: [(lv[0] ?? 3) + 3, (lv[1] ?? 6) + 2] } : { ...r });
       }
@@ -1663,54 +1724,102 @@ export class Match {
     }
     this.spawnRotation = Object.fromEntries(Object.entries(tables).map(([b, t]) => [b, (t.table ?? []).map((r) => r.dex)]));
     const nearest = (tables.meadow?.use || tables.shore?.use) ? this.nearestLand(tables) : null;
+    const landAt = (spot: { x: number; y: number }, biome: Biome): Biome | null =>
+      tables[biome]?.use && nearest ? nearest[Math.floor(spot.y) * g.cols + Math.floor(spot.x)] ?? null : biome;
+    const inHabitat = (h: string, spot: { x: number; y: number }, biome: Biome): boolean => {
+      const def = extra.habitats?.[h];
+      if (!def) return false;
+      if (def.biome && biome !== def.biome) return false;
+      if (def.zones && !def.zones.some(([cx, cy, rx, ry]) => ((spot.x - cx) / rx) ** 2 + ((spot.y - cy) / ry) ** 2 <= 1)) return false;
+      return !!(def.biome || def.zones);
+    };
+    const used = new Set<string>();
+    const key = (p: { x: number; y: number }) => `${Math.floor(p.x)},${Math.floor(p.y)}`;
+    const placed: Record<string, number> = {};
+    // Habitat slots first: each land puts a few of its spawns where its habitat entries live (the
+    // desert ruins, its mesas, its beaches), rolling only among those entries there.
+    for (const [land, table] of Object.entries(tables) as Array<[Biome, Table]>) {
+      if (table.use || !table.table?.length || !table.habitatSlots) continue;
+      for (const [h, range] of Object.entries(table.habitatSlots)) {
+        const rows = table.table.filter((r) => r.habitat === h);
+        if (!rows.length) continue;
+        const cands: Array<{ x: number; y: number; biome: Biome }> = [];
+        for (const [bb, list] of Object.entries(byBiome) as Array<[Biome, Array<{ x: number; y: number }>]>) {
+          if (bb === 'water') continue;
+          for (const p of list) if (landAt(p, bb) === land && inHabitat(h, p, bb)) cands.push({ ...p, biome: bb });
+        }
+        const n = Math.min(this.rng.int(range[0] ?? 1, range[1] ?? range[0] ?? 1), cands.length);
+        for (const spot of this.rng.shuffle(cands)) {
+          if ((placed[`${land}:${h}`] ?? 0) >= n) break;
+          if (used.has(key(spot))) continue;
+          // Spread out: not right beside another habitat spawn.
+          if ([...used].some((k) => { const [ux, uy] = k.split(',').map(Number) as [number, number]; return Math.abs(ux - spot.x) < 3 && Math.abs(uy - spot.y) < 3; })) continue;
+          used.add(key(spot));
+          placed[`${land}:${h}`] = (placed[`${land}:${h}`] ?? 0) + 1;
+          placed[land] = (placed[land] ?? 0) + 1;
+          this.spawnWild(this.rng.weighted(rows, (r) => r.weight), table, spot);
+        }
+      }
+    }
     for (const [biome, table] of Object.entries(tables) as Array<[Biome, Table]>) {
-      const spots = this.rng.shuffle([...byBiome[biome]]);
-      const n = Math.min(table.count, spots.length);
+      const spots = this.rng.shuffle([...byBiome[biome]]).filter((p) => !used.has(key(p)));
+      // A land's habitat spawns count toward its total.
+      const n = Math.min(Math.max(0, table.count - (placed[biome] ?? 0)), spots.length);
       const forced: Row[] = (extra.megaLines ?? []).filter((l) => l.land === biome).map((l) => ({ dex: l.dex, weight: 1 }));
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
         // Meadows and beaches borrow the table of the land they border.
-        const land = table.use && nearest ? nearest[Math.floor(spot.y) * g.cols + Math.floor(spot.x)] : biome;
-        const t = land ? tables[land as Biome] : undefined;
+        const land = landAt(spot, biome);
+        const t = land ? tables[land] : undefined;
         if (!t?.table?.length) continue;
-        let row = forced[i] ?? this.rng.weighted(t.table, (r) => r.weight);
-        const lv = row.levels ?? t.levels ?? [3, 6];
-        // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
-        // easing to none at the coast, so the outer lands stay gentle for fresh teams.
-        // Round every starting point the land stays at its base levels, so a fresh team can train there.
-        const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
-        // (No bonus within 25 tiles of a start, the full bonus from 70: a gentle ramp, so a start that
-        // happens to sit nearer the crystal is not ringed by much stronger wilds.)
-        const calm = Math.min(1, Math.max(0, (nearStart - 25) / 45));
-        // Round the crystal the bonus is spread a little, so the middle holds levels from the 30s to about 60.
-        const w = CONFIG.wild;
-        const spread = this.rng.range(w.centerLevelSpread[0] ?? 0.75, w.centerLevelSpread[1] ?? 1.1);
-        let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm * spread);
-        // Close to the crystal, now and then an Alpha: huge, fully evolved, level 75.
-        const toCenter = Math.hypot(spot.x - this.centerX, spot.y - this.centerY);
-        const alpha = nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
-        // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
-        const elite = !alpha && nearStart > 35 && this.rng.chance(w.eliteChance ?? 0);
-        if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
-        if (alpha) {
-          // A cut above the wilds around it: alphaLevelBonus over the local level, at most alphaLevelMax.
-          level = Math.min(w.alphaLevelMax, level + w.alphaLevelBonus + this.rng.int(-2, 2));
-          // An Alpha is a line's last form: prefer a row that actually evolves.
-          for (let k = 0; k < 8 && finalForm(row.dex, this.rng) === row.dex; k++) row = this.rng.weighted(t.table, (r) => r.weight);
-        }
-        level = Math.min(100, level);
-        // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
-        const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
-        // Now and then a shiny (Alphas a little more often).
-        const shiny = this.rng.chance((alpha ? w.shinyChance * 4 : w.shinyChance) * this.shinyBoost);
-        const mon = this.makeMon(dex, level, null, spot.x, spot.y, shiny);
-        if (elite) mon.elite = true;
-        if (alpha) mon.alpha = true;
-        mon.dir = this.rng.int(0, 7) as Dir8;
-        this.wilds.push(mon);
+        // Habitat entries spawn in their habitat slots only.
+        const open = t.table.filter((r) => !r.habitat);
+        if (!open.length) continue;
+        const row = forced[i] ?? this.rng.weighted(open, (r) => r.weight);
+        this.spawnWild(row, t, spot);
       }
     }
-    this.spawnBosses(byBiome);
+    this.spawnStrong(byBiome);
+  }
+
+  /** One wild Pokémon of `row` (from land table `t`) at `spot`: its level, Elite or Alpha, form and shininess. */
+  private spawnWild(row0: SpawnRow, t: { levels?: number[]; table?: SpawnRow[] }, spot: { x: number; y: number }): void {
+    let row = row0;
+    const lv = row.levels ?? t.levels ?? [3, 6];
+    // Stronger the closer to the Shadow Crystal: up to centerLevelBonus extra levels at the centre,
+    // easing to none at the coast, so the outer lands stay gentle for fresh teams.
+    // Round every starting point the land stays at its base levels, so a fresh team can train there.
+    const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
+    // (No bonus within 25 tiles of a start, the full bonus from 70: a gentle ramp, so a start that
+    // happens to sit nearer the crystal is not ringed by much stronger wilds.)
+    const calm = Math.min(1, Math.max(0, (nearStart - 25) / 45));
+    // Round the crystal the bonus is spread a little, so the middle holds levels from the 30s to about 60.
+    const w = CONFIG.wild;
+    const spread = this.rng.range(w.centerLevelSpread[0] ?? 0.75, w.centerLevelSpread[1] ?? 1.1);
+    let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm * spread);
+    // Close to the crystal, now and then an Alpha: huge, fully evolved, level 75.
+    const toCenter = Math.hypot(spot.x - this.centerX, spot.y - this.centerY);
+    const alpha = nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
+    // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
+    const elite = !alpha && nearStart > 35 && this.rng.chance(w.eliteChance ?? 0);
+    if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
+    if (alpha) {
+      // A cut above the wilds around it: alphaLevelBonus over the local level, at most alphaLevelMax.
+      level = Math.min(w.alphaLevelMax, level + w.alphaLevelBonus + this.rng.int(-2, 2));
+      // An Alpha is a line's last form: prefer a row that actually evolves (of the same habitat).
+      const same = (t.table ?? []).filter((r) => r.habitat === row0.habitat);
+      for (let k = 0; k < 8 && same.length && finalForm(row.dex, this.rng) === row.dex; k++) row = this.rng.weighted(same, (r) => r.weight);
+    }
+    level = Math.min(100, level);
+    // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
+    const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
+    // Now and then a shiny (Alphas a little more often).
+    const shiny = this.rng.chance((alpha ? w.shinyChance * 4 : w.shinyChance) * this.shinyBoost);
+    const mon = this.makeMon(dex, level, null, spot.x, spot.y, shiny);
+    if (elite) mon.elite = true;
+    if (alpha) mon.alpha = true;
+    mon.dir = this.rng.int(0, 7) as Dir8;
+    this.wilds.push(mon);
   }
 
   /** Extra wild levels at a spot: centerLevelBonus at the Shadow Crystal, none past centerLevelRadius. */
@@ -1756,15 +1865,21 @@ export class Match {
   }
 
   /**
-   * One boss per land, somewhere new every match: a random open spot inside that land (a few tiles
-   * clear of its edges, so it is not on a border or a shoreline) and well apart from the other bosses.
+   * The stronger encounters (spawns.json strong): one to three per land each match, new species every
+   * match, each somewhere new: a random open spot inside that land (a few tiles clear of its edges,
+   * so it is not on a border or a shoreline), apart from the others and far from every start. They
+   * carry no mark: only their level and their habits (a small patch, slow to anger) set them apart.
    */
-  private spawnBosses(byBiome: Record<Biome, Array<{ x: number; y: number }>>): void {
-    const bosses = (SPAWNS as unknown as { bosses?: Array<{ biome: Biome; dex: string; level: number }> }).bosses ?? [];
+  private spawnStrong(byBiome: Record<Biome, Array<{ x: number; y: number }>>): void {
+    const cfg = (SPAWNS as unknown as { strong?: StrongConfig }).strong;
+    if (!cfg) return;
     const placed: Array<{ x: number; y: number }> = [];
-    for (const b of bosses) {
-      const spots = byBiome[b.biome];
+    const counts = Object.entries(cfg.count).map(([k, p]) => ({ n: Number(k), p }));
+    for (const [biome, pool] of Object.entries(cfg.pools) as Array<[Biome, StrongPool]>) {
+      const spots = byBiome[biome];
       if (!spots?.length) continue;
+      const n = counts.length ? this.rng.weighted(counts, (c) => c.p).n : 1;
+      const picks = pickStrong(this.rng, pool, n, cfg.pseudoChance);
       const inLand = new Set(spots.map((p) => `${Math.floor(p.x)},${Math.floor(p.y)}`));
       const inside = (p: { x: number; y: number }, r: number) => {
         const tx = Math.floor(p.x);
@@ -1772,27 +1887,31 @@ export class Match {
         for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!inLand.has(`${tx + dx},${ty + dy}`)) return false;
         return true;
       };
-      // Well apart from the other bosses, and never near where a trainer starts.
+      // Well apart from each other, and never near where a trainer starts.
       const starts = [...this.startSpots, { x: this.player.x, y: this.player.y }];
-      const apart = (p: { x: number; y: number }) =>
-        placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= 12) && starts.every((s) => Math.hypot(p.x - s.x, p.y - s.y) >= 45);
-      // The deepest ring that still leaves room to choose from, then any spot in the land.
-      let pool: Array<{ x: number; y: number }> = [];
-      for (const r of [3, 2, 1, 0]) {
-        pool = spots.filter((p) => inside(p, r) && apart(p));
-        if (pool.length >= 8) break;
+      for (const row of picks) {
+        const apart = (p: { x: number; y: number }) =>
+          placed.every((q) => Math.hypot(p.x - q.x, p.y - q.y) >= 12) && starts.every((s) => Math.hypot(p.x - s.x, p.y - s.y) >= 45);
+        // The deepest ring that still leaves room to choose from, then any spot in the land.
+        let cands: Array<{ x: number; y: number }> = [];
+        for (const r of [3, 2, 1, 0]) {
+          cands = spots.filter((p) => inside(p, r) && apart(p));
+          if (cands.length >= 8) break;
+        }
+        // Nowhere that far from every start: the spot farthest from them (and the others).
+        if (!cands.length) {
+          const far = (p: { x: number; y: number }) => Math.min(...starts.map((s) => Math.hypot(p.x - s.x, p.y - s.y)), ...placed.map((q) => Math.hypot(p.x - q.x, p.y - q.y)));
+          cands = [spots.reduce((a, b) => (far(b) > far(a) ? b : a))];
+        }
+        const best = this.rng.pick(cands);
+        placed.push(best);
+        const lv = row.levels ?? [20, 24];
+        const mon = this.makeMon(row.dex, this.rng.int(lv[0] ?? 20, lv[1] ?? lv[0] ?? 20), null, best.x, best.y);
+        // Internally still a "land boss": the patch it keeps, its slow temper, Styler loops, XP.
+        mon.landBoss = true;
+        mon.dir = this.rng.int(0, 7) as Dir8;
+        this.wilds.push(mon);
       }
-      // Nowhere that far from every start: the spot farthest from them.
-      if (!pool.length) {
-        const far = (p: { x: number; y: number }) => Math.min(...starts.map((s) => Math.hypot(p.x - s.x, p.y - s.y)));
-        pool = [spots.reduce((a, b) => (far(b) > far(a) ? b : a))];
-      }
-      const best = this.rng.pick(pool);
-      placed.push(best);
-      const mon = this.makeMon(b.dex, b.level, null, best.x, best.y);
-      mon.landBoss = true;
-      mon.dir = this.rng.int(0, 7) as Dir8;
-      this.wilds.push(mon);
     }
   }
 
@@ -2359,6 +2478,8 @@ export class Match {
     if (p.duelId) return "You can't release a Pokémon during a battle";
     if (p.party.length <= 1) return "You can't release your last Pokémon";
     p.party.splice(index, 1);
+    // Its held item stays with the trainer (when there is room for it).
+    if (m.heldItem && this.giveItem(p, m.heldItem)) m.heldItem = null;
     m.owner = null;
     m.stowed = false;
     m.recall = false;
@@ -2387,6 +2508,7 @@ export class Match {
     if (!entry || ITEMS[entry.id]?.kind !== 'voucher') return '';
     const m = p.party[index];
     if (!m) return '';
+    if (!this.keepsResults) return 'Nothing leaves a private match: vouchers do nothing here';
     if (p.duelId) return "You can't extract a Pokémon during a battle";
     if (!p.party.some((o) => o !== m && !o.fainted && !o.captured)) return "You can't extract your last Pokémon that can fight";
     this.takeItem(p, itemSlot);
@@ -2672,6 +2794,13 @@ export class Match {
   afterTrainerMove(t: Trainer, moved: number, from: { x: number; y: number } = { x: t.px, y: t.py }, dt = this.lastDt || 1 / 60): void {
     const net = Math.hypot(t.x - from.x, t.y - from.y);
     t.moving = moved > 1e-4 && net / dt > 0.9;
+    // Eggs hatch by walking: the distance this step's own movement covered (never a teleport, a
+    // push from someone else or a walk into a wall), at most the fastest a trainer can go.
+    if (t.eggs?.length && t.alive && moved > 1e-4) {
+      const most = this.trainerSpeed(t) * dt * 1.05;
+      const step = Math.min(moved, net + 1e-6, most);
+      for (const e of t.eggs) e.steps = Math.min(e.need, e.steps + step);
+    }
     // One walk cycle per 2.2 tiles: the side run has two strides in it, so feet land about five times a second at full speed.
     if (t.moving) t.walkPhase = (t.walkPhase + net / 2.2) % 1;
   }
@@ -2999,7 +3128,7 @@ export class Match {
       // The champion's trophy: a shiny Pokémon at your best level.
       const pool = CHAMPION_SHINIES.filter((d) => SPECIES.has(d) && SpriteRegistry.hasShiny(d));
       let prize = '';
-      if (pool.length && this.player.party.length < this.partyCap) {
+      if (pool.length && partySize(this.player) < this.partyCap) {
         const best = Math.max(...this.player.party.map((x) => x.level));
         const mon = this.makeMon(pool[this.rng.int(0, pool.length - 1)] as string, best, this.player, this.player.x + 0.8, this.player.y + 0.5, true);
         mon.stowed = true;
@@ -3041,11 +3170,6 @@ export class Match {
       }
     }
     void wasPhase;
-    for (let i = this.lightZones.length - 1; i >= 0; i--) {
-      const z = this.lightZones[i] as (typeof this.lightZones)[number];
-      z.t -= dt;
-      if (z.t <= 0) this.lightZones.splice(i, 1);
-    }
     if (!Number.isFinite(d.radius)) return;
     const c = CONFIG.darkness;
     for (const m of this.mons()) {
@@ -3102,10 +3226,9 @@ export class Match {
     }
   }
 
-  /** Inside the darkness and outside every shard clearing. */
+  /** Inside the darkness. */
   isDark(x: number, y: number): boolean {
-    if (!inDarkness(this.darkness, x, y, this.centerX, this.centerY)) return false;
-    return !this.lightZones.some((z) => Math.hypot(z.x - x, z.y - y) < z.r);
+    return inDarkness(this.darkness, x, y, this.centerX, this.centerY);
   }
 
   private spawnDarkrai(): void {
@@ -3357,7 +3480,7 @@ export class Match {
     if (!L) return '';
     const below = CONFIG.shadowLugia.snagBelow;
     if (L.hp / L.maxHp >= below) return `${L.name} is too strong to snag. Wear it under ${Math.round(below * 100)}% HP first`;
-    if (p.party.length >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
+    if (partySize(p) >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
     const d = this.playerDuel as Duel;
     const host = L.owner as Trainer;
     this.takeItem(p, slot);

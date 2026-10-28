@@ -2,7 +2,7 @@
  * Online progression, shared by the server (which awards it) and the browser (which shows it):
  * trainer XP and levels, achievements, titles, and the trainer looks they unlock.
  *
- * Every match a signed-in player finishes (casual or ranked; private matches keep nothing) earns
+ * Every public match a signed-in player finishes (private matches keep nothing) earns
  * XP for playing, for how far they got, and for what they did. Levels unlock Ranger looks;
  * achievements unlock titles (shown on profiles and in battles) and the two named looks.
  */
@@ -28,6 +28,7 @@ export function levelOf(xp: number): { level: number; into: number; next: number
 }
 
 export interface MatchFacts {
+  /** Public matches are casual ('ranked' is a retired mode, kept only so old records read). */
   mode: 'casual' | 'ranked' | 'private';
   place: number;
   /** Trainers in the match (humans and computer trainers). */
@@ -54,10 +55,6 @@ export function matchXp(f: MatchFacts): Array<{ what: string; xp: number }> {
   if (dmg) out.push({ what: 'Damage dealt', xp: Math.min(150, dmg) });
   const minutes = Math.floor(f.stats.timeSurvived / 60);
   if (minutes) out.push({ what: `Survived ${minutes} min`, xp: Math.min(120, minutes * 10) });
-  if (f.mode === 'ranked') {
-    const sum = out.reduce((n, x) => n + x.xp, 0);
-    out.push({ what: 'Ranked bonus', xp: Math.round(sum * 0.25) });
-  }
   return out;
 }
 
@@ -68,9 +65,6 @@ export interface AchievementContext {
   match: MatchFacts | null;
   life: { matches: number; wins: number; catches: number; knockouts: number; eliminations?: number; damage: number };
   level: number;
-  /** Ranked tier id this season (null before placement). */
-  tier: string | null;
-  rankedWins: number;
   pc: number;
 }
 
@@ -84,9 +78,6 @@ export interface Achievement {
   look?: string;
   check: (c: AchievementContext) => boolean;
 }
-
-const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'master'];
-const atLeast = (tier: string | null, want: string) => tier !== null && TIER_ORDER.indexOf(tier) >= TIER_ORDER.indexOf(want);
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'first_match', name: 'First Steps', desc: 'Finish an online match', check: (c) => c.life.matches >= 1 },
@@ -105,10 +96,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'alpha', name: 'Alpha Wrangler', desc: 'Finish a match with an alpha Pokémon', check: (c) => !!c.match?.party.some((m) => m.alpha) },
   { id: 'legend', name: 'Legend Tamer', desc: 'Finish a match with a legendary Pokémon', title: 'Legend Tamer', check: (c) => !!c.match?.party.some((m) => m.legend) },
   { id: 'level_50_mon', name: 'Raised Right', desc: 'Finish a match with a Pokémon at level 50 or higher', check: (c) => !!c.match?.party.some((m) => m.level >= 50) },
-  { id: 'ranked_win', name: 'Ranked Victor', desc: 'Win a ranked match', check: (c) => c.rankedWins >= 1 },
-  { id: 'tier_gold', name: 'Gold Standard', desc: 'Reach Gold in ranked', check: (c) => atLeast(c.tier, 'gold') },
-  { id: 'tier_diamond', name: 'Diamond Hands', desc: 'Reach Diamond in ranked', title: 'Diamond', check: (c) => atLeast(c.tier, 'diamond') },
-  { id: 'tier_master', name: 'Master Ranger', desc: 'Reach Master in ranked', title: 'Master Ranger', check: (c) => atLeast(c.tier, 'master') },
+  // (The ranked achievements, Ranked Victor, Gold Standard, Diamond Hands and Master Ranger, left with
+  // ranked play; any that were earned stay in the database but are no longer shown or worn.)
   { id: 'pc_10', name: 'Starting a Collection', desc: 'Keep 10 Pokémon in your PC', check: (c) => c.pc >= 10 },
   { id: 'pc_50', name: 'Professor', desc: 'Keep 50 Pokémon in your PC', title: 'Professor', check: (c) => c.pc >= 50 },
   { id: 'level_10', name: 'Ace Trainer', desc: 'Reach trainer level 10', title: 'Ace Trainer', check: (c) => c.level >= 10 },

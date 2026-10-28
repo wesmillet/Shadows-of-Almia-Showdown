@@ -121,7 +121,6 @@ export class PlayerView {
     r.throws = this.list('throws', m.throws.filter((th) => near(th.x, th.y)));
     r.duels = this.list('duels', m.duels.filter((d) => near(d.cx, d.cy) || d.a.trainer === me || d.b.trainer === me));
     r.darkness = m.darkness;
-    r.lightZones = m.lightZones;
     r.outposts = m.outposts;
     r.chests = m.chests;
     r.challenge = m.challenge;

@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { Backups } from './backup';
 import { s3FromEnv, s3Get } from './s3';
+import { archiveAccount } from './collectionLog';
 
 const DATA = process.env.DATA_DIR ?? join(import.meta.dirname, '..', '.data');
 const [cmd, a, b] = process.argv.slice(2);
@@ -50,15 +51,51 @@ if (cmd === 'restore') {
   }
   const live = join(DATA, 'almia.db');
   const keep = `${live}.before-restore-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}`;
-  if (existsSync(live)) renameSync(live, keep);
-  for (const x of ['-wal', '-shm']) if (existsSync(live + x)) unlinkSync(live + x);
-  writeFileSync(live, data);
+  // The backup must open cleanly before it replaces anything.
+  const tmp = `${live}.restoring`;
+  writeFileSync(tmp, data);
+  try {
+    const check = new DatabaseSync(tmp);
+    const ok = (check.prepare('PRAGMA integrity_check').get() as { integrity_check?: string } | undefined)?.integrity_check;
+    check.close();
+    if (ok !== 'ok') throw new Error(String(ok));
+  } catch (e) {
+    unlinkSync(tmp);
+    console.error('That backup does not pass an integrity check:', e instanceof Error ? e.message : e);
+    process.exit(1);
+  }
+  if (existsSync(live)) {
+    // Fold the old database's write-ahead log into it first, so the kept copy is complete (the
+    // server must be stopped; a database still in use is refused).
+    try {
+      const old = new DatabaseSync(live);
+      old.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+      old.close();
+    } catch (e) {
+      unlinkSync(tmp);
+      console.error('Could not close out the current database (is the server still running?):', e instanceof Error ? e.message : e);
+      process.exit(1);
+    }
+    renameSync(live, keep);
+    // Anything the checkpoint left behind goes with the kept copy, not into the bin.
+    for (const x of ['-wal', '-shm']) if (existsSync(live + x)) renameSync(live + x, keep + x);
+  }
+  renameSync(tmp, live);
   console.log(`Restored ${a} (${Math.round(data.length / 1024)} KB).${existsSync(keep) ? ` The old database is ${keep}.` : ''} Start the server again.`);
   process.exit(0);
 }
 
 const db = new DatabaseSync(join(DATA, 'almia.db'));
 db.exec('PRAGMA foreign_keys = ON');
+
+/** What the CLI changes goes in the moderators' log too (as "admin CLI"). */
+const logAdmin = (action: string, target: string, detail = '') => {
+  try {
+    db.prepare('INSERT INTO mod_actions (by_user, by_name, action, target, detail, at) VALUES (?, ?, ?, ?, ?, ?)').run(null, 'admin CLI', action, target, detail.slice(0, 300), Date.now());
+  } catch {
+    // an older database without the table: nothing to log into
+  }
+};
 
 interface U {
   id: number;
@@ -88,6 +125,7 @@ switch (cmd) {
   }
   case 'resolve':
     db.prepare('UPDATE reports SET resolved = 1 WHERE id = ?').run(Number(a));
+    logAdmin('resolve', `report #${a}`);
     console.log(`Report #${a} resolved.`);
     break;
   case 'player': {
@@ -104,6 +142,7 @@ switch (cmd) {
     const u = user(a);
     const mins = Number(b ?? 60);
     db.prepare('UPDATE users SET muted_until = ? WHERE id = ?').run(mins > 0 ? Date.now() + mins * 60_000 : 0, u.id);
+    logAdmin('mute', u.username, `${mins} min`);
     console.log(mins > 0 ? `${u.username} muted for ${mins} minutes.` : `${u.username} unmuted.`);
     break;
   }
@@ -111,17 +150,21 @@ switch (cmd) {
     const u = user(a);
     db.prepare('UPDATE users SET banned = 1 WHERE id = ?').run(u.id);
     db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
+    logAdmin('ban', u.username);
     console.log(`${u.username} banned and signed out.`);
     break;
   }
   case 'unban': {
     const u = user(a);
     db.prepare('UPDATE users SET banned = 0 WHERE id = ?').run(u.id);
+    logAdmin('unban', u.username);
     console.log(`${u.username} unbanned.`);
     break;
   }
   case 'delete': {
     const u = user(a);
+    archiveAccount(db, u.id, 'admin CLI');
+    logAdmin('delete', u.username);
     db.prepare('DELETE FROM users WHERE id = ?').run(u.id);
     db.prepare('UPDATE chat SET name = ?, text = ? WHERE user_id = ?').run('[deleted]', '[deleted]', u.id);
     console.log(`${u.username} and everything kept for it deleted.`);
@@ -138,6 +181,7 @@ switch (cmd) {
     const u = user(a);
     const role = cmd === 'player-role' ? 'player' : cmd;
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, u.id);
+    logAdmin('role', u.username, role);
     console.log(`${u.username} is now ${role === 'player' ? 'a player again' : `a${role === 'admin' ? 'n admin' : ' moderator'} (the dashboard is at /mod)`}.`);
     break;
   }

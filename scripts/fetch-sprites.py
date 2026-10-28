@@ -8,6 +8,7 @@ Usage:
   python3 scripts/fetch-sprites.py 0037:alola     # a named form -> assets/pokemon/0037-alola
   python3 scripts/fetch-sprites.py --list scripts/species-list.txt
   python3 scripts/fetch-sprites.py --credits      # only rebuild assets/CREDITS.md
+  python3 scripts/fetch-sprites.py --allow-incomplete 0968   # a set SpriteCollab still marks unfinished
 
 For each dex number the top-level files of sprite/<dex>/ (AnimData.xml,
 credits.txt and every *-Anim.png, *-Offsets.png, *-Shadow.png) are copied to
@@ -141,6 +142,9 @@ def main(argv):
     specs = []
     args = list(argv)
     credits_only = False
+    # SpriteCollab marks a set "incomplete" until every action is drawn; such a set is real art but
+    # may lack some actions (the game falls back to Idle for those). Only fetched when asked for.
+    allow_incomplete = False
     while args:
         a = args.pop(0)
         if a == '--list':
@@ -151,6 +155,8 @@ def main(argv):
                         specs.append(line)
         elif a == '--credits':
             credits_only = True
+        elif a == '--allow-incomplete':
+            allow_incomplete = True
         else:
             specs.append(a)
     ensure_repo()
@@ -183,7 +189,7 @@ def main(argv):
                 print(f'!! {s}: no such form with sprites', file=sys.stderr)
                 continue
             targets.append((f'{dex}-{variant.lower()}', f'{dex}/{hit[0][0]}', f'{tracker[dex]["name"]} ({hit[0][1]["name"]})'))
-        elif node.get('sprite_complete', 0) == 0:
+        elif node.get('sprite_complete', 0) == 0 and not (allow_incomplete and node.get('sprite_files')):
             print(f'!! {dex} ({node.get("name")}): no sprites drawn yet', file=sys.stderr)
         else:
             targets.append((dex, dex, node['name']))

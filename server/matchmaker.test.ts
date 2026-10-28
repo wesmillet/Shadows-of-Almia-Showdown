@@ -9,7 +9,7 @@ function peer(name: string): Peer & { got: unknown[] } {
 
 function setup(size = 4) {
   const started: Array<{ players: Lineup[]; mode: QueueMode }> = [];
-  const mm = new Matchmaker({ size, wait: { casual: 10, ranked: 30 }, fullSeconds: 2, start: (players, mode) => started.push({ players, mode }) });
+  const mm = new Matchmaker({ size, wait: { casual: 10 }, fullSeconds: 2, start: (players, mode) => started.push({ players, mode }) });
   return { mm, started };
 }
 
@@ -51,32 +51,9 @@ describe('matchmaker', () => {
     expect(mm.has('p1')).toBe(false);
   });
 
-  it('matches ranked players by rating, widening with time', () => {
-    const { mm, started } = setup(2);
-    mm.join({ tickets: [{ peer: peer('low'), starter: '0001', rating: 1200 }], party: false }, 'ranked', 0);
-    mm.join({ tickets: [{ peer: peer('high'), starter: '0001', rating: 1800 }], party: false }, 'ranked', 0);
-    expect(mm.waiting.ranked).toBe(2);
-    mm.tick(3000);
-    expect(started.length).toBe(0);
-    // A 1300 joins the low lobby at once; a 1650 is too far from the high one until it has waited.
-    mm.join({ tickets: [{ peer: peer('near'), starter: '0001', rating: 1300 }], party: false }, 'ranked', 3000);
-    mm.tick(5100);
-    expect(started[0]?.players.map((p) => p.peer.name).sort()).toEqual(['low', 'near']);
-    expect(started[0]?.mode).toBe('ranked');
-  });
-
-  it('keeps casual and ranked apart', () => {
-    const { mm, started } = setup(2);
-    mm.join({ tickets: [{ peer: peer('a'), starter: '0001' }], party: false }, 'casual', 0);
-    mm.join({ tickets: [{ peer: peer('b'), starter: '0001', rating: 1500 }], party: false }, 'ranked', 0);
-    mm.tick(3000);
-    expect(started.length).toBe(0);
-    expect(mm.waiting).toEqual({ casual: 1, ranked: 1 });
-  });
-
   it('waits for half the lobby to be real players before starting with bots', () => {
     const started: Array<unknown> = [];
-    const mm = new Matchmaker({ size: 8, wait: { casual: 10, ranked: 30 }, fullSeconds: 2, start: (players) => started.push(players) });
+    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players) });
     for (const k of ['a', 'b', 'c']) mm.join({ tickets: [{ peer: peer(k), starter: '0001' }], party: false }, 'casual', 0);
     mm.startNow('a', 0);
     mm.tick(60_000);
@@ -84,5 +61,30 @@ describe('matchmaker', () => {
     mm.join({ tickets: [{ peer: peer('d'), starter: '0001' }], party: false }, 'casual', 60_000);
     mm.tick(60_000 + 11_000);
     expect(started.length).toBe(1);
+  });
+
+  it('never lets the countdown or Start now go below four real players in an eight-player lobby', () => {
+    const started: Array<Lineup[]> = [];
+    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players) });
+    const peers = ['a', 'b', 'c', 'd'].map(peer);
+    for (const p of peers) mm.join({ tickets: [{ peer: p, starter: '0001' }], party: false }, 'casual', 0);
+    // Four are in: Start now counts down from two seconds...
+    mm.startNow('a', 1000);
+    // ...but one leaves before it fires: back to waiting, and the others are told how many are missing.
+    mm.leave('d');
+    mm.tick(3500);
+    expect(started.length).toBe(0);
+    const last = peers[0]?.got.at(-1) as { need: number; min: number; startsIn: number | null };
+    expect(last.need).toBe(1);
+    expect(last.min).toBe(4);
+    expect(last.startsIn).toBeNull();
+    // Start now does nothing below the minimum, and neither does the wait running out.
+    mm.startNow('a', 4000);
+    mm.tick(120_000);
+    expect(started.length).toBe(0);
+    mm.join({ tickets: [{ peer: peer('e'), starter: '0001' }], party: false }, 'casual', 120_000);
+    mm.startNow('e', 120_000);
+    mm.tick(122_100);
+    expect(started[0]?.length).toBe(4);
   });
 });

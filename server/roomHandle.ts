@@ -10,7 +10,7 @@ import type { Peer, RoomMode, RoomResult } from './room';
 /** How a match ended: everything the hub records. */
 export interface EndReport {
   results: RoomResult[];
-  /** Computer trainers' places (ranked counts them as opponents). */
+  /** Computer trainers' places. */
   botPlaces: number[];
   /** Anti-cheat flags per player: kind -> count and an example. */
   flags: Array<{ key: string; name: string; flags: Array<[string, { n: number; detail: string }]> }>;

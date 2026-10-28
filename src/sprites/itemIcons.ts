@@ -5,13 +5,12 @@ import type { Assets } from './assets';
 /** A drawable with pixel dimensions: a loaded image or a composed canvas. */
 export type Drawable = HTMLImageElement | HTMLCanvasElement;
 
-/** Where an item's picture lives under assets/items/. Balls and the crystal shard use the overworld ball set. */
+/** Where an item's picture lives under assets/items/. Balls use the overworld ball set. */
 export function iconPath(itemId: string, tmType?: string, bag = false): string {
   if (tmType) return `tm-${tmType}`;
   // In the bag a ball shows its bag icon (bag-balls/, PokeAPI); on the ground and in flight, the overworld sprite.
   if (bag && itemId.endsWith('-ball')) return `bag-balls/${itemId}`;
   if (itemId.endsWith('-ball')) return `balls/${itemId.replace(/-ball$/, '')}_ball`;
-  if (itemId === 'crystal-shard') return 'balls/vial';
   return itemId;
 }
 

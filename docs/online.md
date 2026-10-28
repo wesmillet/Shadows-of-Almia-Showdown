@@ -36,26 +36,25 @@ the domain, and (optionally) Google for "Sign in with Google".
 
 | | |
 |---|---|
-| **Casual** | Anyone, alone or in a party. |
-| **Ranked** | Signed-in players, solo. Glicko-2 rating extended to free-for-all placements (`server/rating.ts`); five placement games, then a tier (Bronze to Master). Seasons last `SEASON_DAYS` (60) from `SEASON_START`; each starts everyone halfway back to 1500. Computer trainers count as weaker opponents and stop helping past 1750, so the top tiers take real players. Lobbies match by rating, the window widening while they wait. |
+| **Public matches** | Anyone, alone or in a party. Eight trainers; a lobby needs four real players before computer trainers fill the other seats, and neither the wait running out nor "Start now with bots" starts it with fewer (the lobby says how many more are needed). `MIN_PLAYERS` can lower that for testing, never on the live server. Ranked play has been retired: there is no ranked queue, board or standing any more (old ratings stay in the database, untouched). |
 | **Parties** | Friends, up to four. The leader starts the match; everyone picks a starter; the party plays as a squad (teammates never fight; the last squad standing wins, knocked-out members included). |
-| **Private lobbies** | A host makes one and shares the five-letter code. Rules: trainers (2-8), computer trainers on/off, starter level, teams (solo, pairs, fours, pick), storm speed, the rare-item chest. Nothing from a private match is kept (no stats, no Pokémon), so they can not be farmed. After the match everyone is back in the lobby. |
+| **Private lobbies** | A host makes one and shares the five-letter code. Rules: trainers (2-8), computer trainers on/off, starter level, teams (solo, pairs, fours, pick), storm speed, the rare-item chest. Nothing from a private match is kept (no stats, no Pokémon, no Extraction Voucher reaches a PC, no storage-chest change is saved), so they can not be farmed. Their replays are for their own players only. After the match everyone is back in the lobby. |
 | **Friends** | Requests by trainer name (asking back accepts). Friends show what they are doing. |
 | **Watching** | A friend's match, the featured match (most players), or the rest of your own after being knocked out (your squad first). Spectators are 4 seconds behind, so watching can not help a player. ←/→ switch whom the camera follows. |
 | **Replays** | Every match is recorded (`server/replays.ts`): what any trainer could see, nobody's bag, keyframed every 30 s for seeking, about 2 KB/s. Space pause, ←/→ 10 s, ↑/↓ speed, Q/E switch trainer. The oldest go once they pass `REPLAY_MB` (400). |
 
 ## Progress (`src/net/progression.ts`)
 
-- **Trainer XP and levels**: every casual or ranked match a signed-in player finishes earns XP for
-  playing, for each trainer outlasted, for winning, knockouts, catches, damage and time survived
-  (ranked +25%). The end screen lists it line by line.
+- **Trainer XP and levels**: every public match a signed-in player finishes earns XP for
+  playing, for each trainer outlasted, for winning, knockouts, catches, damage and time survived.
+  The end screen lists it line by line.
 - **Looks**: the first Ranger is free; the other Rangers unlock with levels (2 to 25), and the
   townsfolk are locked for now. The server checks every look (`/api/look`), and guests wear the
   free look only.
-- **Achievements**: 25, from one match (10 knockouts, a shiny in your party at the end...) or totals
-  (100 catches, level 25, Master tier...). Several give a **title**, worn on your profile and shown
+- **Achievements**: 21, from one match (10 knockouts, a shiny in your party at the end...) or totals
+  (100 catches, level 25...); the four ranked ones left with ranked play. Several give a **title**, worn on your profile and shown
   under your name in battles.
-- **Profiles**: in the game (click a name) and as a page to share: `/u/<name>` (level, title, rank,
+- **Profiles**: in the game (click a name) and as a page to share: `/u/<name>` (level, title,
   stats, achievements, recent matches with links to their replays). `?replay=<match>` and
   `?profile=<name>` links open the game straight there.
 - **Recovery codes**: no email is kept, so signing up shows eight one-time recovery codes; "Forgot
@@ -79,8 +78,8 @@ private one) to be a second player. Useful settings (environment variables):
 | `MATCH_SIZE=2` | Trainers per match (2 makes a quick 1v1) |
 | `DEV_CLUSTER=1` | Players start side by side (testing PvP; ignored on the live server) |
 | `RARE_CHEST=1` | The rare-item chest (default: on except on the live server) |
-| `RANKED_WAIT=120` | Seconds a ranked lobby waits for players (default 120 live, twice `LOBBY_WAIT` elsewhere) |
-| `SEASON_START`, `SEASON_DAYS` | When ranked season 1 starts (ISO date) and how long seasons last |
+| `MIN_PLAYERS=4` | Real players a public lobby needs before computer trainers fill in (default half the lobby; never lower on live) |
+| `MAX_PER_IP=12` | Game connections one address may hold at once (default 12 live, 64 elsewhere) |
 | `REPLAYS=0`, `REPLAY_MB=400` | Turn recording off; how much disk replays may use |
 | `SIM_LATENCY_MS=100` | Testing: pretend every message takes this long each way (never on live) |
 | `ROOM_WORKERS=4` | At most this many match worker threads (default: from memory; 0: matches in the main thread) |
@@ -94,7 +93,10 @@ Checks (each exits non-zero on a failure):
 
 ```
 npx tsx server/checks/social.ts      # against a running server (MATCH_SIZE=4 LOBBY_WAIT=4): accounts,
-                                     # friends, party squads, watching, ranked, private lobbies, replays
+                                     # friends, party squads, watching, private lobbies, replays
+npx tsx server/checks/queue.ts       # against a running server with MATCH_SIZE=8: the four-player minimum
+npx tsx server/checks/gameplay.ts    # Eggs, the forest stranger, private rules, chests, stronger encounters
+npx tsx server/checks/online_events.ts  # the same through a Room and the browser's decoder
 npx tsx server/checks/teams.ts       # squads in the simulation
 npx tsx server/checks/lagcomp.ts     # lag-compensated casts
 ```
@@ -161,7 +163,10 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
   fly ssh console --app almia-showdown -C "node dist-server/admin.js admin YourName"
   ```
   The dashboard has: open reports (players' and the server's own); a page per player (stats,
-  reports, anti-cheat flags, chat, devices and other accounts seen on them, history) with mute,
+  reports, anti-cheat flags, chat, devices and other accounts seen on them, history, and the
+  **collection log**: every change to their PC and storage chest, with a snapshot of each Pokémon,
+  from matches, trades, Wonder Trades, renames and account deletions, kept for good in the
+  `collection_log` table for "my Pokémon is missing" reports) with mute,
   kick, ban (optionally with every device it used, and its recent addresses for a week), unban,
   and for admins roles and deleting an account; the chat log (remove a message from every open
   chat); flagged players; live matches (watch any); announcements; and the log of everything the

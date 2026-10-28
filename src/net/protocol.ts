@@ -14,7 +14,8 @@ export type CommandName =
   | 'mega' | 'ride' | 'sell' | 'buy' | 'deposit' | 'withdraw' | 'interact' | 'pickUp' | 'duelPick' | 'stylerLoop' | 'stylerBreak'
   | 'snag' | 'extract' | 'teach' | 'equip' | 'useItem' | 'discard' | 'throw';
 
-export type QueueMode = 'casual' | 'ranked';
+/** Public matches are all casual (ranked play has been retired). */
+export type QueueMode = 'casual';
 
 /** A private lobby's custom rules (server/privateLobby.ts checks every one). */
 export interface PrivateRules {
@@ -61,9 +62,9 @@ export interface FriendEntry {
 
 export type ClientMsg =
   /** Join the queue for a match with the starter picked from the server's roll (in a party or private lobby: that one's pick). */
-  | { t: 'queue'; pick: number; mode?: QueueMode }
+  | { t: 'queue'; pick: number; mode?: string }
   /** Parties: invite a friend, answer an invite, leave, remove someone (leader), or queue together (leader). */
-  | { t: 'party'; a: 'invite' | 'accept' | 'decline' | 'leave' | 'kick' | 'queue'; name?: string; mode?: QueueMode }
+  | { t: 'party'; a: 'invite' | 'accept' | 'decline' | 'leave' | 'kick' | 'queue'; name?: string; mode?: string }
   /** Private lobbies: make one, join by code, change the rules (host), pick a team, start (host). */
   | { t: 'private'; a: 'create' | 'join' | 'leave' | 'rules' | 'team' | 'start' | 'kick'; code?: string; rules?: Partial<PrivateRules>; team?: number; name?: string }
   /** Watch a match: a friend's (by name), a match by id, or the featured one. `follow` switches whom the camera follows. */
@@ -100,7 +101,7 @@ export type ServerMsg =
   | { t: 'hello'; name: string; guest: boolean; server: 'live' | 'demo' | 'dev'; build: string }
   /** The starter roll: the browser animates the reels from this seed (src/sim/starters.ts) and the server knows what it offered. */
   | { t: 'roll'; seed: number; pool: string[] }
-  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode; /** Players still needed before the countdown starts. */ need?: number }
+  | { t: 'lobby'; players: string[]; startsIn: number | null; size: number; mode?: QueueMode; /** Players still needed before the countdown starts. */ need?: number; /** Real players a lobby needs before computer trainers fill the rest. */ min?: number }
   /** Friends (with what they are doing), your party, and party invites waiting for an answer. */
   | { t: 'social'; friends: FriendEntry[]; party: PartyState | null; invites: string[] }
   /** Your trade offers changed (one came in, was answered or cancelled): fetch /api/trades again. */
@@ -119,8 +120,6 @@ export type ServerMsg =
   | { t: 'unqueued'; text: string }
   /** What a match did for your progress: XP line by line, levels, achievements earned. */
   | { t: 'progress'; xp: Array<{ what: string; xp: number }>; before: { level: number; into: number; next: number }; after: { level: number; into: number; next: number }; achievements: Array<{ id: string; name: string; desc: string; title?: string; look?: string }> }
-  /** A ranked match's effect on your rating. */
-  | { t: 'rated'; before: number; after: number; tier: { id: string; name: string; color: string } | null; placementLeft: number }
   /** A short message for whatever screen is up (a friend request, an invite, a party change). */
   | { t: 'notice'; text: string }
   | { t: 'start'; matchId: string; seed: number; you: number; roster: RosterEntry[]; mode?: string }

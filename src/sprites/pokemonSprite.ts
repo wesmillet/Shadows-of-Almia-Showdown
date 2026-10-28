@@ -126,7 +126,8 @@ const FALLBACKS: Record<string, string[]> = {
   Hop: ['Attack', 'Idle'],
   Hurt: ['Idle'],
   Faint: ['Hurt', 'Idle'],
-  Walk: ['Idle'],
+  // A set drawn without a Walk (Iron Treads) rolls along on its Rotate sheet, looped.
+  Walk: ['Rotate', 'Idle'],
 };
 
 interface Sheet {
@@ -441,7 +442,8 @@ export class AnimPlayer {
 
   play(action: string, opts: { loop?: boolean; restart?: boolean } = {}): void {
     const resolved = this.sprites.resolve(action);
-    const loop = opts.loop ?? !ONE_SHOT.has(resolved);
+    // Walking always loops, whatever sheet stands in for it.
+    const loop = opts.loop ?? (action === 'Walk' ? true : !ONE_SHOT.has(resolved));
     if (resolved === this.action && !opts.restart && (loop === this.loop)) return;
     void this.sprites.ensureSheet(resolved);
     this.action = resolved;

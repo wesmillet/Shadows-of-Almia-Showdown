@@ -26,7 +26,7 @@ export interface SyncPatch {
 const MON_SKIP = new Set([
   'species', 'sprites', 'anim', 'homeX', 'homeY', 'targetX', 'targetY', 'idleTimer', 'wander', 'wanderPause', 'roamTarget',
   'stuckT', 'chaseBlockId', 'chaseBlockT', 'detourSide', 'detourT', 'sinceHit', 'everHit', 'castSeq', 'orbPaid', 'busy',
-  'statusTimer', 'outsideDark', 'shadowStormT', 'snagHinted', 'px', 'py',
+  'statusTimer', 'outsideDark', 'shadowStormT', 'leftoversT', 'snagHinted', 'px', 'py',
 ]);
 /** Fields of a trainer the browser never needs. */
 const TRAINER_SKIP = new Set(['ai', 'aiTimer', 'aiTarget', 'aiKey', 'aiProgress', 'aiBans', 'attackTimer', 'roamTimer', 'counter', 'px', 'py']);

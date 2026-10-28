@@ -1,6 +1,6 @@
 /**
  * A trainer's public profile as a web page (/u/<name>), to share outside the game: their look,
- * level and title, ranked standing, lifetime stats, achievements and recent matches (with links to
+ * level and title, lifetime stats, achievements and recent matches (with links to
  * watch the replays). Plain HTML from the server, in the game's cream-and-ink pixel style.
  */
 import { readFileSync } from 'node:fs';
@@ -30,10 +30,6 @@ export function profilePage(p: PublicProfile, assetsDir: string): string {
   const portrait = sheet
     ? `<div class="look" style="width:${sheet.w * k}px;height:${sheet.h * k}px;background-image:url('/assets/rangers/${esc(sheet.file)}');background-size:auto ${sheet.h * k}px;background-position:0 0"></div>`
     : '<div class="look none"></div>';
-  const r = p.ranked;
-  const ranked = r.tier
-    ? `<div class="tier" style="color:${esc(r.tier.color)}">${esc(r.tier.name)} · ${r.rating}${r.rank ? ` · #${r.rank}` : ''}</div><div class="dim">Season ${r.season} · ${r.wins} wins in ${r.games} ranked games · peak ${r.peak}</div>`
-    : `<div class="dim">${r.games ? `Ranked season ${r.season}: ${r.placementLeft} placement game${r.placementLeft === 1 ? '' : 's'} left` : `No ranked games in season ${r.season} yet`}</div>`;
   const s = p.stats;
   const have = new Map(p.achievements.map((a) => [a.id, a.at]));
   const badges = ACHIEVEMENTS.map((a) => {
@@ -44,7 +40,7 @@ export function profilePage(p: PublicProfile, assetsDir: string): string {
     ? p.recent.map((m) => {
         const when = new Date(m.at).toISOString().replace('T', ' ').slice(0, 16);
         const res = m.outcome === 'win' ? '<span class="win">Won</span>' : `#${m.place}`;
-        const extra = [m.mode === 'ranked' ? `Ranked${m.ratingDelta !== null ? ` ${m.ratingDelta >= 0 ? '+' : ''}${m.ratingDelta}` : ''}` : 'Casual', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
+        const extra = [m.mode === 'private' ? 'Private' : 'Public', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
         const replay = m.replay ? `<a href="/?replay=${encodeURIComponent(m.match)}">Watch</a>` : '';
         return `<tr><td>${res}</td><td>${esc(extra)}</td><td class="dim">${esc(when)} UTC</td><td>${replay}</td></tr>`;
       }).join('')
@@ -95,7 +91,6 @@ ${LEVELS_ON ? `<div>Trainer level ${p.progress.level}</div>
 <div class="bar"><i style="width:${pct}%"></i></div>
 <div class="dim">${p.progress.next ? `${p.progress.into} / ${p.progress.next} XP to level ${p.progress.level + 1}` : 'Top level'}</div>` : ''}
 <div class="dim">${p.online ? '<span class="online">Online now</span> · ' : ''}Trainer since ${new Date(p.joined).toISOString().slice(0, 10)} · ${p.pc} Pokémon in their PC</div>
-${ranked}
 </div></div>
 <div class="panel"><h2>Stats</h2><div class="stats">
 <div><b>${s.matches}</b>matches</div><div><b>${s.wins}</b>wins</div><div><b>${s.bestPlace ?? '-'}</b>best place</div>

@@ -68,6 +68,5 @@ over cleanly.
 - Everyone's position goes to every client for the minimap radar; a traffic-reader can see the
   whole map. Client-authoritative nothing: the server checks commands, so this is scouting,
   not cheating.
-- Ranked with one player in queue fills with bots and still rates the match.
 - "Watch the rest" is unavailable when the last human goes out (the room closes with them).
 - Starter rerolls outside a match are unlimited.

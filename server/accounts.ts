@@ -21,7 +21,7 @@ import { DEV_CHEST } from '../src/dev';
 import { CONFIG } from '../src/sim/data';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
-import { DEFAULT_RATING, decay, PLACEMENT_GAMES, seasonAt, seasonReset, tierOf, type Rating } from './rating';
+import { COLLECTION_LOG_SQL } from './collectionLog';
 import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
@@ -59,18 +59,6 @@ export interface UserRow {
   role: string;
 }
 
-interface RatingRow {
-  user_id: number;
-  season: number;
-  rating: number;
-  rd: number;
-  vol: number;
-  games: number;
-  wins: number;
-  peak: number;
-  last_at: number;
-}
-
 const MAX_FRIENDS = 200;
 const RECOVERY_CODES = 8;
 /** Recovery codes are typed by hand: case, spaces and dashes do not matter. */
@@ -81,9 +69,8 @@ export interface PublicProfile {
   joined: number;
   look: unknown;
   stats: Stats;
-  recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; ratingDelta: number | null; xp: number | null; replay: boolean }>;
+  recent: Array<{ match: string; place: number; outcome: string; mode: string; at: number; xp: number | null; replay: boolean }>;
   pc: number;
-  ranked: ReturnType<Accounts['rankedCard']>;
   online: boolean;
   progress: { xp: number; level: number; into: number; next: number };
   title: string | null;
@@ -213,6 +200,7 @@ export class Accounts {
         chat_id INTEGER, at INTEGER NOT NULL, resolved INTEGER NOT NULL DEFAULT 0
       );
     `);
+    this.db.exec(COLLECTION_LOG_SQL);
     // Columns added after the first release (older databases get them here).
     for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
@@ -272,7 +260,7 @@ export class Accounts {
         .map((w) => ({ id: w.id, got: card(w.got_pc), gave: card(w.pc_id), partner: w.partner }));
       return send(200, { offers, wonder: { waiting: waiting ? card(waiting.pc_id) : null, news } });
     }
-    if (req.method === 'POST' && path === '/api/wonder') return this.wonderSend(req, me, send, card, nameOf);
+    if (req.method === 'POST' && path === '/api/wonder') return await this.wonderSend(req, me, send, card, nameOf);
     if (req.method === 'POST' && path === '/api/wonder/cancel') {
       const r = this.db.prepare("UPDATE wonder SET status = 'cancelled', closed_at = ? WHERE user_id = ? AND status = 'waiting'").run(Date.now(), me.id);
       return send(200, r.changes ? { ok: true, text: 'Taken back. It is in your PC as before' } : { error: 'Nothing is out on Wonder Trade' });
@@ -312,7 +300,7 @@ export class Accounts {
     }
     if (path === '/api/trades/respond') {
       if (t.to_user !== me.id) return send(403, { error: 'Not your offer' });
-      if (!b.accept) {
+      if (b.accept !== true) {
         this.db.prepare("UPDATE trades SET status = 'declined', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
         this.onTradesChanged([t.from_user]);
         return send(200, { ok: true, text: 'Declined' });
@@ -330,6 +318,10 @@ export class Accounts {
         const stamp = (entry: string, from: number): string => JSON.stringify({ ...JSON.parse(entry), tradedFrom: nameOf(from), tradedAt: new Date().toISOString() });
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.to_user, stamp(g.entry, t.from_user), t.give_pc);
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.from_user, stamp(w.entry, t.to_user), t.want_pc);
+        this.logCollection(t.from_user, 'trade:out', { pcId: t.give_pc, other: t.to_user, ref: `trade:${t.id}`, detail: JSON.parse(g.entry) });
+        this.logCollection(t.to_user, 'trade:in', { pcId: t.give_pc, other: t.from_user, ref: `trade:${t.id}`, detail: JSON.parse(g.entry) });
+        this.logCollection(t.to_user, 'trade:out', { pcId: t.want_pc, other: t.from_user, ref: `trade:${t.id}`, detail: JSON.parse(w.entry) });
+        this.logCollection(t.from_user, 'trade:in', { pcId: t.want_pc, other: t.to_user, ref: `trade:${t.id}`, detail: JSON.parse(w.entry) });
         this.db.prepare("UPDATE trades SET status = 'done', closed_at = ? WHERE id = ?").run(Date.now(), t.id);
         // Any other open offer that involved either Pokémon is now stale.
         this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc IN (?, ?) OR want_pc IN (?, ?))").run(Date.now(), t.give_pc, t.want_pc, t.give_pc, t.want_pc);
@@ -391,6 +383,10 @@ export class Accounts {
         const c = stamp(theirs, partnerId);
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(partnerId, a, mine);
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(me.id, c, theirs);
+        this.logCollection(me.id, 'wonder:out', { pcId: mine, other: partnerId, ref: `wonder:${waiting.id}`, detail: JSON.parse(a) });
+        this.logCollection(partnerId, 'wonder:in', { pcId: mine, other: me.id, ref: `wonder:${waiting.id}`, detail: JSON.parse(a) });
+        this.logCollection(partnerId, 'wonder:out', { pcId: theirs, other: me.id, ref: `wonder:${waiting.id}`, detail: JSON.parse(c) });
+        this.logCollection(me.id, 'wonder:in', { pcId: theirs, other: partnerId, ref: `wonder:${waiting.id}`, detail: JSON.parse(c) });
         this.db.prepare("UPDATE wonder SET status = 'done', got_pc = ?, partner = ?, closed_at = ? WHERE id = ?").run(mine, me.username, now, waiting.id);
         this.db.prepare("INSERT INTO wonder (user_id, pc_id, status, got_pc, partner, seen, created_at, closed_at) VALUES (?, ?, 'done', ?, ?, 1, ?, ?)").run(me.id, mine, theirs, nameOf(partnerId), now, now);
         this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc IN (?, ?) OR want_pc IN (?, ?))").run(now, mine, theirs, mine, theirs);
@@ -408,6 +404,8 @@ export class Accounts {
 
   /** Set by main.ts: tell these accounts (when online) their trade offers changed. */
   onTradesChanged: (userIds: number[]) => void = () => {};
+  /** An account's password was changed or recovered: its game connections close (they sign in again). */
+  onSignedOut: (userId: number, reason: string) => void = () => {};
 
   // ---------------------------------------------------------------- identity
 
@@ -462,9 +460,32 @@ export class Accounts {
     return this.profile(userId).chest.filter((e) => e && ITEMS[e.id] && Number.isInteger(e.count) && e.count > 0 && e.count < 10000);
   }
 
-  saveChest(userId: number, box: Array<InventorySlot | null>): void {
-    const list = box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: e.count }));
-    this.db.prepare('UPDATE profiles SET chest = ? WHERE user_id = ?').run(JSON.stringify(list), userId);
+  saveChest(userId: number, box: Array<InventorySlot | null>, ref: string | null = null): void {
+    const list = box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: Math.min(e.count, 9999) })).slice(0, CONFIG.items.storageSlots);
+    const before = (this.db.prepare('SELECT chest FROM profiles WHERE user_id = ?').get(userId) as { chest: string } | undefined)?.chest ?? '[]';
+    const after = JSON.stringify(list);
+    if (before === after) return;
+    this.atomically(() => {
+      this.db.prepare('UPDATE profiles SET chest = ? WHERE user_id = ?').run(after, userId);
+      this.logCollection(userId, 'chest', { ref, detail: { before: JSON.parse(before), after: list } });
+    });
+  }
+
+  /**
+   * The collection log: one row per change to a player's PC or storage chest (added from a match,
+   * traded, Wonder Traded, chest changes, deleted with the account), kept for good, with a snapshot of
+   * the Pokémon, so a "my Pokémon is missing" report can be traced. No foreign keys: rows outlive
+   * their accounts on purpose. Call it inside the same transaction as the change.
+   */
+  logCollection(userId: number, action: string, o: { pcId?: number | null; other?: number | null; ref?: string | null; detail?: unknown } = {}): void {
+    const name = (id: number | null | undefined) => (id ? ((this.db.prepare('SELECT username FROM users WHERE id = ?').get(id) as { username: string } | undefined)?.username ?? null) : null);
+    this.db.prepare('INSERT INTO collection_log (user_id, username, action, pc_id, other_user, other_name, ref, detail, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(userId, name(userId), action, o.pcId ?? null, o.other ?? null, name(o.other), o.ref ?? null, o.detail === undefined ? null : JSON.stringify(o.detail), Date.now());
+  }
+
+  /** A player's collection history, newest first (moderators: missing-Pokémon reports). */
+  collectionLog(userId: number, limit = 200): Array<Record<string, unknown>> {
+    return this.db.prepare('SELECT * FROM collection_log WHERE user_id = ? OR other_user = ? ORDER BY at DESC, id DESC LIMIT ?').all(userId, userId, limit) as Array<Record<string, unknown>>;
   }
 
   /** The species in a player's PC (for their starter pool). */
@@ -474,12 +495,31 @@ export class Accounts {
   }
 
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
-  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher', matchId: string): void {
+  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher', matchId: string): number {
     const entry = {
       uid: randomBytes(6).toString('base64url'), dex: m.dex, name: m.name, level: m.level, shiny: m.shiny || undefined, alpha: m.alpha || undefined,
       legend: m.legend || undefined, shadow: m.shadow || undefined, moves: m.moves, heldItem: m.heldItem ?? null, via, at: new Date().toISOString(), match: matchId,
     };
-    this.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(userId, JSON.stringify(entry), Date.now());
+    return this.atomically(() => {
+      const r = this.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(userId, JSON.stringify(entry), Date.now());
+      const pcId = Number(r.lastInsertRowid);
+      this.logCollection(userId, `add:${via}`, { pcId, ref: matchId, detail: entry });
+      return pcId;
+    });
+  }
+
+  /** Runs `fn` as one unit (a savepoint: works inside a transaction already open, or on its own). */
+  private atomically<T>(fn: () => T): T {
+    this.db.exec('SAVEPOINT unit');
+    try {
+      const out = fn();
+      this.db.exec('RELEASE unit');
+      return out;
+    } catch (e) {
+      this.db.exec('ROLLBACK TO unit');
+      this.db.exec('RELEASE unit');
+      throw e;
+    }
   }
 
   /** What a Pokémon in a match goes home as (server/pcFields.ts). */
@@ -488,9 +528,22 @@ export class Accounts {
   /**
    * A finished match: stats for every signed-in player, and extraction picks for winners (and
    * vouchers). Private matches (custom rules, friends only) keep nothing: they would be too easy to
-   * farm. `ratingDeltas` is filled in for ranked matches.
+   * farm. (`ratingDeltas` was for ranked matches, which are retired: it is always empty now.)
    */
   recordMatch(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private' = 'casual', ratingDeltas: Map<string, number> = new Map(), field = 8, xpBoost = 1): Map<string, Progress> {
+    // All of a match's records, or none of them.
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = this.recordMatchNow(matchId, results, mode, ratingDeltas, field, xpBoost);
+      this.db.exec('COMMIT');
+      return out;
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
+  }
+
+  private recordMatchNow(matchId: string, results: RoomResult[], mode: 'casual' | 'ranked' | 'private', ratingDeltas: Map<string, number>, field: number, xpBoost: number): Map<string, Progress> {
     const progress = new Map<string, Progress>();
     this.db.prepare('INSERT OR IGNORE INTO matches (id, ended_at, summary, mode) VALUES (?, ?, ?, ?)').run(matchId, Date.now(), JSON.stringify(results.map((r) => ({ name: r.name, place: r.place, outcome: r.outcome, team: r.team }))), mode);
     if (mode === 'private') return progress;
@@ -548,10 +601,9 @@ export class Accounts {
   checkAchievements(userId: number, match: MatchFacts | null): Progress['achievements'] {
     const have = new Set(this.earned(userId));
     const st = this.profile(userId).stats;
-    const card = this.rankedCard(userId);
     const ctx = {
       match, life: { matches: st.matches, wins: st.wins, catches: st.catches, knockouts: st.knockouts, eliminations: st.eliminations, damage: st.damage },
-      level: levelOf(this.xp(userId)).level, tier: card.tier?.id ?? null, rankedWins: card.wins,
+      level: levelOf(this.xp(userId)).level,
       pc: (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(userId) as { n: number }).n,
     };
     const out: Progress['achievements'] = [];
@@ -565,14 +617,14 @@ export class Accounts {
 
   /** Everything a trainer's profile shows anyone (in the game and at /u/<name>). */
   publicProfile(u: UserRow, prof = this.profile(u.id)): PublicProfile {
-    const recent = (this.db.prepare(`SELECT m.match_id, m.place, m.outcome, m.rating_delta, m.xp, x.ended_at, x.mode, (SELECT 1 FROM replays r WHERE r.id = m.match_id) AS replay
+    const recent = (this.db.prepare(`SELECT m.match_id, m.place, m.outcome, m.xp, x.ended_at, x.mode, (SELECT 1 FROM replays r WHERE r.id = m.match_id) AS replay
       FROM match_players m JOIN matches x ON x.id = m.match_id WHERE m.user_id = ? ORDER BY x.ended_at DESC LIMIT 12`).all(u.id) as Array<Record<string, unknown>>)
-      .map((r) => ({ match: String(r.match_id), place: Number(r.place), outcome: String(r.outcome), mode: String(r.mode), at: Number(r.ended_at), ratingDelta: r.rating_delta === null ? null : Math.round(Number(r.rating_delta)), xp: r.xp === null ? null : Number(r.xp), replay: !!r.replay }));
+      .map((r) => ({ match: String(r.match_id), place: Number(r.place), outcome: String(r.outcome), mode: String(r.mode), at: Number(r.ended_at), xp: r.xp === null ? null : Number(r.xp), replay: !!r.replay }));
     const pcCount = (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(u.id) as { n: number }).n;
     const ach = this.db.prepare('SELECT id, at FROM achievements WHERE user_id = ? ORDER BY at').all(u.id) as Array<{ id: string; at: number }>;
     const xp = this.xp(u.id);
     return {
-      name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, ranked: this.rankedCard(u.id), online: this.presence(u.id).online,
+      name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
       progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ach,
     };
   }
@@ -660,36 +712,6 @@ export class Accounts {
   /** Mutes from chat for `minutes` (0 lifts it). */
   mute(userId: number, minutes: number): void {
     this.db.prepare('UPDATE users SET muted_until = ? WHERE id = ?').run(minutes > 0 ? Date.now() + minutes * 60_000 : 0, userId);
-  }
-
-  // ---------------------------------------------------------------- ranked
-
-  /**
-   * A player's rating this season (as of now: the deviation grows with days away). Their first
-   * ranked game of a season starts from last season's rating, halfway back to 1500.
-   */
-  rating(userId: number, now = Date.now()): { r: Rating; games: number; wins: number; peak: number; season: number } {
-    const { season } = seasonAt(now);
-    const row = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND season = ?').get(userId, season) as RatingRow | undefined;
-    if (row) return { r: decay({ rating: row.rating, rd: row.rd, vol: row.vol }, (now - row.last_at) / 86400_000), games: row.games, wins: row.wins, peak: row.peak, season };
-    const prev = this.db.prepare('SELECT * FROM ratings WHERE user_id = ? AND season < ? ORDER BY season DESC LIMIT 1').get(userId, season) as RatingRow | undefined;
-    const r = prev ? seasonReset({ rating: prev.rating, rd: prev.rd, vol: prev.vol }) : { ...DEFAULT_RATING };
-    return { r, games: 0, wins: 0, peak: r.rating, season };
-  }
-
-  /** What a player's ranked standing looks like on screen. */
-  rankedCard(userId: number): { season: number; rating: number; rd: number; games: number; wins: number; peak: number; tier: ReturnType<typeof tierOf>; placementLeft: number; rank: number | null } {
-    const x = this.rating(userId);
-    const shown = Math.round(x.r.rating);
-    const rank = x.games >= PLACEMENT_GAMES ? 1 + (this.db.prepare('SELECT COUNT(*) AS n FROM ratings r JOIN users u ON u.id = r.user_id WHERE r.season = ? AND r.games >= ? AND r.rating > ? AND u.banned = 0').get(x.season, PLACEMENT_GAMES, x.r.rating) as { n: number }).n : null;
-    return { season: x.season, rating: shown, rd: Math.round(x.r.rd), games: x.games, wins: x.wins, peak: Math.round(x.peak), tier: tierOf(x.r.rating, x.games), placementLeft: Math.max(0, PLACEMENT_GAMES - x.games), rank };
-  }
-
-  saveRating(userId: number, r: Rating, won: boolean, now = Date.now()): void {
-    const cur = this.rating(userId, now);
-    this.db.prepare(`INSERT INTO ratings (user_id, season, rating, rd, vol, games, wins, peak, last_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(user_id, season) DO UPDATE SET rating = excluded.rating, rd = excluded.rd, vol = excluded.vol, games = excluded.games, wins = excluded.wins, peak = excluded.peak, last_at = excluded.last_at`)
-      .run(userId, cur.season, r.rating, r.rd, r.vol, cur.games + 1, cur.wins + (won ? 1 : 0), Math.max(cur.peak, r.rating), now);
   }
 
   // ---------------------------------------------------------------- friends
@@ -783,6 +805,29 @@ export class Accounts {
     return !!this.db.prepare('SELECT 1 FROM replays WHERE id = ?').get(id);
   }
 
+  /** A simple per-key budget: at most `n` uses per `ms` (in memory; a restart forgives). */
+  private budgets = new Map<string, number[]>();
+  allow(key: string, n: number, ms: number): boolean {
+    const now = Date.now();
+    const list = (this.budgets.get(key) ?? []).filter((t) => now - t < ms);
+    if (list.length >= n) {
+      this.budgets.set(key, list);
+      return false;
+    }
+    list.push(now);
+    this.budgets.set(key, list);
+    if (this.budgets.size > 50_000) this.budgets.clear();
+    return true;
+  }
+
+  /** Whether this viewer may watch a replay: anyone for a public match, only its own players for a private one. */
+  canWatchReplay(id: string, userId: number | null): boolean {
+    const r = this.db.prepare('SELECT mode FROM replays WHERE id = ?').get(id) as { mode: string } | undefined;
+    if (!r) return false;
+    if (r.mode !== 'private') return true;
+    return userId !== null && !!this.db.prepare('SELECT 1 FROM replay_players WHERE replay_id = ? AND user_id = ?').get(id, userId);
+  }
+
   // ---------------------------------------------------------------- HTTP API
 
   async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -806,9 +851,9 @@ export class Accounts {
           progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
         });
       }
-      if (req.method === 'POST' && path === '/api/register') return this.register(req, res, send);
-      if (req.method === 'POST' && path === '/api/login') return this.login(req, res, send);
-      if (req.method === 'POST' && path === '/api/recover') return this.recover(req, send);
+      if (req.method === 'POST' && path === '/api/register') return await this.register(req, res, send);
+      if (req.method === 'POST' && path === '/api/login') return await this.login(req, res, send);
+      if (req.method === 'POST' && path === '/api/recover') return await this.recover(req, send);
       if (req.method === 'POST' && path === '/api/logout') {
         const token = parseCookies(req.headers.cookie)[COOKIE];
         if (token) this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
@@ -816,12 +861,8 @@ export class Accounts {
       }
       if (req.method === 'GET' && path === '/api/auth/google') return this.googleStart(req, res);
       if (req.method === 'GET' && path === '/api/auth/google/callback') return this.googleCallback(req, res, url);
-      if (req.method === 'GET' && path === '/api/season') return send(200, seasonAt(Date.now()));
-      if (req.method === 'GET' && path === '/api/leaderboard' && url.searchParams.get('mode') === 'ranked') {
-        const season = Number(url.searchParams.get('season')) || seasonAt(Date.now()).season;
-        const rows = this.db.prepare('SELECT u.username, r.rating, r.games, r.wins, r.peak FROM ratings r JOIN users u ON u.id = r.user_id WHERE r.season = ? AND r.games >= ? AND u.banned = 0 ORDER BY r.rating DESC LIMIT 100').all(season, PLACEMENT_GAMES) as Array<{ username: string; rating: number; games: number; wins: number; peak: number }>;
-        return send(200, { season, players: rows.map((r) => ({ name: r.username, rating: Math.round(r.rating), games: r.games, wins: r.wins, tier: tierOf(r.rating, r.games) })) });
-      }
+      // (Ranked play is retired: /api/season, /api/ranked and the ranked leaderboard are gone. The
+      // ratings table stays in the database untouched.)
       if (req.method === 'GET' && path === '/api/replays' && !url.searchParams.get('mine')) return send(200, { replays: this.replayList(null) });
       if (req.method === 'GET' && path === '/api/leaderboard') {
         const rows = this.db.prepare("SELECT u.username, p.stats FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.banned = 0 AND json_extract(p.stats, '$.wins') > 0 ORDER BY json_extract(p.stats, '$.wins') DESC LIMIT 50").all() as Array<{ username: string; stats: string }>;
@@ -836,7 +877,6 @@ export class Accounts {
       }
       if (!me) return send(401, { error: 'Sign in first' });
       if (me.banned) return send(403, { error: 'This account is banned' });
-      if (req.method === 'GET' && path === '/api/ranked') return send(200, this.rankedCard(me.id));
       if (req.method === 'GET' && path === '/api/replays') return send(200, { replays: this.replayList(me.id) });
       if (req.method === 'GET' && path === '/api/friends') {
         return send(200, { friends: this.friendList(me.id) });
@@ -860,7 +900,7 @@ export class Accounts {
         const pooled = this.pooledIds(me.id);
         return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id, ...(pooled.has(r.id) ? { wonder: true } : {}) })) });
       }
-      if (path.startsWith('/api/trade') || path.startsWith('/api/wonder')) return this.tradeApi(req, path, me, send);
+      if (path.startsWith('/api/trade') || path.startsWith('/api/wonder')) return await this.tradeApi(req, path, me, send);
       if (req.method === 'GET' && path === '/api/extract') {
         const row = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 1').get(me.id) as { match_id: string; party: string; picks_left: number; outcome: string } | undefined;
         return send(200, row ? { match: row.match_id, party: JSON.parse(row.party), picks: row.picks_left, outcome: row.outcome } : { match: null });
@@ -874,8 +914,22 @@ export class Accounts {
         const pick = Number.isInteger(i) ? party[i] : undefined;
         if (!pick || pick.taken) return send(400, { error: 'Pick one of your Pokémon from that match' });
         pick.taken = true;
-        this.addToPc(me.id, pick, row.outcome === 'win' ? 'win' : 'voucher', String(b.match));
-        this.db.prepare('UPDATE match_players SET picks_left = picks_left - 1, party = ? WHERE user_id = ? AND match_id = ?').run(JSON.stringify(party), me.id, String(b.match));
+        // The PC entry and the spent pick together, or neither (a crash between them can not leave a pick to spend twice).
+        this.db.exec('BEGIN IMMEDIATE');
+        try {
+          const left = this.db.prepare('SELECT picks_left FROM match_players WHERE user_id = ? AND match_id = ?').get(me.id, String(b.match)) as { picks_left: number } | undefined;
+          if (!left || left.picks_left <= 0) {
+            this.db.exec('ROLLBACK');
+            return send(400, { error: 'Nothing to extract from that match' });
+          }
+          const pcId = this.addToPc(me.id, pick, row.outcome === 'win' ? 'win' : 'voucher', String(b.match));
+          (pick as { pcId?: number }).pcId = pcId;
+          this.db.prepare('UPDATE match_players SET picks_left = picks_left - 1, party = ? WHERE user_id = ? AND match_id = ?').run(JSON.stringify(party), me.id, String(b.match));
+          this.db.exec('COMMIT');
+        } catch (e) {
+          this.db.exec('ROLLBACK');
+          throw e;
+        }
         return send(200, { ok: true, name: pick.name, achievements: this.checkAchievements(me.id, null) });
       }
       if (req.method === 'POST' && path === '/api/title') {
@@ -905,6 +959,7 @@ export class Accounts {
         // Every other browser signed in to this account is signed out.
         const token = parseCookies(req.headers.cookie)[COOKIE] ?? '';
         this.db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(me.id, sha256(token));
+        this.onSignedOut(me.id, 'Your password was changed, so please sign in again');
         return send(200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/look') {
@@ -916,6 +971,7 @@ export class Accounts {
         return send(200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/rename') {
+        if (!this.allow(`rename:${me.id}`, 3, 24 * 3600_000)) return send(429, { error: 'You can change your name three times a day' });
         const b = await readJson(req);
         const name = String(b.username ?? '');
         const err = this.checkUsername(name);
@@ -925,9 +981,13 @@ export class Accounts {
         } catch {
           return send(409, { error: 'That name is taken' });
         }
+        // Kept, so reports and trades made under the old name can still be traced.
+        this.logMod({ id: me.id, name }, 'rename', name, `was ${me.username}`);
+        this.logCollection(me.id, 'rename', { detail: { from: me.username, to: name } });
         return send(200, { ok: true, username: name });
       }
       if (req.method === 'POST' && path === '/api/report') {
+        if (!this.allow(`report:${me.id}`, 10, 3600_000)) return send(429, { error: 'That is a lot of reports. Try again later' });
         const b = await readJson(req);
         const target = String(b.name ?? '').slice(0, 32);
         const reason = String(b.reason ?? '').slice(0, 300);
@@ -937,8 +997,10 @@ export class Accounts {
       }
       return send(404, { error: 'Not found' });
     } catch (e) {
+      if (e instanceof BodyTooLarge) return send(413, { error: 'Too much data' });
       console.error('api error', e);
       this.onError(e, { path, method: req.method });
+      if (res.headersSent) return;
       return send(500, { error: 'Something went wrong' });
     }
   }
@@ -1014,6 +1076,7 @@ export class Accounts {
     }
     this.db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(password), u.id);
     this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
+    this.onSignedOut(u.id, 'This account was recovered with a recovery code, so this connection was closed');
     const left = (this.db.prepare('SELECT COUNT(*) AS n FROM recovery WHERE user_id = ? AND used_at IS NULL').get(u.id) as { n: number }).n;
     return send(200, { ok: true, username: u.username, codesLeft: left }, { 'Set-Cookie': this.cookie(req, this.newSession(u.id), SESSION_DAYS * 86400) });
   }
@@ -1159,11 +1222,18 @@ export function clientIp(req: IncomingMessage): string {
   return String(req.headers['fly-client-ip'] ?? req.socket.remoteAddress ?? '?');
 }
 
+/** A request body over the limit (answered 413, not treated as a server error). */
+class BodyTooLarge extends Error {
+  constructor() {
+    super('body too large');
+  }
+}
+
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
   let body = '';
   for await (const chunk of req) {
     body += chunk;
-    if (body.length > 8192) throw new Error('body too large');
+    if (body.length > 8192) throw new BodyTooLarge();
   }
   try {
     const v = JSON.parse(body || '{}') as unknown;

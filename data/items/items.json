@@ -101,14 +101,16 @@
       "name": "Leftovers",
       "short": "Leftovrs",
       "kind": "hold",
-      "effect": "regen"
+      "effect": "regen",
+      "desc": "Holder heals 1/16 of its HP every 3 s (also while waiting in its ball)"
     },
     {
       "id": "focus-sash",
       "name": "Focus Sash",
       "short": "Sash",
       "kind": "hold",
-      "effect": "sash"
+      "effect": "sash",
+      "desc": "From full HP, holder survives one knockout blow with 1 HP (used up)"
     },
     {
       "id": "storm-mask",
@@ -144,14 +146,16 @@
       "name": "Choice Band",
       "short": "Ch.Band",
       "kind": "hold",
-      "effect": "choice-band"
+      "effect": "choice-band",
+      "desc": "Holder's physical moves deal 1.5x damage"
     },
     {
       "id": "life-orb",
       "name": "Life Orb",
       "short": "Life Orb",
       "kind": "hold",
-      "effect": "life-orb"
+      "effect": "life-orb",
+      "desc": "Holder's attacks deal 1.3x damage; each move it uses costs it 10% of its HP"
     },
     {
       "id": "charcoal",
@@ -159,7 +163,8 @@
       "short": "Charcoal",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "fire"
+      "boostType": "fire",
+      "desc": "Holder's Fire-type moves deal 1.2x damage"
     },
     {
       "id": "mystic-water",
@@ -167,7 +172,8 @@
       "short": "M.Water",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "water"
+      "boostType": "water",
+      "desc": "Holder's Water-type moves deal 1.2x damage"
     },
     {
       "id": "magnet",
@@ -175,7 +181,8 @@
       "short": "Magnet",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "electric"
+      "boostType": "electric",
+      "desc": "Holder's Electric-type moves deal 1.2x damage"
     },
     {
       "id": "miracle-seed",
@@ -183,7 +190,8 @@
       "short": "M.Seed",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "grass"
+      "boostType": "grass",
+      "desc": "Holder's Grass-type moves deal 1.2x damage"
     },
     {
       "id": "never-melt-ice",
@@ -191,7 +199,8 @@
       "short": "N.M.Ice",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "ice"
+      "boostType": "ice",
+      "desc": "Holder's Ice-type moves deal 1.2x damage"
     },
     {
       "id": "black-belt",
@@ -199,7 +208,8 @@
       "short": "B.Belt",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "fighting"
+      "boostType": "fighting",
+      "desc": "Holder's Fighting-type moves deal 1.2x damage"
     },
     {
       "id": "soft-sand",
@@ -207,7 +217,8 @@
       "short": "S.Sand",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "ground"
+      "boostType": "ground",
+      "desc": "Holder's Ground-type moves deal 1.2x damage"
     },
     {
       "id": "sharp-beak",
@@ -215,7 +226,8 @@
       "short": "S.Beak",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "flying"
+      "boostType": "flying",
+      "desc": "Holder's Flying-type moves deal 1.2x damage"
     },
     {
       "id": "twisted-spoon",
@@ -223,7 +235,8 @@
       "short": "T.Spoon",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "psychic"
+      "boostType": "psychic",
+      "desc": "Holder's Psychic-type moves deal 1.2x damage"
     },
     {
       "id": "poison-barb",
@@ -231,7 +244,8 @@
       "short": "P.Barb",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "poison"
+      "boostType": "poison",
+      "desc": "Holder's Poison-type moves deal 1.2x damage"
     },
     {
       "id": "hard-stone",
@@ -239,7 +253,8 @@
       "short": "H.Stone",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "rock"
+      "boostType": "rock",
+      "desc": "Holder's Rock-type moves deal 1.2x damage"
     },
     {
       "id": "spell-tag",
@@ -247,7 +262,8 @@
       "short": "S.Tag",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "ghost"
+      "boostType": "ghost",
+      "desc": "Holder's Ghost-type moves deal 1.2x damage"
     },
     {
       "id": "dragon-fang",
@@ -255,7 +271,8 @@
       "short": "D.Fang",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "dragon"
+      "boostType": "dragon",
+      "desc": "Holder's Dragon-type moves deal 1.2x damage"
     },
     {
       "id": "black-glasses",
@@ -263,7 +280,8 @@
       "short": "B.Glass",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "dark"
+      "boostType": "dark",
+      "desc": "Holder's Dark-type moves deal 1.2x damage"
     },
     {
       "id": "metal-coat",
@@ -271,7 +289,8 @@
       "short": "M.Coat",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "steel"
+      "boostType": "steel",
+      "desc": "Holder's Steel-type moves deal 1.2x damage"
     },
     {
       "id": "silk-scarf",
@@ -279,16 +298,8 @@
       "short": "S.Scarf",
       "kind": "hold",
       "effect": "type-boost",
-      "boostType": "normal"
-    },
-    {
-      "id": "crystal-shard",
-      "name": "Crystal Shard",
-      "short": "Shard",
-      "kind": "shard",
-      "radius": 5,
-      "seconds": 10,
-      "desc": "Clears the darkness around you for 10 s"
+      "boostType": "normal",
+      "desc": "Holder's Normal-type moves deal 1.2x damage"
     },
     {
       "id": "rare-candy",
@@ -303,7 +314,7 @@
       "short": "Exp.Sh",
       "kind": "hold",
       "effect": "exp-share",
-      "desc": "Holder gets full XP even waiting in its ball"
+      "desc": "Holder gets full XP from its team's knockouts, even waiting in its ball"
     },
     {
       "id": "lucky-egg",
@@ -502,14 +513,6 @@
       "short": "SuperRod",
       "kind": "rod",
       "desc": "Fish at the water's edge (Space): the best bites, items, and something big in Tide Lake"
-    },
-    {
-      "id": "mystery-egg",
-      "name": "Pokémon Egg",
-      "short": "Egg",
-      "kind": "charm",
-      "desc": "A Breeder's Egg. It hatches when it's ready. Keep it warm",
-      "stack": 3
     }
   ]
 }

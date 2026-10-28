@@ -145,7 +145,7 @@ export class MatchScreen implements Screen {
     // Scene effects the events use (Lugia's burst, the lake's rings, landings, portals).
     for (const id of SCENE_FX) ids.add(id);
     this.fx.preload(ids);
-    this.icons.preload([...BALL_LIST.map((b) => b.id), 'crystal-shard', 'styler']);
+    this.icons.preload([...BALL_LIST.map((b) => b.id), 'styler', 'mystery-egg']);
     void assets.loadImage('tiles/sunnyside/vfx/spr_deco_glint_01_strip6.png').then((img) => (this.glint = img));
     void assets.loadImage('ui/alpha.png').then((img) => (this.alphaBadge = img));
     void assets.loadImage('fx/darkrai_portal.png').then((img) => (this.portalSheet = img));
@@ -529,7 +529,7 @@ export class MatchScreen implements Screen {
     let best: { name: string; role: string } | null = null;
     let bd = Infinity;
     for (const n of this.match.npcs) {
-      if (!n.role.startsWith('villager') && n.role !== 'breeder') continue;
+      if (!n.role.startsWith('villager') && n.role !== 'breeder' && n.role !== 'disguise') continue;
       const d = Math.hypot(n.x - p.x, n.y - p.y);
       if (d <= 1.8 && d < bd) {
         bd = d;
@@ -1886,7 +1886,6 @@ export class MatchScreen implements Screen {
     if (first) drawPointLight(v, first.x, first.y, 1.2, '#ffe8c0', 0.12);
     for (const o of this.match.outposts) drawPointLight(v, o.x, o.y, 2.2, '#7dffc0', o.users.length ? 0.5 : 0.22, 0);
     for (const it of this.match.items) drawPointLight(v, it.x, it.y, 0.5, '#ffe9a8', 0.25, 0.1);
-    for (const z of this.match.lightZones) drawPointLight(v, z.x, z.y, z.r * 0.8, '#d9b8ff', 0.3 * Math.min(1, z.t / 1.5), 0);
     for (const th of this.match.throws) if (th.phase === 'absorb' || th.phase === 'burst' || th.phase === 'click') drawPointLight(v, th.x, th.y, 1.2, '#ff8a8a', 0.6, 0.3);
     // The Shadow Crystal pulses; brighter as the night deepens.
     const t = this.match.time;
@@ -2168,7 +2167,6 @@ export class MatchScreen implements Screen {
     this.groundVfx.drawLights(v);
     this.drawLights(v);
     const lp = this.lightingParams(v);
-    const zone = this.match.lightZones[this.match.lightZones.length - 1];
     this.lighting.render({
       cold: lp.cold,
       darkCx: v.toScreenX(this.match.centerX),
@@ -2176,9 +2174,9 @@ export class MatchScreen implements Screen {
       darkRadius: lp.darkRadius,
       darkFeather: lp.darkFeather,
       darkAmount: lp.darkAmount,
-      clearCx: zone ? v.toScreenX(zone.x) : 0,
-      clearCy: zone ? v.toScreenY(zone.y) : 0,
-      clearRadius: zone ? zone.r * v.pxPerTile * Math.min(1, zone.t / 1.5) : 0,
+      clearCx: 0,
+      clearCy: 0,
+      clearRadius: 0,
       time: this.match.time,
     });
     if (this.showHud) {

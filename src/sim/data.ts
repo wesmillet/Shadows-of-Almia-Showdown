@@ -46,6 +46,8 @@ export interface SpeciesDef {
   /** Mega forms: the base form's dex and the Mega Stone it holds (scripts/megas.py, src/sim/mega.ts). */
   megaOf?: string;
   stone?: string;
+  /** Legendary or Mythical (PokeAPI's is_legendary / is_mythical); absent for ordinary species. */
+  class?: 'legendary' | 'mythical';
 }
 
 /** The moves a Pokémon of this species knows at `level`: its signature moves first, then the newest attacks it has reached (MOVE_SLOTS of them). */

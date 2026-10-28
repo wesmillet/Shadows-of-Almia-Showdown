@@ -39,9 +39,9 @@ FACE_TO_TOWER_R = [P(38, 3), P(38, 4), P(36, 5)]
 # the gatehouse: six wide, four tall, the arch in the middle
 GATEHOUSE = [
     [P(37, 11), P(6, 1), P(6, 1), P(6, 1), P(6, 1), P(39, 11)],
-    [P(37, 12), P(11, 50), P(12, 50), P(13, 50), P(14, 50), P(39, 12)],
-    [P(35, 13), P(11, 51), P(12, 51), P(13, 51), P(14, 51), P(41, 13)],
-    [P(31, 14), P(11, 52), P(12, 52), P(13, 52), P(14, 52), P(33, 14)],
+    [P(37, 12), P(1, 50), P(2, 50), P(3, 50), P(4, 50), P(39, 12)],     # the open arch (the kit's
+    [P(35, 13), P(1, 51), P(2, 51), P(3, 51), P(4, 51), P(41, 13)],     # wooden door, P(11..14),
+    [P(31, 14), P(1, 52), P(2, 52), P(3, 52), P(4, 52), P(33, 14)],     # kept everyone out)
 ]
 # the keep's stairs down the north wall into the courtyard, three wide
 STAIRS = [[P(25, 45), P(10, 45), P(26, 45)], [P(1, 26), P(2, 26), P(3, 26)], [P(1, 27), P(2, 27), P(3, 27)], [P(1, 27), P(2, 27), P(3, 27)], [P(1, 28), P(2, 28), P(3, 28)]]
@@ -113,7 +113,10 @@ def compose(W, H, gate_x=None, side_gates=(), seed=8):
     walls[s0 + 2, gx - 2], walls[s0 + 2, gx + 5] = FRONT_CAP_R, FRONT_CAP_L
     for x in range(gx - 1, gx + 5): walls[s0 + 2, x] = None
     stamp(walls, GATEHOUSE, gx - 1, s0 + 2)
-    gate = (gx, s0 + 1, gx + 4, H)
+    # and the back parapet opens over the gate, so the passage runs from the courtyard straight out
+    for x in range(gx, gx + 4): walls[s0, x] = None
+    walls[s0, gx - 1], walls[s0, gx + 4] = FRONT_CAP_R, FRONT_CAP_L
+    gate = (gx, s0, gx + 4, H)
     # side gates: the wall opens, the walkway too; red roofed towers stand above and below
     for (side, y0, y1) in side_gates:
         xs = range(0, 4) if side == 'W' else range(W - 4, W)

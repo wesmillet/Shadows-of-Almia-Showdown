@@ -79,6 +79,9 @@ for (ocx, ocy, rx, ry, cls) in z['ovals']:
     else:
         # the stepped rim tiles beyond the curve go, but never where a walk runs
         stone_px = (stone_px & ~(up(ring_t) & ~curve & ~walk_px)) | (curve & valid)
+        # a slab oval drawn over a light one (the rings of the castle court's medallion) takes its
+        # curve back out of the light paving: ovals paint in order, later over earlier
+        light_px = light_px & ~curve
 S1 = smooth(stone_px)                  # any stone
 S2 = light_px & S1                     # light slabs
 

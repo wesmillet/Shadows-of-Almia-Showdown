@@ -193,3 +193,22 @@ The Poké Ball drawn on a portrait waiting in its ball is gone. Instead the part
 Pokémon that are out first, then those waiting in their balls, then the fainted; the party's own
 order (which decides who comes out) is unchanged, and clicks still go to the right Pokémon.
 `party_out_first.png`: before and after the lead faints.
+
+### Afternoon: Tackle, the castle court, the south gate, the desert
+
+- **Tackle** is a plain body blow: the ground ripple (`fx_067`) is gone, only the hit burst remains
+  (`data/moves.json`, and its recipe in `scripts/moves.py`; the move scripts still rebuild the
+  library unchanged).
+- **The castle court's centre** has a paved medallion: rings of darker and lighter slabs and four
+  studs, as paving shapes in `areas/castle.tmx` (editable in Tiled). The smoothing pass
+  (`scripts/mapgen/pave_smooth.py`) now lets a slab oval drawn over a light one take its curve back,
+  so nested rings come out clean. `castle_centre_before_after.png`.
+- **The south gate is open**: the gatehouse shows the kit's open arch instead of the wooden door,
+  the parapet above the passage opens, and the slab walk runs from the court through the arch to
+  the road. Walkable end to end (the parapet row used to block it). Changed in the castle's Tiled
+  file and in `castlekit.py` for future exports; the smoothing overlay no longer paints over the
+  castle's own tiles. `castle_south_gate_before_after.png`.
+- **The round raised mesa west of Sunreach is gone**: flat desert there now (`design3.py`). The rocky
+  Pokémon that lived on it still spawn in the same area. `desert_west_before_after.png`.
+- Checks: `scripts/check-server.sh` passes; the full map was rebuilt and every point of interest is
+  reachable.

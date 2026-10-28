@@ -50,7 +50,7 @@ RECIPES = {
     'spectral-thief': ([T('fx_242', scale=3.2, fps=10), T('fx_206', scale=2.6, fps=2, delay=0.15), T('fx_187', scale=2.6, fps=11, delay=0.35)], 0.55),
     'v-create': ([T('fx_175', scale=3, ground=True, fps=9), T('fx_255', scale=2.4, fps=11, lift=2.6), T('fx_223', scale=3.2, fps=12, delay=0.25)], 1.0),
     # ---------------------------------------------------------------- Normal
-    'tackle': ([T('fx_001', scale=2.8, fps=16), T('fx_067', scale=0.9, ground=True, fps=16)], 0.1),
+    'tackle': ([T('fx_001', scale=2.8, fps=16)], 0.1),   # a plain body blow: no ground ripple
     'scratch': ([T('fx_116', scale=2.4, fps=24), T('fx_001', scale=1.6, fps=18, delay=0.05)], 0),
     'quick-attack': ([PR('fx_131', scale=2.2, speed=24, facing='right'), T('fx_001', scale=2.6, fps=16), T('fx_067', scale=0.8, ground=True, fps=16)], 0.1),
     'howl': ([A('fx_028', scale=1.2, ground=True, fps=20)], 0),

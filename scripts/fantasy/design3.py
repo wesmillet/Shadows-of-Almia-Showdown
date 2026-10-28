@@ -124,7 +124,8 @@ class Design:
             r = ellipse(mx, my, rx, ry) + (0.04 + 0.16 * damp) * noise(seed + 20 + k, 7) + 0.05 * noise(seed + 40 + k, 3) * damp
             level[(r < 1) & (level == k + 1) & ~town] = k + 2
         # desert mesas
-        for (mx, my, rx, ry, s) in [(48, 150, 18, 12, 8), (140, 198, 10, 6, 9)]:
+        # (the round one west of Sunreach, (48, 150), was taken out on 28 October: flat desert there now)
+        for (mx, my, rx, ry, s) in [(140, 198, 10, 6, 9)]:
             r = ellipse(mx, my, rx, ry) + 0.15 * noise(seed + s, 5)
             level[(r < 1) & inland & (biome == DESERT)] = 1
         # autumn ridge along the north-east

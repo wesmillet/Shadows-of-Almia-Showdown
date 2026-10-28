@@ -6,6 +6,13 @@ props, where the healer stands. No code involved.
 
 ## Editing the castle
 
+Without the repository or Python: unzip the prepared tileset folder (the pack with the castle
+already installed in `Tiled/Tilemaps/Almia castle.tmx`, and a `READ ME FIRST.txt` guide), edit in
+Tiled, save, and hand the saved `.tmx` back to be copied over `areas/castle.tmx` and rebuilt.
+Tiled may save tile layers as CSV (as here) or Base64 (plain, zlib or gzip); all are read.
+
+With the repository:
+
 1. Install Tiled (free, https://www.mapeditor.org).
 2. Put the map next to the pack's own samples so Tiled finds the tilesets:
 

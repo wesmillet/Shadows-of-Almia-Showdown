@@ -150,6 +150,9 @@ for o in objs:
     nm_ = _names_early.get(tuple(o[:5]), '')
     if nm_.startswith('Bridge_'):
         clear((o[5] + o[3] / 2) / 16, (o[6] + o[4] / 2) / 16, max(o[3], o[4]) / 32 + 2)
+        # and its straight approaches stay open, so nothing tall hides the way onto the deck
+        bcx, bcy = int((o[5] + o[3] / 2) // 16), int((o[6] + o[4] / 2) // 16)
+        keep_out[max(0, bcy - 5):bcy + 7, max(0, bcx - 11):bcx + 12] = True
     elif nm_.startswith('Ruins_'):
         clear((o[5] + o[3] / 2) / 16, (o[6] + o[4]) / 16, 4)
 lk = m['lake']

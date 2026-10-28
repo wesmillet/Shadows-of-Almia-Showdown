@@ -46,6 +46,7 @@ def roads(d, placer, seed=21):
     for idx, (kind, pts) in enumerate(D.ROADS):
         if kind != '1':
             continue
+        pts, _ = D.river_crossings(d, pts)     # the road as painted, straight over its bridges
         line = D.road_path(pts, 500 + idx, not D.climbs(pts))
         # a signpost a few tiles along from the road's first waypoint, on the right-hand verge
         if len(line) > 20:

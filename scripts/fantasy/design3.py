@@ -277,7 +277,75 @@ ROADS = [
     ('1', [(158, 134), (168, 142)]),
     ('1', [(236, 164), (247, 158), (252, 150), (262, 128)]),
     ('1', [(198, 191), (198, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
+    # from the north road over the river to the autumn town: the north of the island no longer
+    # has to go round by the crystal to reach Emberwood (a second bridge, river_crossings)
+    ('1', [(165, 58), (186, 52), (218, 58), (228, 79)]),
 ]
+# A road over a river runs straight across it for CROSS_HALF tiles either side of the river's
+# middle (the bridge's deck is five tiles, so four tiles of straight road meet each end square on)
+CROSS_HALF = 7
+
+
+def river_crossings(d, pts):
+    """A road's waypoints with a straight east-west run through every river it crosses, and the
+    crossings (bridge middle x, y). The crossing row is one where the river's three rows under the
+    deck fit in its five tiles, so the deck covers all the water and nothing else."""
+    lines = getattr(d, 'rivers', [])
+    if not lines: return pts, []
+    H_, W_ = d.river.shape
+    def wet(x, y):
+        xi, yi = int(round(x)), int(round(y))
+        return 0 <= yi < H_ and 0 <= xi < W_ and bool(d.river[yi, xi])
+    crossings = []
+    out = list(pts)
+    i = 0
+    while i < len(out) - 1:
+        (ax, ay), (bx, by) = out[i], out[i + 1]
+        L = float(np.hypot(bx - ax, by - ay))
+        hit = None
+        for s in np.arange(0, L, 0.25):
+            x, y = ax + (bx - ax) * s / L, ay + (by - ay) * s / L
+            if wet(x, y): hit = (x, y); break
+        if hit is None: i += 1; continue
+        best = None
+        for dy in sorted(range(-4, 5), key=abs):
+            cy = int(round(hit[1])) + dy
+            cols = np.nonzero(d.river[cy - 1:cy + 2].any(0))[0]
+            if len(cols) and cols[-1] - cols[0] <= 4:
+                best = (int(cols[0] + cols[-1] + 1) // 2, cy); break
+        if best is None: i += 1; continue
+        cx, cy = best
+        crossings.append(best)
+        east = bx > ax
+        a = (cx - CROSS_HALF, cy) if east else (cx + CROSS_HALF, cy)
+        b = (cx + CROSS_HALF, cy) if east else (cx - CROSS_HALF, cy)
+        # waypoints too close to the crossing would put a kink in its approach: dropped
+        near = lambda p: np.hypot(p[0] - cx, p[1] - cy) < CROSS_HALF + 5
+        head = [p for p in out[:i + 1] if not near(p) or p == out[0]]
+        tail = [p for p in out[i + 1:] if not near(p) or p == out[-1]]
+        out = head + [a, b] + tail
+        i = len(head) + 1
+    return out, crossings
+
+
+def square_crossings(d):
+    """Each crossing's approaches exactly three tiles wide (the deck's width) and straight, centred
+    on the deck's middle row: the brush's width wobble and the curves' edges trimmed off."""
+    for (cx, cy) in getattr(d, 'crossings', []):
+        x0, x1 = cx - CROSS_HALF, cx + CROSS_HALF + 1
+        for yy in (cy - 3, cy - 2, cy + 2, cy + 3):
+            d.paths[yy, x0 + 2:x1 - 2] = 0
+        d.paths[cy - 1:cy + 2, x0:x1] = np.maximum(d.paths[cy - 1:cy + 2, x0:x1], 1)
+        # stubs: bits of road beside the straight run that lead nowhere (the brush's overshoot at
+        # the bends) go; the roads that carry on away from the crossing stay
+        bx0, bx1, R = x0 - 4, x1 + 4, 6
+        for (r0, r1, far) in ((cy - R, cy - 1, 0), (cy + 2, cy + R + 1, -1)):
+            box = d.paths[r0:r1, bx0:bx1] > 0
+            lbl, n = ndimage.label(box)
+            # (the row against the straight run doesn't count as a way out)
+            edge = set(np.unique(np.concatenate([lbl[far], lbl[:, 0], lbl[:, -1]]))) - {0}
+            for i in range(1, n + 1):
+                if i not in edge: d.paths[r0:r1, bx0:bx1][lbl == i] = 0
 
 
 def climbs(pts):
@@ -366,9 +434,13 @@ def paint_roads(d, roads=ROADS, w=3, out=None):
             xi, yi, ai, bi = int(round(x)), int(round(y)), int(round(ax)), int(round(ay))
             if not (0 <= xi < W_ and 0 <= yi < H_): return False
             return bool(flat[yi, xi]) and lv[yi, xi] == lv[min(H_ - 1, bi), min(W_ - 1, ai)]
+    if out is None: d.crossings = []
     for idx, (kind, pts) in enumerate(roads):
         k = int(kind)
         wind = k == 1
+        if out is None and k == 1:
+            pts, cr = river_crossings(d, pts)
+            d.crossings += cr
         if climbs(pts):
             # climbing roads wind too, straight only through their flights of stairs
             pts = stair_waypoints(pts, getattr(d, 'stair_rows', {}))
@@ -387,6 +459,7 @@ def paint_roads(d, roads=ROADS, w=3, out=None):
                     if (xx + 0.5 - x - 0.5) ** 2 + (yy + 0.5 - y - 0.5) ** 2 <= r * r:
                         target[yy, xx] = max(target[yy, xx], k)
     if out is not None: return
+    square_crossings(d)
     # no road is ever one or two tiles across: wherever no 3x3 block of road covers a cell, widen
     for _ in range(3):
         p = d.paths > 0

@@ -79,7 +79,7 @@
     "bossWanderRadius": 2
   },
   "trainers": {
-    "count": 7,
+    "count": 9,
     "speed": 4.8,
     "fleeHpFraction": 0.3,
     "partySize": 3,

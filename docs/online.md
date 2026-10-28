@@ -36,7 +36,7 @@ the domain, and (optionally) Google for "Sign in with Google".
 
 | | |
 |---|---|
-| **Public matches** | Anyone, alone or in a party. Eight trainers; a lobby needs four real players before computer trainers fill the other seats, and neither the wait running out nor "Start now with bots" starts it with fewer (the lobby says how many more are needed). `MIN_PLAYERS` can lower that for testing, never on the live server. Ranked play has been retired: there is no ranked queue, board or standing any more (old ratings stay in the database, untouched). |
+| **Public matches** | Anyone, alone or in a party. Ten trainers; a lobby needs five real players before computer trainers fill the other seats, and neither the wait running out nor "Start now with bots" starts it with fewer (the lobby says how many more are needed). An administrator's account (role `admin`, granted with `admin.js admin <name>`; the server checks the role on the account, never the display name) gets "Start now (admin)" in the lobby and may start at once with whoever is queued, even alone, computer trainers in every other seat. `MIN_PLAYERS` can lower that for testing, never on the live server. Ranked play has been retired: there is no ranked queue, board or standing any more (old ratings stay in the database, untouched). |
 | **Parties** | Friends, up to four. The leader starts the match; everyone picks a starter; the party plays as a squad (teammates never fight; the last squad standing wins, knocked-out members included). |
 | **Private lobbies** | A host makes one and shares the five-letter code. Rules: trainers (2-8), computer trainers on/off, starter level, teams (solo, pairs, fours, pick), storm speed, the rare-item chest. Nothing from a private match is kept (no stats, no Pokémon, no Extraction Voucher reaches a PC, no storage-chest change is saved), so they can not be farmed. Their replays are for their own players only. After the match everyone is back in the lobby. |
 | **Friends** | Requests by trainer name (asking back accepts). Friends show what they are doing. |
@@ -75,10 +75,10 @@ private one) to be a second player. Useful settings (environment variables):
 | Setting | What it does |
 |---|---|
 | `LOBBY_WAIT=10` | Seconds a lobby waits for players before filling with computer trainers |
-| `MATCH_SIZE=2` | Trainers per match (2 makes a quick 1v1) |
+| `MATCH_SIZE=10` | Trainers per match (default 10; 2 makes a quick 1v1) |
 | `DEV_CLUSTER=1` | Players start side by side (testing PvP; ignored on the live server) |
 | `RARE_CHEST=1` | The rare-item chest (default: on except on the live server) |
-| `MIN_PLAYERS=4` | Real players a public lobby needs before computer trainers fill in (default half the lobby; never lower on live) |
+| `MIN_PLAYERS=5` | Real players a public lobby needs before computer trainers fill in (default half the lobby: five of ten; never lower on live) |
 | `MAX_PER_IP=12` | Game connections one address may hold at once (default 12 live, 64 elsewhere) |
 | `REPLAYS=0`, `REPLAY_MB=400` | Turn recording off; how much disk replays may use |
 | `SIM_LATENCY_MS=100` | Testing: pretend every message takes this long each way (never on live) |

@@ -45,11 +45,12 @@ const KIND = (process.env.SERVER_KIND ?? 'dev') as 'live' | 'demo' | 'dev';
 const DIST = process.env.DIST_DIR ?? join(ROOT, 'dist');
 const ASSETS = process.env.ASSETS_DIR ?? join(ROOT, 'assets');
 const DATA = process.env.DATA_DIR ?? join(ROOT, '.data');
-const SIZE = Number(process.env.MATCH_SIZE ?? 8);
+const SIZE = Number(process.env.MATCH_SIZE ?? 10);
 const WAIT = Number(process.env.LOBBY_WAIT ?? (KIND === 'live' ? 60 : 15));
 /**
- * Real players a public lobby needs before computer trainers fill the rest: half the lobby (four of
- * eight). MIN_PLAYERS may lower it for testing, but never on the live server.
+ * Real players a public lobby needs before computer trainers fill the rest: half the lobby (five of
+ * ten). MIN_PLAYERS may lower it for testing, but never on the live server. An administrator may
+ * start their own lobby below it (Matchmaker.startNow, checked against the account's role).
  */
 const HALF = Math.ceil(SIZE / 2);
 const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAYERS ?? HALF)) : Number(process.env.MIN_PLAYERS ?? HALF);

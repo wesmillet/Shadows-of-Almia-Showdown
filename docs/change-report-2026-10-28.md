@@ -120,3 +120,69 @@ with the other routes are in the encounter document.
 - Seven ordinary species have no shiny colours (Dragonair, Silcoon, Cascoon, Armarouge, Dewott,
   Archen, Galarian Darumaka), so they are never shiny and Celeste never gives them.
 - Axew and Larvesta are in the Breeder's Egg list but not in the game.
+
+## Evening pass: admin start, ten trainers, privacy, portraits and map fixes
+
+Pictures for everything below are in `docs/polish-2026-10-28/admin-and-map/`.
+
+### Admin start (server)
+
+- An account with the admin role can start a public lobby at any time, alone included; the other
+  seats fill with computer trainers. The server decides this from the signed-in account's id and
+  its role in the accounts database (`hub.isAdmin`: not a guest, not banned, `role = 'admin'`); the
+  display name plays no part. A lookalike name (`wes…x`) gets nothing.
+- Everyone else keeps the normal rule: Start now appears only once five real players are in.
+- The lobby shows the admin a "Start now (admin)" button; an admin start takes everyone already in
+  the lobby along.
+- Checked by `server/checks/admin_start.ts` (in CI and `scripts/check-server.sh`) against a server
+  with the standard settings, using the same admin command line as the live server, and in a
+  browser (`lobby_admin.png`, `lobby_ordinary.png`, `match_admin_start_ten.png`).
+- **To use it live, the Wes account must hold the admin role there**:
+  `fly ssh console --app almia-showdown -C "node dist-server/admin.js admin Wes"`.
+
+### Ten trainers
+
+- Public matches: 10 trainers, at least 5 real players before computer trainers fill in
+  (`server/main.ts`, `fly.toml`, `fly.demo.toml` `MATCH_SIZE = "10"`). Private lobbies: 2 to 10
+  (default 10). Offline: 9 rivals, so 10 in all (`data/config.json`). Lobby and hub text updated.
+
+### Chat and the minimap
+
+- Global chat is gone from matches (playing and watching); the hub and lobby keep it.
+- The minimap shows no other trainers; squadmates only, in blue. The server no longer sends anyone
+  the positions of opponents outside their view (the radar holds squadmates only, plus a count of
+  trainers left for the banner); opponents nearby are still sent and drawn as before. Checked in
+  `server/checks/online_events.ts`.
+
+### Party portraits
+
+- Cause: the portraits are opaque 40 px squares. They were drawn at 1x at least and clipped to the
+  border plus 2 px, so on smaller windows they ran over the slot's border and into the lead's
+  corner brackets (Smoochum was the lead in the report, Tirtouga was not). Now the portrait sits
+  inside the border with the same margin at every size, at the largest whole-pixel scale that fits;
+  where even 1x is too big, its middle is shown at 1x (pixels stay crisp). Before and after at four
+  window sizes: `hud_portraits_before_after.png`.
+
+### Map (all in the generators and the castle's Tiled source; full rebuild run)
+
+- **River crossings.** A road that crosses the river now runs straight across it (design3
+  `river_crossings`): a three-tile road centred on the bridge's middle row, four tiles of straight
+  road at each end, stray road stubs beside it removed, and the bridge picture now covers exactly
+  the walkable deck (it sat half a tile west of it). Nothing tall stands beside the approaches.
+  A second bridge carries a new road from the north road over the river to Emberwood.
+  Collision follows the same cells; the reachability check passes.
+- **Castle walls.** Cause, from the castle's own layers and the artist's Bosk Barracks: the side
+  walls are four tiles between their edge pieces, but the plank floor (whose planks run from the
+  middle of its first tile to the middle of its last) was laid three tiles wide, so a strip of the
+  island's grass showed between the planks and the outer edge on both walls, and inside the corner
+  towers' open tops. The planks now run under all four (`castlekit.close_edges`, applied to
+  `areas/castle.tmx` and to future exports). Separately, the centre colour blend tinted the pale
+  parapet stones of the west towers green (it classed them as sand); castle stone is now left alone.
+- **Town fences removed.** No town is fenced; the woods and meadow run straight into the towns.
+  Buildings, NPCs, plazas and roads are unchanged; farm fences stay.
+
+### Checks
+
+`scripts/check-server.sh` (TypeScript, move scripts, 89 unit tests, builds, every server check
+including the new admin start) passes. `server/checks/gameplay.ts` had a fragile check exposed by
+the new map (the Breeder wanted the starter's species and took it); fixed.

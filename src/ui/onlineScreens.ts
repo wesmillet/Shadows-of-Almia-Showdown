@@ -295,7 +295,7 @@ export class OnlineScreen implements Screen {
     // One way in: everyone fills the same matches.
     const f = this.findState();
     button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
-    text(v, 'Eight trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
+    text(v, 'Ten trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
     if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
     const sy = r.options.y + r.options.h + 34 * s;
@@ -418,7 +418,7 @@ export class PrivateLobbyScreen implements Screen {
       wrap.append(c);
       grid.append(el('label', '', label), wrap);
     };
-    select('Trainers', String(l.rules.size), [2, 3, 4, 5, 6, 7, 8].map((n) => [String(n), String(n)]), (v) => send({ size: Number(v) }));
+    select('Trainers', String(l.rules.size), [2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => [String(n), String(n)]), (v) => send({ size: Number(v) }));
     check('Computer trainers', l.rules.bots, (v) => send({ bots: v }));
     select('Teams', l.rules.teams, Object.entries(TEAM_LABEL) as Array<[string, string]>, (v) => send({ teams: v as PrivateRules['teams'] }));
     select('Starter level', String(l.rules.level), [5, 10, 15, 20, 30, 40, 50].map((n) => [String(n), `Level ${n}`]), (v) => send({ level: Number(v) }));
@@ -460,8 +460,10 @@ export class LobbyScreen implements Screen {
   private startsIn: number | null = null;
   private need = 0;
   /** Real players a match needs before computer trainers fill the rest (the server says). */
-  private min = 4;
-  private size = 8;
+  private min = 5;
+  private size = 10;
+  /** An administrator's lobby: they may start it now, alone or with whoever is here (the server checks). */
+  private admin = false;
   private mode: QueueMode | undefined;
   private unsub: (() => void) | null = null;
   private t = 0;
@@ -481,6 +483,7 @@ export class LobbyScreen implements Screen {
         this.need = m.need ?? 0;
         this.size = m.size;
         this.min = m.min ?? Math.ceil(m.size / 2);
+        this.admin = !!m.admin;
         this.mode = m.mode;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
     });
@@ -494,15 +497,17 @@ export class LobbyScreen implements Screen {
   private leaveRect(): Rect {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 200 * s, w: 220 * s, h: 50 * s };
+    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
   }
 
   /** Casual queues only: done waiting, start with computer trainers filling the rest. */
   private startNowRect(): Rect | null {
-    if (this.startsIn === null || this.startsIn < 4) return null;
+    // An administrator may start at any time (even alone); everyone else once the countdown runs.
+    if (!this.admin && (this.startsIn === null || this.startsIn < 4)) return null;
+    if (this.admin && this.startsIn !== null && this.startsIn < 4) return null;
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 142 * s, w: 220 * s, h: 50 * s };
+    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 176 * s, w: 220 * s, h: 50 * s };
   }
 
   step(dt: number, input: Input): void {
@@ -539,17 +544,17 @@ export class LobbyScreen implements Screen {
     heading(v, `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
-    const py = v.height / 2 - 150 * s;
-    panel(v, px, py, pw, 320 * s, 18, 'rgba(18,14,34,0.9)');
+    const py = v.height / 2 - 170 * s;
+    panel(v, px, py, pw, 340 * s, 18, 'rgba(18,14,34,0.9)');
     text(v, `${this.players.length} / ${this.size} trainers`, v.width / 2, py + 34 * s, 18, { align: 'center', color: INK.accent, shadow: false });
     for (let i = 0; i < this.size; i++) {
-      const y = py + 70 * s + i * 30 * s;
+      const y = py + 66 * s + i * 27 * s;
       const name = this.players[i];
       text(v, name ?? (i < this.players.length ? '' : 'waiting...'), v.width / 2, y, 15, { align: 'center', color: name ? INK.text : INK.dim, shadow: false });
     }
     const b = this.leaveRect();
     const sn = this.startNowRect();
-    if (sn) button(v, 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
+    if (sn) button(v, this.admin && this.need > 0 ? 'Start now (admin)' : 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
     button(v, 'Leave queue', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), '#f4e6c8');
   }
 }

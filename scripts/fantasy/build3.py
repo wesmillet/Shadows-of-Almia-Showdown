@@ -313,24 +313,17 @@ def main():
     bridge_deck = np.zeros(W.shape, bool)
     bridge = content3.catalogue('Objects_Buildings', r'Bridge_Stone_4')
     n_bridges = 0
-    for line in getattr(d, 'rivers', []):
-        rows_hit = []
-        for (x, y) in line:
-            xi, yi = int(round(x)), int(round(y))
-            if 0 <= yi < H and 4 <= xi < Wd - 4 and d.river[yi, xi] and (d.paths[yi, xi - 3] > 0 or d.paths[yi, xi - 2] > 0) and (d.paths[yi, xi + 3] > 0 or d.paths[yi, xi + 2] > 0):
-                rows_hit.append((yi, xi))
-        while rows_hit:
-            yi, xi = rows_hit[0]
-            group = [p for p in rows_hit if abs(p[0] - yi) <= 4]
-            rows_hit = [p for p in rows_hit if p not in group]
-            yi = sorted(g[0] for g in group)[len(group) // 2]
-            xi = int(round(sum(g[1] for g in group) / len(group)))
+    # design3.river_crossings chose each crossing (deck middle x, y) and ran its road straight
+    # through it, three tiles wide, centred on the deck
+    for (xi, yi) in getattr(d, 'crossings', []):
             if bridge:
                 # The bridge is walked on, so it is drawn under whoever crosses it (sorted at its top
                 # row); only its south posts, cut out as their own picture, stand in front of a
                 # crosser's feet. Sorted as one picture at its bottom row, it used to hide anyone on
                 # the deck (seen in the game: a trainer crossing vanished under the stone).
-                bx, by = (xi - 2) * 16 - 8, (yi + 2) * 16
+                # The picture (80 px) covers exactly the deck's five tiles (it used to sit half a
+                # tile west of them).
+                bx, by = (xi - 2) * 16, (yi + 2) * 16
                 art = tiled.tileset(bridge[0][0]).tile_image(bridge[0][1])
                 front = bridge_front_posts(art)
                 town_objects = list(town_objects) + [
@@ -338,6 +331,9 @@ def main():
                     {'img': front, 'name': 'bridge_front_posts', 'x': bx, 'y': by, 'sort': by / 16}]
                 bridge_deck[yi - 1:yi + 2, xi - 2:xi + 3] = True
                 n_bridges += 1
+                # nothing tall beside the straight approaches (a broad tree's crown hid the east one)
+                h_ = D.CROSS_HALF
+                placer.free[max(0, yi - 5):yi + 7, max(0, xi - h_ - 4):xi + h_ + 5] = False
     log(f'  bridges {n_bridges}')
     d.bridge_deck = bridge_deck          # decor3.life keeps its reeds off it
     log('farms')
@@ -345,16 +341,15 @@ def main():
     farm_fence = np.full(W.shape, None, dtype=object)
     farm_field = np.full(W.shape, None, dtype=object)
     farm_block = np.zeros(W.shape, bool)
-    # every town inside its own fence or low wall, open where the roads come in
+    # Every town has its grounds (towns3.grounds: the rectangle round it on its own level). They
+    # used to be fenced in, which read as raised plots; now nothing marks their edge, so the woods
+    # and meadow run straight on into them. Fences are kept for farms (farm3).
     rings = np.zeros(W.shape, bool)
     import random as _rnd
     for name, (tx, ty, b) in D.TOWNS.items():
-        lyr, ring = towns3.enclosure(d, tx, ty, b)
-        farm_fence = np.where(lyr != None, lyr, farm_fence)
-        farm_block |= ring
-        rings |= ring
-        placer.free &= ~ndimage.binary_dilation(ring, iterations=1)
-        # inside the walls: the town's own trees, a watchtower by a corner, props about the yards
+        ring = towns3.grounds(d, tx, ty)
+        rings |= ring                     # (farms still keep two tiles clear of a town's grounds)
+        # within the grounds: the town's own trees, a watchtower by a corner, props about the yards
         rr = _rnd.Random(sum(map(ord, name)))
         inside = ndimage.binary_fill_holes(ring) & ~ring & placer.free & ~town_foot & (d.paths == 0)
         inside &= ~ndimage.binary_dilation(d.paths > 0, iterations=1) & ~ndimage.binary_dilation(town_foot, iterations=1)

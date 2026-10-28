@@ -125,6 +125,8 @@ export class Match {
    * (the mirror only has the trainers near you). Empty offline, where match.trainers is everyone.
    */
   radar: Array<{ id: number; x: number; y: number; alive: boolean; human: boolean; name: string }> = [];
+  /** Online: trainers still in the match (the server's count; their positions are not sent). */
+  trainersLeft: number | null = null;
   /** True once the match is over for everyone (the last trainer standing, or no humans left). */
   over = false;
   trainers: Trainer[] = [];

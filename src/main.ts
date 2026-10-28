@@ -28,7 +28,6 @@ import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type Hu
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
 import { canWear, isFreeLook, lookRequirement } from './net/progression';
-import { ChatPanel } from './ui/overlay';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
@@ -375,7 +374,7 @@ async function boot(): Promise<void> {
       showOnline('Could not join the match, sorry. Try again');
       return;
     }
-    const chat = new ChatPanel(net, { compact: true, collapsed: true });
+    // No global chat during a match (it stays in the lobby and the hub).
     debug.showdown.match = mirror.match;
     debug.showdown.mirror = mirror;
     const screen: MatchScreen = new MatchScreen(game, mirror.match, rangers, assets, ui, () => {
@@ -427,7 +426,6 @@ async function boot(): Promise<void> {
       offAbort();
       offStatus();
       if (staleTimer !== null) clearTimeout(staleTimer);
-      chat.dispose();
       mirror.dispose();
     };
     debug.showdown.screen = screen;
@@ -442,10 +440,8 @@ async function boot(): Promise<void> {
     const mirror = new MirrorMatch({ ground: currentGround, rng: new Rng(h.seed), sprites }, net, h.follow, h.roster, rangers, { observe: true });
     await mirror.ready;
     if (watchingId !== h.matchId) return mirror.dispose();
-    const chat = new ChatPanel(net, { compact: true, collapsed: true });
     const screen = new MatchScreen(game, mirror.match, rangers, assets, ui);
     const leave = () => {
-      chat.dispose();
       mirror.dispose();
       showOnline();
     };
@@ -454,7 +450,6 @@ async function boot(): Promise<void> {
       if (m.t === 'spectateEnd' || (m.t === 'spectate' && m.matchId !== h.matchId) || m.t === 'start' || m.t === 'pick') {
         off();
         watchingId = null;
-        chat.dispose();
         mirror.dispose();
       }
     });

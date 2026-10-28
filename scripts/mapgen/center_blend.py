@@ -71,7 +71,13 @@ w = 0.5 * x * x * (3 - 2 * x)
 own = np.full(G.shape[:2], 9.0, dtype=np.float32)
 for k, c in enumerate(cls):
     own = np.where(bp == c, pd[..., k], own)
-w = np.where(own > 0.30, 0, w)[..., None]
+w = np.where(own > 0.30, 0, w)
+# The castle is built, not grown: in its grounds only the grass blends; its stone keeps its own
+# colour. (The pale parapet stones of the west towers, near the desert border, were classed as
+# sand by their colour and tinted toward the meadow, so green showed on the castle's west side.)
+CASTLE = 7
+castle_px = np.repeat(np.repeat(bio[:th, :tw] == CASTLE, 16, 0), 16, 1)
+w = np.where(castle_px & (bp != MEADOW), 0, w)[..., None]
 mult = 1 + w * (R - 1)
 
 # ---- the blighted plain: round the Shadow Crystal the grass is drained to an ashen grey, fully so

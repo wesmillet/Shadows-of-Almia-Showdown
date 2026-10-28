@@ -74,6 +74,31 @@ const seatB = m.seats[1]!;
 seatA.trainer.duelReadyAt = seatB.trainer.duelReadyAt = 1e9;
 step(10);
 
+// ---------------------------------------------------------------- what an opponent's browser knows
+{
+  // Far apart: neither browser has the other trainer, nor any radar dot for them; the count of
+  // trainers left still arrives.
+  const a = seatA.trainer;
+  const b = seatB.trainer;
+  const keepB = { x: b.x, y: b.y };
+  b.x = b.px = a.x + 60 > m.ground.cols - 5 ? a.x - 60 : a.x + 60;
+  step(6);
+  const vA = view(A) as unknown as Record<string, unknown> & { trainers: Array<Record<string, unknown>>; radar: Array<Record<string, unknown>>; trainersLeft: number };
+  const bId = b.id;
+  check(!vA.trainers.some((t) => t.id === bId), "a far-off opponent is not in the other player's view");
+  check(!(vA.radar ?? []).some((d) => d.id === bId) && (vA.radar ?? []).length === 0, `the minimap radar carries no opponents (${(vA.radar ?? []).length} dots)`);
+  const alive = m.allTrainers.filter((t) => t.alive && !t.visitor && !t.hidden && !t.challenger).length;
+  check(vA.trainersLeft === alive, `the count of trainers left still arrives (${vA.trainersLeft} of ${alive})`);
+  // Close by: the opponent is in the world again.
+  b.x = b.px = a.x + 5;
+  b.y = b.py = a.y;
+  step(6);
+  check((view(A) as unknown as { trainers: Array<Record<string, unknown>> }).trainers.some((t) => t.id === bId), 'an opponent nearby is in the world');
+  b.x = b.px = keepB.x;
+  b.y = b.py = keepB.y;
+  step(3);
+}
+
 // ---------------------------------------------------------------- Zoroark, online
 {
   const w = crew.disguise!;

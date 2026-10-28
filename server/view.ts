@@ -1,6 +1,7 @@
 /**
  * What one player is sent: the part of the match around them (and anything they are battling),
- * their own seat, and a radar of every trainer's position for the minimap. The view object and
+ * their own seat, how many trainers are left, and where their squadmates are (the minimap). Other
+ * trainers' positions are never sent beyond VIEW_RADIUS. The view object and
  * its lists are kept and refilled each time, so unchanged parts cost nothing on the wire.
  */
 import type { Mon, Trainer } from '../src/sim/entities';
@@ -75,10 +76,14 @@ export class PlayerView {
     if (vis.ace) v.add(vis.ace.npc);
     if (m.challenge?.npc) v.add(m.challenge.npc);
 
-    // The minimap's radar: every trainer still in the match (one stable dot each).
+    // The minimap's radar: only this player's squadmates (one stable dot each). Opponents are not
+    // on it and their positions are not sent at all beyond VIEW_RADIUS; how many are left is a count.
     const dots: RadarDot[] = [];
+    let left = 0;
     for (const t of m.allTrainers) {
       if (t.visitor || t.hidden || t.challenger) continue;
+      if (t.alive) left++;
+      if (t === me || me.team === undefined || t.team !== me.team) continue;
       let d = this.radar.get(t.id);
       if (!d) this.radar.set(t.id, (d = { id: t.id, x: 0, y: 0, alive: true, human: t.isPlayer, name: t.name }));
       d.x = Math.round(t.x * 10) / 10;
@@ -127,6 +132,7 @@ export class PlayerView {
     r.shops = m.shops;
     r.visitors = vv;
     r.radar = this.list('radar', dots);
+    r.trainersLeft = left;
     return r;
   }
 }

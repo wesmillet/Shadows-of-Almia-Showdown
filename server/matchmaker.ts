@@ -5,7 +5,9 @@
  * queue keeps forming lobbies; a group goes into the first one with room for all of it. A lobby
  * starts the moment it is full (after a short beat to see who is in), or `wait` seconds after it
  * opened, with computer trainers in the empty seats, but never with fewer than minPlayers real
- * players: neither the wait running out nor "Start now with bots" starts it before then.
+ * players: neither the wait running out nor "Start now with bots" starts it before then. The one
+ * exception is an administrator (checked by the hub from their account's role, never their name):
+ * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.
  */
 import type { Peer } from './room';
 
@@ -38,6 +40,8 @@ export interface MatchmakerOptions {
    * (default half the lobby, rounded up). Below that it keeps waiting. */
   minPlayers?: number;
   start: (players: Lineup[], mode: QueueMode) => void;
+  /** Whether this queued player's account is an administrator (may start a lobby below minPlayers). */
+  isAdmin?: (peer: Peer) => boolean;
 }
 
 interface Forming {
@@ -45,6 +49,8 @@ interface Forming {
   groups: Group[];
   openedAt: number;
   startAt: number;
+  /** An administrator started it: it goes ahead below minPlayers. */
+  forced?: boolean;
 }
 
 export class Matchmaker {
@@ -84,11 +90,12 @@ export class Matchmaker {
   }
 
   /** A queued player is done waiting: their casual lobby starts in two seconds (bots fill the rest). */
-  startNow(key: string, now: number): void {
+  startNow(key: string, now: number, admin = false): void {
     for (const l of this.lobbies) {
       if (l.mode !== 'casual') continue;
       if (!l.groups.some((g) => g.tickets.some((t) => t.peer.key === key))) continue;
-      if (count(l) < this.minPlayers) return;
+      if (admin) l.forced = true;
+      else if (count(l) < this.minPlayers) return;
       l.startAt = Math.min(l.startAt, now + 2000);
       this.status(now, true);
       return;
@@ -114,7 +121,7 @@ export class Matchmaker {
     for (const l of [...this.lobbies]) {
       if (now < l.startAt) continue;
       // Not enough real players yet: keep waiting (the wait starts over once there are).
-      if (count(l) < this.minPlayers) {
+      if (count(l) < this.minPlayers && !l.forced) {
         l.startAt = now + this.o.wait[l.mode] * 1000;
         continue;
       }
@@ -138,9 +145,15 @@ export class Matchmaker {
     for (const l of this.lobbies) {
       const players = l.groups.flatMap((g) => g.tickets.map((t) => t.peer.name));
       // null: waiting for more players (`need` of them) before any countdown
-      const need = Math.max(0, this.minPlayers - players.length);
+      const need = l.forced ? 0 : Math.max(0, this.minPlayers - players.length);
       const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
-      for (const g of l.groups) for (const t of g.tickets) t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers });
+      for (const g of l.groups) {
+        for (const t of g.tickets) {
+          // Only an administrator's own lobby message offers the admin start (the server checks again).
+          const admin = this.o.isAdmin?.(t.peer) || undefined;
+          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin });
+        }
+      }
     }
   }
 }

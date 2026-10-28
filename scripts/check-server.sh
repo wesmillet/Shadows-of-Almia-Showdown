@@ -24,4 +24,12 @@ npx tsx server/checks/social.ts | tail -1
 npx tsx server/checks/moderation.ts | tail -1
 npx tsx server/checks/ops.ts 2>/dev/null | tail -1
 npx tsx server/bots.ts 3 30 > /dev/null && echo "bots ok"
+# A second server with the standard lobby (ten trainers, five real players): the admin start.
+ADMIN_DATA="$(mktemp -d)"
+PORT=8792 SERVER_KIND=dev LOBBY_WAIT=4 DIST_DIR=dist DATA_DIR="$ADMIN_DATA" \
+  node --disable-warning=ExperimentalWarning dist-server/main.js > "$ADMIN_DATA/server.log" 2>&1 &
+SERVER2=$!
+trap 'kill $SERVER $SERVER2 2>/dev/null || true' EXIT
+for i in $(seq 1 90); do curl -sf localhost:8792/health > /dev/null && break; sleep 1; done
+DATA_DIR="$ADMIN_DATA" npx tsx server/checks/admin_start.ts http://localhost:8792 | tail -1
 echo "All server checks passed ($DATA_DIR)"

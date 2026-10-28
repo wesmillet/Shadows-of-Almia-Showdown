@@ -87,4 +87,34 @@ describe('matchmaker', () => {
     mm.tick(122_100);
     expect(started[0]?.length).toBe(4);
   });
+
+  it('ten-trainer lobbies need five real players; an administrator may start alone, nobody else may', () => {
+    const started: Array<Lineup[]> = [];
+    const admins = new Set(['wes']);
+    const mm = new Matchmaker({ size: 10, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players), isAdmin: (p) => admins.has(p.key) });
+    expect(mm.minPlayers).toBe(5);
+    // An ordinary player alone: Start now (even if the client claims to be an admin) does nothing.
+    const other = peer('bob');
+    mm.join({ tickets: [{ peer: other, starter: '0001' }], party: false }, 'casual', 0);
+    mm.startNow('bob', 0);
+    mm.tick(60_000);
+    expect(started.length).toBe(0);
+    expect((other.got.at(-1) as { admin?: boolean }).admin).toBeUndefined();
+    mm.leave('bob');
+    // The administrator alone: their lobby message offers it, and their start goes ahead.
+    const wes = peer('wes');
+    mm.join({ tickets: [{ peer: wes, starter: '0001' }], party: false }, 'casual', 61_000);
+    expect((wes.got.at(-1) as { admin?: boolean; need: number }).admin).toBe(true);
+    mm.startNow('wes', 61_000, true);
+    mm.tick(63_100);
+    expect(started.length).toBe(1);
+    expect(started[0]?.map((x) => x.peer.name)).toEqual(['wes']);
+    // With others queued too, everyone in the lobby comes along.
+    const pals = ['p1', 'p2'].map(peer);
+    mm.join({ tickets: [{ peer: wes, starter: '0001' }], party: false }, 'casual', 70_000);
+    for (const q of pals) mm.join({ tickets: [{ peer: q, starter: '0001' }], party: false }, 'casual', 70_000);
+    mm.startNow('wes', 70_000, true);
+    mm.tick(72_100);
+    expect(started[1]?.map((x) => x.peer.name).sort()).toEqual(['p1', 'p2', 'wes']);
+  });
 });

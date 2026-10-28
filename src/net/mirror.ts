@@ -368,6 +368,7 @@ export class MirrorMatch {
     vis.aceFoe = v.aceFoe ?? null;
     vis.aceReadyAt = v.aceReadyAt ?? 0;
     m.radar = (r.radar as Match['radar']) ?? [];
+    m.trainersLeft = typeof r.trainersLeft === 'number' ? r.trainersLeft : null;
   }
 
   /** The browser's step: send the keys and cursor, glide, animate, drift the storm's motes. */

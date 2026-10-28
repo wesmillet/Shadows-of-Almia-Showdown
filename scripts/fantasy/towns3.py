@@ -118,22 +118,15 @@ def build_town(name, cx, cy, biome, d, seed, ok=None):
     return plaza, objects, npcs, foot
 
 
-ENCLOSURE = {SNOW: 'Tileset_Fence_1_Snow', AUTUMN: 'Tileset_Fence_2', DESERT: 'Tileset_Wall_1', FOREST: 'Tileset_Wall_1'}
-
-
-def enclosure(d, cx, cy, biome, seed=3):
-    """A fence or low stone wall round the town (the pack's corner terrains: posts and rails turn
-    the corners themselves), open wherever a road passes. Returns (layer, blocked cells)."""
-    import wang
+def grounds(d, cx, cy):
+    """The outline of a town's grounds: the rectangle round it on the town's own level (where its
+    fence used to stand; build3 fills it to find the grounds)."""
     from scipy import ndimage
     H, W = d.land.shape
     x0, y0, x1, y1 = cx - 22, cy - 15, cx + 23, cy + 20
-    cells = np.zeros((H, W), np.int32)
-    cells[y0:y1, x0:x1] = 1
-    cells &= (d.land & ~d.water & ~d.beach & (d.level == d.level[cy, cx])).astype(np.int32)
-    Fe = wang.WangSet(ENCLOSURE[biome], seed=seed)
-    layer = Fe.paint(cells)
-    ring = cells.astype(bool) & ~ndimage.binary_erosion(cells.astype(bool))
-    gap = ring & ndimage.binary_dilation(d.paths > 0, iterations=1)
-    for (y, x) in zip(*np.nonzero(gap)): layer[y, x] = None
-    return layer, ring & ~gap
+    cells = np.zeros((H, W), bool)
+    cells[y0:y1, x0:x1] = True
+    cells &= d.land & ~d.water & ~d.beach & (d.level == d.level[cy, cx])
+    return cells & ~ndimage.binary_erosion(cells)
+
+

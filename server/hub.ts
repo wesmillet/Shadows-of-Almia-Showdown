@@ -131,6 +131,7 @@ export class Hub {
       fullSeconds: 3,
       minPlayers: o.minPlayers,
       start: (players, mode) => this.startRoom(players, mode, {}),
+      isAdmin: (peer) => this.isAdmin(peer as Client),
     });
     o.accounts.presence = (id) => this.presence(id);
     o.accounts.onTradesChanged = (ids) => {
@@ -142,6 +143,13 @@ export class Hub {
         if (c) this.pushSocial(c);
       }
     };
+  }
+
+  /** A signed-in, unbanned account whose role is admin (read from the database each time). */
+  isAdmin(c: Client | null | undefined): boolean {
+    if (!c || c.accountId === null || c.guest) return false;
+    const u = this.o.accounts.user(c.accountId);
+    return !!u && !u.banned && u.role === 'admin';
   }
 
   // ---------------------------------------------------------------- connections
@@ -194,7 +202,10 @@ export class Hub {
         this.cancelPick(c, `${c.name} left`);
         return;
       case 'startNow':
-        this.matchmaker.startNow(c.key, Date.now());
+        // An administrator's start goes ahead with whoever is in the lobby (bots fill the rest);
+        // anyone else's waits for the usual minimum. The role comes from the account, fresh from
+        // the database, never from the display name.
+        this.matchmaker.startNow(c.key, Date.now(), this.isAdmin(c));
         return;
       case 'party':
         return this.partyMsg(c, msg);

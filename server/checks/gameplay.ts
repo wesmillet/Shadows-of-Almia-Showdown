@@ -48,6 +48,8 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
     const wanted = m.makeMon(crew.want, 10, p, p.x, p.y);
     wanted.heldItem = 'charcoal';
     p.party.push(wanted);
+    // (the starter may be the wanted species too, and the Breeder takes the first: it holds one as well)
+    for (const q of p.party) if (q && q.dex === crew.want) q.heldItem = 'charcoal';
     while (partySize(p) < m.partyCap) p.party.push(m.makeMon('0396', 8, p, p.x, p.y));
     p.x = p.px = breeder.npc.x + 1;
     p.y = p.py = breeder.npc.y;

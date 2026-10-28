@@ -2,7 +2,7 @@
  * A seat: one human player in a match, with everything that is theirs alone (what they steer,
  * where they aim, their ball target, fishing line, move-learn prompts, Snag offer, result).
  *
- * A match has one seat offline (you) and up to eight on the game server. Match keeps a current
+ * A match has one seat offline (you) and up to ten on the game server. Match keeps a current
  * seat and its per-player fields (match.player, match.controlled, match.aim, ...) read and write
  * the current seat, so the single-player code runs unchanged for whichever seat is being stepped
  * or is acting (Match.withSeat).

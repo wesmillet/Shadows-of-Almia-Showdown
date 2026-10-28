@@ -10,7 +10,7 @@ import type { PrivateRules, PrivateState } from '../src/net/protocol';
 import type { Lineup } from './matchmaker';
 import type { Peer } from './room';
 
-export const DEFAULT_RULES: PrivateRules = { size: 8, bots: true, level: 15, teams: 'solo', storm: 1, rareChest: false };
+export const DEFAULT_RULES: PrivateRules = { size: 10, bots: true, level: 15, teams: 'solo', storm: 1, rareChest: false };
 export const STORM_SPEEDS = [0.5, 0.75, 1, 1.5, 2];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -18,7 +18,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function cleanRules(cur: PrivateRules, patch: Partial<Record<keyof PrivateRules, unknown>>): PrivateRules {
   const r = { ...cur };
   const int = (v: unknown, lo: number, hi: number) => (typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi ? v : null);
-  const size = int(patch.size, 2, 8);
+  const size = int(patch.size, 2, 10);
   if (size !== null) r.size = size;
   const level = int(patch.level, 5, 50);
   if (level !== null) r.level = level;

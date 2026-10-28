@@ -131,6 +131,7 @@ def compose(W, H, gate_x=None, side_gates=(), seed=8):
     keep = keep_rows(kw)
     stamp(walls2_all, keep, kx, T - len(keep) + 1)
     floor = Fw.paint(wood_all)
+    close_edges(floor[T:], walls)
     stamp(walls_all, STAIRS, kx + 3, T)
     stairs = (kx + 3, 0, kx + 6, 5)
     hall = (4, 3, W - 4, s0)
@@ -142,3 +143,37 @@ def compose(W, H, gate_x=None, side_gates=(), seed=8):
         solid[y0:y1, 0:4 if side == 'W' else W] = False
         if side == 'E': solid[y0:y1, W - 4:W] = False
     return layers, hall, gate, stairs, solid, T, (kx, kw, len(keep))
+
+
+# The floor's plank edge pieces: left edge, middle, right edge, for the top row, the run and the
+# bottom row (Atlas_Castle_Floor). Their planks reach from the middle of the first tile to the
+# middle of the last.
+PLANK_ROWS = [(289, 290, 291), (301, 302, 303), (313, 314, 315)]
+
+
+def close_edges(floor, walls, gid0=0):
+    """The side walls and corner towers are four tiles across, edge piece to edge piece, but the
+    plank floor under them was laid three across, so its planks stopped a whole tile short of the
+    outer edge piece and the island's grass showed through (down the walkways, and inside the
+    corner towers' open tops). The artist's own walls are three across and their tower tops sit on
+    planks in all four columns. Where an outer edge piece or a corner tower stands on the tile
+    beyond a plank edge, the edge moves out under it and the old edge becomes a middle piece.
+    In place. Also run on the Tiled castle (areas/castle.tmx), whose cells are tile ids: then
+    gid0 is the first id of the castle building atlas and floor ids are the floor atlas's own."""
+    H, W = floor.shape
+    keys = floor.dtype == object
+    def fid(t): return None if t is None or t == 0 else (t[1] if keys else t)
+    def wid(t): return None if t is None or t == 0 else (t[1] if keys else t - gid0)
+    outer = {W_OUTER[1], E_INNER[1]} | {k[1] for row in TOWER for k in row}
+    before = floor.copy()
+    n = 0
+    for y in range(H):
+        for (l, m, r) in PLANK_ROWS:
+            for x in range(1, W - 1):
+                t = before[y, x]
+                for (edge, nx) in ((l, x - 1), (r, x + 1)):
+                    if fid(t) == edge and fid(before[y, nx]) is None and wid(walls[y, nx]) in outer:
+                        floor[y, nx] = (t[0], edge, 0) if keys else edge
+                        floor[y, x] = (t[0], m, 0) if keys else m
+                        n += 1
+    return n

@@ -14,7 +14,7 @@ kill_timeout = 300
 [env]
   SERVER_KIND = "demo"
   LOBBY_WAIT = "20"
-  MATCH_SIZE = "8"
+  MATCH_SIZE = "10"
   BACKUP_MINUTES = "30"
   DRAIN_SECONDS = "60"
   RARE_CHEST = "1"

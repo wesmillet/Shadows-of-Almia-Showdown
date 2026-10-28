@@ -13,7 +13,7 @@ kill_timeout = 300
 [env]
   SERVER_KIND = "live"
   LOBBY_WAIT = "60"
-  MATCH_SIZE = "8"
+  MATCH_SIZE = "10"
   BACKUP_MINUTES = "15"
   DRAIN_SECONDS = "240"
   RARE_CHEST = "0"

@@ -212,3 +212,6 @@ order (which decides who comes out) is unchanged, and clicks still go to the rig
   Pokémon that lived on it still spawn in the same area. `desert_west_before_after.png`.
 - Checks: `scripts/check-server.sh` passes; the full map was rebuilt and every point of interest is
   reachable.
+- **The castle court's plaza** keeps its square shape with rounded corners (48 px). It is a
+  `corner` property on the plaza's Paving rectangle in `areas/castle.tmx` (any Paving rectangle
+  can have one), applied by the smoothing pass. `castle_plaza_rounded_corners.png`.

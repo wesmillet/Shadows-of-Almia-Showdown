@@ -285,7 +285,7 @@ def main():
         if 'Grass' in _n: continue          # (the lawns meet the paving softly, as before)
         _fixed |= np.vectorize(lambda t: t is not None, otypes=[bool])(_arr)
     _ovals = np.array(castle3.ovals(A['pave']) + [(cx + 0.5, cy + 0.5, 17.5, 12, 1), (cx + 0.5, cy + 0.5, 14.5, 9.5, 2)], np.float32)
-    np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, walks=walks & d.land)
+    np.savez_compressed(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f'{NAME}_pave.npz'), pav=pav, fixed=_fixed, ovals=_ovals, rounded=np.array(A.get('rounded', []), np.float32).reshape(-1, 5), walks=walks & d.land)
     arena_box = A['arena']
     log('cliffs')
     cl_layers, cliff_block, stair_cells = build_cliffs(d)

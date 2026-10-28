@@ -13,7 +13,8 @@ properties `x0` and `y0`). What the build reads:
                       names (a name ending in "(preview)" is only there to look at: the island
                       paints that part itself, so edits to it are ignored)
     "Solid"           a tile layer: tiles with anything in them are walls, never walked
-    "Paving"          an object layer of rectangles and ellipses, class "Slab" or "Mid Slab":
+    "Paving"          an object layer of rectangles and ellipses, class "Slab" or "Mid Slab" (a
+                      rectangle's int property "corner" rounds its outer corners, in pixels):
                       slabs painted with the castle floor set, with the edges smoothed at pixel
                       level, ellipses as true ovals (the battlefield's light oval)
     "Objects"         an object layer of tile objects: props, trees, furniture from any object tileset
@@ -289,8 +290,11 @@ def load(name, shape, statue_fn=None):
         if o['kind'] == 'ellipse':
             area['pave'].append(('ellipse', x0 + (o['x'] + o['w'] / 2) / 16, y0 + (o['y'] + o['h'] / 2) / 16, o['w'] / 32, o['h'] / 32, cls))
         elif o['kind'] == 'rect':
-            area['pave'].append(('rect', x0 + int(round(o['x'] / 16)), y0 + int(round(o['y'] / 16)),
-                                 x0 + int(round((o['x'] + o['w']) / 16)), y0 + int(round((o['y'] + o['h']) / 16)), cls))
+            r = ('rect', x0 + int(round(o['x'] / 16)), y0 + int(round(o['y'] / 16)),
+                 x0 + int(round((o['x'] + o['w']) / 16)), y0 + int(round((o['y'] + o['h']) / 16)), cls)
+            area['pave'].append(r)
+            # a "corner" property (pixels): the rectangle's outer corners are rounded that much
+            if o['props'].get('corner'): area.setdefault('rounded', []).append(r[1:5] + (int(o['props']['corner']),))
     for o in m.shapes.get('Objects', []):
         if not o['visible'] or not o['gid']: continue
         rs = m.resolve(o['gid'])

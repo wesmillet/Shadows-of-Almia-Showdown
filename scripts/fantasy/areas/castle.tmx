@@ -884,7 +884,11 @@
 </data>
   </layer>
   <objectgroup id="11" name="Paving">
-    <object id="1" class="Slab" x="368" y="384" width="624" height="368" />
+    <object id="1" class="Slab" x="368" y="384" width="624" height="368">
+      <properties>
+        <property name="corner" type="int" value="48" />
+      </properties>
+    </object>
     <object id="2" class="Slab" x="64" y="512" width="304" height="80" />
     <object id="3" class="Slab" x="992" y="512" width="288" height="80" />
     <object id="4" class="Slab" x="640" y="752" width="64" height="224" />

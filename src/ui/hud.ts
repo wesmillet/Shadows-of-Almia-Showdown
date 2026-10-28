@@ -842,9 +842,16 @@ export class Hud {
     this.heldRects = [];
     const first = lead(p);
     if (n) this.occupied.push({ x: x0, y: bottom - n * ps - (n - 1) * gap, w: cardW + 60 * s, h: n * ps + (n - 1) * gap });
+    // The Pokémon that are out come first, then those waiting in their balls, then the fainted (the
+    // party itself keeps its order; the click areas stay indexed by party slot).
+    const rank = (m: (typeof p.party)[number]) => (m.fainted ? 2 : m.stowed ? 1 : 0);
+    const order = p.party.map((_, i) => i).sort((a, b) => rank(p.party[a] as (typeof p.party)[number]) - rank(p.party[b] as (typeof p.party)[number]) || a - b);
+    const rowOf: number[] = [];
+    order.forEach((idx, r) => (rowOf[idx] = r));
     p.party.forEach((m, i) => {
       const x = x0;
-      const y0 = Math.round(bottom - (n - i) * ps - (n - 1 - i) * gap);
+      const row = rowOf[i] as number;
+      const y0 = Math.round(bottom - (n - row) * ps - (n - 1 - row) * gap);
       const hover = hit(st.mouseX, st.mouseY, x, y0, cardW + 24 * s, ps);
       const isLead = m === first;
       // The portrait in its slot.
@@ -883,8 +890,6 @@ export class Hud {
         ctx.fillStyle = 'rgba(255,255,255,0.12)';
         ctx.fillRect(px + 4 * k2, py + 4 * k2, inner, inner);
       }
-      // Waiting in its ball (only two are out at a time): a small ball on the portrait.
-      if (m.stowed && !m.fainted) this.icons.draw(ctx, 'poke-ball', px + 10 * s, py + ps - 10 * s, 16 * s);
       // The name tab, with the level; the behaviour chip at the row's right end.
       const rx = px + ps + 6 * s;
       const chipW = Math.round(46 * s);
@@ -923,7 +928,7 @@ export class Hud {
       ctx.lineWidth = Math.max(1, Math.round(s));
       ctx.strokeRect(chipX + 0.5, chipY + 0.5, chipW - 1, chipH - 1);
       this.label(ctx, BEHAVIOR_LABEL[m.behavior], chipX + chipW / 2, chipY + chipH - 4 * s, 8, '#ffffff', 'center', '800', chipW - 6 * s);
-      this.behaviorRects.push({ x: chipX, y: chipY, w: chipW, h: chipH });
+      this.behaviorRects[i] = { x: chipX, y: chipY, w: chipW, h: chipH };
       if (roaming) {
         // A map pin on the portrait.
         const pinX = px + ps - 9 * s;
@@ -975,7 +980,7 @@ export class Hud {
         }
         this.heldRects.push({ x: hx - 11 * s, y: hy - 11 * s, w: 22 * s, h: 22 * s, index: i });
       }
-      this.portraitRects.push({ x, y: y0, w: cardW, h: ps });
+      this.portraitRects[i] = { x, y: y0, w: cardW, h: ps };
       // Hovering a row (with more than one in the party): a red X at its right end releases it,
       // after a second click on the "Release?" it turns into.
       const armed = this.releaseArmed === i;

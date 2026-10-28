@@ -186,3 +186,10 @@ Pictures for everything below are in `docs/polish-2026-10-28/admin-and-map/`.
 `scripts/check-server.sh` (TypeScript, move scripts, 89 unit tests, builds, every server check
 including the new admin start) passes. `server/checks/gameplay.ts` had a fragile check exposed by
 the new map (the Breeder wanted the starter's species and took it); fixed.
+
+### Party order on screen (follow-up)
+
+The Poké Ball drawn on a portrait waiting in its ball is gone. Instead the party column lists the
+Pokémon that are out first, then those waiting in their balls, then the fainted; the party's own
+order (which decides who comes out) is unchanged, and clicks still go to the right Pokémon.
+`party_out_first.png`: before and after the lead faints.

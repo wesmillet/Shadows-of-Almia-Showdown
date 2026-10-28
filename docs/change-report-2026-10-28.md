@@ -95,7 +95,7 @@ with the other routes are in the encounter document.
 
 ## Checks performed
 
-- `npx tsc --noEmit`; `vitest` (82 tests on `online`, including new rare-group tests); client and
+- `npx tsc --noEmit`; `vitest` (79 tests on `online`, including three new rare-group tests); client and
   server builds.
 - `bash scripts/check-server.sh` locally (built server, teams, gameplay, online events, lag
   compensation, social, moderation, ops, bots): all passed. CI on `online` passed.

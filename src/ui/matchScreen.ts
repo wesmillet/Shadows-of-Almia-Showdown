@@ -1420,8 +1420,10 @@ export class MatchScreen implements Screen {
       this.floaters.add(ev.target.x, ev.target.y, `${ev.crit ? '✦' : ''}${ev.damage}`, color, ev.effectiveness > 1 ? 30 : 22);
       if (ev.effectiveness > 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Super effective!', '#ffd36b', 15);
       else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
-      // Hit-stop only for hits the player is part of; distant AI fights stay quiet.
-      if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
+      // Hit-stop only for hits the player is part of; distant AI fights stay quiet. Offline only: an
+      // online match is the server's and never stepped here, so nothing would ever count the freeze
+      // down (it froze every shot and delayed impact on screen for the rest of the match).
+      if (!this.match.mirror && (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer)) {
         if (this.match.battle.hitStop <= 0) this.hitStopFresh = true;
         this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
       }
@@ -2148,7 +2150,7 @@ export class MatchScreen implements Screen {
     const v = this.ctx.view;
     const p = this.match.player;
     // A hit-stop that began in this frame's step did not stop that step, so effects take their step too.
-    const held = this.match.battle.hitStop > 0 && !this.hitStopFresh;
+    const held = !this.match.mirror && this.match.battle.hitStop > 0 && !this.hitStopFresh;
     this.hitStopFresh = false;
     this.vfx.update(frameDt, held);
     this.groundVfx.update(frameDt, held);

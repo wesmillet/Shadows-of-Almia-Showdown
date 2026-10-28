@@ -97,13 +97,22 @@ def roads(d, placer, seed=21):
     return n_sign, n_lamp, n_flower
 
 
+def falls_zone(d):
+    """The stream over the plateau and its waterfall: no reeds or lily pads in it (reeds stood in
+    the three-tile stream and over the fall's edges)."""
+    z = np.zeros(d.land.shape, bool)
+    for (fx, y_lip) in getattr(d, 'falls', []):
+        z[max(0, y_lip - 12):y_lip + 6, max(0, fx - 3):fx + 4] = True
+    return z
+
+
 def lakes(d, seed=22):
     """Floating plants on still water near the shore (not the sea)."""
     from scipy import ndimage
     rng = random.Random(seed)
     pads = catalogue('Objects_Props', r'LilyPad_\d') + catalogue('Objects_Props', r'LotusFlower')
     cattail = catalogue('Objects_Props', r'Cattail(_\d+)?')
-    lake = d.water & d.land
+    lake = d.water & d.land & ~falls_zone(d)
     if not lake.any():
         return []
     near_shore = lake & ndimage.binary_dilation(~lake & d.land, iterations=3)
@@ -265,11 +274,6 @@ def mountain(d, placer, anim, blocked):
 
 # ---------------------------------------------------------------------------- life everywhere
 
-GRASS = {
-    D.MEADOW: ('Objects_Grass', r'Grass_Light_.*'), D.CASTLE: ('Objects_Grass', r'Grass_Emerald_.*'),
-    D.FOREST: ('Objects_Grass', r'Grass_(Emerald|Dark)_.*'), D.AUTUMN: ('Objects_Grass', r'Grass_Light_.*'),
-    D.SNOW: ('Objects_Grass_Snow', r'.*'), D.DESERT: ('Objects_Grass_Desert', r'.*'),
-}
 FLOWER_SETS = {D.MEADOW: [0, 96, 384, 480], D.FOREST: [0, 384], D.AUTUMN: [96, 192, 768], D.CASTLE: [0, 384, 480, 672]}
 
 
@@ -278,31 +282,16 @@ CATTAILS = {331, 361}
 
 
 def life(d, placer, anim, seed=31):
-    """Grass clumps on every land, patches of animated flowers on the green ones, reeds and
+    """Patches of animated flowers on the green lands, reeds and
     lily pads swaying on the lakes, floating logs, rune rocks glowing round the crystal."""
     import animprops
     rng = random.Random(seed)
     n = 0
-    pools = {}
-    for b, (ts, rx) in GRASS.items():
-        try: pools[b] = catalogue(ts, rx)
-        except Exception: pools[b] = []
     blight = D.blight()
     order = list(zip(*np.nonzero(placer.free & d.land & ~d.water & ~d.beach)))
     rng.shuffle(order)
-    for (y, x) in order:
-        b = int(d.biome[y, x])
-        pool = pools.get(b)
-        if not pool or blight[y, x]: continue
-        if rng.random() >= 0.025: continue
-        k = rng.choice(pool)
-        # a clump spreads over several tiles: none of them water (a 4 x 3 clump at the shore used to
-        # drape over the water's edge and blur the shoreline)
-        w, h = content3.size(k)
-        tw, th = (w + 15) // 16, (h + 15) // 16
-        y0, x0 = max(0, y - th + 1), max(0, x - tw // 2)
-        if d.water[y0:y + 2, x0:x0 + tw + 1].any(): continue
-        if placer.put(k, x, y, clear=0, shadow=False): n += 1
+    # (Grass clumps, the pack's Objects_Grass pictures, are no longer scattered: drawn upright they
+    # stood over anyone walking behind them and hid a trainer or a small Pokemon whole.)
     # flower patches (6 x 2 tiles of small animated flowers)
     free_anim = lambda cells: all(0 <= y < anim.shape[0] and 0 <= x < anim.shape[1] and placer.free[y, x] and anim[y, x] is None and d.land[y, x] and not d.water[y, x] and d.paths[y, x] == 0 for (y, x) in cells)
     def put_anim(ts, tid, x, yb):
@@ -318,7 +307,7 @@ def life(d, placer, anim, seed=31):
         if put_anim('Animation_Flowers', rng.choice(FLOWER_SETS[b]), x, y): n += 1
     # on the water: reeds along the banks, lily pads out on the lakes, a floating log or two
     from scipy import ndimage
-    bank = d.water & ndimage.binary_dilation(~d.water & d.land, iterations=1)
+    bank = d.water & ndimage.binary_dilation(~d.water & d.land, iterations=1) & ~falls_zone(d)
     deck = getattr(d, 'bridge_deck', None)
     if deck is not None: bank &= ~ndimage.binary_dilation(deck, iterations=2)
     deep = d.water & ~ndimage.binary_dilation(~d.water, iterations=2)

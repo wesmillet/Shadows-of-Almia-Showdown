@@ -51,6 +51,16 @@ export function createMatch(world: World, humans: Human[], size: number, seed: n
   const m = newMatch(world, humans, size, seed, rules);
   // Testing only (never on the live server): DEV_GATHER=1 starts every human player a few steps
   // from the first, so a playtest with two browsers can fight at once instead of walking the island.
+  // Testing only: DEV_START=x,y puts the first player there (to look at one place online).
+  const devStart = process.env.SERVER_KIND === 'dev' ? /^(\d+),(\d+)$/.exec(process.env.DEV_START ?? '') : null;
+  if (devStart && m.seats[0]) {
+    const t = m.seats[0].trainer;
+    const dx = Number(devStart[1]) + 0.5 - t.x;
+    const dy = Number(devStart[2]) + 0.5 - t.y;
+    t.x = t.px = t.x + dx;
+    t.y = t.py = t.y + dy;
+    for (const mon of t.party) if (mon) { mon.x = mon.px = mon.x + dx; mon.y = mon.py = mon.y + dy; }
+  }
   if (process.env.DEV_GATHER === '1' && process.env.SERVER_KIND === 'dev') {
     const first = m.seats[0]?.trainer;
     const g = m.ground;

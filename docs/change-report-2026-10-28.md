@@ -215,3 +215,41 @@ order (which decides who comes out) is unchanged, and clicks still go to the rig
 - **The castle court's plaza** keeps its square shape with rounded corners (48 px). It is a
   `corner` property on the plaza's Paving rectangle in `areas/castle.tmx` (any Paving rectangle
   can have one), applied by the smoothing pass. `castle_plaza_rounded_corners.png`.
+
+## Evening: what broke, and the fixes
+
+Reported: move effects lingering over the map, cut-off objects, grass covering the trainer,
+a dialogue box over the interface, Sandygast's shadow, an NPC flashing near a village. Pictures in
+`docs/polish-2026-10-28/fixes-evening/`.
+
+- **Lingering move effects (online), caused this morning.** The move-timing change paused shots
+  and delayed impacts during the hit-stop freeze. Online nothing counts that freeze down in the
+  browser (the match is the server's), so after the player's first heavy hit every shot in flight
+  and every delayed impact stayed frozen on screen for the rest of the match. Online matches no
+  longer freeze effects. Checked in a browser against a local server: effects come and go, the
+  oldest on screen under a second old over 45 s of fighting.
+- **Cut-off scraps (since the island was rebuilt with the whole pack, 27 October).** The landscaper
+  (`scripts/fantasy/polish3.py`) listed some pictures as rectangles of the packed object sheet
+  (beach pebbles and palms, its block list, its cattails). When the sheet was packed again those
+  rectangles pointed into the middle of other pictures, so slivers of palms, rocks and props were
+  scattered over beaches and the desert. Pictures are now picked by name, and the build fails if any
+  object on the map is not a whole picture (it checks all of them: none left). A tile swap from the
+  same era (four "gray patch" tile numbers of the old tile sheet) swapped 15 unrelated ground tiles
+  and is gone too.
+- **Banners cut off.** Animated props are assembled from the pack's animation sheets
+  (`animprops.py`). A flag's pole does not move, so it is not an animated tile; the assembler started
+  at the flag, left the pole out and took the next frame's pole instead (a flag hanging between two
+  poles, cut off at one end). The still parts of a prop's first frame are now part of it, foot
+  included. The other animated props were checked; none else lost a part.
+- **Grass covering the trainer.** The grass clumps (the pack's Objects_Grass pictures) are no
+  longer scattered: they were drawn upright, so anyone behind one was hidden. The tall grass where
+  wild Pokémon hide is unchanged.
+- **Reeds in the waterfall's stream** removed (they stood in the three-tile stream and over the
+  fall's edges).
+- **NPC lines over the interface.** A long line (the Breeder's) ran under the trainers-left banner
+  and the minimap. Messages now wrap to stay between them.
+- **Sandygast** (and Palossand) cast no shadow.
+- **The flashing NPC** was not reproduced: townsfolk and vendors were watched frame by frame in four
+  towns, offline and online, without a jump or flicker. More detail is needed (which town, online or
+  offline).
+- For testing only: `DEV_START=x,y` starts the first player at a spot on a dev server.

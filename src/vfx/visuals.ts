@@ -16,6 +16,11 @@ export interface MoveVisual {
   draw(view: View): void;
   /** Draw additive light on the light canvas. */
   drawLight(view: View): void;
+  /**
+   * Waiting on the simulation's clock (a shot in flight, an impact not yet due): it waits out a
+   * hit-stop with the simulation, so it still lands in the frame its damage does.
+   */
+  waitsOnSim?(): boolean;
 }
 
 function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, alpha: number): void {
@@ -424,15 +429,30 @@ export function drawPointLight(view: View, x: number, y: number, radiusTiles: nu
 
 export class VfxLayer {
   readonly list: MoveVisual[] = [];
+  /** Added since the last update: they show their first frame before they start to play. */
+  private readonly fresh = new Set<MoveVisual>();
 
   add(v: MoveVisual): void {
     this.list.push(v);
+    this.fresh.add(v);
   }
 
-  update(dt: number): void {
+  /**
+   * Advances every effect by a frame. One added during this frame's simulation step is left at its
+   * start for this frame, so effect time runs in step with the simulation: a shot the simulation
+   * lands after n steps arrives on screen n frames after it was fired, in the same frame its damage
+   * shows (it used to arrive one frame early, as did every delayed impact).
+   */
+  update(dt: number, simHeld = false): void {
     for (let i = this.list.length - 1; i >= 0; i--) {
-      if (!(this.list[i] as MoveVisual).update(dt)) this.list.splice(i, 1);
+      const v = this.list[i] as MoveVisual;
+      if (this.fresh.has(v)) continue;
+      // During a hit-stop the simulation stands still: shots in flight and impacts not yet due wait
+      // with it (impacts already playing keep playing, which is the point of the freeze).
+      if (simHeld && v.waitsOnSim?.()) continue;
+      if (!v.update(dt)) this.list.splice(i, 1);
     }
+    this.fresh.clear();
   }
 
   draw(view: View): void {

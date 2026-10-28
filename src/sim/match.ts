@@ -2114,6 +2114,12 @@ export class Match {
       m.casting.targetX = l.tx;
       m.casting.targetY = l.ty;
     }
+    // Winding up where it stands (facing the target) before it sets off.
+    if (l.wait && l.wait > 0) {
+      l.wait -= dt;
+      m.dir = dirFromVector(l.tx - m.x, l.ty - m.y, m.dir);
+      return;
+    }
     const left = Math.max(dt, l.dur - l.t);
     l.t += dt;
     const dx = l.tx - m.x;
@@ -2339,6 +2345,9 @@ export class Match {
     if (this.outcome) return;
     if (this.battle.hitStop > 0) {
       this.battle.hitStop -= dt;
+      // the white hit flash is two frames however long the freeze (it used to last the whole
+      // freeze too, a body flat white for seven frames that hid the impact drawn on it)
+      for (const m of this.mons()) if (m.flash > 0) m.flash = Math.max(0, m.flash - dt);
       return;
     }
     this.time += dt;

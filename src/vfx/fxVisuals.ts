@@ -54,6 +54,9 @@ export interface FxAnimOptions {
   rotation?: number;
   /** Light strength multiplier (0 disables). */
   light?: number;
+  /** Start past the sheet's lead-in (its first nearly empty frames): an impact on a Pokémon hit,
+   * full size in the frame the damage lands. */
+  skipLeadIn?: boolean;
 }
 
 /** A frame animation at a world point. */
@@ -83,6 +86,7 @@ export class FxAnim implements MoveVisual {
     this.rotation = o.rotation ?? 0;
     this.light = o.light ?? 1;
     this.y = o.y + 0.01;
+    if (o.skipLeadIn && !this.loopSeconds) this.t = (sheet.leadIn ?? 0) / this.fps;
   }
 
   private get life(): number {
@@ -145,6 +149,9 @@ export interface FxProjectileOptions {
   facing?: FxFacing;
   /** Tiles per second. */
   speed?: number;
+  /** Flight time in seconds, overriding `speed`: the simulation's own (battle.impactDelay), so the
+   * shot lands on screen in the very frame its damage does. */
+  seconds?: number;
   /** Height of a lobbed arc, in tiles. */
   arc?: number;
   /** Height at the start, in tiles (a fall from the sky); `lift` is the height at the end. */
@@ -178,7 +185,7 @@ export class FxProjectile implements MoveVisual {
   constructor(private readonly sheet: FxSheet, private readonly o: FxProjectileOptions) {
     const fall = o.fromLift !== undefined ? Math.abs(o.fromLift - (o.lift ?? 0.45)) : 0;
     const d = Math.max(Math.hypot(o.to.x - o.from.x, o.to.y - o.from.y), fall);
-    this.dur = Math.max(0.12, d / (o.speed ?? 11));
+    this.dur = o.seconds !== undefined ? Math.max(1 / 60, o.seconds) : Math.max(0.12, d / (o.speed ?? 11));
     // A fall points straight down; otherwise along the ground path.
     const ang = o.fromLift !== undefined && fall > 0.5 ? Math.PI / 2 : Math.atan2(o.to.y - o.from.y, o.to.x - o.from.x);
     // Only clearly elongated art (a streak, a dart) turns to its flight path; balls,
@@ -195,9 +202,13 @@ export class FxProjectile implements MoveVisual {
     this.y = o.from.y + 0.02;
   }
 
+  waitsOnSim(): boolean {
+    return !this.hit;
+  }
+
   update(dt: number): boolean {
     this.t += dt;
-    const p = Math.min(1, this.t / this.dur);
+    const p = this.t + 1e-6 >= this.dur ? 1 : this.t / this.dur;
     this.x = this.o.from.x + (this.o.to.x - this.o.from.x) * p;
     this.wy = this.o.from.y + (this.o.to.y - this.o.from.y) * p;
     const end = this.o.lift ?? 0.45;
@@ -388,17 +399,26 @@ export class Delayed implements MoveVisual {
     return this.inner.y;
   }
 
+  waitsOnSim(): boolean {
+    return !this.started;
+  }
+
+  /** Started: its delay is up (to within rounding: 6 frames of 1/60 s make 0.1 s, not 0.0999...). */
+  get started(): boolean {
+    return this.t + 1e-6 >= this.delay;
+  }
+
   update(dt: number): boolean {
     this.t += dt;
-    if (this.t < this.delay) return true;
+    if (!this.started) return true;
     return this.inner.update(dt);
   }
 
   draw(view: View): void {
-    if (this.t >= this.delay) this.inner.draw(view);
+    if (this.started) this.inner.draw(view);
   }
 
   drawLight(view: View): void {
-    if (this.t >= this.delay) this.inner.drawLight(view);
+    if (this.started) this.inner.drawLight(view);
   }
 }

@@ -229,6 +229,10 @@ export interface MoveDef {
   contact?: boolean;
   /** A dashing contact move (Quick Attack, Aqua Jet, Mach Punch): its lunge runs this much faster and further. */
   dash?: number;
+  /** A contact move that reaches past its user's body (Vine Whip's vine), in tiles: it strikes from that far off. */
+  reach?: number;
+  /** A draining move: the user gets back this share of the damage it dealt (Giga Drain 0.5, Draining Kiss 0.75). */
+  drain?: number;
   /** Shove strength for a contact hit or a slam's landing, times the usual (Dragon Tail sends its target off). */
   knock?: number;
   /** The user takes this share of the damage it dealt (Double-Edge, Flare Blitz), once per use. */
@@ -252,7 +256,7 @@ export function isContact(m: MoveDef): boolean {
  */
 export function contactReach(a: SpeciesDef, t: SpeciesDef | null, m: MoveDef): number {
   const L = CONFIG.battle.lunge as typeof CONFIG.battle.lunge & { reachSlack?: number };
-  const own = m.leap ? 0.45 + Math.min(1.6, bodyRadius(a) * 1.1) : 0.15 + Math.min(1.2, bodyRadius(a) * 0.75);
+  const own = (m.leap ? 0.45 + Math.min(1.6, bodyRadius(a) * 1.1) : 0.15 + Math.min(1.2, bodyRadius(a) * 0.75)) + (m.reach ?? 0);
   return own + (t ? bodyRadius(t) * 0.75 : 0.2) + (L.reachSlack ?? 0.45);
 }
 

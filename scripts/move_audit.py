@@ -19,6 +19,8 @@ def T(id, **k): return dict(id=id, anchor='target', **k)
 
 # Priority dashes: they lunge faster and further (battle.ts startLunge: lunge.maxTiles x dash).
 DASH = {'quick-attack': 1.35, 'aqua-jet': 1.35, 'mach-punch': 1.3, 'bullet-punch': 1.3, 'shadow-sneak': 1.3, 'sucker-punch': 1.25}
+DRAIN = {'absorb': 0.5, 'mega-drain': 0.5, 'giga-drain': 0.5, 'draining-kiss': 0.75}
+REACH = {'vine-whip': 2.0}
 # Shove strength on a contact hit or a slam's landing, times the usual power-scaled shove.
 KNOCK = {'dragon-tail': 2.4, 'body-slam': 1.3, 'heavy-slam': 1.6, 'iron-tail': 1.2, 'wave-crash': 1.2,
          'lick': 0.5, 'nuzzle': 0.5, 'bug-bite': 0.7, 'double-kick': 0.6, 'fury-cutter': 0.6}
@@ -47,8 +49,10 @@ def main():
     note = (" dash (optional): a priority dash lunges that much faster and further. knock (optional): how hard a contact hit or a slam's"
             " landing shoves, times the usual. A contact move or slam lands only on a body its user is touching when it strikes"
             " (data.ts contactReach); shots and blasts stop at walls (match.ts shotClear). Effect and dash/knock changes since 28"
-            " October: scripts/move_audit.py.")
+            " October: scripts/move_audit.py. drain (optional): the user gets back that share of the HP the hit took. reach (optional):"
+            " a contact move that strikes from that many tiles past its user's body (Vine Whip).")
     if 'dash (optional)' not in data['_comment']: data['_comment'] += note
+    elif 'drain (optional)' not in data['_comment']: data['_comment'] = data['_comment'][:data['_comment'].index(' dash (optional)')] + note
     # Quick Attack looked exactly like Tackle: a sharp star for the quick strike, a lighter puff.
     by['quick-attack']['fx'] = [T('fx_005', scale=2.2, fps=20), T('fx_067', scale=0.6, ground=True, fps=18)]
     # Brick Break's second part was the big white disc (fx_004), a white-out over the target.
@@ -73,6 +77,25 @@ def main():
     # Lick showed claw marks; Astonish had the splat that suits a lick. Swapped: a lick, a start.
     by['lick']['fx'] = [T('fx_049', scale=1.0, fps=20, tint='#ff9ad5')]
     by['astonish']['fx'] = [T('fx_196', scale=1.4, fps=16, tint='#c9a6ff')]
+    # Draining moves had no healing at all: the user now gets back a share of the HP it took
+    # (battle.ts landHit; the canon shares). The sparkles that played on the user at every cast, hit
+    # or miss, now play only when HP actually comes back (the 'heal' event).
+    for mid, share in DRAIN.items():
+        by[mid]['drain'] = share
+        by[mid]['fx'] = [p for p in by[mid]['fx'] if p['anchor'] != 'attacker']
+    for mid, m in by.items():
+        if mid not in DRAIN: m.pop('drain', None)
+    # Vine Whip's vine: a thin green lash from its user to the target (fx_108, the slim beam strip,
+    # tinted) and a quick cut where it lands. Its old effect (fx_064, vines sprouting round the target)
+    # took a third of a second to grow, so the hit came long before anything showed.
+    by['vine-whip']['fx'] = [dict(id='fx_108', anchor='attacker', mode='stream', scale=0.9, seconds=0.3, fps=16, tint='#6cc24a', origin='body'),
+                            T('fx_116', scale=1.3, fps=30, tint='#7ad04a')]
+    # Fairy Wind landed as a flat pink disc over the target (fx_205): a pink sparkle burst instead.
+    by['fairy-wind']['fx'] = [p for p in by['fairy-wind']['fx'] if p['anchor'] != 'target'] + [T('fx_031', scale=1.6, fps=16, tint='#ffb3e6')]
+    # Vine Whip lashes from a distance with its vine instead of charging in like Tackle.
+    for mid, m in by.items():
+        if mid in REACH: m['reach'] = REACH[mid]
+        else: m.pop('reach', None)
     out = json.dumps(data, ensure_ascii=True)
     if out != raw:
         open(PATH, 'w', encoding='utf-8').write(out)

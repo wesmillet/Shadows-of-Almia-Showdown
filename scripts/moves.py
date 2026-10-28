@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """The move library: every move's numbers and its animation recipe, written into data/moves.json.
 
-  python3 scripts/moves.py              (fills in effects only for moves that have none)
+  python3 scripts/moves.py              (adds moves missing from moves.json; effects only for moves that have none)
   python3 scripts/moves.py tackle bite  (rewrites those moves' effects from RECIPES)
-  python3 scripts/moves.py --all        (rewrites every move's effects from RECIPES)
+  python3 scripts/moves.py --all        (rewrites every move's effects from RECIPES: undoes later tuning)
+  python3 scripts/moves.py --reset tackle (restarts that move's numbers from NEW)
+
+The move library's source of truth is data/moves.json; the supported order after editing a move is
+  python3 scripts/moves.py && python3 scripts/move_balance.py && python3 scripts/move_audit.py
+which leaves an unchanged library unchanged (scripts/check_moves.sh checks exactly that).
 
 Recipes use the Guardian Signs effect sheets (assets/fx/guardian_signs) in one grammar:
 a carrier (a beam or stream from the user, a projectile, or a drop from the sky), one
@@ -354,7 +359,13 @@ EXTRA_STATUS = {
 def main():
     data = json.load(open(PATH))
     by = {m['id']: m for m in data['moves']}
+    # NEW holds each move's first numbers. A move already in data/moves.json keeps its own: they
+    # have been balanced since (move_balance.py's cooldowns and animations, Twister's line), and
+    # rewriting them from here put 65 cooldowns, 23 animations and Twister's shape back to their
+    # first drafts. `--reset id ...` starts those moves over from NEW.
+    reset = '--reset' in sys.argv
     for mid, (name, typ, cat, power, shape, cd, anim, extra) in NEW.items():
+        if mid in by and not (reset and mid in sys.argv): continue
         m = by.get(mid) or {'id': mid}
         m.update({'name': name, 'type': typ, 'category': cat, 'power': power, 'shape': shape, 'cooldown': cd,
                   'vfx': VFX[shape], 'anim': anim, 'size': 1.0})

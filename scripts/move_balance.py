@@ -107,8 +107,15 @@ RECOIL = {'double-edge': 0.33, 'brave-bird': 0.33, 'wild-charge': 0.25, 'flare-b
 QUICK = {'quick-attack', 'bullet-punch', 'shadow-sneak', 'ice-shard', 'aqua-jet', 'mach-punch', 'sucker-punch'}
 
 
+# Cooldowns set by hand over the formula, with the reason (c89ea521: Sucker Punch at 1.75 s was
+# quietly the strongest move in the game).
+COOLDOWN = {'sucker-punch': 2.4}
+
+
 def cooldown(m, channel):
     """Seconds between uses: power / (damage per second the move is allowed), see the module doc."""
+    if m['id'] in COOLDOWN:
+        return COOLDOWN[m['id']]
     p = m['power']
     if m['id'] in channel['moves']:
         p *= channel['powerMult']
@@ -190,9 +197,11 @@ def main():
     tms = json.load(open(TMS))
     tms['_comment'] = ("TMs teach `move` (moves.json id) to the lead when it is an attack of the kind the Pokemon fights with "
                        "(physical for a physical attacker, special for a special one, either for a mixed one), whatever its type: "
-                       "sim/data.ts canLearnTm. Set-up moves go the same way (Swords Dance, Bulk Up, Agility, Dragon Dance to "
-                       "physical fighters; Nasty Plot, Calm Mind to special ones). Icon = assets/items/tm-<type>.png. Rare TMs "
-                       "(the strongest attacks and the set-up moves) only come from Ultra Ball loot and Alpha prizes.")
+                       "sim/data.ts canLearnTm. Set-up moves go the same way (Bulk Up, Dragon Dance to physical fighters; Calm "
+                       "Mind to special ones); other status TMs (Will-O-Wisp, Thunder Wave, Hypnosis) go to anyone. Every TM here "
+                       "earns its slot in this game's real-time two-move battles; the dull ones were cut. Icon = "
+                       "assets/items/tm-<type>.png. Rare TMs (the strongest attacks and the best set-up moves) only come from "
+                       "Ultra Ball loot and Alpha prizes.")
     tms['tms'] = [{'id': f'tm-{i}', 'move': i, 'rare': False} for i in COMMON if i in all_ids] + \
                  [{'id': f'tm-{i}', 'move': i, 'rare': True} for i in RARE if i in all_ids]
     json.dump(tms, open(TMS, 'w'), indent=2, ensure_ascii=False)

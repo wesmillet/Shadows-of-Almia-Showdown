@@ -132,8 +132,10 @@ def tall_grass(d, free, seed=7):
     T = wang.WangSet('Tileset_TallGrass', seed=seed)
     cells = np.zeros(d.land.shape, np.int32)
     n = noise(seed + 70, 3)
+    # never right at the water: tall grass drawn over the shore tiles hid the shoreline's edge
+    shore = ndimage.binary_dilation(d.water, iterations=1)
     for b, name in TALL.items():
-        m = (d.biome == b) & free & (n > 1.15)
+        m = (d.biome == b) & free & ~shore & (n > 1.15)
         m = ndimage.binary_opening(m, structure=np.ones((3, 3)))
         cells[m] = T.color(name)
     return T.paint(cells), cells > 0

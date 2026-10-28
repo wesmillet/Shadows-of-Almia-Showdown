@@ -83,6 +83,25 @@ for (ocx, ocy, rx, ry, cls) in z['ovals']:
         # curve back out of the light paving: ovals paint in order, later over earlier
         light_px = light_px & ~curve
 S1 = smooth(stone_px)                  # any stone
+# Rounded rectangles (a Paving rectangle's "corner" property, in pixels): each outer corner of the
+# rectangle loses what lies outside a quarter circle of that radius, unless other paving carries on
+# past that corner (a walk leaving along either edge), which keeps it square.
+qx = np.arange(S1.shape[1])[None, :] + 0.5
+qy = np.arange(S1.shape[0])[:, None] + 0.5
+for (rx0, ry0, rx1, ry1, rr) in (z['rounded'] if 'rounded' in z.files else []):
+    X_0, Y_0, X_1, Y_1, r = rx0 * 16 - X0, ry0 * 16 - Y0, rx1 * 16 - X0, ry1 * 16 - Y0, float(rr)
+    for (sx, sy) in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        cx_ = X_0 + r if sx < 0 else X_1 - r
+        cy_ = Y_0 + r if sy < 0 else Y_1 - r
+        ex = int(X_0 - 2 if sx < 0 else X_1 + 1)           # just outside the side edge, by the corner
+        ey = int(Y_0 - 2 if sy < 0 else Y_1 + 1)           # just outside the top or bottom edge
+        near_y = int(cy_ + sy * r * 0.6)
+        near_x = int(cx_ + sx * r * 0.6)
+        inb = lambda y, x: 0 <= y < S1.shape[0] and 0 <= x < S1.shape[1]
+        if (inb(near_y, ex) and S1[near_y, ex]) or (inb(ey, near_x) and S1[ey, near_x]): continue
+        corner = ((qx - cx_) * sx > 0) & ((qy - cy_) * sy > 0) & (((qx - cx_) ** 2 + (qy - cy_) ** 2) > r * r)
+        corner &= (qx > X_0) & (qx < X_1) & (qy > Y_0) & (qy < Y_1)
+        S1 = S1 & ~(corner & valid)
 S2 = light_px & S1                     # light slabs
 
 # reference textures: a tile deep inside each kind of paving (tiles are 16-pixel aligned)

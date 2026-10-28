@@ -1,0 +1,54 @@
+# Sets an account's role on the LIVE online server, from the browser (no tools to install):
+#   GitHub -> Actions -> "Set account role" -> Run workflow -> account name and role.
+# It runs the server's own admin command (server/admin.ts) on the Fly machine over SSH, with the
+# FLY_API_TOKEN repository secret the launch workflow already uses. The account must exist
+# (signed up on the live site) first; the run fails and says so otherwise.
+name: Set account role
+
+on:
+  workflow_dispatch:
+    inputs:
+      account:
+        description: Account name (as signed up on the live site)
+        required: true
+      role:
+        description: "admin (can start a match alone, the /mod dashboard), mod, or player (ordinary)"
+        type: choice
+        options: [admin, mod, player]
+        default: admin
+      app:
+        description: Fly app name
+        default: almia-showdown
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  role:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      ACCOUNT: ${{ github.event.inputs.account }}
+      ROLE: ${{ github.event.inputs.role }}
+      APP: ${{ github.event.inputs.app }}
+    steps:
+      - name: Check the inputs
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then echo "::error::The FLY_API_TOKEN secret is not set."; exit 1; fi
+          # account names are 3-16 letters, numbers or _ (server/accounts.ts)
+          if ! [[ "$ACCOUNT" =~ ^[A-Za-z0-9_]{3,16}$ ]]; then echo "::error::Not an account name: $ACCOUNT"; exit 1; fi
+          if ! [[ "$APP" =~ ^[a-z0-9-]{2,40}$ ]]; then echo "::error::Not an app name: $APP"; exit 1; fi
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: The account before
+        run: flyctl ssh console --app "$APP" -C "node dist-server/admin.js player $ACCOUNT"
+      - name: Set the role
+        run: |
+          CMD="$ROLE"
+          if [ "$ROLE" = "player" ]; then CMD="player-role"; fi
+          flyctl ssh console --app "$APP" -C "node dist-server/admin.js $CMD $ACCOUNT"
+      - name: The account after
+        run: |
+          flyctl ssh console --app "$APP" -C "node dist-server/admin.js player $ACCOUNT" | tee after.txt
+          echo "### $(head -1 after.txt)" >> "$GITHUB_STEP_SUMMARY"

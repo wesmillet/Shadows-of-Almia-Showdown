@@ -5,7 +5,8 @@
  *   - The disguised Zoroark: revealed once, a catchable wild, gone for a second Space.
  *   - Private matches and the rare-item chest keep nothing (no voucher to the PC, no chest save).
  *   - Chests: items taken out of the chest come back if the match is called off.
- *   - Celeste's prizes: ordinary species only.
+ *   - Celeste's prizes: ordinary species only, also after the prize's level evolves it.
+ *   - Shinies: the base chance, and stronger encounters can be shiny.
  *   - Stronger encounters: one to three per land, no label.
  *   - Leftovers heals on its own timer and leaves the attack pacing alone.
  *   npx tsx server/checks/gameplay.ts
@@ -18,7 +19,7 @@ import { Match } from '../../src/sim/match';
 import { Rng } from '../../src/core/rng';
 import { SpriteRegistry } from '../../src/sprites/pokemonSprite';
 import { lead, partySize, type Trainer } from '../../src/sim/entities';
-import { celestePrizePool } from '../../src/sim/visitors';
+import { celesteEligible, celestePrize, celestePrizePool } from '../../src/sim/visitors';
 import { NodeAssets } from '../nodeAssets';
 
 const ROOT = join(import.meta.dirname, '..', '..', 'assets');
@@ -179,6 +180,31 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
   const bad = pool.filter((d) => SPECIES.get(d)?.class || SPECIES.get(d)?.megaOf || /-(shiny|mega|shadow|final|unbound)/.test(d));
   check(bad.length === 0, `Celeste's pool has no legendaries, Mythicals, Megas or variants (${pool.length} species)`);
   check(pool.includes('0010') && pool.includes('0571') && pool.includes('0027-alola'), 'it holds ordinary species of every kind, regional forms too');
+  // The classification itself: every species PokeAPI calls legendary or Mythical carries a class.
+  const named = ['0150', '0151', '0243', '0245', '0249', '0250', '0251', '0381', '0384', '0385', '0488', '0490', '0491', '0492', '0494', '0720', '0802', '0808', '0809', '0888', '0889', '1007', '1008'];
+  check(named.filter((d) => SPECIES.has(d)).every((d) => !!SPECIES.get(d)?.class), 'every legendary and Mythical in the game is classified as one');
+  // The prize as given (after the level's evolution): every species of the pool at every level, many times.
+  const given = new Set<string>();
+  const rng = new Rng(99);
+  for (let i = 0; i < 60_000; i++) given.add(celestePrize(rng, rng.int(1, 100)));
+  const wrong = [...given].filter((d) => !celesteEligible(d) || SPECIES.get(d)?.class);
+  check(wrong.length === 0, `60,000 prizes at random levels: ${given.size} different species given, none legendary, Mythical, Mega or a variant${wrong.length ? ` (bad: ${wrong.join(' ')})` : ''}`);
+}
+
+// ---------------------------------------------------------------- shinies
+{
+  check(CONFIG.wild.shinyChance === 0.01 && CONFIG.wild.alphaShinyMultiplier === 4, `base shiny chance ${CONFIG.wild.shinyChance}, Alphas x${CONFIG.wild.alphaShinyMultiplier}`);
+  let strong = 0;
+  let strongShiny = 0;
+  for (let s = 100; s < 400; s++) {
+    const m = make(s);
+    for (const w of m.wilds) {
+      if (!w.landBoss || w.legend) continue;
+      strong++;
+      if (w.shiny) strongShiny++;
+    }
+  }
+  check(strongShiny > 0, `stronger encounters can be shiny (${strongShiny} of ${strong} over 300 matches)`);
 }
 
 // ---------------------------------------------------------------- stronger encounters and Leftovers

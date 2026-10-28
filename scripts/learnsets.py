@@ -196,6 +196,12 @@ KITS = {
     '0452': ['crunch', 'poison-jab', 'x-scissor', 'poison-fang'],         # Drapion
     '0567': ['rock-slide', 'aerial-ace', 'stone-edge', 'brave-bird'],     # Archeops
     '0968': ['iron-tail', 'heavy-slam', 'bulldoze', 'iron-head'],         # Orthworm
+    # October 28: the desert's coast and rocks (Tirtouga, Dwebble) and Onix, Steelix's ordinary route.
+    '0564': ['aqua-jet', 'rock-throw', 'bite', 'ancient-power'],          # Tirtouga
+    '0565': ['aqua-tail', 'stone-edge', 'crunch', 'waterfall'],           # Carracosta
+    '0557': ['rock-throw', 'bug-bite', 'smack-down', 'fury-cutter'],      # Dwebble
+    '0558': ['stone-edge', 'x-scissor', 'rock-slide', 'razor-shell'],     # Crustle
+    '0095': ['rock-throw', 'rock-tomb', 'bulldoze', 'iron-tail'],         # Onix
     '0225': ['ice-shard', 'aerial-ace', 'icicle-crash', 'brave-bird'],    # Delibird
     '0975': ['icicle-crash', 'body-slam', 'avalanche', 'heavy-slam'],     # Cetitan
     '0555-galar': ['icicle-crash', 'fire-punch', 'avalanche', 'headbutt'],  # Galarian Darmanitan

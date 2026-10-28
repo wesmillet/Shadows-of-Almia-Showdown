@@ -140,6 +140,13 @@ step(10);
       break;
     }
   }
+  // Nothing to interrupt the walk: no wild Pokémon close by, a healthy team, on its feet.
+  m.wilds = m.wilds.filter((w) => Math.hypot(w.x - p.x, w.y - p.y) > 25);
+  for (const x of p.party) {
+    x.fainted = false;
+    x.hp = x.maxHp;
+  }
+  p.downUntil = null;
   // Honest walking first: frames with real keys move the trainer and count.
   const egg = p.eggs![0]!;
   let n = 1000;
@@ -164,12 +171,13 @@ step(10);
   room.receive('uB', { t: 'in', f: Array.from({ length: 40 }, () => [n++, 0, 1]) } as ClientMsg);
   step(1);
   check(egg.steps - s1 <= CONFIG.player.speedTilesPerSec * STEP * 1.06 + 0.01, 'a burst of frames moves one step per step');
-  // Standing still: nothing.
+  // Standing still: nothing (once the burst's queued frames, which are real keys, have played out).
   room.receive('uB', { t: 'in', f: [[n++, 0, 0]] } as ClientMsg);
+  for (let k = 0; k < 120 && seatB.inputs.length; k++) step(1);
   step(2);
   const s2 = egg.steps;
   step(120);
-  check(egg.steps === s2, 'standing still adds nothing');
+  check(egg.steps === s2, `standing still adds nothing (${(egg.steps - s2).toFixed(6)} steps)`);
 }
 
 // ---------------------------------------------------------------- private rules

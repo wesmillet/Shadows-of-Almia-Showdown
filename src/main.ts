@@ -64,6 +64,15 @@ function matchCast(): Set<string> {
   const out = new Set<string>(['0491', '0491-final', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
   for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
   for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
+  // The rotation pools, the starters and pseudo-legendaries (rare) and the stronger encounters.
+  const sp = SPAWNS as unknown as {
+    rotation?: Record<string, Array<{ dex: string }>>;
+    rare?: { groups: Record<string, { lands: Record<string, string[]> }> };
+    strong?: { pools: Record<string, { candidates: Array<{ dex: string }>; pseudo: Array<{ dex: string }> }> };
+  };
+  for (const l of Object.values(sp.rotation ?? {})) for (const r of l) out.add(r.dex);
+  for (const g of Object.values(sp.rare?.groups ?? {})) for (const l of Object.values(g.lands)) for (const d of l) out.add(d);
+  for (const p of Object.values(sp.strong?.pools ?? {})) for (const r of [...p.candidates, ...p.pseudo]) out.add(r.dex);
   return withEvolutions(out);
 }
 

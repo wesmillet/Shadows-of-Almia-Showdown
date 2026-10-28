@@ -1,5 +1,5 @@
 {
-  "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start (there are no wild respawns: these are all the wilds a match has, plus fishing); levels = [min, max] for its common Pokémon, an entry's own levels override that. weight sets how often an entry is picked, relative to the others it competes with: about 8-10 common, 4-6 uncommon, 2-3 scarce, 1.2 rare. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^curve (config.json wild). An entry with a habitat only spawns in that habitat (see habitats): each land fills habitatSlots of its count there, rolling only among its own habitat entries; every other spot rolls among the entries with no habitat. Stronger encounters (strong) are separate from these tables.",
+  "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start (there are no wild respawns: these are all the wilds a match has, plus fishing); levels = [min, max] for its common Pokémon, an entry's own levels override that. weight sets how often an entry is picked, relative to the others it competes with: about 8-10 common, 4-6 uncommon, 2-3 scarce, 1.2-1.5 rare. Starters and pseudo-legendaries are placed by rare, not by these tables. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^curve (config.json wild). An entry with a habitat only spawns in that habitat (see habitats): each land fills habitatSlots of its count there, rolling only among its own habitat entries; every other spot rolls among the entries with no habitat. Stronger encounters (strong) are separate from these tables.",
   "biomes": {
     "forest": {
       "count": 46,
@@ -37,22 +37,6 @@
           ]
         },
         {
-          "dex": "0387",
-          "weight": 1.2,
-          "levels": [
-            5,
-            7
-          ]
-        },
-        {
-          "dex": "0252",
-          "weight": 1.2,
-          "levels": [
-            5,
-            7
-          ]
-        },
-        {
           "dex": "0280",
           "weight": 1.2,
           "levels": [
@@ -63,6 +47,14 @@
         {
           "dex": "0446",
           "weight": 1.2
+        },
+        {
+          "dex": "0447",
+          "weight": 1.5,
+          "levels": [
+            4,
+            7
+          ]
         }
       ]
     },
@@ -108,6 +100,10 @@
             7,
             10
           ]
+        },
+        {
+          "dex": "0092",
+          "weight": 1.5
         }
       ]
     },
@@ -163,17 +159,13 @@
           ]
         },
         {
-          "dex": "0996",
-          "weight": 1.2,
-          "levels": [
-            6,
-            9
-          ]
-        },
-        {
           "dex": "0086",
           "weight": 6,
           "habitat": "beach"
+        },
+        {
+          "dex": "0361",
+          "weight": 1.5
         }
       ],
       "habitatSlots": {
@@ -227,14 +219,6 @@
           ]
         },
         {
-          "dex": "0246",
-          "weight": 1.2,
-          "levels": [
-            8,
-            11
-          ]
-        },
-        {
           "dex": "0343",
           "weight": 5,
           "habitat": "ruins"
@@ -261,6 +245,29 @@
           "dex": "0769",
           "weight": 6,
           "habitat": "beach"
+        },
+        {
+          "dex": "0564",
+          "weight": 4,
+          "levels": [
+            5,
+            8
+          ],
+          "habitat": "beach"
+        },
+        {
+          "dex": "0557",
+          "weight": 5,
+          "habitat": "rocky"
+        },
+        {
+          "dex": "0095",
+          "weight": 3,
+          "levels": [
+            5,
+            8
+          ],
+          "habitat": "rocky"
         }
       ],
       "habitatSlots": {
@@ -269,12 +276,12 @@
           4
         ],
         "rocky": [
-          2,
-          3
+          4,
+          5
         ],
         "beach": [
-          2,
-          3
+          3,
+          4
         ]
       }
     },
@@ -519,38 +526,6 @@
       {
         "dex": "0236",
         "weight": 1.2
-      },
-      {
-        "dex": "0704",
-        "weight": 1.2
-      },
-      {
-        "dex": "0001",
-        "weight": 1.2
-      },
-      {
-        "dex": "0152",
-        "weight": 1.2
-      },
-      {
-        "dex": "0495",
-        "weight": 1.2
-      },
-      {
-        "dex": "0650",
-        "weight": 1.2
-      },
-      {
-        "dex": "0722",
-        "weight": 1.2
-      },
-      {
-        "dex": "0810",
-        "weight": 1.2
-      },
-      {
-        "dex": "0906",
-        "weight": 1.2
       }
     ],
     "autumn": [
@@ -575,51 +550,11 @@
         "weight": 4
       },
       {
-        "dex": "0390",
-        "weight": 1.2
-      },
-      {
         "dex": "0240",
         "weight": 1.2
       },
       {
         "dex": "0239",
-        "weight": 1.2
-      },
-      {
-        "dex": "0885",
-        "weight": 1.2
-      },
-      {
-        "dex": "0633",
-        "weight": 1.2
-      },
-      {
-        "dex": "0155",
-        "weight": 1.2
-      },
-      {
-        "dex": "0255",
-        "weight": 1.2
-      },
-      {
-        "dex": "0498",
-        "weight": 1.2
-      },
-      {
-        "dex": "0653",
-        "weight": 1.2
-      },
-      {
-        "dex": "0725",
-        "weight": 1.2
-      },
-      {
-        "dex": "0813",
-        "weight": 1.2
-      },
-      {
-        "dex": "0909",
         "weight": 1.2
       }
     ],
@@ -659,42 +594,6 @@
       {
         "dex": "0238",
         "weight": 1.2
-      },
-      {
-        "dex": "0374",
-        "weight": 1.2
-      },
-      {
-        "dex": "0147",
-        "weight": 1.2
-      },
-      {
-        "dex": "0393",
-        "weight": 1.2
-      },
-      {
-        "dex": "0656",
-        "weight": 1.2
-      },
-      {
-        "dex": "0728",
-        "weight": 1.2
-      },
-      {
-        "dex": "0816",
-        "weight": 1.2
-      },
-      {
-        "dex": "0912",
-        "weight": 1.2
-      },
-      {
-        "dex": "0158",
-        "weight": 1.2
-      },
-      {
-        "dex": "0007",
-        "weight": 1.2
       }
     ],
     "desert": [
@@ -713,57 +612,86 @@
       {
         "dex": "0436",
         "weight": 4
-      },
-      {
-        "dex": "0443",
-        "weight": 1.2
-      },
-      {
-        "dex": "0371",
-        "weight": 1.2
-      },
-      {
-        "dex": "0782",
-        "weight": 1.2
-      },
-      {
-        "dex": "0258",
-        "weight": 1.2
       }
     ]
   },
   "rotationPicks": 5,
-  "megaLines": [
-    {
-      "dex": "0004",
-      "land": "autumn"
-    },
-    {
-      "dex": "0092",
-      "land": "autumn"
-    },
-    {
-      "dex": "0361",
-      "land": "snow"
-    },
-    {
-      "dex": "0447",
-      "land": "forest"
-    },
-    {
-      "dex": "0280",
-      "land": "forest"
-    },
-    {
-      "dex": "0246",
-      "land": "desert"
-    },
-    {
-      "dex": "0359",
-      "land": "snow"
+  "rotationPicksByLand": {
+    "desert": 3
+  },
+  "_rotationComment": "Every match is different: each land's own table is always used (its weights jittered by tableJitter), plus rotationPicks species (rotationPicksByLand for a land with a smaller pool) drawn from that land's rotation pool for that match, picked by weight without repeats and never one already in the land's table. Every line that can Mega Evolve lives in an ordinary table (Riolu and Ralts in the forest, Charmander as a starter and Gastly in the red wood, Snorunt and Absol in the snow, Larvitar as a pseudo-legendary and Onix on the desert rocks): none is guaranteed in a match any more. Starters and pseudo-legendaries are not in these tables: see rare.",
+  "rare": {
+    "_comment": "Starter Pokemon and pseudo-legendary families, kept out of the tables above so every member of a group has the same actual availability whatever its land's size or table: each species is placed in a match with probability perMatch (one of it; a perMatch above 1 places floor(perMatch) and one more with the remainder), at a random ordinary spot of its land (its own ground, or a meadow or beach whose nearest land it is), taking that spot from the land's table. Its level is the land's levels + levelsOver plus the usual rise toward the Shadow Crystal, so where it lands decides how strong (and how evolved) it is. Starters keep to their type's land (grass in the forest, fire in the red wood, water in the snow, Mudkip in the desert); pseudo-legendaries to the lands they had. These are ordinary wild spawns: the stronger encounters' pseudo-legendary picks (strong.pseudoChance) are separate.",
+    "levelsOver": [
+      3,
+      2
+    ],
+    "groups": {
+      "starters": {
+        "perMatch": 0.25,
+        "lands": {
+          "forest": [
+            "0001",
+            "0152",
+            "0252",
+            "0387",
+            "0495",
+            "0650",
+            "0722",
+            "0810",
+            "0906"
+          ],
+          "autumn": [
+            "0004",
+            "0155",
+            "0255",
+            "0390",
+            "0498",
+            "0653",
+            "0725",
+            "0813",
+            "0909"
+          ],
+          "snow": [
+            "0007",
+            "0158",
+            "0393",
+            "0501",
+            "0656",
+            "0728",
+            "0816",
+            "0912"
+          ],
+          "desert": [
+            "0258"
+          ]
+        }
+      },
+      "pseudo": {
+        "perMatch": 0.2,
+        "lands": {
+          "forest": [
+            "0704"
+          ],
+          "autumn": [
+            "0633",
+            "0885"
+          ],
+          "snow": [
+            "0147",
+            "0374",
+            "0996"
+          ],
+          "desert": [
+            "0246",
+            "0371",
+            "0443",
+            "0782"
+          ]
+        }
+      }
     }
-  ],
-  "_rotationComment": "Every match is different: each land's own table is always used (its weights jittered by tableJitter), plus rotationPicks species drawn from that land's rotation pool for that match, picked by weight without repeats (so the 1.2-weight starters and pseudo-legendaries are drawn into a match less often than the 4-weight regulars) and never one already in the land's table. megaLines: every Pokémon line that can Mega Evolve has at least one of its first form placed in its land each match, so its Mega Stone is always usable.",
+  },
   "tableJitter": [
     0.6,
     1.4
@@ -801,7 +729,7 @@
     }
   },
   "strong": {
-    "_comment": "Stronger encounters: strong wild Pokémon placed deep inside each land, new species every match. They look like any other wild Pokémon (no label or mark); they keep to a small patch, are slow to anger, need more Styler loops and give xpBossMultiplier XP (config.json). count: probability of 1, 2 or 3 per land each match. Each one picks, without repeats in its land: with pseudoChance one of the land's pseudo entries (split by their weights), otherwise one of its candidates by weight. levels: [min, max]. shinyChance stays 0 (as the old land bosses).",
+    "_comment": "Stronger encounters: strong wild Pokémon placed deep inside each land, new species every match. They look like any other wild Pokémon (no label or mark); they keep to a small patch, are slow to anger, need more Styler loops and give xpBossMultiplier XP (config.json). count: probability of 1, 2 or 3 per land each match. Each one picks, without repeats in its land: with pseudoChance one of the land's pseudo entries (split by their weights), otherwise one of its candidates by weight. levels: [min, max]. They can be shiny at the ordinary wild rate (config.json wild.shinyChance, times any match shiny boost); a shiny one is the only visual difference.",
     "count": {
       "1": 0.65,
       "2": 0.27,

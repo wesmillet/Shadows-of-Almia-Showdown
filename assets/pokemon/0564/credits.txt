@@ -1,0 +1,1 @@
+Stand-in built by scripts/standin-sprites.py from the Generation V animated battle sprites (Pokemon Black and White, (c) Nintendo / Creatures / GAME FREAK) as published in the PokeAPI sprites repository (https://github.com/PokeAPI/sprites). Replace with SpriteCollab art when it exists.

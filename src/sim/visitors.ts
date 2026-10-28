@@ -22,6 +22,7 @@ import { canStand, tryMove } from './movement';
 import type { Shop } from './town';
 import { TownsfolkCrew } from './townsfolk';
 import { formAtLevel } from './evolution';
+import type { Rng } from '../core/rng';
 import { SpriteRegistry } from '../sprites/pokemonSprite';
 
 /** The merchant's stock: rare things the town stalls do not carry (evolution stones are the towns' to sell). */
@@ -40,11 +41,28 @@ const ACE_TEAM = ['0445', '0448', '0130'];
  * species with no shiny colours (the prize is always shiny). Regional forms (Alolan, Galarian) count.
  */
 export function celestePrizePool(): string[] {
-  return [...SPECIES.values()]
-    .filter((sp) => !sp.class && !sp.megaOf)
-    .filter((sp) => !sp.dex.includes('-') || /-(alola|galar|hisui|paldea)$/.test(sp.dex))
-    .filter((sp) => SpriteRegistry.hasShiny(sp.dex))
-    .map((sp) => sp.dex);
+  return [...SPECIES.values()].filter((sp) => celesteEligible(sp.dex)).map((sp) => sp.dex);
+}
+
+/**
+ * Whether Celeste may hand over `dex`: an ordinary species (species.json class, from PokeAPI's
+ * is_legendary and is_mythical, is empty), not a Mega, not a variant folder, with shiny colours.
+ * Checked on the pick and again on the form it is given in, so an evolution can never turn a
+ * prize into something she must not give.
+ */
+export function celesteEligible(dex: string): boolean {
+  const sp = SPECIES.get(dex);
+  if (!sp || sp.class || sp.megaOf) return false;
+  if (dex.includes('-') && !/-(alola|galar|hisui|paldea)$/.test(dex)) return false;
+  return SpriteRegistry.hasShiny(dex);
+}
+
+/** Celeste's prize for a team whose best level is `top`: a random eligible species, at the form that level reaches when that form is eligible too. */
+export function celestePrize(rng: Rng, top: number): string {
+  const pool = celestePrizePool();
+  const picked = pool[rng.int(0, pool.length - 1)] as string;
+  const grown = formAtLevel(picked, top, rng);
+  return celesteEligible(grown) ? grown : picked;
 }
 /** What can come through Hoopa's portal. */
 const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243', '1007', '1008', '0888', '0889'];
@@ -651,11 +669,8 @@ export class Visitors {
       this.aceState = 'won';
       // A random shiny from every eligible ordinary species (each equally likely), met at the form its
       // level reaches (a level 40 pick of Charmander is a Charizard) when that form can be shiny too.
-      const pool = celestePrizePool();
       const top = Math.max(1, ...pl.party.map((x) => x.level));
-      const picked = pool[m.rng.int(0, pool.length - 1)] as string;
-      const grown = formAtLevel(picked, top, m.rng);
-      const dex = SpriteRegistry.hasShiny(grown) ? grown : picked;
+      const dex = celestePrize(m.rng, top);
       m.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: pl.x, y: pl.y, scale: 2.4, lift: 1, fps: 10 });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: pl.x, y: pl.y, scale: 2.4, ground: true, fps: 10, tint: '#ffd6f0' });
       if (partySize(pl) >= m.partyCap) {

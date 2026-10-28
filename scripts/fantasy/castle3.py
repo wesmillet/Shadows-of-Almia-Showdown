@@ -71,7 +71,8 @@ def generated(d):
     # the fountain on the north-west lawn, its pad touching the west walk, with the Celebi statue in its basin
     fountains = [(ox0 + 8, int(ocy) - 11)]
     for (fx, fy) in fountains:
-        pave.append(('rect', fx - 1, fy - 1, fx + 7, fy + 7, 1))
+        # its pad runs down to the west walk (a one-row strip of lawn used to sit between them)
+        pave.append(('rect', fx - 1, fy - 1, fx + 7, max(fy + 7, oy0 + side_gaps[0][0]), 1))
         W[fy + 1:fy + 6, fx:fx + 6] = True                     # the basin
     layers = []
     # the lawns, as the pack's Forest Castle has them: grass with a stone kerb (Tileset_Castle_Grass)
@@ -142,7 +143,10 @@ def generated(d):
     for x in range(hx0_ + 6, hx1_ - 4, 12):
         if banner: yard.put(banner[0], x, hy0_ - 1, clear=0, shadow=False)
     for x in range(icx - 10, icx + 11, 10):
-        if bench: yard.put(bench[0], x, icy + 11, clear=0, shadow=False)
+        # the south row too faces the court: the long bench along the plaza's edge, not the one
+        # set end-on (Bench_1 is the bench seen end-on, Bench_2 the same bench seen long-side)
+        # (none in the middle of the south row: it stood in the walk to the south gate)
+        if bench and x != icx: yard.put(bench[1 % len(bench)], x, icy + 11, clear=0, shadow=False)
         if bench: yard.put(bench[1 % len(bench)], x, icy - 10, clear=0, shadow=False)
     for (x, y) in [(px0, py0 + 1), (px1, py0 + 1), (px0, py1), (px1, py1)]:
         if lamp: yard.put(lamp[0], x, y, clear=0, shadow=False)

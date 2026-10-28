@@ -319,6 +319,20 @@ export class FanGround implements GroundRenderer {
             ctx.drawImage(this.atlas, (a % ac) * 16, Math.floor(a / ac) * 16, 16, 16, tx * 16, ty * 16, 16, 16);
           }
         }
+      } else if (item.name.endsWith('Shadows')) {
+        // Shadow discs are drawn as one shape and faded once, so where two overlap the ground
+        // is not shaded twice (each disc at the layer's opacity left dark lenses where trees stand close).
+        const list = chunk.decals.get(li);
+        if (list?.length) {
+          const sc = this.shadeScratch(c.width, c.height);
+          const sctx = sc.getContext('2d') as CanvasRenderingContext2D;
+          sctx.clearRect(0, 0, sc.width, sc.height);
+          for (const [s, sx, sy, w, h, x, y] of list) {
+            const img = this.sheets[s];
+            if (img) sctx.drawImage(img, sx, sy, w, h, x - cc * CHUNK * 16, y - cr * CHUNK * 16, w, h);
+          }
+          ctx.drawImage(sc, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
+        }
       } else {
         for (const [s, sx, sy, w, h, x, y] of chunk.decals.get(li) ?? []) {
           const img = this.sheets[s];
@@ -330,6 +344,20 @@ export class FanGround implements GroundRenderer {
     if (!overlayDrawn) drawOverlay();
     this.applyBlend(ctx, cc * CHUNK * 16, cr * CHUNK * 16, c.width, c.height);
     return c;
+  }
+
+  private shadeCanvas: HTMLCanvasElement | null = null;
+
+  /** A scratch canvas at least w x h for drawing a chunk's shadow discs before fading them. */
+  private shadeScratch(w: number, h: number): HTMLCanvasElement {
+    let sc = this.shadeCanvas;
+    if (!sc || sc.width < w || sc.height < h) {
+      sc = document.createElement('canvas');
+      sc.width = w;
+      sc.height = h;
+      this.shadeCanvas = sc;
+    }
+    return sc;
   }
 
   /** Multiplies a freshly baked chunk (map pixels x0, y0) by the centre blend where they overlap. */

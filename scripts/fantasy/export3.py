@@ -136,6 +136,22 @@ def export(path_base, rel_base, m):
         s = packer.add(pk, img)
         sort = o.get('sort', o['y'] / 16)
         objs.append([s[0], s[1], s[2], s[3], s[4], int(round(o['x'])), int(round(o['y'] - s[4])), round(sort, 3)])
+    # Pictures packed for later passes (polish3 adds shadows of every size), and a note of what
+    # every packed rect shows, by file name (scripts/fantasy/out/<name>_pictures.json; not shipped).
+    for k in m.get('pack', []):
+        img = tile_pixels(k)
+        if img is not None: packer.add((k, img.shape), img)
+    names = []
+    for pk, r in packer.index.items():
+        if pk[0] == 'img': nm = 'img:' + str(pk[1])
+        else:
+            t = tiled.tileset(pk[0][0]).tiles.get(pk[0][1])
+            nm = os.path.splitext(os.path.basename(t.image))[0] if t is not None and t.image else ''
+        names.append({'rect': list(r), 'name': nm})
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, f"{m['name']}_pictures.json"), 'w') as f:
+        json.dump(names, f)
     sheets = packer.save(path_base)
 
     data = {

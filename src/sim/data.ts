@@ -227,6 +227,10 @@ export interface MoveDef {
   shake?: number;
   /** Override for isContact: false for a physical move that strikes from range (Stone Edge's spikes). */
   contact?: boolean;
+  /** A dashing contact move (Quick Attack, Aqua Jet, Mach Punch): its lunge runs this much faster and further. */
+  dash?: number;
+  /** Shove strength for a contact hit or a slam's landing, times the usual (Dragon Tail sends its target off). */
+  knock?: number;
   /** The user takes this share of the damage it dealt (Double-Edge, Flare Blitz), once per use. */
   recoil?: number;
 }
@@ -238,6 +242,18 @@ export interface MoveDef {
 export function isContact(m: MoveDef): boolean {
   if (m.contact !== undefined) return m.contact;
   return m.category === 'physical' && m.shape === 'single' && !m.leap && !(m.fx ?? []).some((p) => p.anchor === 'projectile' || p.anchor === 'sky');
+}
+
+/**
+ * How close a contact move's user must be to land it: the two bodies touching (as a lunge ends,
+ * battle.startLunge), plus a little slack for a target still moving in the last frame. A slam lands
+ * further out (it comes down in front of its target). A big attacker's own body counts for at most
+ * 1.2 tiles, so a huge sprite does not hit from across the screen.
+ */
+export function contactReach(a: SpeciesDef, t: SpeciesDef | null, m: MoveDef): number {
+  const L = CONFIG.battle.lunge as typeof CONFIG.battle.lunge & { reachSlack?: number };
+  const own = m.leap ? 0.45 + Math.min(1.6, bodyRadius(a) * 1.1) : 0.15 + Math.min(1.2, bodyRadius(a) * 0.75);
+  return own + (t ? bodyRadius(t) * 0.75 : 0.2) + (L.reachSlack ?? 0.45);
 }
 
 export const MOVES = new Map<string, MoveDef>();

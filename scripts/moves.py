@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """The move library: every move's numbers and its animation recipe, written into data/moves.json.
 
-  python3 scripts/moves.py
+  python3 scripts/moves.py              (fills in effects only for moves that have none)
+  python3 scripts/moves.py tackle bite  (rewrites those moves' effects from RECIPES)
+  python3 scripts/moves.py --all        (rewrites every move's effects from RECIPES)
 
 Recipes use the Guardian Signs effect sheets (assets/fx/guardian_signs) in one grammar:
 a carrier (a beam or stream from the user, a projectile, or a drop from the sky), one
@@ -358,11 +360,18 @@ def main():
                   'vfx': VFX[shape], 'anim': anim, 'size': 1.0})
         m.update(extra)
         by[mid] = m
-    missing = [mid for mid in by if mid not in RECIPES]
+    # The effects in data/moves.json have since been tuned by hand and by the 28 October move audit
+    # (docs/move-audit-2026-10-28.md), so RECIPES no longer match them. Rewriting every move from
+    # RECIPES would undo that: by default only moves with no effects yet take their recipe; pass
+    # move ids to rewrite those, or --all to rewrite everything from RECIPES.
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    redo_all = '--all' in sys.argv
+    missing = [mid for mid in by if mid not in RECIPES and (redo_all or not by[mid].get('fx'))]
     if missing: sys.exit(f'no recipe for: {missing}')
     for mid, (kind, chance) in EXTRA_STATUS.items():
         if mid in by and 'status' not in by[mid]: by[mid]['status'] = {'kind': kind, 'chance': chance}
     for mid, m in by.items():
+        if not (redo_all or mid in args or not m.get('fx')): continue
         parts, shake = RECIPES[mid]
         m['fx'] = parts
         if shake: m['shake'] = shake

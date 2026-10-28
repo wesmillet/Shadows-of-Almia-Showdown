@@ -57,8 +57,13 @@ def in_town(px, py):
     return any(math.hypot(tx - a, ty - b) < 14 for a, b in town_pts)
 
 pal = {b: {'large': [], 'huge': [], 'med': [], 'small': [], 'reeds': []} for b in range(8)}
+# Made things belong where people put them (roads, towns, ruins), not scattered over the wilds: a
+# purple banner or a tombstone alone in a meadow tells no story. Only flora and rocks are scattered.
+import re as _re
+_made = _re.compile(r'Banner|Lamp|Sign|Ruins_|Tombstone|Skull|Crate|Barrel|Bench|Statue|Fence|Well|Market|Hay|Scarecrow|Plant_(Corn|Cabbage|Pumpkin|Tomato|Carrot|Eggplant|Potatoe|Radish|Cotton|Wheat)')   # and farm crops
+_rect_name = {tuple(e['rect']): e['name'] for e in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f"{m['name']}_pictures.json")))}
 for i, r in enumerate(rect_ids):
-    if r in BLOCKLIST: continue
+    if r in BLOCKLIST or _made.search(_rect_name.get(tuple(r), '')): continue
     sh, sx, sy, w, h = r
     uses = by_rect[r]
     n = len(uses)
@@ -105,25 +110,23 @@ def pick(b, cls):
         if x <= 0: return r
     return opts[-1][0]
 
-# ---- the shadow decal most trees pair with
-shadow_layer = next(s for s in m['stack'] if s['kind'] == 'decals' and s['name'] == 'Shadows')
-sh_count = collections.Counter(tuple(d[:5]) for d in shadow_layer['decals'])
-SHADOW = sh_count.most_common(1)[0][0]
-# learn the usual offset shadow-vs-tree from existing pairs of the most common large tree
-def shadow_offset():
-    offs = []
-    dec = [d for d in shadow_layer['decals'] if tuple(d[:5]) == SHADOW]
-    for r, n in sorted(((r, n) for b in range(8) for r, n in pal[b]['large']), key=lambda t: -t[1])[:6]:
-        for o in by_rect[r]:
-            bx, by = o[5] + r[3] / 2, o[6] + r[4]
-            best = min(dec, key=lambda d: (d[5] + d[3] / 2 - bx) ** 2 + (d[6] + d[4] - by) ** 2, default=None)
-            if best is None: continue
-            dx, dy = best[5] + best[3] / 2 - bx, best[6] + best[4] - by
-            if abs(dx) <= 10 and abs(dy) <= 10: offs.append((dx, dy))
-    if not offs: return (0, 2)
-    return (float(np.median([o[0] for o in offs])), float(np.median([o[1] for o in offs])))
-SH_OFF = shadow_offset()
-print('shadow decal', SHADOW, 'offset', SH_OFF)
+# ---- ground shadows: one rule for every picture (shadows3), sized from the picture itself
+import shadows3
+from PIL import Image as _Image
+_names = {tuple(e['rect']): e['name'] for e in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f"{m['name']}_pictures.json")))}
+_sheets = [np.array(_Image.open(os.path.join(ROOT, 'assets', p_)).convert('RGBA')) for p_ in m['sheets']]
+SHADOW_RECT = {}
+for r_, n_ in _names.items():
+    for s_ in shadows3.SIZES:
+        if n_ == shadows3.decal_name(s_): SHADOW_RECT[s_] = r_
+print('shadow discs packed:', sorted(SHADOW_RECT))
+def shadow_decal(r, px, py):
+    sh, sx, sy, w, h = r
+    got = shadows3.shadow_for(_names.get(tuple(r), ''), _sheets[sh][sy:sy + h, sx:sx + w, 3])
+    if got is None or got[0] not in SHADOW_RECT: return None
+    s_, trunk = got
+    dx, dy = shadows3.place(s_, px, py + h, trunk)
+    return list(SHADOW_RECT[s_]) + [dx, dy]
 
 # ---- placement machinery
 keep_out = np.zeros((rows, cols), bool)
@@ -162,7 +165,10 @@ def near_object(px, py, mind):
     for dx in (-1, 0, 1):
         for dy in (-1, 0, 1):
             for ax, ay, sz in grid_anchor[(gx + dx, gy + dy)]:
-                if (ax - px) ** 2 + (ay - py) ** 2 < mind * mind: return True
+                # keep clear of the other thing's base too, not only of our own size (a small bush
+                # used to be set down inside a big tree's trunk)
+                r_ = max(mind, sz * 0.4)
+                if (ax - px) ** 2 + (ay - py) ** 2 < r_ * r_: return True
     return False
 
 def can_block(tx, ty):
@@ -182,23 +188,40 @@ def can_block(tx, ty):
     return True
 
 added_objs, added_decals, blocked_tiles = [], [], []
+bases = collections.defaultdict(list)          # (left, bottom, w) of every object, by 64 px cell
+for o in objs: bases[(int((o[5] + o[3] / 2) // 64), int((o[6] + o[4]) // 64))].append((o[5], o[6] + o[4], o[3], o[4]))
+def stands_in(px, py, w, h):
+    """Would a picture at (px, py, w, h) stand in another's base, or another stand in its base?"""
+    cx, by = px + w / 2, py + h
+    for dx in (-2, -1, 0, 1, 2):
+        for dy in (-2, -1, 0, 1, 2):
+            for (l, b, bw, bh) in bases[(int(cx // 64) + dx, int(by // 64) + dy)]:
+                # two upright pictures overlapping by a third of the smaller one read as one tangled
+                # shape (a dead tree growing out of a palm, a log on a hedge): keep them apart
+                if h >= 28 and bh >= 28:
+                    ox = min(px + w, l + bw) - max(px, l)
+                    oy = min(by, b) - max(py, b - bh)
+                    if ox > 0 and oy > 0 and ox * oy > 0.33 * min(w * h, bw * bh): return True
+                if abs(b - by) > 22: continue
+                if bw >= 20 and l + bw * 0.15 < cx < l + bw * 0.85: return True
+                if w >= 20 and px + w * 0.15 < l + bw / 2 < px + w * 0.85: return True
+    return False
+
 def place(r, tx, ty, block):
     sh, sx, sy, w, h = r
     px = int(tx * 16 + 8 - w / 2)
     py = int(ty * 16 + 13 - h)
     if near_object(px + w / 2, py + h, max(10, w * 0.45)): return False
+    if stands_in(px, py, w, h): return False
     if block:
         if not can_block(tx, ty) or road[ty, tx] or tall[ty, tx]: return False
         walk[ty, tx] = False
         blocked_tiles.append((tx, ty))
+    bases[(int((px + w / 2) // 64), int((py + h) // 64))].append((px, py + h, w, h))
     added_objs.append([sh, sx, sy, w, h, px, py, round((py + h) / 16, 3)])
-    # a round canopy shadow under leafy trees only: a bare desert tree or a thin palm has no
-    # canopy to cast one, so it gets none (the blob looked wrong under them)
-    if h >= 28 and int(biome[min(rows - 1, int((py + h - 2) // 16)), min(cols - 1, int((px + w / 2) // 16))]) not in (3, 5):
-        dsh, dsx, dsy, dw, dh = SHADOW
-        dpx = int(px + w / 2 + SH_OFF[0] - dw / 2)
-        dpy = int(py + h + SH_OFF[1] - dh)
-        added_decals.append([dsh, dsx, dsy, dw, dh, dpx, dpy])
+    # its ground shadow, by the island's one rule (shadows3)
+    dcl = shadow_decal(r, px, py)
+    if dcl: added_decals.append(dcl)
     grid_anchor[(int((px + w / 2) // 64), int((py + h) // 64))].append((px + w / 2, py + h, max(w, h)))
     return True
 

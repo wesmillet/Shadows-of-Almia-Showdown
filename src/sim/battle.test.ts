@@ -135,3 +135,101 @@ describe('contact moves and speed', () => {
     expect(b.lunge ?? null).toBeNull();
   });
 });
+
+describe('contact reach, shots in flight and line of fire (move audit, 28 October)', () => {
+  const anim = { play() {}, sprites: { def: () => undefined }, action: 'Attack', dir: 0, done: false } as unknown as Mon['anim'];
+  const foe = (dex: string, x: number, y: number): Mon => {
+    const t = mon(dex, x, y);
+    t.id = 2;
+    t.anim = anim;
+    t.owner = { isPlayer: false } as unknown as Mon['owner'];
+    return t;
+  };
+  const caster = (moves: string[]): Mon => {
+    const a = mon('0025', 0, 0);
+    a.moves = moves;
+    a.anim = anim;
+    a.dir = dirFromVector(1, 0, 0);
+    return a;
+  };
+  const run = (b: BattleSystem, a: Mon, t: Mon, seconds: number): void => {
+    for (let i = 0; i < seconds * 60; i++) {
+      b.stepMon(a, 1 / 60, () => [a, t]);
+      b.stepFlights(1 / 60);
+    }
+  };
+
+  it('a contact move lands when its user reaches the target, and misses when it never gets there', () => {
+    // Close by: the bodies touch, Tackle lands.
+    const b1 = new BattleSystem(new Rng(4));
+    const a1 = caster(['tackle']);
+    const t1 = foe('0129', 0.9, 0);
+    const hp1 = t1.hp;
+    expect(b1.tryCast(a1, 0, t1.x, t1.y, t1.id, t1)).toBe(true);
+    run(b1, a1, t1, 1);
+    expect(t1.hp).toBeLessThan(hp1);
+    // Far off, and the lunge does not move it (as when a wall stops it): no damage at range.
+    const b2 = new BattleSystem(new Rng(4));
+    const a2 = caster(['tackle']);
+    const t2 = foe('0129', 3, 0);
+    const hp2 = t2.hp;
+    expect(b2.tryCast(a2, 0, t2.x, t2.y, t2.id, t2)).toBe(true);
+    a2.lunge = null; // the lunge never carries it
+    run(b2, a2, t2, 1);
+    expect(t2.hp).toBe(hp2);
+  });
+
+  it('a lunge covers at most lunge.maxTiles (a priority dash further)', () => {
+    const b = new BattleSystem(new Rng(5));
+    const a = caster(['tackle', 'quick-attack']);
+    const t = foe('0129', 9, 0);
+    b.tryCast(a, 0, t.x, t.y, t.id, t);
+    expect(a.lunge).toBeTruthy();
+    expect((a.lunge!.speed ?? 0) * a.lunge!.dur).toBeLessThan(3 * 1.2);
+    const q = caster(['quick-attack']);
+    b.tryCast(q, 0, t.x, t.y, t.id, t);
+    expect((q.lunge!.speed ?? 0) * q.lunge!.dur).toBeGreaterThan((a.lunge!.speed ?? 0) * a.lunge!.dur);
+  });
+
+  it('the AI does not pick a contact move for a target beyond its lunge', () => {
+    const b = new BattleSystem(new Rng(6));
+    const a = caster(['tackle']);
+    expect(b.chooseMove(a, foe('0129', 8, 0))).toBe(-1);
+    expect(b.chooseMove(a, foe('0129', 1.5, 0))).toBe(0);
+  });
+
+  it('a thrown move misses a target that has moved well clear of where it was thrown', () => {
+    const b = new BattleSystem(new Rng(7));
+    const a = caster(['rock-throw']);
+    const t = foe('0129', 5, 0);
+    const hp = t.hp;
+    expect(b.tryCast(a, 0, t.x, t.y, t.id, t)).toBe(true);
+    // Run until the cast resolves and the rock is in the air, then step aside.
+    for (let i = 0; i < 120 && !b.inFlight.length; i++) b.stepMon(a, 1 / 60, () => [a, t]);
+    expect(b.inFlight.length).toBe(1);
+    t.y += 3;
+    run(b, a, t, 1);
+    expect(t.hp).toBe(hp);
+    // Standing still, it is hit.
+    const t2 = foe('0129', 5, 0);
+    const a2 = caster(['rock-throw']);
+    b.tryCast(a2, 0, t2.x, t2.y, t2.id, t2);
+    run(b, a2, t2, 1.5);
+    expect(t2.hp).toBeLessThan(hp);
+  });
+
+  it('a wall between them stops a shot but not a move falling from the sky', () => {
+    const wall = (ax: number, _ay: number, bx: number) => !(Math.min(ax, bx) < 2.5 && Math.max(ax, bx) > 2.5);
+    const b = new BattleSystem(new Rng(8));
+    b.shotLine = (ax, ay, bx, by) => wall(ax, ay, bx) || by > 99;
+    const a = caster(['ember', 'icicle-crash']);
+    const t = foe('0129', 4, 0);
+    const hp = t.hp;
+    b.tryCast(a, 0, t.x, t.y, t.id, t);
+    run(b, a, t, 1.5);
+    expect(t.hp).toBe(hp);
+    b.tryCast(a, 1, t.x, t.y, t.id, t);
+    run(b, a, t, 1.5);
+    expect(t.hp).toBeLessThan(hp);
+  });
+});

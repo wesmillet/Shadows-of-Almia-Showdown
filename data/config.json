@@ -113,11 +113,13 @@
       "powerMult": 1.3,
       "turnDegPerSec": 140
     },
-    "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at lungeSpeed tiles a second (times its Speed multiplier), at most lungeMaxSeconds, and strikes on arrival. A contact hit shoves the target knockTiles (times power / 80, within knockScale) unless it is a boss, a legend, an Alpha or much bigger than the attacker.",
+    "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at speed tiles a second (times its Speed multiplier and the move's dash), covering at most maxTiles (times dash) in at most maxSeconds, following a target that moves, and strikes on arrival. It lands only if the two bodies are then touching (data.contactReach: their radii plus reachSlack): a lunge stopped by a wall, or a target that got away, is a miss. A contact hit or a slam's landing shoves the target knockTiles (times power / 80 within knockScale, times the move's knock) unless it is a boss, a legend, an Alpha, a Shadow Pokémon, mid-leap or much bigger than the attacker; walls stop the shove.",
     "lunge": {
       "speed": 16,
       "maxSeconds": 0.45,
       "minTiles": 0.3,
+      "maxTiles": 3,
+      "reachSlack": 0.45,
       "knockTiles": 0.45,
       "knockSeconds": 0.14,
       "knockScale": [

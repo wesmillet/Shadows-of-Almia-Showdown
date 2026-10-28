@@ -6,12 +6,12 @@
 Needs the Fan-tasy packs unpacked and merged (FANTASY_DIR, see tiled.py),
 numpy, scipy and Pillow.
 """
-import os, sys, time, json
+import os, re, sys, time, json
 import numpy as np
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import design3 as D
-import paint3, cliffs, castle, castle2, stamps, content3, towns3, collide, export3, wang, tiled, decor3
+import paint3, cliffs, castle, castle2, stamps, content3, towns3, collide, export3, wang, tiled, decor3, shadows3
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NAME = 'almia3'
@@ -160,6 +160,37 @@ def castle_walls(d):
         # the gap is cut that much taller and a tower stands on the face (see the towers)
         else: W[gy - half - castle.FACE_ROWS:gy + half + 1, gx - 3:gx + 4] = False
     return W
+
+
+SOFT = re.compile(r'Grass_|Cattail|Plant_|Hay_Dummy|Flower|Mushroom|Bridge|Shadow')
+
+
+def settle(objects, placer):
+    """Each placer keeps its own objects apart, but towns, farms, the castle area, road decor, the
+    woods and the shores are placed by different placers, so a cactus could stand inside a house,
+    a lamp inside a rune rock or a palm inside a palm. Where one solid object's base stands in the
+    base of another (the bottom 20 px, its middle 70%), the smaller one goes, with its shadow.
+    Soft things (grass, reeds, plants, flowers) may stand among others as they do in the samples."""
+    def nm(o): return content3.picture_name(o['key']) if 'key' in o else o.get('name', '')
+    solid = [o for o in objects if 'key' in o and not SOFT.search(nm(o))]
+    gone = set()
+    by_size = sorted(solid, key=lambda o: -content3.size(o['key'])[0] * content3.size(o['key'])[1])
+    def inside(a, b):
+        aw, _ = content3.size(a['key']); bw, _ = content3.size(b['key'])
+        ax = a['x'] + aw / 2
+        return bw >= 20 and b['x'] + bw * 0.15 < ax < b['x'] + bw * 0.85 and b['y'] - 20 < a['y'] <= b['y'] + 2
+    for i, b in enumerate(by_size):
+        if id(b) in gone: continue
+        for a in by_size[i + 1:]:
+            if id(a) in gone: continue
+            if abs(a['y'] - b['y']) > 22 or abs(a['x'] - b['x']) > 200: continue
+            if inside(a, b) or inside(b, a):
+                gone.add(id(a))
+    out = [o for o in objects if id(o) not in gone]
+    drop = [content3.shadow_decal(o['key'], o['x'], o['y']) for o in objects if id(o) in gone]
+    placer.decals = [x for x in placer.decals if x not in drop]
+    log(f'  settled: {len(gone)} objects standing inside others removed')
+    return out
 
 
 def main():
@@ -312,7 +343,7 @@ def main():
         n_t = 0
         for (y, x) in cells:
             if n_t >= 7: break
-            if trees and placer.free[y, x] and placer.put(rr.choice(trees), x, y, clear=1, shadow=b != D.DESERT): n_t += 1
+            if trees and placer.free[y, x] and placer.put(rr.choice(trees), x, y, clear=1): n_t += 1
         props = [content3.catalogue(kit['propset'], pat) for pat in kit['props']]
         props = [p for p in props if p]
         n_p = 0
@@ -345,13 +376,11 @@ def main():
         st = _statue.statue(dex)
         bcx, bcy = sx * 16 - 1, sy * 16 + 10
         objects.append({'img': st, 'name': f'statue_{dex}', 'x': int(bcx - (st.shape[1] - 6) / 2), 'y': int(bcy) + 4})   # (+6 wide, +4 tall: its shadow)
-    # wide trees among the area's props cast the round shadow the woods do
+    # the area's trees (and stumps, rocks) cast the same shadows the island's do
     for o in A['objects']:
-        if 'key' in o and o['key'][0].startswith('Objects_Trees'):
-            w_, h_ = content3.size(o['key'])
-            if w_ >= 40 and 'Tree' in os.path.basename(tiled.tileset(o['key'][0]).tiles[o['key'][1]].image):
-                dcl = content3.shadow_decal(48 if w_ >= 64 else 40, o['x'] + w_ // 2, o['y'] + 2)
-                if dcl: placer.decals.append(dcl)
+        if 'key' in o:
+            dcl = content3.shadow_decal(o['key'], o['x'], o['y'])
+            if dcl: placer.decals.append(dcl)
     placer.free &= ~d.castle          # inside the walls nothing wild
     log('decor')
     n_arena = decor3.arena(placer)
@@ -392,6 +421,8 @@ def main():
     log(f'  life {n_life}, waterfalls {n_falls}')
     log(f'  summit {n_summit}, blight {n_dead}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')
     objects += placer.objects
+    placer.decals += shore_placer.decals          # the beach palms' shadows (they were dropped before)
+    objects = settle(objects, placer)
     tg, tall = paint3.tall_grass(d, placer.free & ~occupied & ~(d.biome == D.CASTLE))
     stack.insert([n for n, _ in stack].index('Road') + 1, ('Tall grass', tg))
     stack.append(('Animations', anim))
@@ -458,7 +489,9 @@ def main():
     st = [{'kind': 'tiles', 'name': n, 'opacity': 0.25 if n.endswith('Shadows') else 1.0, 'tiles': L} for n, L in stack]
     decals = [x for x in placer.decals if x]
     st.insert(len(st) - 2, {'kind': 'decals', 'name': 'Shadows', 'opacity': 0.25, 'decals': decals})
-    data = {'name': NAME, 'cols': Wd, 'rows': H, 'stack': st, 'objects': objects,
+    # every size of the shadow disc, so polish3 can give its trees the right one
+    pack = [k for k in (content3.shadow_key(s_) for s_ in shadows3.SIZES) if k]
+    data = {'name': NAME, 'cols': Wd, 'rows': H, 'stack': st, 'objects': objects, 'pack': [(k[0], k[1], 0) for k in pack],
             'walkable': walk, 'reachable': reach, 'biome': biome, 'minimap': minimap,
             'stairs': [[int(x), int(y)] for (y, x) in zip(*np.nonzero(stair_cells))],
             'center': {'x': D.CRYSTAL[0] + 0.5, 'y': D.CRYSTAL[1] + 0.5}, 'outposts': outposts, 'spawns': spawns,

@@ -92,13 +92,27 @@ def build_town(name, cx, cy, biome, d, seed, ok=None):
         cxs = sx + wh(k)[0] / 32
         npcs.append({'role': 'vendor', 'x': cxs, 'y': py0 + 5 - 0.6, 'town': name, 'stand': i, 'standX': cxs, 'standY': py0 + 5})
     # the well on the east half, lamps and props round the edge
+    beside_well = px1 - 3
     if kit['well']:
         k = find(kit['build'], re.escape(kit['well']), rng)
-        if k: place(k, px1 - 5, py0 + 4)
-    for j, (tx, ty) in enumerate([(px1 - 1, py0 + 1), (px0, py1 - 1), (px1 - 1, py1 - 1), (cx + 2, py0 + 1)]):
+        if k:
+            wt, _ = place(k, px1 - 5, py0 + 4)
+            beside_well = px1 - 5 + wt
+    # props in small purposeful spots: the north-east corner, one beside the well (a lamp where the
+    # kit has one), a pair in the south-west corner, one by the healer. The fourth spot used to be
+    # (cx + 2, py0 + 1), which is inside the third market stand: its lamp stood on the awning.
+    spots = [(px1 - 1, py0 + 1), (min(beside_well, px1), py0 + 4), (px0, py1 - 1), (px0 + 1, py1 - 1), (px1 - 1, py1 - 1)]
+    order = [0, 3, 1, 2, 4]
+    taken = {}
+    for j, (tx, ty) in zip(order, spots):
         pat = kit['props'][j % len(kit['props'])]
         k = find(kit['propset'], pat, rng)
-        if k: place(k, tx, ty)
+        if not k: continue
+        tx = max(tx, taken.get(ty, tx))          # side by side, never on top of each other
+        wt = (wh(k)[0] + 15) // 16
+        if tx + wt - 1 > px1: continue
+        place(k, tx, ty)
+        taken[ty] = tx + wt
     # the healer stands by the east side of the plaza
     npcs.append({'role': 'healer', 'x': px1 - 3 + 0.5, 'y': py1 - 2 + 0.5, 'town': name})
     return plaza, objects, npcs, foot

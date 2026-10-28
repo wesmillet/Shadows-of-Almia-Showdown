@@ -135,8 +135,7 @@ class Map:
                 v = vis and c.get('visible', '1') != '0'
                 o = op * float(c.get('opacity', 1))
                 if c.tag == 'layer':
-                    d = c.find('data')
-                    vals = [int(x) for x in d.text.replace('\n', '').split(',') if x.strip()]
+                    vals = _layer_data(c.find('data'))
                     name = prefix + c.get('name')
                     self.layers.append(('tiles', name, np.array(vals, dtype=np.uint32).reshape(self.h, self.w)))
                     self.meta[name] = {'visible': v, 'opacity': o, 'props': properties(c)}
@@ -197,6 +196,22 @@ class Map:
                         a = np.array(Image.fromarray(a).resize((int(o['w']), int(o['h'])), Image.NEAREST))
                     blit(img, a, int(round(o['x'])), int(round(o['y'] - a.shape[0])), op)
         return Image.fromarray(img.clip(0, 255).astype(np.uint8))
+
+
+def _layer_data(d):
+    """A tile layer's gids, in whichever layer format Tiled saved it: CSV (the default here), or
+    Base64, plain or compressed with zlib or gzip (Preferences or Map Properties, Tile Layer Format)."""
+    enc, comp = d.get('encoding', 'csv'), d.get('compression')
+    if enc == 'csv':
+        return [int(x) for x in d.text.replace('\n', '').split(',') if x.strip()]
+    if enc == 'base64':
+        import base64, zlib, gzip
+        raw = base64.b64decode(d.text.strip())
+        if comp == 'zlib': raw = zlib.decompress(raw)
+        elif comp == 'gzip': raw = gzip.decompress(raw)
+        elif comp: raise ValueError(f'tile layer compression {comp} not supported: save the map with CSV or zlib')
+        return np.frombuffer(raw, dtype='<u4').tolist()
+    raise ValueError(f'tile layer encoding {enc} not supported: save the map with CSV')
 
 
 def properties(node):

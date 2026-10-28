@@ -34,6 +34,10 @@ export function trainerPos(t: Trainer, alpha: number): { x: number; y: number } 
   return { x: lerp(t.px, t.x, alpha), y: lerp(t.py, t.y, alpha) };
 }
 
+/** Pokémon built into the ground they stand on cast no shadow: Sandygast and Palossand (sand
+ * castles), Diglett and Dugtrio (only their heads out of the earth). */
+const GROUNDED = new Set(['0769', '0770', '0050', '0051']);
+
 /** Flat oval drop shadow on the pixel grid (no gradient). */
 export function drawSoftShadow(view: View, sx: number, sy: number, radiusTiles: number, alpha = 0.28): void {
   const ctx = view.ctx;
@@ -314,10 +318,10 @@ export function renderWorld(view: View, match: Match, opts: WorldRenderOptions):
   const vis = view.visibleTiles();
   const inView = (x: number, y: number, pad = 2) => x > vis.x0 - pad && x < vis.x1 + pad && y > vis.y0 - pad && y < vis.y1 + pad;
 
-  // Soft shadows under everyone.
+  // Soft shadows under everyone (but those that are part of the ground they stand in).
   for (const m of match.renderMons()) {
     const p = monPos(m, alpha);
-    if (!inView(p.x, p.y) || m.visual.alpha <= 0.05) continue;
+    if (!inView(p.x, p.y) || m.visual.alpha <= 0.05 || GROUNDED.has(m.dex)) continue;
     // Sized to the body: a Jirachi gets a small pool of shade, a Steelix a wide one.
     const r = Math.max(0.1, Math.min(2.6, bodyRadius(m.species) * 0.8)) * Math.min(1, m.visual.scale);
     // One shadow per Pokémon, under the frame's ground point (the sprite sheet's own shadow is not drawn too).

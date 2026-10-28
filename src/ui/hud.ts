@@ -160,19 +160,45 @@ export class Hud {
   }
 
   /** A one-line cream strip centred on `cx` with its top at `y`: returns its height. */
-  private creamStrip(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, size: number, color: string = FLAT_INK.text, accent?: { text: string; color: string }): number {
+  /** How far in from each side the top-centre messages keep: past the trainers-left banner and the
+   * minimap (208 px chart, its frame and margin). */
+  private topReserve(s: number): number {
+    return 296 * s;
+  }
+
+  private creamStrip(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, size: number, color: string = FLAT_INK.text, accent?: { text: string; color: string }, maxW = Infinity): number {
     const s = this.view.baseScale;
     const k = this.px2;
     ctx.font = this.font(size, '700');
+    const pad = 12 * k + 10 * s;
     const tw = ctx.measureText(text).width;
     const aw = accent ? ctx.measureText(accent.text).width : 0;
-    const w = tw + aw + 12 * k + 10 * s;
-    const h = Math.round(8 * k + size * 1.25 * s);
+    // Too wide for the room it has (a townsperson's line): wrapped over several lines, centred.
+    let lines = [text];
+    if (!accent && tw + pad > maxW) {
+      lines = [];
+      let line = '';
+      for (const word of text.split(' ')) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(next).width + pad > maxW) {
+          lines.push(line);
+          line = word;
+        } else line = next;
+      }
+      if (line) lines.push(line);
+    }
+    const lw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    const w = (lines.length > 1 ? lw : tw + aw) + pad;
+    const lineH = size * 1.25 * s;
+    const h = Math.round(8 * k + lineH * lines.length);
     const x = Math.round(cx - w / 2);
     if (!this.ui.flat(ctx, 'cream', x, y, w, h, k)) this.popupBox(ctx, x, y, w, h);
-    const base = y + 3 * k + (h - 8 * k) / 2 + size * 0.42 * s;
-    this.ink(ctx, text, x + 6 * k + 5 * s, base, size, color);
-    if (accent) this.ink(ctx, accent.text, x + 6 * k + 5 * s + tw, base, size, accent.color);
+    lines.forEach((l, i) => {
+      const base = y + 3 * k + (lineH * (i + 0.5)) + size * 0.42 * s;
+      const lx = lines.length > 1 ? Math.round(cx - ctx.measureText(l).width / 2) : x + 6 * k + 5 * s;
+      this.ink(ctx, l, lx, base, size, color);
+    });
+    if (accent) this.ink(ctx, accent.text, x + 6 * k + 5 * s + tw, y + 3 * k + (h - 8 * k) / 2 + size * 0.42 * s, size, accent.color);
     return h;
   }
 
@@ -400,7 +426,8 @@ export class Hud {
       const newest = i === st.notices.length - 1;
       ctx.save();
       ctx.globalAlpha = newest ? 1 : 0.85;
-      ny += this.creamStrip(ctx, msg, v.width / 2, ny, newest ? 15 : 12) + 6 * s;
+      // between the trainers-left banner (top left) and the minimap (top right), never over them
+      ny += this.creamStrip(ctx, msg, v.width / 2, ny, newest ? 15 : 12, FLAT_INK.text, undefined, Math.max(240 * s, v.width - 2 * this.topReserve(s))) + 6 * s;
       ctx.restore();
     });
     if (st.popup) {

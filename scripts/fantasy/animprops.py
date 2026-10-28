@@ -33,12 +33,23 @@ def blocks(tileset):
         step = (frames[1] - frames[0]) if len(frames) > 1 else 1
         if step <= 0 or step >= cols: step = 1
         c0, r0 = tid % cols, tid // cols
+        # The prop's first frame may start left of its first animated tile: a still part (a
+        # banner's pole) drawn the same in every frame. Such a column joins the prop, so the frame
+        # is taken whole (it used to start at the flag, take in the next frame's pole instead, and
+        # draw every banner cut off between two poles).
+        def same(a, b):
+            # a still tile whose place in the next frame holds a still tile too
+            return 0 <= b < ts.count and a not in animated and b not in animated and bool((alpha(b) > 0).any())
+        while c0 > 0 and c0 - 1 > (tid % cols) - step and (alpha(r0 * cols + c0 - 1) > 0).any() and same(r0 * cols + c0 - 1, r0 * cols + c0 - 1 + step):
+            c0 -= 1
         def row_cells(r):
             return [r * cols + c for c in range(c0, min(cols, c0 + step)) if (alpha(r * cols + c) > 0).any()]
         band = [r0]
         r = r0 + 1
         while r * cols + c0 < ts.count and any(joined_v(a, a + cols) for a in row_cells(r - 1) if a + cols in animated or (alpha(a + cols) > 0).any()) and row_cells(r):
-            if not any(t in animated for t in row_cells(r)) and not any((t in animated) for t in row_cells(r - 1)): break
+            # still rows joined below belong too (a banner's pole and its stone foot); a row of
+            # animated tiles under a still row is the next prop in the sheet
+            if any(t in animated for t in row_cells(r)) and not any(t in animated for t in row_cells(r - 1)): break
             band.append(r); r += 1
         cells = []
         for r in band:

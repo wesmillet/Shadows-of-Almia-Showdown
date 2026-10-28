@@ -7,21 +7,26 @@
    and gets a shadow decal like its neighbours; small flora is decorative.
 Writes a new almia3.json (walkable/reachable updated) and after-previews. Run with --write to save.
 """
-import json, sys, math, collections, random
+import json, sys, math, collections, random, re
 import numpy as np
 from render3 import load, decode
 
 import os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BN = ['water', 'meadow', 'forest', 'shore', 'snow', 'desert', 'autumn', 'castle']  # BIOME_CODES (fanGround.ts)
-GRAY_FIX = {746: 745, 747: 744, 748: 745, 749: 744}
-# Object pictures by their sheet rect (sheet, x, y, w, h), so the pass keeps choosing the same art when
-# the map changes (they were first picked by rank in the map's own object counts).
-BLOCKLIST = set([(0, 440, 366, 30, 62), (0, 1807, 141, 64, 224), (0, 338, 366, 20, 60), (0, 359, 366, 24, 59), (0, 678, 366, 14, 11), (0, 778, 366, 24, 59), (0, 693, 366, 7, 23)])   # lamp post, tower, pillar, banners, sign scrap, stake
-REEDS = set([(0, 296, 366, 16, 28), (0, 313, 366, 24, 28)])   # cattails: only at water edges
 rng = random.Random(20261027)
 
 m = load()
+# Pictures are picked by NAME (from out/<map>_pictures.json): sheet rectangles change every time
+# the object sheet is packed again. (They used to be listed here as rectangles of an older sheet,
+# which after the island was rebuilt pointed into the middle of other pictures: slivers of
+# palms, rocks and props were scattered over the beaches as cut-off scraps.)
+_PICS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f"{m['name']}_pictures.json")))
+def by_name(pattern, max_h=None, min_h=None):
+    rx = re.compile(pattern)
+    return [tuple(e['rect']) for e in _PICS if rx.search(e['name']) and (max_h is None or e['rect'][4] <= max_h) and (min_h is None or e['rect'][4] >= min_h)]
+BLOCKLIST = set(by_name(r'LampPost|Watchtower|Tower|Pillar|Banner|Sign|Stake'))   # made things, never scattered
+REEDS = set(by_name(r'^Cattail'))   # cattails: only at water edges
 cols, rows = m['cols'], m['rows']
 N = cols * rows
 biome = np.array([[int(c) for c in r] for r in m['biome']], np.int8)
@@ -36,13 +41,9 @@ road = (layers['Road'] > 0) | (layers.get('Courtyard', np.zeros((rows, cols))) >
 tall = layers['Tall grass'] > 0
 water = biome == 0
 
-# ---- 1. the gray patches
+# ---- 1. (A fix for gray ground-patch tiles used to swap tile numbers 746-749 here: numbers of an
+# older packed tile sheet, which after the island was rebuilt swapped unrelated tiles instead.)
 gp = layers['Ground patches']
-fixed = 0
-for bad, good in GRAY_FIX.items():
-    n = int((gp == bad).sum()); fixed += n
-    gp[gp == bad] = good
-print('gray patch tiles fixed:', fixed)
 
 sand_layer = layers['Sand'] > 0
 # ---- palettes from the artist's own placements
@@ -62,8 +63,10 @@ pal = {b: {'large': [], 'huge': [], 'med': [], 'small': [], 'reeds': []} for b i
 import re as _re
 _made = _re.compile(r'Banner|Lamp|Sign|Ruins_|Tombstone|Skull|Crate|Barrel|Bench|Statue|Fence|Well|Market|Hay|Scarecrow|Plant_(Corn|Cabbage|Pumpkin|Tomato|Carrot|Eggplant|Potatoe|Radish|Cotton|Wheat)')   # and farm crops
 _rect_name = {tuple(e['rect']): e['name'] for e in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f"{m['name']}_pictures.json")))}
+# Grass clumps (Objects_Grass) are not scattered either: upright, they hid whoever stood behind them.
+_grass = _re.compile(r'^Grass_')
 for i, r in enumerate(rect_ids):
-    if r in BLOCKLIST or _made.search(_rect_name.get(tuple(r), '')): continue
+    if r in BLOCKLIST or _made.search(_rect_name.get(tuple(r), '')) or _grass.search(_rect_name.get(tuple(r), '')): continue
     sh, sx, sy, w, h = r
     uses = by_rect[r]
     n = len(uses)
@@ -90,9 +93,9 @@ for cls in ('large', 'huge', 'med', 'small'):
     merged = pal[1][cls] + pal[2][cls]                 # meadow and forest share their greens
     pal[1][cls] = pal[2][cls] = merged
 REED_PAL = [(r, n) for b in range(8) for r, n in pal[b]['reeds']]
-BEACH_SMALL = [(0, 1903, 856, 11, 12), (0, 1974, 856, 15, 12), (0, 2007, 856, 15, 15), (0, 2023, 856, 14, 12), (0, 219, 925, 14, 11), (0, 249, 925, 16, 12), (0, 297, 925, 15, 12), (0, 907, 925, 15, 15), (0, 69, 925, 12, 12)]
-BEACH_MED = [(0, 44, 925, 24, 23)]
-BEACH_PALM = [(0, 220, 495, 64, 77), (0, 1016, 495, 47, 63), (0, 764, 620, 47, 63)]
+BEACH_SMALL = by_name(r'^Rock_Brown_Desert_', max_h=16)          # pebbles
+BEACH_MED = by_name(r'^Rock_Brown_Desert_', min_h=17, max_h=28)
+BEACH_PALM = by_name(r'^Palm_(Light|Emerald|Yellow)_')
 pal[3]['small'] = [(r, 2) for r in BEACH_SMALL]
 pal[3]['med'] = [(r, 2) for r in BEACH_MED]
 pal[3]['large'] = [(r, 2) for r in BEACH_PALM]
@@ -381,6 +384,12 @@ for p in [*m['outposts'], *m['spawns'], *[{'x': t['x'], 'y': t['y']} for t in m[
     box = seen[max(0, ty - 2):ty + 3, max(0, tx - 2):tx + 3]
     assert box.any(), f'POI unreachable at {tx},{ty}'
 print('all POIs reachable')
+# every object on the map is a whole picture of the pack (a rectangle of the packed sheet that is
+# not exactly one picture draws a cut-off scrap of whatever lies there)
+_whole = {tuple(e['rect']) for e in _PICS}
+_scraps = [o for o in list(m['objects']) + list(added_objs) if tuple(o[:5]) not in _whole]
+assert not _scraps, f'{len(_scraps)} objects are not whole pictures, e.g. {_scraps[:3]}'
+print('every object a whole picture')
 
 # ---- write back
 if '--write' in sys.argv:

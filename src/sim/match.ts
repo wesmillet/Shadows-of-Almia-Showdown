@@ -27,7 +27,7 @@ import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pi
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
 import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
-import { pickStrong, weightedPicks, type SpawnRow, type StrongConfig, type StrongPool } from './spawning';
+import { pickStrong, rarePlacements, weightedPicks, type RareConfig, type SpawnRow, type StrongConfig, type StrongPool } from './spawning';
 
 const AI_NAMES: Array<[string, string]> = [
   ['Rook', 'trainer_a'],
@@ -1562,10 +1562,12 @@ export class Match {
     type Row = SpawnRow;
     type Table = { count: number; levels?: number[]; table?: Row[]; use?: string; habitatSlots?: Record<string, [number, number]> };
     // Every match differs: each land keeps its own table (weights jittered) plus a few species drawn
-    // from its rotation pool for this match, and every line that can Mega Evolve is placed in its land.
+    // from its rotation pool for this match; starters and pseudo-legendaries are placed by their own
+    // rule (rare), so each of them is equally available whatever its land.
     const extra = SPAWNS as unknown as {
-      rotation?: Record<string, Row[]>; rotationPicks?: number; tableJitter?: [number, number];
-      megaLines?: Array<{ dex: string; land: string }>;
+      rotation?: Record<string, Row[]>; rotationPicks?: number; rotationPicksByLand?: Record<string, number>;
+      tableJitter?: [number, number];
+      rare?: RareConfig;
       habitats?: Record<string, { zones?: Array<[number, number, number, number]>; biome?: Biome }>;
     };
     const tables = {} as Record<Biome, Table>;
@@ -1580,7 +1582,7 @@ export class Match {
       // The rotation picks: by weight, without repeats, never a species already in the table (a pick
       // that duplicated the table used to be a wasted pick).
       const pool = (extra.rotation?.[b] ?? []).filter((r) => !rows.some((x) => x.dex === r.dex));
-      for (const r of weightedPicks(this.rng, pool, extra.rotationPicks ?? 0)) {
+      for (const r of weightedPicks(this.rng, pool, extra.rotationPicksByLand?.[b] ?? extra.rotationPicks ?? 0)) {
         // Rare picks (starters, pseudo-legendaries) come a little stronger, like a table's rare entries.
         rows.push(r.weight <= 1.5 ? { ...r, levels: [(lv[0] ?? 3) + 3, (lv[1] ?? 6) + 2] } : { ...r });
       }
@@ -1625,24 +1627,36 @@ export class Match {
         }
       }
     }
+    // The ordinary spots: each rolls on its land's table (meadows and beaches borrow the table of
+    // the land they border). Collected first so the rare placements can take some of them.
+    const plan: Array<{ row: Row; t: Table; spot: { x: number; y: number }; land: Biome; rare?: boolean }> = [];
     for (const [biome, table] of Object.entries(tables) as Array<[Biome, Table]>) {
       const spots = this.rng.shuffle([...byBiome[biome]]).filter((p) => !used.has(key(p)));
       // A land's habitat spawns count toward its total.
       const n = Math.min(Math.max(0, table.count - (placed[biome] ?? 0)), spots.length);
-      const forced: Row[] = (extra.megaLines ?? []).filter((l) => l.land === biome).map((l) => ({ dex: l.dex, weight: 1 }));
       for (let i = 0; i < n; i++) {
         const spot = spots[i] as { x: number; y: number };
-        // Meadows and beaches borrow the table of the land they border.
         const land = landAt(spot, biome);
         const t = land ? tables[land] : undefined;
-        if (!t?.table?.length) continue;
+        if (!land || !t?.table?.length) continue;
         // Habitat entries spawn in their habitat slots only.
         const open = t.table.filter((r) => !r.habitat);
         if (!open.length) continue;
-        const row = forced[i] ?? this.rng.weighted(open, (r) => r.weight);
-        this.spawnWild(row, t, spot);
+        plan.push({ row: this.rng.weighted(open, (r) => r.weight), t, spot, land });
       }
     }
+    // Starters and pseudo-legendaries (spawns.json rare): each one is in a match with the same
+    // probability wherever it lives, at a random ordinary spot of its land.
+    for (const r of rarePlacements(this.rng, extra.rare)) {
+      const free = plan.filter((p) => p.land === r.land && !p.rare);
+      if (!free.length) continue;
+      const p = this.rng.pick(free);
+      const lv = p.t.levels ?? [3, 6];
+      const [o0, o1] = extra.rare?.levelsOver ?? [3, 2];
+      p.row = { dex: r.dex, weight: 1, levels: [(lv[0] ?? 3) + o0, (lv[1] ?? 6) + o1] };
+      p.rare = true;
+    }
+    for (const p of plan) this.spawnWild(p.row, p.t, p.spot);
     this.spawnStrong(byBiome);
   }
 
@@ -1677,8 +1691,8 @@ export class Match {
     level = Math.min(100, level);
     // Past an evolution level a wild Pokémon is met already evolved (Luxio, Gyarados...); an Alpha always is.
     const dex = alpha ? finalForm(row.dex, this.rng) : formAtLevel(row.dex, level, this.rng, true);
-    // Now and then a shiny (Alphas a little more often).
-    const shiny = this.rng.chance(alpha ? w.shinyChance * 4 : w.shinyChance);
+    // Now and then a shiny (Alphas alphaShinyMultiplier times as often).
+    const shiny = this.rng.chance(w.shinyChance * (alpha ? w.alphaShinyMultiplier : 1));
     const mon = this.makeMon(dex, level, null, spot.x, spot.y, shiny);
     if (elite) mon.elite = true;
     if (alpha) mon.alpha = true;
@@ -1770,7 +1784,9 @@ export class Match {
         const best = this.rng.pick(cands);
         placed.push(best);
         const lv = row.levels ?? [20, 24];
-        const mon = this.makeMon(row.dex, this.rng.int(lv[0] ?? 20, lv[1] ?? lv[0] ?? 20), null, best.x, best.y);
+        // Shiny at the ordinary wild rate, like any other wild Pokémon (being shiny is its only look apart).
+        const shiny = this.rng.chance(CONFIG.wild.shinyChance);
+        const mon = this.makeMon(row.dex, this.rng.int(lv[0] ?? 20, lv[1] ?? lv[0] ?? 20), null, best.x, best.y, shiny);
         // Internally still a "land boss": the patch it keeps, its slow temper, Styler loops, XP.
         mon.landBoss = true;
         mon.dir = this.rng.int(0, 7) as Dir8;
@@ -2573,9 +2589,9 @@ export class Match {
     t.moving = moved > 1e-4 && net / dt > 0.9;
     // Eggs hatch by walking: the distance this step's own movement covered (never a teleport, a
     // push from someone else or a walk into a wall), at most the fastest a trainer can go.
-    if (t.eggs?.length && t.alive && moved > 1e-4) {
+    if (t.eggs?.length && t.alive && moved > 1e-4 && net > 1e-4) {
       const most = CONFIG.player.speedTilesPerSec * (t.mount ? Math.max(CONFIG.riding.flySpeed, CONFIG.riding.rideSpeed) : 1) * dt * 1.05;
-      const step = Math.min(moved, net + 1e-6, most);
+      const step = Math.min(moved, net, most);
       for (const e of t.eggs) e.steps = Math.min(e.need, e.steps + step);
     }
     // One walk cycle per 2.2 tiles: the side run has two strides in it, so feet land about five times a second at full speed.

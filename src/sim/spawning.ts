@@ -56,3 +56,32 @@ export function pickStrong(rng: Rng, pool: StrongPool, n: number, pseudoChance: 
   }
   return out;
 }
+
+/** spawns.json rare: groups of species (starters, pseudo-legendaries) placed by a per-species rate. */
+export interface RareConfig {
+  /** Levels over the land's own [min, max]. */
+  levelsOver?: [number, number];
+  groups: Record<string, { perMatch: number; lands: Record<string, string[]> }>;
+}
+
+/**
+ * The rare species placed in one match: each listed species is placed floor(perMatch) times, plus
+ * once more with probability perMatch's remainder, in its land. So every species of a group has
+ * the same expected number per match (perMatch) whatever its land's size or table.
+ */
+export function rarePlacements(rng: Rng, cfg: RareConfig | undefined): Array<{ dex: string; land: string; group: string }> {
+  const out: Array<{ dex: string; land: string; group: string }> = [];
+  if (!cfg) return out;
+  for (const [group, g] of Object.entries(cfg.groups)) {
+    if (group.startsWith('_')) continue;
+    const whole = Math.floor(g.perMatch);
+    const frac = g.perMatch - whole;
+    for (const [land, list] of Object.entries(g.lands)) {
+      for (const dex of list) {
+        const n = whole + (rng.chance(frac) ? 1 : 0);
+        for (let i = 0; i < n; i++) out.push({ dex, land, group });
+      }
+    }
+  }
+  return out;
+}

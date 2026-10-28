@@ -156,6 +156,9 @@ license, sheets). The current artists per folder, resolved through
 - <@!237286997645983744>: Idle,Walk,Sleep,Hurt,Charge,Swing,Double,Rotate
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Lick,Twirl,Swing,Double,Rotate,Hop
 
+### 0095 Onix
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Slam,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
 ### 0098 Krabby
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Slam,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -891,6 +894,14 @@ license, sheets). The current artists per folder, resolved through
 - <@!229131140903075840>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Rumble,Emit,Swing,Double,Rotate,Hop
 - <@!544245909639397378>: Attack,Strike
 
+### 0557 Dwebble
+- <@!872983950732165181>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
+- <@!883792430720225350>: Idle,Walk,Attack,Strike,Double,EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!883792430720225350>: Eat,Pull,Sit,Head
+
+### 0558 Crustle
+- Stand-in built by scripts/standin-sprites.py from the Generation V animated battle sprites (Pokemon Black and White, (c) Nintendo / Creatures / GAME FREAK) as published in the PokeAPI sprites repository (https://github.com/PokeAPI/sprites). Replace with SpriteCollab art when it exists.
+
 ### 0561 Sigilyph
 - <@!229131140903075840>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,SpAttack,Swing,Double,Rotate,Hop
 - <@!229131140903075840>: Hurt,Shoot,Double
@@ -898,6 +909,12 @@ license, sheets). The current artists per folder, resolved through
 ### 0563 Cofagrigus
 - <@!872983950732165181>: Idle,Walk,Sleep,Attack,Charge,Shoot,Strike,SpAttack,Swing,Double,Rotate,Hop
 - <@!544245909639397378>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Swing,Double,Rotate,Hop
+
+### 0564 Tirtouga
+- Stand-in built by scripts/standin-sprites.py from the Generation V animated battle sprites (Pokemon Black and White, (c) Nintendo / Creatures / GAME FREAK) as published in the PokeAPI sprites repository (https://github.com/PokeAPI/sprites). Replace with SpriteCollab art when it exists.
+
+### 0565 Carracosta
+- Stand-in built by scripts/standin-sprites.py from the Generation V animated battle sprites (Pokemon Black and White, (c) Nintendo / Creatures / GAME FREAK) as published in the PokeAPI sprites repository (https://github.com/PokeAPI/sprites). Replace with SpriteCollab art when it exists.
 
 ### 0566 Archen
 - <@!229131140903075840>: Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack,RearUp,Swing,Double,Rotate,Hop,Pain,Cringe,Faint
@@ -1552,6 +1569,10 @@ license, sheets). The current artists per folder, resolved through
 ### 0094-mega Gengar (mega)
 - <@!537560911716810763> (earlier version): Normal
 - <@!350050109741858829>: Normal
+
+### 0095 Onix
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!544245909639397378>: Surprised
 
 ### 0098 Krabby
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -2559,6 +2580,14 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Normal
 - <@!356635814668664832>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
+### 0557 Dwebble
+- MUCRUSH (earlier version): Normal
+- <@!356635814668664832>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined,Special0
+
+### 0558 Crustle
+- MUCRUSH (earlier version): Normal
+- <@!356635814668664832>: Normal,Normal^
+
 ### 0561 Sigilyph
 - MUCRUSH (earlier version): Normal
 - <@!350050109741858829>: Normal
@@ -2566,6 +2595,14 @@ license, sheets). The current artists per folder, resolved through
 ### 0563 Cofagrigus
 - MUCRUSH (earlier version): Normal
 - <@!276369635304275968>: Normal,Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
+
+### 0564 Tirtouga
+- MUCRUSH (earlier version): Normal
+- <@!217899432652308480>: Normal
+- <@!217899432652308480>: Normal
+
+### 0565 Carracosta
+- <@!350050109741858829>: Normal
 
 ### 0566 Archen
 - <@!356635814668664832>: Normal,Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined

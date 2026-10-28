@@ -48,3 +48,15 @@ scripts/                  fetch-sprites.py
    engage, flee), Ranger outpost, elimination.
 4. Darkness pulses, drowsy/sleep/Bad Dreams, aura, Darkrai finale.
 5. Title, starter roll, win/loss screens, README.
+
+## Future ideas (not scheduled, not implemented)
+
+- **Match modifiers (noted 2026-10-28).** Now and then a match could start with a modifier
+  that everyone in it shares, announced on the lobby and loading screens. Examples: boosted
+  shiny odds, cheaper shop items, a faster storm. Questions to settle before building it:
+  how often a modifier match comes up, whether more than one can stack, whether private
+  matches can pick one, and how it shows in replays and the collection log.
+  Groundwork that exists: the online server's timed events (server/events.ts) already scale
+  a match's shiny chance (`shinyBoost`, applied once on top of `wild.shinyChance`) and storm
+  speed; those are scheduled by an admin for every match in a window, not rolled per match.
+  A per-match modifier would sit beside them (and must not multiply the same thing twice).

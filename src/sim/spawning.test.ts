@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../core/rng';
-import { pickStrong, weightedPicks, type StrongPool } from './spawning';
+import { pickStrong, rarePlacements, weightedPicks, type RareConfig, type StrongPool } from './spawning';
 import { SPAWNS, SPECIES } from './data';
 
 describe('rotation picks', () => {
@@ -52,5 +52,39 @@ describe('stronger encounters', () => {
     const total = Object.values(strong.count).reduce((a, b) => a + b, 0);
     expect(total).toBeCloseTo(1, 6);
     expect(Math.min(...Object.keys(strong.count).map(Number))).toBe(1);
+  });
+});
+
+describe('starters and pseudo-legendaries (rare)', () => {
+  const sp = SPAWNS as unknown as {
+    rare: RareConfig;
+    biomes: Record<string, { table?: Array<{ dex: string }> }>;
+    rotation: Record<string, Array<{ dex: string }>>;
+  };
+  const listed = (g: string) => Object.values(sp.rare.groups[g]?.lands ?? {}).flat();
+
+  it('lists every main-series starter and every pseudo-legendary family once, and nowhere else', () => {
+    expect(listed('starters').length).toBe(27);
+    expect(listed('pseudo').length).toBe(10);
+    const all = [...listed('starters'), ...listed('pseudo')];
+    expect(new Set(all).size).toBe(all.length);
+    for (const d of all) expect(SPECIES.has(d), d).toBe(true);
+    // Not also in a table or a rotation pool, which would make it more available than its group.
+    for (const t of Object.values(sp.biomes)) for (const r of t.table ?? []) expect(all, r.dex).not.toContain(r.dex);
+    for (const l of Object.values(sp.rotation)) for (const r of l) expect(all, r.dex).not.toContain(r.dex);
+  });
+
+  it('gives every member of a group the same rate, wherever it lives', () => {
+    const rng = new Rng(3);
+    const N = 20_000;
+    const count = new Map<string, number>();
+    for (let i = 0; i < N; i++) for (const r of rarePlacements(rng, sp.rare)) count.set(r.dex, (count.get(r.dex) ?? 0) + 1);
+    for (const [g, cfg] of Object.entries(sp.rare.groups)) {
+      for (const d of listed(g)) expect((count.get(d) ?? 0) / N, d).toBeCloseTo(cfg.perMatch, 1);
+    }
+  });
+
+  it('keeps both groups rare', () => {
+    for (const g of Object.values(sp.rare.groups)) expect(g.perMatch).toBeLessThanOrEqual(0.5);
   });
 });

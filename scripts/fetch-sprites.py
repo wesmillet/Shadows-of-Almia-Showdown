@@ -121,6 +121,9 @@ def build_credits(tracker=None):
             if variant:
                 label = f'{label} ({variant})'.strip()
             lines.append(f'### {dex} {label}'.rstrip())
+            if os.path.isfile(os.path.join(base, dex, 'STANDIN')):
+                # A stand-in set (scripts/standin-sprites.py): its credits.txt is one line of prose.
+                lines.append('- ' + open(cpath, encoding='utf-8').read().strip())
             for row in parse_credits(cpath):
                 who = names.get(row['id'], {'name': row['id'], 'contact': ''})
                 contact = f" ({who['contact']})" if who['contact'] else ''

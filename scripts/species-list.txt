@@ -194,3 +194,7 @@
 0478  # Froslass
 0903  # Sneasler
 0563  # Cofagrigus
+0557  # Dwebble
+0095  # Onix
+# Tirtouga 0564, Carracosta 0565 and Crustle 0558 have no SpriteCollab sprites yet: stand-ins from
+# scripts/standin-sprites.py (their folders hold a STANDIN file). Their portraits are SpriteCollab's.

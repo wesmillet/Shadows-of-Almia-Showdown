@@ -42,8 +42,17 @@ describe('species data', () => {
     for (const biome of Object.values(spawns.biomes)) {
       for (const row of (biome as { table?: Array<{ dex: string }> }).table ?? []) expect(SPECIES.has(row.dex)).toBe(true);
     }
-    for (const b of spawns.bosses) {
-      expect(SPECIES.has(b.dex)).toBe(true);
+    for (const rows of Object.values(spawns.rotation)) for (const row of rows) expect(SPECIES.has(row.dex), row.dex).toBe(true);
+    for (const pool of Object.values(spawns.strong.pools)) {
+      for (const row of [...pool.candidates, ...pool.pseudo]) expect(SPECIES.has(row.dex), row.dex).toBe(true);
+    }
+    // Every habitat entry has somewhere to live, and a land with habitat entries gives them slots.
+    for (const [land, b] of Object.entries(spawns.biomes) as Array<[string, { table?: Array<{ dex: string; habitat?: string }>; habitatSlots?: Record<string, number[]> }]>) {
+      for (const row of b.table ?? []) {
+        if (!row.habitat) continue;
+        expect((spawns.habitats as Record<string, unknown>)[row.habitat], `${land} ${row.dex}`).toBeDefined();
+        expect(b.habitatSlots?.[row.habitat], `${land} ${row.dex}`).toBeDefined();
+      }
     }
     for (const dex of spawns.starterPool) expect(SPECIES.has(dex)).toBe(true);
   });

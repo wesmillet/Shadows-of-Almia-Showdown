@@ -2,7 +2,7 @@
  * Visitors who roam the island alongside the battle royale:
  *   - the Wandering Merchant, whose stall (Space beside him) sells rare items;
  *   - Ace Trainer Celeste, who takes on anyone who asks (a one-on-one battle with
- *     a strong team); beat her and she hands over a shiny or a powerful Pokémon;
+ *     a strong team); beat her and she hands over a random shiny Pokémon;
  *   - Hoopa, who floats about until the player talks to it, then opens a ring
  *     portal: a legendary comes through as a boss, and when it is worn down to
  *     its last HP it joins whoever beat it;
@@ -16,23 +16,36 @@ import { dirFromVector } from '../core/math';
 import { CONFIG, SPECIES } from './data';
 import type { BattleEvent } from './battle';
 import type { Mon, Trainer } from './entities';
-import { activeParty } from './entities';
+import { activeParty, partySize } from './entities';
 import type { Match } from './match';
 import { canStand, tryMove } from './movement';
 import type { Shop } from './town';
 import { TownsfolkCrew } from './townsfolk';
+import { formAtLevel } from './evolution';
+import { SpriteRegistry } from '../sprites/pokemonSprite';
 
-/** The merchant's stock: rare things the town stalls do not carry (at most ten lines with the Storm Mask). */
+/** The merchant's stock: rare things the town stalls do not carry (evolution stones are the towns' to sell). */
 const MERCHANT_STOCK: Array<[string, number]> = [
   ['rare-candy', 900], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
-  ['leftovers', 2200], ['life-orb', 2600], ['crystal-shard', 1500], ['max-revive', 2500],
+  ['leftovers', 2200], ['life-orb', 2600], ['max-revive', 2500],
 ];
-const STONES = ['fire-stone', 'water-stone', 'thunder-stone', 'leaf-stone', 'ice-stone', 'moon-stone', 'sun-stone', 'shiny-stone', 'dusk-stone', 'dawn-stone'];
 
-/** Celeste's team and her prizes. */
+/** Celeste's team. */
 const ACE_TEAM = ['0445', '0448', '0130'];
-const SHINY_PRIZES = ['0448-shiny', '0445-shiny', '0149-shiny', '0248-shiny', '0130-shiny'];
-const POWER_PRIZES = ['0376', '0373', '0706', '0887', '0149', '0248', '1007', '1008'];
+
+/**
+ * Every species Celeste may give: the game's ordinary species, all of them. Left out: legendary and
+ * Mythical species (species.json class), Mega forms, the hand-fetched variant folders (shiny sets,
+ * shadows, Darkrai's final form, Hoopa Unbound: any dex with a "-" that is not a regional form) and
+ * species with no shiny colours (the prize is always shiny). Regional forms (Alolan, Galarian) count.
+ */
+export function celestePrizePool(): string[] {
+  return [...SPECIES.values()]
+    .filter((sp) => !sp.class && !sp.megaOf)
+    .filter((sp) => !sp.dex.includes('-') || /-(alola|galar|hisui|paldea)$/.test(sp.dex))
+    .filter((sp) => SpriteRegistry.hasShiny(sp.dex))
+    .map((sp) => sp.dex);
+}
 /** What can come through Hoopa's portal. */
 const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243', '1007', '1008', '0888', '0889'];
 const LUGIA = '0249';
@@ -88,8 +101,6 @@ export class Visitors {
     const ms = spot();
     const merchant = m.makeTrainer('Wandering Merchant', 'merchant', false, ms.x, ms.y);
     const stock = MERCHANT_STOCK.map(([id, price]) => ({ id, price }));
-    // One stone of the day.
-    stock.push({ id: STONES[rng.int(0, STONES.length - 1)] as string, price: 1100 });
     // Now and then (every match in tester mode) a Storm Mask: the one way to last in the storm.
     const dk = CONFIG.darkness as { stormMaskChance?: number; stormMaskPrice?: number };
     if (isDev() || rng.chance(dk.stormMaskChance ?? 0.05)) stock.unshift({ id: 'storm-mask', price: dk.stormMaskPrice ?? 20000 });
@@ -144,6 +155,8 @@ export class Visitors {
         this.walk(this.folk.breeder, dt, 1.6);
       }
       for (const w of this.folk.walkers) this.walk(w, dt, 1.4);
+      // The stranger keeps to the forest.
+      if (this.folk.disguise) this.walk(this.folk.disguise, dt, 1.3, (x, y) => this.m.ground.biomeAt(Math.floor(x), Math.floor(y)) === 'forest');
       this.folk.step(dt);
     }
     if (this.aceFoe) {
@@ -158,7 +171,7 @@ export class Visitors {
   }
 
   /** Walks a visitor between far-apart points on the island; they stop for anyone standing close. */
-  private walk(w: Walker, dt: number, speed: number): void {
+  private walk(w: Walker, dt: number, speed: number, keep: (x: number, y: number) => boolean = () => true): void {
     const m = this.m;
     const n = w.npc;
     if (Math.hypot(m.player.x - n.x, m.player.y - n.y) < 3) {
@@ -177,7 +190,7 @@ export class Visitors {
         const r = m.rng.range(18, 40);
         const x = n.x + Math.cos(a) * r;
         const y = n.y + Math.sin(a) * r;
-        if (m.ground.reachable(Math.floor(x), Math.floor(y))) w.goal = { x, y };
+        if (m.ground.reachable(Math.floor(x), Math.floor(y)) && keep(x, y)) w.goal = { x, y };
       }
       if (!w.goal) return;
     }
@@ -567,7 +580,7 @@ export class Visitors {
     L.status = null;
     L.behavior = 'guard';
     m.wilds = m.wilds.filter((w) => w !== L);
-    if (t.party.length >= m.partyCap) {
+    if (partySize(t) >= m.partyCap) {
       // No room: it flies off, leaving the trainer a voucher to remember it by.
       L.captured = true;
       if (t.isPlayer) m.giveItem(t, 'extraction-voucher', 1);
@@ -599,22 +612,25 @@ export class Visitors {
     }
     if (won) {
       this.aceState = 'won';
-      const shiny = m.rng.chance(0.5);
-      const pool = (shiny ? SHINY_PRIZES : POWER_PRIZES).filter((d) => SPECIES.has(d));
-      const dex = pool[m.rng.int(0, pool.length - 1)] as string;
+      // A random shiny from every eligible ordinary species (each equally likely), met at the form its
+      // level reaches (a level 40 pick of Charmander is a Charizard) when that form can be shiny too.
+      const pool = celestePrizePool();
       const top = Math.max(1, ...pl.party.map((x) => x.level));
+      const picked = pool[m.rng.int(0, pool.length - 1)] as string;
+      const grown = formAtLevel(picked, top, m.rng);
+      const dex = SpriteRegistry.hasShiny(grown) ? grown : picked;
       m.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: pl.x, y: pl.y, scale: 2.4, lift: 1, fps: 10 });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: pl.x, y: pl.y, scale: 2.4, ground: true, fps: 10, tint: '#ffd6f0' });
-      if (pl.party.length >= m.partyCap) {
+      if (partySize(pl) >= m.partyCap) {
         // No room for a Pokémon: she hands over a voucher (and some money) instead.
         m.giveItem(pl, 'extraction-voucher', 1);
         pl.money += 2000;
         m.battle.events.push({ type: 'notice', text: 'Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!', seconds: 4 });
       } else {
-        const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8);
+        const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8, true);
         prize.behavior = 'guard';
         pl.party.push(prize);
-        m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you ${shiny ? 'a shiny ' : ''}${prize.name}!`, seconds: 4 });
+        m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you a shiny ${prize.name}!`, seconds: 4 });
       }
     } else {
       // A friendly bout: she patches your team up and you may try again later.
@@ -635,4 +651,4 @@ export class Visitors {
 }
 
 /** Every species a visitor can bring into a match (main.ts preloads their sprites). */
-export const VISITOR_DEXES = ['0720', HOOPA_UNBOUND, SHADOW_MEWTWO, LUGIA, ...PORTAL_LEGENDS, ...ACE_TEAM, ...SHINY_PRIZES, ...POWER_PRIZES];
+export const VISITOR_DEXES = ['0720', HOOPA_UNBOUND, SHADOW_MEWTWO, LUGIA, ...PORTAL_LEGENDS, ...ACE_TEAM];

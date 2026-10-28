@@ -1,5 +1,5 @@
 {
-  "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start; levels = [min, max] for its common Pokémon, an entry's own levels override that (uncommon and rare ones come a little stronger). weight sets how often an entry is picked: 10 common, 4 uncommon, 1.2 rare. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^2 (config.json wild). bosses: one per land, placed deep inside it, slow to anger (bossAggroRange) and slow to wander.",
+  "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start (there are no wild respawns: these are all the wilds a match has, plus fishing); levels = [min, max] for its common Pokémon, an entry's own levels override that. weight sets how often an entry is picked, relative to the others it competes with: about 8-10 common, 4-6 uncommon, 2-3 scarce, 1.2 rare. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^curve (config.json wild). An entry with a habitat only spawns in that habitat (see habitats): each land fills habitatSlots of its count there, rolling only among its own habitat entries; every other spot rolls among the entries with no habitat. Stronger encounters (strong) are separate from these tables.",
   "biomes": {
     "forest": {
       "count": 46,
@@ -18,7 +18,7 @@
         },
         {
           "dex": "0840",
-          "weight": 8.0
+          "weight": 8
         },
         {
           "dex": "0406",
@@ -26,7 +26,7 @@
         },
         {
           "dex": "0265",
-          "weight": 12.0
+          "weight": 11
         },
         {
           "dex": "0357",
@@ -87,7 +87,7 @@
         },
         {
           "dex": "0935",
-          "weight": 8.0
+          "weight": 8
         },
         {
           "dex": "0585",
@@ -112,7 +112,7 @@
       ]
     },
     "snow": {
-      "count": 44,
+      "count": 46,
       "levels": [
         3,
         6
@@ -120,19 +120,31 @@
       "table": [
         {
           "dex": "0459",
-          "weight": 10
+          "weight": 8
         },
         {
           "dex": "0037-alola",
-          "weight": 10
-        },
-        {
-          "dex": "0698",
-          "weight": 7.0
+          "weight": 8
         },
         {
           "dex": "0363",
-          "weight": 10
+          "weight": 8
+        },
+        {
+          "dex": "0872",
+          "weight": 8
+        },
+        {
+          "dex": "0613",
+          "weight": 7
+        },
+        {
+          "dex": "0582",
+          "weight": 8
+        },
+        {
+          "dex": "0027-alola",
+          "weight": 7
         },
         {
           "dex": "0359",
@@ -140,6 +152,14 @@
           "levels": [
             7,
             10
+          ]
+        },
+        {
+          "dex": "0215",
+          "weight": 4,
+          "levels": [
+            6,
+            9
           ]
         },
         {
@@ -151,25 +171,20 @@
           ]
         },
         {
-          "dex": "0872",
-          "weight": 10
-        },
-        {
-          "dex": "0613",
-          "weight": 8
-        },
-        {
-          "dex": "0215",
-          "weight": 4,
-          "levels": [
-            6,
-            9
-          ]
+          "dex": "0086",
+          "weight": 6,
+          "habitat": "beach"
         }
-      ]
+      ],
+      "habitatSlots": {
+        "beach": [
+          2,
+          3
+        ]
+      }
     },
     "desert": {
-      "count": 38,
+      "count": 40,
       "levels": [
         4,
         7
@@ -177,19 +192,39 @@
       "table": [
         {
           "dex": "0551",
-          "weight": 10
+          "weight": 8
         },
         {
           "dex": "0328",
-          "weight": 10
+          "weight": 8
         },
         {
           "dex": "0554",
-          "weight": 10
+          "weight": 7
         },
         {
           "dex": "0449",
-          "weight": 5.0
+          "weight": 5
+        },
+        {
+          "dex": "0322",
+          "weight": 7
+        },
+        {
+          "dex": "0451",
+          "weight": 7
+        },
+        {
+          "dex": "0694",
+          "weight": 6
+        },
+        {
+          "dex": "0968",
+          "weight": 2.5,
+          "levels": [
+            6,
+            9
+          ]
         },
         {
           "dex": "0246",
@@ -198,8 +233,50 @@
             8,
             11
           ]
+        },
+        {
+          "dex": "0343",
+          "weight": 5,
+          "habitat": "ruins"
+        },
+        {
+          "dex": "0561",
+          "weight": 3,
+          "levels": [
+            5,
+            8
+          ],
+          "habitat": "ruins"
+        },
+        {
+          "dex": "0566",
+          "weight": 4,
+          "levels": [
+            5,
+            8
+          ],
+          "habitat": "rocky"
+        },
+        {
+          "dex": "0769",
+          "weight": 6,
+          "habitat": "beach"
         }
-      ]
+      ],
+      "habitatSlots": {
+        "ruins": [
+          3,
+          4
+        ],
+        "rocky": [
+          2,
+          3
+        ],
+        "beach": [
+          2,
+          3
+        ]
+      }
     },
     "meadow": {
       "count": 26,
@@ -294,30 +371,11 @@
     "0074",
     "0054"
   ],
-  "bosses": [
-    {
-      "biome": "forest",
-      "dex": "0217",
-      "level": 20
-    },
-    {
-      "biome": "autumn",
-      "dex": "0475",
-      "level": 26
-    },
-    {
-      "biome": "snow",
-      "dex": "0713",
-      "level": 28
-    },
-    {
-      "biome": "desert",
-      "dex": "0208",
-      "level": 36
-    }
-  ],
   "_starterBaseComment": "A new player rolls from these tiers only; every Pokémon kept in the PC adds the first form of its line to the pool (src/sim/starters.ts).",
-  "starterBaseTiers": ["common", "uncommon"],
+  "starterBaseTiers": [
+    "common",
+    "uncommon"
+  ],
   "starterTiers": [
     {
       "id": "common",
@@ -431,27 +489,7 @@
         "weight": 4
       },
       {
-        "dex": "0736",
-        "weight": 4
-      },
-      {
-        "dex": "0265",
-        "weight": 4
-      },
-      {
-        "dex": "0406",
-        "weight": 4
-      },
-      {
         "dex": "0753",
-        "weight": 4
-      },
-      {
-        "dex": "0133",
-        "weight": 1.2
-      },
-      {
-        "dex": "0396",
         "weight": 4
       },
       {
@@ -475,16 +513,12 @@
         "weight": 4
       },
       {
-        "dex": "0236",
+        "dex": "0133",
         "weight": 1.2
       },
       {
-        "dex": "0840",
-        "weight": 4
-      },
-      {
-        "dex": "0357",
-        "weight": 4
+        "dex": "0236",
+        "weight": 1.2
       },
       {
         "dex": "0704",
@@ -496,14 +530,6 @@
       },
       {
         "dex": "0152",
-        "weight": 1.2
-      },
-      {
-        "dex": "0252",
-        "weight": 1.2
-      },
-      {
-        "dex": "0387",
         "weight": 1.2
       },
       {
@@ -529,35 +555,11 @@
     ],
     "autumn": [
       {
-        "dex": "0390",
-        "weight": 1.2
-      },
-      {
         "dex": "0037",
         "weight": 4
       },
       {
-        "dex": "0935",
-        "weight": 4
-      },
-      {
-        "dex": "0240",
-        "weight": 1.2
-      },
-      {
-        "dex": "0570",
-        "weight": 4
-      },
-      {
-        "dex": "0859",
-        "weight": 4
-      },
-      {
         "dex": "0216",
-        "weight": 4
-      },
-      {
-        "dex": "0585",
         "weight": 4
       },
       {
@@ -569,16 +571,16 @@
         "weight": 4
       },
       {
-        "dex": "0577",
-        "weight": 4
-      },
-      {
-        "dex": "0518",
-        "weight": 4
-      },
-      {
         "dex": "0679",
         "weight": 4
+      },
+      {
+        "dex": "0390",
+        "weight": 1.2
+      },
+      {
+        "dex": "0240",
+        "weight": 1.2
       },
       {
         "dex": "0239",
@@ -627,7 +629,31 @@
         "weight": 4
       },
       {
-        "dex": "0363",
+        "dex": "0698",
+        "weight": 4
+      },
+      {
+        "dex": "0436",
+        "weight": 4
+      },
+      {
+        "dex": "0712",
+        "weight": 4
+      },
+      {
+        "dex": "0554-galar",
+        "weight": 4
+      },
+      {
+        "dex": "0225",
+        "weight": 4
+      },
+      {
+        "dex": "0974",
+        "weight": 4
+      },
+      {
+        "dex": "0615",
         "weight": 4
       },
       {
@@ -635,20 +661,8 @@
         "weight": 1.2
       },
       {
-        "dex": "0698",
-        "weight": 4
-      },
-      {
-        "dex": "0996",
-        "weight": 1.2
-      },
-      {
         "dex": "0374",
         "weight": 1.2
-      },
-      {
-        "dex": "0436",
-        "weight": 4
       },
       {
         "dex": "0147",
@@ -681,10 +695,6 @@
       {
         "dex": "0007",
         "weight": 1.2
-      },
-      {
-        "dex": "0712",
-        "weight": 4
       }
     ],
     "desert": [
@@ -693,11 +703,15 @@
         "weight": 4
       },
       {
-        "dex": "0449",
+        "dex": "0074",
         "weight": 4
       },
       {
-        "dex": "0074",
+        "dex": "0331",
+        "weight": 4
+      },
+      {
+        "dex": "0436",
         "weight": 4
       },
       {
@@ -713,20 +727,8 @@
         "weight": 1.2
       },
       {
-        "dex": "0331",
-        "weight": 4
-      },
-      {
-        "dex": "0554",
-        "weight": 4
-      },
-      {
         "dex": "0258",
         "weight": 1.2
-      },
-      {
-        "dex": "0436",
-        "weight": 4
       }
     ]
   },
@@ -761,9 +763,257 @@
       "land": "snow"
     }
   ],
-  "_rotationComment": "Every match is different: each land's own table is always used (its weights jittered by tableJitter), plus rotationPicks species drawn at random from that land's rotation pool for that match. megaLines: every Pokemon line that can Mega Evolve has at least one of its first form placed in its land each match, so its Mega Stone is always usable.",
+  "_rotationComment": "Every match is different: each land's own table is always used (its weights jittered by tableJitter), plus rotationPicks species drawn from that land's rotation pool for that match, picked by weight without repeats (so the 1.2-weight starters and pseudo-legendaries are drawn into a match less often than the 4-weight regulars) and never one already in the land's table. megaLines: every Pokémon line that can Mega Evolve has at least one of its first form placed in its land each match, so its Mega Stone is always usable.",
   "tableJitter": [
     0.6,
     1.4
-  ]
+  ],
+  "habitats": {
+    "_comment": "Where habitat entries live. zones: ellipses [cx, cy, rx, ry] in tiles (the desert ruins round (86, 186) and the two desert mesas with their rocky skirts, from scripts/fantasy/design3.py and decor3.ruins); biome: tiles of that map biome (shore = the sandy beaches). A habitat spot must also be one the land owns (its own biome, or a meadow or beach whose nearest land it is).",
+    "ruins": {
+      "zones": [
+        [
+          86,
+          186,
+          17,
+          13
+        ]
+      ]
+    },
+    "rocky": {
+      "zones": [
+        [
+          48,
+          150,
+          21,
+          15
+        ],
+        [
+          140,
+          198,
+          13,
+          9
+        ]
+      ]
+    },
+    "beach": {
+      "biome": "shore"
+    }
+  },
+  "strong": {
+    "_comment": "Stronger encounters: strong wild Pokémon placed deep inside each land, new species every match. They look like any other wild Pokémon (no label or mark); they keep to a small patch, are slow to anger, need more Styler loops and give xpBossMultiplier XP (config.json). count: probability of 1, 2 or 3 per land each match. Each one picks, without repeats in its land: with pseudoChance one of the land's pseudo entries (split by their weights), otherwise one of its candidates by weight. levels: [min, max]. shinyChance stays 0 (as the old land bosses).",
+    "count": {
+      "1": 0.65,
+      "2": 0.27,
+      "3": 0.08
+    },
+    "pseudoChance": 0.1,
+    "pools": {
+      "forest": {
+        "candidates": [
+          {
+            "dex": "0217",
+            "weight": 1,
+            "levels": [
+              20,
+              24
+            ]
+          },
+          {
+            "dex": "0289",
+            "weight": 1,
+            "levels": [
+              24,
+              28
+            ]
+          },
+          {
+            "dex": "0143",
+            "weight": 1,
+            "levels": [
+              22,
+              26
+            ]
+          },
+          {
+            "dex": "0212",
+            "weight": 1,
+            "levels": [
+              24,
+              28
+            ]
+          },
+          {
+            "dex": "0900",
+            "weight": 1,
+            "levels": [
+              24,
+              28
+            ]
+          }
+        ],
+        "pseudo": []
+      },
+      "autumn": {
+        "candidates": [
+          {
+            "dex": "0475",
+            "weight": 1,
+            "levels": [
+              26,
+              30
+            ]
+          },
+          {
+            "dex": "0282",
+            "weight": 1,
+            "levels": [
+              26,
+              30
+            ]
+          },
+          {
+            "dex": "0094",
+            "weight": 1,
+            "levels": [
+              26,
+              30
+            ]
+          }
+        ],
+        "pseudo": [
+          {
+            "dex": "0887",
+            "weight": 1,
+            "levels": [
+              30,
+              34
+            ]
+          }
+        ]
+      },
+      "snow": {
+        "candidates": [
+          {
+            "dex": "0713",
+            "weight": 1,
+            "levels": [
+              28,
+              32
+            ]
+          },
+          {
+            "dex": "0460",
+            "weight": 1,
+            "levels": [
+              27,
+              31
+            ]
+          },
+          {
+            "dex": "0362",
+            "weight": 1,
+            "levels": [
+              27,
+              31
+            ]
+          },
+          {
+            "dex": "0478",
+            "weight": 1,
+            "levels": [
+              27,
+              31
+            ]
+          },
+          {
+            "dex": "0903",
+            "weight": 1,
+            "levels": [
+              28,
+              32
+            ]
+          }
+        ],
+        "pseudo": [
+          {
+            "dex": "0998",
+            "weight": 1,
+            "levels": [
+              32,
+              36
+            ]
+          }
+        ]
+      },
+      "desert": {
+        "candidates": [
+          {
+            "dex": "0208",
+            "weight": 1,
+            "levels": [
+              34,
+              38
+            ]
+          },
+          {
+            "dex": "0452",
+            "weight": 1,
+            "levels": [
+              32,
+              36
+            ]
+          },
+          {
+            "dex": "0563",
+            "weight": 1,
+            "levels": [
+              32,
+              36
+            ]
+          },
+          {
+            "dex": "0990",
+            "weight": 0.4,
+            "levels": [
+              30,
+              40
+            ]
+          }
+        ],
+        "pseudo": [
+          {
+            "dex": "0248",
+            "weight": 1,
+            "levels": [
+              36,
+              40
+            ]
+          },
+          {
+            "dex": "0445",
+            "weight": 1,
+            "levels": [
+              36,
+              40
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "events": {
+    "zoroark": {
+      "_comment": "The disguised Zoroark (src/sim/townsfolk.ts): in chance of matches a wandering stranger walks the forest; talking to her reveals Zoroark, a wild encounter at levels, shiny shinyChance of the time (this event only).",
+      "chance": 0.05,
+      "levels": [
+        24,
+        30
+      ],
+      "shinyChance": 0.1,
+      "dex": "0571",
+      "role": "disguise",
+      "name": "Wandering Girl"
+    }
+  }
 }

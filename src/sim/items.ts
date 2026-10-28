@@ -20,7 +20,7 @@ export interface ItemDef {
   id: string;
   name: string;
   short: string;
-  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'shard' | 'candy' | 'stone' | 'voucher' | 'rod' | 'charm';
+  kind: 'ball' | 'heal' | 'revive' | 'cure' | 'boost' | 'hold' | 'tm' | 'styler' | 'candy' | 'stone' | 'voucher' | 'rod' | 'charm';
   /** Balls: base catch modifier. */
   tier?: number;
   special?: BallSpecial;
@@ -38,9 +38,6 @@ export interface ItemDef {
   stack?: number;
   /** Mega Stones: the base dex that Mega Evolves holding it. */
   megaFor?: string;
-  /** Crystal shard: clear radius in tiles and how long it lasts. */
-  radius?: number;
-  seconds?: number;
 }
 
 export type LootTier = 'common' | 'uncommon' | 'rare';

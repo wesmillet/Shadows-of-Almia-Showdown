@@ -423,9 +423,9 @@ export class Hud {
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
         : def?.effect === 'mega' ? `Mega Stone · give it to ${def.megaFor ? (SPECIES.get(def.megaFor)?.name ?? 'its Pokémon') : 'its Pokémon'}, then press M`
-        : def?.kind === 'hold' ? 'Held item · Held & TMs tab'
+        : def?.kind === 'hold' ? `Held item · ${def.desc ? `${def.desc} · ` : ''}Held & TMs tab`
+        : def?.kind === 'charm' ? `${def.desc ?? 'Works from your bag'}`
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
-        : def?.kind === 'shard' ? (def.desc ?? '')
         : def?.kind === 'styler' ? `${def.desc ?? ''} · its number key`
         : 'Press its number key to use it';
       this.ink(ctx, hint, tx, y + 44 * s, 10, FLAT_INK.dim, 'left', w - (tx - x) - 16 * s);
@@ -828,7 +828,9 @@ export class Hud {
     const gap = Math.round(6 * s);
     const right = Math.round(176 * s);
     const cardW = ps + 6 * s + right;
-    const n = p.party.length;
+    // Eggs take party slots too: their rows come after the Pokémon.
+    const eggs = p.eggs ?? [];
+    const n = p.party.length + eggs.length;
     const x0 = 16 * s;
     const bottom = v.height - 16 * s;
     this.behaviorRects = [];
@@ -988,6 +990,32 @@ export class Hud {
         }
         this.releaseRects.push({ x: xx, y: xy, w: bw, h: xs, index: i });
       }
+    });
+    // Eggs: the egg in a plain slot, "Egg" on the tab and how far it has to go along the bar.
+    eggs.forEach((egg, j) => {
+      const i = p.party.length + j;
+      const x = x0;
+      const y0 = Math.round(bottom - (n - i) * ps - (n - 1 - i) * gap);
+      if (!this.ui.flat(ctx, 'slotGhost', x, y0, ps, ps, k2)) this.panel(ctx, x, y0, ps, ps, 8);
+      const wobble = egg.need - egg.steps < 60 ? Math.sin(performance.now() / 90) * 0.12 : 0;
+      ctx.save();
+      ctx.translate(x + ps / 2, y0 + ps * 0.62);
+      ctx.rotate(wobble);
+      this.icons.draw(ctx, 'mystery-egg', 0, -ps * 0.12, Math.round(ps * 0.7));
+      ctx.restore();
+      const rx = x + ps + 6 * s;
+      const tabText = 'Egg';
+      ctx.font = this.font(10, '700');
+      const tabH = Math.round(6 * k2 + 12 * s);
+      const tabW = Math.round(ctx.measureText(tabText).width + 6 * k2 + 10 * s);
+      if (!this.ui.flat(ctx, 'tab', rx, y0, tabW, tabH, k2)) this.panel(ctx, rx, y0, tabW, tabH, 6);
+      this.ink(ctx, tabText, rx + 4 * k2 + 3 * s, y0 + 2 * k2 + (tabH - 6 * k2) / 2 + 4.5 * s, 10, FLAT_INK.text, 'left', tabW - 6 * k2 - 6 * s);
+      const by = y0 + ps - 10 * k2 - 2 * s;
+      const frac = clamp(egg.steps / Math.max(1, egg.need), 0, 1);
+      if (!this.ui.flatBar(ctx, rx, by, right, k2, frac, 'gold')) this.pillBar(ctx, rx, by + 3 * k2, right, 4 * k2, frac, '#ffcf4a');
+      const left = Math.max(0, Math.ceil(egg.need - egg.steps));
+      const info = left <= 0 ? 'Hatching!' : left < 60 ? 'It moves!' : `${left} steps to go`;
+      this.label(ctx, info, rx + right + 5 * s, by + 5 * k2 + 4 * s, 9, '#ffe9a8', 'left', '700');
     });
   }
 

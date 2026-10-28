@@ -28,7 +28,7 @@
     "roamHuntRange": 12,
     "roamFleeFraction": 0.25,
     "xpShareRange": 12,
-    "_xpComment": "XP to the next level = xpBase + xpPerLevel*L + xpPerLevelSq*L^2; a knockout pays xpKoBase + xpKoPerLevel*L (up to double against higher levels), times xpEliteMultiplier for elite wilds and xpBossMultiplier for land bosses. An even fight is worth about a level and a quarter early on, one level around level 25 and under a level by level 40 (about half the old pace). The partner out with the lead takes half; Pokémon in their balls take benchShare. A catch gives the lead catchXpShare of a knockout.",
+    "_xpComment": "XP to the next level = xpBase + xpPerLevel*L + xpPerLevelSq*L^2; a knockout pays xpKoBase + xpKoPerLevel*L (up to double against higher levels), times xpEliteMultiplier for elite wilds and xpBossMultiplier for the stronger encounters (spawns.json strong). An even fight is worth about a level and a quarter early on, one level around level 25 and under a level by level 40 (about half the old pace). The partner out with the lead takes half; Pokémon in their balls take benchShare. A catch gives the lead catchXpShare of a knockout.",
     "xpBase": 30,
     "xpPerLevel": 5,
     "xpPerLevelSq": 0.15,
@@ -183,7 +183,7 @@
     "alphaMegaStoneChance": 0.3
   },
   "styler": {
-    "_comment": "Capture Styler: hold C and draw loops round a wild Pokémon. It needs baseLoops + 1 per perLevel levels (+eliteLoops for elites, +bossLoops for land bosses, at most maxLoops). A full set calms it for calmSeconds: it stops fighting and every ball thrown at it counts catchMultiplier times. The line reaches maxRange tiles from the trainer; if the Pokémon runs through the line it breaks and one loop is lost.",
+    "_comment": "Capture Styler: hold C and draw loops round a wild Pokémon. It needs baseLoops + 1 per perLevel levels (+eliteLoops for elites, +bossLoops for the stronger encounters and Alphas, at most maxLoops). A full set calms it for calmSeconds: it stops fighting and every ball thrown at it counts catchMultiplier times. The line reaches maxRange tiles from the trainer; if the Pokémon runs through the line it breaks and one loop is lost.",
     "baseLoops": 2,
     "perLevel": 10,
     "eliteLoops": 2,
@@ -297,6 +297,11 @@
         "scale": 1.15
       }
     }
+  },
+  "eggs": {
+    "_comment": "The Breeder's Eggs (src/sim/townsfolk.ts) sit in party slots and hatch after hatchSteps tiles walked with them (counted on the server from the trainer's real movement; standing still or walking into a wall adds nothing). mythicalChance of Eggs hold a small Mythical Pokemon (townsfolk.ts MYTHICAL_EGGS) instead of one of the Breeder's lines.",
+    "hatchSteps": 450,
+    "mythicalChance": 0.05
   },
   "respawn": {
     "_comment": "A trainer whose last Pokémon falls to a wild Pokémon comes back after baseSeconds + perMinute for each minute played (up to maxSeconds), at an outpost, with the party healed and every item lost (dropped where they fell). No respawns once the final showdown starts.",

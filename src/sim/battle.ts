@@ -614,7 +614,7 @@ export class BattleSystem {
         attacker.orbPaid = attacker.castSeq;
         const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
         this.applyDamage(attacker, recoil, null);
-        this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'burn' });
+        this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'recoil' });
       }
     }
     this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });

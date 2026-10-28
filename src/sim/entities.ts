@@ -148,6 +148,8 @@ export interface Mon {
   megaFrom?: { dex: string; name: string };
   /** Back in its Poké Ball while its trainer is in a one-on-one battle (not drawn, cannot act or be hit). */
   stowed?: boolean;
+  /** Seconds toward the next Leftovers heal. */
+  leftoversT?: number;
   /** The one-on-one battle this Pokémon is fighting in: it only fights the other side of that battle. */
   duelId?: number;
 }
@@ -175,6 +177,11 @@ export interface Trainer {
   moving: boolean;
   walkPhase: number;
   party: Mon[];
+  /**
+   * Eggs (from the Breeder). Each takes a party slot (see partySize) but is not a Pokémon: it never
+   * fights, is never the lead and is not in `party`. It hatches after `need` tiles walked.
+   */
+  eggs?: EggSlot[];
   /** Bag tab: balls and consumables. */
   items: Array<InventorySlot | null>;
   /** Gear tab: held items and TMs. */
@@ -228,6 +235,20 @@ export interface Trainer {
   hidden?: boolean;
   /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */
   legendBout?: boolean;
+}
+
+/** An Egg in a party slot: what it holds is known only to the server (TownsfolkCrew). */
+export interface EggSlot {
+  id: number;
+  /** Tiles walked with it so far. */
+  steps: number;
+  /** Tiles to walk before it hatches. */
+  need: number;
+}
+
+/** Party slots in use: Pokémon (not the ones that have left) plus Eggs. */
+export function partySize(t: Trainer): number {
+  return t.party.length + (t.eggs?.length ?? 0);
 }
 
 export interface InventorySlot {

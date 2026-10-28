@@ -11,8 +11,9 @@ Usage:
   SPRITECOLLAB_DIR=/path/to/sparse/checkout python3 scripts/shiny-palettes.py
 
 data/shiny.json: { "<dex>": { "sprite": [[normal, shiny], ...], "portrait": [[normal, shiny], ...] } }
-with colours as 0xRRGGBB integers. Species with a "-" in their key (forms,
-the hand-fetched "-shiny" sets) are skipped.
+with colours as 0xRRGGBB integers. Regional forms (<dex>-alola, <dex>-galar) read
+their form's own shiny set (sprite/<dex>/<form>/0001/); other keys with a "-"
+(the hand-fetched "-shiny" sets, Megas, shadows) are skipped.
 """
 import collections
 import importlib.util
@@ -29,6 +30,7 @@ spec = importlib.util.spec_from_file_location('fetch_sprites', os.path.join(ROOT
 fs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fs)
 OUT = os.path.join(ROOT, 'data', 'shiny.json')
+REGIONAL = {'alola', 'galar', 'hisui', 'paldea'}
 
 
 def blob(path):
@@ -65,7 +67,19 @@ def pairs(normal, shiny):
 def main():
     fs.ensure_repo()
     species = json.load(open(os.path.join(ROOT, 'data', 'species.json')))['species']
-    dexes = sorted({s['dex'] for s in species if '-' not in s['dex']})
+    tracker = json.load(open(os.path.join(fs.WORK, 'tracker.json')))
+
+    def source(dex):
+        """SpriteCollab folder of a species' sheets: the dex, or the regional form's subgroup."""
+        if '-' not in dex:
+            return dex
+        base, form = dex.split('-', 1)
+        if form not in REGIONAL:
+            return None
+        hit = [k for k, v in tracker.get(base, {}).get('subgroups', {}).items() if v.get('name', '').lower() == form]
+        return f'{base}/{hit[0]}' if hit else None
+
+    dexes = sorted({s['dex'] for s in species if source(s['dex'])})
     result = json.load(open(OUT)) if os.path.isfile(OUT) else {}
     missing = []
     for dex in dexes:
@@ -73,13 +87,14 @@ def main():
             continue
         entry = {}
         local = os.path.join(fs.SPRITES, dex, 'Idle-Anim.png')
-        shiny = blob(f'sprite/{dex}/0000/0001/Idle-Anim.png')
+        src = source(dex)
+        shiny = blob(f'sprite/{src}/0000/0001/Idle-Anim.png' if src == dex else f'sprite/{src}/0001/Idle-Anim.png')
         if os.path.isfile(local) and shiny:
             p = pairs(Image.open(local), Image.open(io.BytesIO(shiny)))
             if p:
                 entry['sprite'] = p
         local = os.path.join(fs.PORTRAITS, dex, 'Normal.png')
-        shiny = blob(f'portrait/{dex}/0000/0001/Normal.png')
+        shiny = blob(f'portrait/{src}/0000/0001/Normal.png' if src == dex else f'portrait/{src}/0001/Normal.png')
         if os.path.isfile(local) and shiny:
             p = pairs(Image.open(local), Image.open(io.BytesIO(shiny)))
             if p:

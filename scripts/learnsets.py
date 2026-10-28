@@ -108,6 +108,13 @@ ROLE = {
     '0320': S, '0321': S,                       # Wailmer, Wailord
     '0339': P, '0340': P,                       # Barboach, Whiscash
     '0456': S, '0457': S,                       # Finneon, Lumineon
+    '0322': S, '0323': S,                       # Numel, Camerupt: Earth Power, Flamethrower
+    '0769': S, '0770': S,                       # Sandygast, Palossand: Shadow Ball, Earth Power
+    '0343': S, '0344': S,                       # Baltoy, Claydol: Psybeam, Earth Power
+    '0694': S, '0695': S,                       # Helioptile, Heliolisk: Thunderbolt
+    '0582': S, '0583': S, '0584': S,            # Vanillite line: Ice Beam, Blizzard
+    '0615': S,                                  # Cryogonal
+    '0086': S, '0087': S,                       # Seel, Dewgong: Aurora Beam, Ice Beam
     '0959': P,                                  # Tinkaton
     '0006-mega_x': P, '0362-mega': P,           # Mega Charizard X, Mega Glalie
 }
@@ -178,6 +185,20 @@ KITS = {
     '0009': ['water-pulse', 'hydro-pump', 'flash-cannon', 'surf'],
     '0448': ['aura-sphere', 'close-combat', 'flash-cannon', 'dark-pulse'],
     '0447': ['quick-attack', 'force-palm', 'aura-sphere', 'metal-claw'],
+    # The stronger wild encounters (spawns.json strong pools) and the October 2026 additions.
+    '0289': ['body-slam', 'double-edge', 'slash', 'earthquake'],          # Slaking
+    '0212': ['bullet-punch', 'x-scissor', 'iron-head', 'aerial-ace'],     # Scizor
+    '0900': ['stone-edge', 'x-scissor', 'rock-slide', 'close-combat'],    # Kleavor
+    '0478': ['ice-beam', 'shadow-ball', 'icy-wind', 'hex'],               # Froslass
+    '0903': ['close-combat', 'poison-jab', 'brick-break', 'aerial-ace'],  # Sneasler
+    '0563': ['shadow-ball', 'hex', 'psychic', 'will-o-wisp'],             # Cofagrigus
+    '0990': ['earthquake', 'iron-head', 'heavy-slam', 'bulldoze'],        # Iron Treads
+    '0452': ['crunch', 'poison-jab', 'x-scissor', 'poison-fang'],         # Drapion
+    '0567': ['rock-slide', 'aerial-ace', 'stone-edge', 'brave-bird'],     # Archeops
+    '0968': ['iron-tail', 'heavy-slam', 'bulldoze', 'iron-head'],         # Orthworm
+    '0225': ['ice-shard', 'aerial-ace', 'icicle-crash', 'brave-bird'],    # Delibird
+    '0975': ['icicle-crash', 'body-slam', 'avalanche', 'heavy-slam'],     # Cetitan
+    '0555-galar': ['icicle-crash', 'fire-punch', 'avalanche', 'headbutt'],  # Galarian Darmanitan
 }
 
 

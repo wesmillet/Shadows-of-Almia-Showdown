@@ -20,7 +20,7 @@ export interface LightingParams {
   darkRadius: number;
   darkFeather: number;
   darkAmount: number;
-  /** A Crystal Shard's clearing: a circle the darkness leaves alone (radius 0 = none). */
+  /** A clearing: a circle the darkness leaves alone (radius 0 = none; nothing makes one at present). */
   clearCx: number;
   clearCy: number;
   clearRadius: number;

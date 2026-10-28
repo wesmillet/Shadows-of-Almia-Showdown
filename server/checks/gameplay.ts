@@ -51,8 +51,11 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
     // (the starter may be the wanted species too, and the Breeder takes the first: it holds one as well)
     for (const q of p.party) if (q && q.dex === crew.want) q.heldItem = 'charcoal';
     while (partySize(p) < m.partyCap) p.party.push(m.makeMon('0396', 8, p, p.x, p.y));
-    p.x = p.px = breeder.npc.x + 1;
-    p.y = p.py = breeder.npc.y;
+    // beside the Breeder, on open ground (the tile east of her can hold a rock or a bush)
+    const sides: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+    const side: [number, number] = sides.find(([dx, dy]) => m.ground.walkable(Math.floor(breeder.npc.x + dx), Math.floor(breeder.npc.y + dy))) ?? [1, 0];
+    p.x = p.px = breeder.npc.x + side[0];
+    p.y = p.py = breeder.npc.y + side[1];
     const before = partySize(p);
     const text = m.withSeat(seat, () => crew.talk(breeder));
     check(/Egg/.test(text) && (p.eggs?.length ?? 0) === 1, `the Breeder trades an Egg ("${text.slice(0, 60)}...")`);

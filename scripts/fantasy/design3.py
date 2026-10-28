@@ -274,9 +274,15 @@ ROADS = [
     ('1', [(118, 109), (122, 100), (122, 77)]),
     # to the castle: the gate yard's north gate, the south gate and the east postern
     # (the castle paves its own approaches with the courtyard's slabs: build3.py)
-    ('1', [(186, 115), (182, 128), (168, 142), (156, 152), (159, 164)]),
-    ('1', [(158, 134), (168, 142)]),
-    ('1', [(236, 164), (247, 158), (252, 150), (262, 128)]),
+    # (the road to the west gate used to run at the castle's north-west tower, meet a second short
+    # road there, and come down beside the wall to the gate; now it turns off at the hub west of the
+    # tower, keeps clear of the wall, and meets the gate square on)
+    ('1', [(186, 115), (182, 126), (168, 134), (157, 140)]),
+    ('1', [(157, 140), (152, 149), (152, 164)]),
+    ('1', [(243, 164), (249, 157), (252, 150), (262, 128)]),
+    # the side gates' approaches: straight, five wide like the openings in the wall, paved
+    ('2', [(152, 164), (159, 164)]),
+    ('2', [(236, 164), (243, 164)]),
     ('1', [(198, 191), (198, 202), (214, 205), (232, 198), (246, 190)]),      # south gate to the forest lake
     # from the north road over the river to the autumn town: the north of the island no longer
     # has to go round by the crystal to reach Emberwood (a second bridge, river_crossings)

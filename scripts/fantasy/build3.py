@@ -300,7 +300,8 @@ def main():
     # keep the ground before every castle gate clear (no trees or cacti crowding an entrance)
     for (gx, gy, horiz) in D.GATES.values():
         r0, r1 = (gy - 9, gy + 10) if horiz else (gy - 9, gy + 6)
-        c0, c1 = (gx - 7, gx + 8) if horiz else (gx - 9, gx + 10)
+        # (a side gate's clear ground runs out past its paved approach, design3: no tree's crown over it)
+        c0, c1 = (gx - 7, gx + 8) if horiz else (gx - 14, gx + 15)
         occupied[max(0, r0):r1, max(0, c0):c1] = True
     placer = content3.Placer(~occupied)
     # animated props (torches, fires, banners, flowers...) live in a tile layer the game animates

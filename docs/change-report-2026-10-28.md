@@ -253,3 +253,40 @@ a dialogue box over the interface, Sandygast's shadow, an NPC flashing near a vi
   towns, offline and online, without a jump or flicker. More detail is needed (which town, online or
   offline).
 - For testing only: `DEV_START=x,y` starts the first player at a spot on a dev server.
+
+## Evening: castle correction pass
+
+Small fixes only; the footprint and layout are unchanged (no redesign, no new walls). Before and
+after close-ups in `docs/polish-2026-10-28/castle-corrections/`. Changes are in the Tiled castle
+(`scripts/fantasy/areas/castle.tmx`) and, where the generator makes the same thing, in
+`castlekit.py`, `castle3.py` and `design3.py`.
+
+- **Side exits.** Each side gate now has a straight paved approach, five tiles wide, exactly as wide
+  as its opening and centred on it (`design3` ROADS, brick). The road to the west gate no longer
+  runs at the north-west tower to meet a second short road there and then slide down beside the
+  wall: it leaves the junction west of the tower, keeps clear of the wall and turns into the gate's
+  approach. The road to the east gate starts from its approach. No tree's crown is planted over an
+  approach (`build3`).
+- **South benches** use the same bench as the north row, set long-side to the plaza, facing the
+  court (Bench_1 is that bench seen end-on). The middle one is gone: two tiles wide, it would have
+  blocked the walk to the south gate (the end-on one already narrowed it to three tiles).
+- **Celebi's fountain.** Its paved pad runs down to the west walk; the one-row strip of lawn between
+  them is gone and the lawn's kerb is redrawn round it.
+- **Grass through the south wall.** Cause, from the castle's layers and the artist's Bosk Barracks:
+  the south walkway had one row of planks, so the front parapet and the gatehouse's top stood on
+  nothing, and the back parapet stood on nothing either; the grass showed through the gaps between
+  their merlons. The artist lays two rows of planks (the front parapet on the second) and the
+  court's slab floor under the back parapet; the castle now does the same. The bottom corner towers'
+  tops had the same gap at their inner edge (planks now run under it).
+- **Depth at the south gate.** The gatehouse is now a standing picture (a `Gatehouse` group in the
+  `Buildings` group of the Tiled map, `foot` 0 so it adds no collision): someone walking through
+  the arch goes under it instead of being drawn over the stone.
+- **Checked:** the round towers, the red-roofed towers, the keep, the gatehouse, the fountain and
+  every object round the castle against the atlas and Bosk Barracks: all whole (the build's check
+  that every object is a whole picture passes). The towers' open tops and the walls' flat edges are
+  the artist's own shapes.
+- **Entrances:** a trainer was stood outside, in the opening and inside each of the three gates at
+  gameplay zoom: all walkable and reachable, drawn correctly (`entrances_in_game.png`).
+- **Checks:** `scripts/check-server.sh` passes. `server/checks/gameplay.ts` stood the player on the
+  tile east of the Breeder, which the new map happens to block, so the egg-hatching walk never moved
+  (the check ran on for twenty minutes); it now picks an open tile beside her.

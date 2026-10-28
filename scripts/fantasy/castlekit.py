@@ -90,7 +90,10 @@ def compose(W, H, gate_x=None, side_gates=(), seed=8):
     wood_cells[1:3, 2:W - 2] = wood
     wood_cells[1:s0 + 2, 1:4] = wood
     wood_cells[1:s0 + 2, W - 4:W - 1] = wood
-    wood_cells[s0 + 1, 1:W - 1] = wood
+    # the south walkway is two rows of planks, the front parapet standing on the second (as the
+    # artist's Bosk Barracks lays it): with one row, the parapet and the gatehouse's top stood on
+    # nothing and the grass below showed through their gaps
+    wood_cells[s0 + 1:s0 + 3, 1:W - 1] = wood
     wood_cells[s0 + 2:s0 + 4, 1:5] = wood                  # under the corner towers
     wood_cells[s0 + 2:s0 + 4, W - 5:W - 1] = wood
     # the parapet along the north, the side walls' edges, the south cross-section
@@ -135,6 +138,15 @@ def compose(W, H, gate_x=None, side_gates=(), seed=8):
     stamp(walls2_all, keep, kx, T - len(keep) + 1)
     floor = Fw.paint(wood_all)
     close_edges(floor[T:], walls)
+    # the south wall's back parapet stands on the court's slab floor, as in the artist's sample
+    # (two slab tiles in turn); on nothing, the grass showed between its merlons
+    for x in range(W):
+        if walls[s0, x] in (BACK_PARAPET, FRONT_CAP_R, FRONT_CAP_L) and floor[T + s0, x] is None:
+            floor[T + s0, x] = (FLOOR, 14 if x % 2 else 164, 0)
+    # the bottom corner towers' tops: their planks run on under the tower's inner edge to meet that slab
+    for x in (3, W - 4):
+        k = floor[T + s0, x]
+        if k is not None and k[1] in (301, 303): floor[T + s0, x] = (k[0], 302, 0)
     stamp(walls_all, STAIRS, kx + 3, T)
     stairs = (kx + 3, 0, kx + 6, 5)
     hall = (4, 3, W - 4, s0)

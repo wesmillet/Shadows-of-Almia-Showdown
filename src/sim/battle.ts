@@ -29,6 +29,7 @@ export type BattleEvent =
   | { type: 'status'; target: Mon; status: StatusKind }
   | { type: 'stages'; target: Mon; stat: 'atk' | 'def' | 'spe'; delta: number }
   | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' | 'poison' | 'recoil' }
+  | { type: 'heal'; mon: Mon; amount: number; move: MoveDef }
   | { type: 'thaw'; mon: Mon }
   | { type: 'dodged'; mon: Mon }
   | { type: 'dodge-start'; mon: Mon }
@@ -66,6 +67,9 @@ export type BattleEvent =
   | { type: 'duel-start'; duel: Duel }
   | { type: 'duel-send'; duel: Duel; mon: Mon; trainer: Trainer }
   | { type: 'duel-end'; duel: Duel; winner: Trainer };
+
+/** The white hit flash: two frames (it also runs down through a hit-stop: Match.step). */
+export const HIT_FLASH = 2 / 60;
 
 const STAGE_MULT = (s: number): number => (s >= 0 ? (2 + s) / 2 : 2 / (2 - s));
 
@@ -188,7 +192,7 @@ export function moveReach(m: MoveDef): number {
     default:
       // A lunge covers lunge.maxTiles (more for a dash) and ends with the bodies touching; a slam
       // jumps a little further; anything thrown, shot or called down reaches a good way.
-      if (isContact(m)) return 0.6 + CONFIG.battle.lunge.maxTiles * (m.dash ?? 1);
+      if (isContact(m)) return 0.6 + CONFIG.battle.lunge.maxTiles * (m.dash ?? 1) + (m.reach ?? 0);
       if (m.leap) return 4.2;
       return 5;
   }
@@ -211,14 +215,34 @@ export function isChannel(id: string): boolean {
 }
 
 export function impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
+  return travelDelay(attacker, target, m) + strikeDelay(m);
+}
+
+/** Seconds the carrier takes to get there: a projectile's flight, a fall from the sky, a beam reaching out. */
+export function travelDelay(attacker: Mon, target: Mon, m: MoveDef): number {
   const carrier = m.fx?.find((p) => p.anchor === 'projectile' || p.anchor === 'sky');
-  if (carrier?.anchor === 'projectile') return Math.max(0.12, Math.hypot(target.x - attacker.x, target.y - attacker.y) / (carrier.speed ?? 11));
+  const wait = carrier?.delay ?? 0;
+  if (carrier?.anchor === 'projectile') return wait + Math.max(0.12, Math.hypot(target.x - attacker.x, target.y - attacker.y) / (carrier.speed ?? 11));
   if (carrier?.anchor === 'sky') {
     const lift = Math.max(0.2, (target.species.body[1] * drawScale(target.species)) / 16 / 2);
-    return Math.max(0.12, Math.abs((carrier.height ?? 6) - lift) / (carrier.speed ?? 14));
+    return wait + Math.max(0.12, Math.abs((carrier.height ?? 6) - lift) / (carrier.speed ?? 14));
   }
-  if (m.fx?.some((p) => p.anchor === 'attacker' && p.mode === 'beam')) return 0.1;
+  if (m.fx?.some((p) => p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream'))) return BEAM_REACH;
   return 0;
+}
+
+/** Seconds a beam takes to reach out to its target (its impacts wait for it too, matchScreen.spawnFx). */
+export const BEAM_REACH = 0.1;
+
+/**
+ * Seconds after the carrier arrives until the move's first impact on the target shows: the smallest
+ * `delay` among its parts played on the target (a ring that rolls out from its user, an eruption that
+ * rises first). The damage waits for it, so the HP drops in the frame the impact appears.
+ */
+export function strikeDelay(m: MoveDef): number {
+  const parts = (m.fx ?? []).filter((p) => p.anchor === 'target' && p.mode !== 'status');
+  if (!parts.length) return 0;
+  return Math.min(...parts.map((p) => p.delay ?? 0));
 }
 
 export class BattleSystem {
@@ -385,25 +409,31 @@ export class BattleSystem {
 
   /**
    * Sets a contact move's lunge going: from the user to just short of its target (the two bodies
-   * touching), fast, over at most lunge.maxSeconds; the cast resolves the moment it arrives. Already
-   * close enough, it simply strikes where it stands.
+   * touching, or as far as a whip reaches), fast; the cast resolves the moment it arrives. The strike
+   * still comes on the move's planned strike time (its own wind-up, `cast`, or the attack
+   * animation's strike frame) when that is later than the lunge needs: the user winds up where it
+   * stands, then rushes in. A priority dash (`dash`) skips the wait and strikes on arrival. Already
+   * close enough, it simply strikes where it stands, on the planned time.
    */
   private startLunge(a: Mon, tx: number, ty: number, target: Mon | null): void {
     const L = CONFIG.battle.lunge;
     if (!a.casting) return;
     const gx = target ? target.x : tx;
     const gy = target ? target.y : ty;
-    // Stop with the two bodies touching, not overlapping (a Gyarados used to end up on top of its target).
-    const stop = 0.15 + Math.min(1.2, bodyRadius(a.species) * 0.75) + (target ? bodyRadius(target.species) * 0.75 : 0.2);
     const m = move(a.casting.moveId);
+    // Stop with the two bodies touching, not overlapping (a Gyarados used to end up on top of its
+    // target); a whip stops as far off as it reaches.
+    const stop = 0.15 + Math.min(1.2, bodyRadius(a.species) * 0.75) + (target ? bodyRadius(target.species) * 0.75 : 0.2) + (m.reach ?? 0);
     const dash = m.dash ?? 1;
     // It covers at most maxTiles (a dash further): a target further off is lunged at and missed.
     const travel = Math.min(L.maxTiles * dash, Math.hypot(gx - a.x, gy - a.y) - stop);
     if (travel < L.minTiles) return;
     const speed = L.speed * dash * moveSpeed(a);
     const dur = Math.max(0.08, Math.min(L.maxSeconds, travel / speed));
-    a.lunge = { t: 0, dur, target, tx: gx, ty: gy, stop, speed: Math.max(speed, travel / dur) * 1.15, budget: travel + 0.15 };
-    a.casting.t = dur + 0.04;
+    const planned = a.casting.t;
+    const wait = m.dash ? 0 : Math.max(0, planned - dur);
+    a.lunge = { t: 0, dur, target, tx: gx, ty: gy, stop, speed: Math.max(speed, travel / dur) * 1.15, budget: travel + 0.15, wait };
+    a.casting.t = wait + dur + 0.04;
   }
 
   /** A contact hit shoves its target back a little (not bosses, legends, Alphas or much bigger bodies). */
@@ -604,7 +634,7 @@ export class BattleSystem {
     const due: typeof this.inFlight = [];
     this.inFlight = this.inFlight.filter((f) => {
       f.t -= dt;
-      if (f.t > 0) return true;
+      if (f.t > 1e-6) return true;
       due.push(f);
       return false;
     });
@@ -627,8 +657,20 @@ export class BattleSystem {
     // A Pokémon set to Catch holds back like False Swipe: a wild Pokémon is left with at least 1 HP.
     if (attacker.behavior === 'catch' && target.wild && !target.owner) r.damage = Math.min(r.damage, Math.max(0, target.hp - 1));
     if (r.damage > 0) {
+      const hpBefore = target.hp;
       this.applyDamage(target, r.damage, attacker);
-      target.flash = 0.06;
+      // A draining move (Absorb, Giga Drain, Draining Kiss): its user gets back a share of the HP it
+      // actually took (a Focus Sash or a legend's last stand counts for what was really lost), never
+      // past full, and not once it has fainted.
+      if (m.drain && !attacker.fainted && attacker.hp < attacker.maxHp) {
+        const took = Math.max(0, hpBefore - target.hp);
+        const back = Math.min(attacker.maxHp - attacker.hp, Math.max(took > 0 ? 1 : 0, Math.floor(took * m.drain)));
+        if (back > 0) {
+          attacker.hp += back;
+          this.events.push({ type: 'heal', mon: attacker, amount: back, move: m });
+        }
+      }
+      target.flash = HIT_FLASH;
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
       if (!target.fainted && (isContact(m) || m.leap)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;

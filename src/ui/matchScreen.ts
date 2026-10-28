@@ -12,7 +12,7 @@ import type { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { music, type TrackId } from '../audio/music';
 import { settings } from '../settings';
-import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
+import { BEAM_REACH, areaContains, makeArea, R, strikeDelay, travelDelay, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, isContact, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
@@ -59,6 +59,8 @@ export const EXTRA_FX = {
   /** The flash on the ground as Hoopa's portal opens. */
   portal: 'fx_190',
   paralysis: 'fx_096',
+  /** The sparkle ring round a Pokémon whose drain move gave it HP back. */
+  drain: 'fx_014',
   /** Rising sparkles while a Pokémon evolves. */
   evolve: 'fx_041',
 } as const;
@@ -69,6 +71,8 @@ export class MatchScreen implements Screen {
   private readonly vfx = new VfxLayer();
   /** Effects drawn flat on the ground, under the Pokémon (rings, puddles, cracks). */
   private readonly groundVfx = new VfxLayer();
+  /** A hit-stop started during this frame's simulation step (see render). */
+  private hitStopFresh = false;
   /** The match HUD (bag, party, move wheel, info bars); screens built on this one can hide it. */
   protected showHud = true;
   /** Where the camera looks instead of the player (null = follow the player or the battle). */
@@ -230,6 +234,10 @@ export class MatchScreen implements Screen {
       // Let the last hit land and the camera settle before the results.
       if (this.endTimer < 0) this.endTimer = 1.6;
       this.endTimer -= dt;
+      // The blow that ended it still shows: its hit, its number and the faint (they were left
+      // unread once the match was over, online above all, where the outcome comes with that blow).
+      this.consumeEvents();
+      this.match.battle.stepFainting(dt);
       this.vfx.update(dt);
       this.groundVfx.update(dt);
       if (this.endTimer <= 0 && this.onEnd) {
@@ -1229,6 +1237,11 @@ export class MatchScreen implements Screen {
         // Bad Dreams: the nightmare cloud loops over the sleeper until the next tick.
         if (ev.source === 'dreams') this.playFx(EXTRA_FX.dreams, { x: ev.target.x, y: ev.target.y, lift: 1.1, scale: 2, fps: 10, loopSeconds: 1.05, follow: ev.target });
         break;
+      case 'heal':
+        // A drain lands: the HP it took flows back into its user (sparkles round it, a green number).
+        this.floaters.add(ev.mon.x, ev.mon.y - 0.1, `+${ev.amount}`, '#8dff9a', 16);
+        this.playFx(EXTRA_FX.drain, { x: ev.mon.x, y: ev.mon.y, lift: 0.45, scale: 1.4, fps: 18, tint: ev.move.type === 'fairy' ? '#ffb3e6' : '#b6ff8a' });
+        break;
       case 'faint':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, `${ev.mon.name} fainted`, '#ffffff', 15);
         break;
@@ -1409,6 +1422,7 @@ export class MatchScreen implements Screen {
       else if (ev.effectiveness < 1) this.floaters.add(ev.target.x + 0.2, ev.target.y - 0.4, 'Not very effective', '#b0bec5', 13);
       // Hit-stop only for hits the player is part of; distant AI fights stay quiet.
       if (ev.attacker.owner?.isPlayer || ev.target.owner?.isPlayer) {
+        if (this.match.battle.hitStop <= 0) this.hitStopFresh = true;
         this.match.battle.hitStop = Math.max(this.match.battle.hitStop, CONFIG.battle.hitStopMs / 1000);
       }
     }
@@ -1455,7 +1469,7 @@ export class MatchScreen implements Screen {
    * sky drop that carries the target parts to each Pokémon hit, or target parts played at once.
    * Target parts land on the middle of the body and scale gently with its size.
    */
-  private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[]): void {
+  private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[], m?: MoveDef): void {
     const from = { x: attacker.x, y: attacker.y };
     const fromLift = this.bodyLift(attacker);
     // Beams and shots from a big body are a little thicker, from a small one a little thinner.
@@ -1484,7 +1498,8 @@ export class MatchScreen implements Screen {
       // trainer-sized body (2.8 on the ground), so a hit reads without swallowing the Pokémon that made it.
       let scale = (part.scale ?? 2) * k;
       if (onBody) scale = Math.min(scale, ((part.ground ? 2.8 : 1.9) * k * 48) / Math.max(sheet.fw, sheet.fh));
-      this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift, scale, fps: part.fps ?? 15, tint: part.tint }), part);
+      // An impact on a Pokémon hit skips its sheet's lead-in, so it is full size the frame the HP drops.
+      this.addVfx(new FxAnim(sheet, { x: t.x, y: t.y, lift, scale, fps: part.fps ?? 15, tint: part.tint, skipLeadIn: onBody && !!t.mon }), part);
     };
     // A channelled beam pulses every quarter second: its impacts play on every other pulse, so their
     // flashes and lights don't pile up into a white-out while the beam keeps pouring.
@@ -1493,6 +1508,15 @@ export class MatchScreen implements Screen {
     const skipImpacts = !!ch && pulse % 2 === 1;
     let carrier: FxPart | null = null;
     const impacts: FxPart[] = [];
+    const beamReach = parts.some((p) => p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream')) ? BEAM_REACH : 0;
+    // The simulation's own wait before this hit lands (its entry in battle.inFlight, made this very
+    // step), less the impact's own delay: how long the carrier takes on screen. Falls back to the
+    // same reckoning from where the two stand now.
+    const flight = (mon: Mon): number | undefined => {
+      if (!m) return undefined;
+      const f = this.match.battle.inFlight.find((x) => x.attacker === attacker && x.target === mon && x.m.id === m.id);
+      return f ? f.t - strikeDelay(m) : travelDelay(attacker, mon, m);
+    };
     for (const part of parts) {
       if (part.anchor === 'projectile' || part.anchor === 'sky') {
         carrier = part;
@@ -1522,7 +1546,8 @@ export class MatchScreen implements Screen {
         continue;
       }
       if (carrier) impacts.push(part);
-      else if (!skipImpacts) for (const t of targets) playAt(part, t, true);
+      // A beam's impacts wait for it to reach out (battle.travelDelay), as its damage does.
+      else if (!skipImpacts) for (const t of targets) playAt(beamReach ? { ...part, delay: (part.delay ?? 0) + beamReach } : part, t, true);
     }
     if (!carrier) return;
     const sheet = this.fx.sheet(carrier.id);
@@ -1538,8 +1563,9 @@ export class MatchScreen implements Screen {
         speed, loopFrom: c.loopFrom, grounded: c.grounded, sway: c.sway, fadeOut: c.fadeOut,
       }), c);
       for (const h of hits) {
-        const d = Math.hypot(h.x - from.x, h.y - from.y) / speed;
-        for (const p of impacts) playAt({ ...p, delay: (p.delay ?? 0) + d + (c.delay ?? 0) }, { x: h.x, y: h.y, mon: h }, true);
+        // Each impact as the carrier passes, on the simulation's own clock (battle.travelDelay).
+        const d = flight(h) ?? Math.hypot(h.x - from.x, h.y - from.y) / speed + (c.delay ?? 0);
+        for (const p of impacts) playAt({ ...p, delay: (p.delay ?? 0) + d }, { x: h.x, y: h.y, mon: h }, true);
       }
       return;
     }
@@ -1557,6 +1583,10 @@ export class MatchScreen implements Screen {
         fromLift: sky ? (c.height ?? 6) : out.lift,
         arc: c.arc,
         speed: c.speed ?? (sky ? 14 : 11),
+        // On a Pokémon hit, the flight takes exactly as long as the simulation's (battle.travelDelay,
+        // measured from the user's middle), so the impact and the HP drop come in the same frame; a
+        // miss flies at its own speed.
+        seconds: t.mon && m ? (flight(t.mon) ?? 0) - (c.delay ?? 0) : undefined,
         scale: (c.scale ?? 2) * (sky ? 1 : userK),
         fps: c.fps ?? 15,
         tint: c.tint,
@@ -1581,7 +1611,7 @@ export class MatchScreen implements Screen {
       area = { ...area, tx: attacker.x + ux * front, ty: attacker.y + uy * front };
     }
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
-      this.spawnFx(attacker, m.fx, area, hits);
+      this.spawnFx(attacker, m.fx, area, hits, m);
       // Moves never shake the camera, except the three great legends' own (Aeroblast, Dark Void...).
       if (m.shake && isEpic(attacker) && (attacker.owner === this.match.player || hits.some((h) => h.owner === this.match.player) || Math.hypot(attacker.x - this.match.player.x, attacker.y - this.match.player.y) < 10)) {
         this.shake = Math.max(this.shake, m.shake);
@@ -2117,8 +2147,11 @@ export class MatchScreen implements Screen {
   render(alpha: number, frameDt: number): void {
     const v = this.ctx.view;
     const p = this.match.player;
-    this.vfx.update(frameDt);
-    this.groundVfx.update(frameDt);
+    // A hit-stop that began in this frame's step did not stop that step, so effects take their step too.
+    const held = this.match.battle.hitStop > 0 && !this.hitStopFresh;
+    this.hitStopFresh = false;
+    this.vfx.update(frameDt, held);
+    this.groundVfx.update(frameDt, held);
     this.floaters.update(frameDt);
     for (let i = this.later.length - 1; i >= 0; i--) {
       const l = this.later[i] as { t: number; fn: () => void };

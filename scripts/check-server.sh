@@ -6,6 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export DATA_DIR="${DATA_DIR:-$(mktemp -d)}" OPS_TOKEN="${OPS_TOKEN:-local-ops-token-0000}"
 npx tsc --noEmit
+bash scripts/check_moves.sh
 npm test --silent
 npm run build:client --silent
 npm run build:server --silent

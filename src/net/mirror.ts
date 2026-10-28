@@ -208,6 +208,7 @@ export class MirrorMatch {
     else if (msg.t === 'reply') this.onReply?.(msg.text, msg.seconds);
     else if (msg.t === 'end') {
       this.ended = { outcome: msg.outcome, place: msg.place };
+      this.releaseEvents(Infinity);
       this.match.seat.outcome = msg.outcome;
       this.onEnd?.(msg.outcome, msg.place);
     }
@@ -276,7 +277,26 @@ export class MirrorMatch {
       // A knockout: its Faint animation plays out here before it is gone (as offline).
       if (d.type === 'faint' && d.mon && !this.match.battle.fainting.some((f) => f.mon === d.mon)) this.match.battle.fainting.push({ mon: d.mon as unknown as Mon, t: 1.1 });
     }
-    this.match.battle.events.push(...(decoded as typeof this.match.battle.events));
+    // The update's positions glide in over `interval` (the gap between updates); its events wait
+    // that long too, so a hit shows when the attacker has visibly arrived, not while it is still
+    // gliding toward the target (a remote player's Tackle used to land before its lunge was seen).
+    if (decoded.length) this.held.push({ t: this.interval, events: decoded });
+    // The match is over for this player: nothing steps the mirror any more, so the last blow is
+    // shown now rather than held.
+    if (this.match.seat.outcome || this.ended) this.releaseEvents(Infinity);
+  }
+
+  /** Events from the server waiting for their update's positions to glide in (see applyUpdate). */
+  private held: Array<{ t: number; events: unknown[] }> = [];
+
+  private releaseEvents(dt: number): void {
+    while (this.held.length) {
+      const h = this.held[0] as { t: number; events: unknown[] };
+      h.t -= dt;
+      if (h.t > 1e-6) break;
+      this.held.shift();
+      this.match.battle.events.push(...(h.events as typeof this.match.battle.events));
+    }
   }
 
   private ids = new WeakMap<Obj, number>();
@@ -407,6 +427,7 @@ export class MirrorMatch {
       mon.anim.dir = mon.dir;
       if (mon.status !== 'freeze') mon.anim.update(dt);
     }
+    this.releaseEvents(dt);
     m.battle.stepFainting(dt);
     // Ground items bob on their own (the server sends their timer once).
     for (const it of m.items) it.bob += dt;

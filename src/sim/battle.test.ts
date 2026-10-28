@@ -125,8 +125,10 @@ describe('contact moves and speed', () => {
     expect(a.lunge?.target).toBe(t);
     expect(a.lunge!.stop).toBeGreaterThan(0.3);
     expect(a.lunge!.stop).toBeLessThan(2);
-    // The cast resolves as the lunge arrives.
-    expect(a.casting!.t).toBeCloseTo(a.lunge!.dur + 0.04, 5);
+    // The cast resolves as the lunge arrives, on the move's planned strike time if that is later
+    // (it winds up where it stands first: lunge.wait).
+    expect(a.casting!.t).toBeCloseTo((a.lunge!.wait ?? 0) + a.lunge!.dur + 0.04, 5);
+    expect((a.lunge!.wait ?? 0) + a.lunge!.dur).toBeGreaterThanOrEqual(0.3 - 1e-9);
     // A ranged move does not lunge.
     const b = mon('0025', 0, 0);
     b.moves = ['thunder-shock'];
@@ -231,5 +233,79 @@ describe('contact reach, shots in flight and line of fire (move audit, 28 Octobe
     b.tryCast(a, 1, t.x, t.y, t.id, t);
     run(b, a, t, 1.5);
     expect(t.hp).toBeLessThan(hp);
+  });
+});
+
+describe('draining moves (Absorb, Mega Drain, Giga Drain, Draining Kiss)', () => {
+  const anim = { play() {}, sprites: { def: () => undefined }, action: 'Shoot', dir: 0, done: false } as unknown as Mon['anim'];
+  const pair = (move: string, tDex = '0129') => {
+    const a = mon('0387', 0, 0); // Turtwig
+    a.moves = [move];
+    a.anim = anim;
+    const t = mon(tDex, 2.5, 0);
+    t.id = 2;
+    t.anim = anim;
+    t.owner = { isPlayer: false } as unknown as Mon['owner'];
+    return { a, t };
+  };
+  const run = (b: BattleSystem, a: Mon, t: Mon) => {
+    for (let i = 0; i < 90; i++) {
+      b.stepMon(a, 1 / 60, () => [a, t]);
+      b.stepFlights(1 / 60);
+    }
+  };
+  const land = (b: BattleSystem, a: Mon, t: Mon) => (b as unknown as { landHit(a: Mon, t: Mon, m: ReturnType<typeof move>): void }).landHit(a, t, move(a.moves[0] as string));
+
+  it('gives back the move\'s share of the HP the hit actually took, never past full', () => {
+    const b = new BattleSystem(new Rng(9));
+    const { a, t } = pair('giga-drain');
+    a.hp = 1;
+    const before = t.hp;
+    land(b, a, t);
+    const took = before - t.hp;
+    expect(took).toBeGreaterThan(0);
+    expect(a.hp - 1).toBe(Math.max(1, Math.floor(took * 0.5)));
+    expect(b.events.some((e) => e.type === 'heal')).toBe(true);
+    // at full HP: nothing back, no heal shown
+    const b2 = new BattleSystem(new Rng(9));
+    const p2 = pair('giga-drain');
+    land(b2, p2.a, p2.t);
+    expect(p2.a.hp).toBe(p2.a.maxHp);
+    expect(b2.events.some((e) => e.type === 'heal')).toBe(false);
+  });
+
+  it('counts only what the target really lost (a target on its last HP), and lands on a resisting type', () => {
+    const b = new BattleSystem(new Rng(10));
+    const { a, t } = pair('draining-kiss');
+    a.hp = 1;
+    t.hp = 2;
+    land(b, a, t);
+    expect(t.fainted).toBe(true);
+    expect(a.hp).toBe(1 + Math.max(1, Math.floor(2 * 0.75)));
+    // (No type is immune to Grass or Fairy, so a drain always lands when it connects; resisted, it drains less.)
+    const b2 = new BattleSystem(new Rng(10));
+    const p2 = pair('absorb', '0092'); // Gastly: Poison resists Grass
+    p2.a.hp = 1;
+    land(b2, p2.a, p2.t);
+    expect(p2.a.hp).toBeGreaterThan(1);
+  });
+
+  it('a miss drains nothing', () => {
+    const b = new BattleSystem(new Rng(11));
+    const { a, t } = pair('mega-drain');
+    a.hp = 1;
+    b.tryCast(a, 0, t.x, t.y, t.id, t);
+    t.x = 40; // gone before it lands
+    run(b, a, t);
+    expect(a.hp).toBe(1);
+  });
+
+  it('a fainted user gets nothing back', () => {
+    const b = new BattleSystem(new Rng(12));
+    const { a, t } = pair('giga-drain');
+    a.hp = 0;
+    a.fainted = true;
+    land(b, a, t);
+    expect(a.hp).toBe(0);
   });
 });

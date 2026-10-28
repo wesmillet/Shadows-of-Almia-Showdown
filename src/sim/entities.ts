@@ -119,7 +119,7 @@ export interface Mon {
    * its target over the cast and strikes on arrival. `target` is tracked as it moves; `stop` is
    * how far short of its middle the lunge ends (the two bodies just touching).
    */
-  lunge?: { t: number; dur: number; target: Mon | null; tx: number; ty: number; stop: number; /** Tiles a second it can cover (it cannot catch a target that outruns it). */ speed?: number; /** Tiles it may still travel (a little over its planned lunge, for a target that sidesteps). */ budget?: number } | null;
+  lunge?: { t: number; dur: number; target: Mon | null; tx: number; ty: number; stop: number; /** Tiles a second it can cover (it cannot catch a target that outruns it). */ speed?: number; /** Tiles it may still travel (a little over its planned lunge, for a target that sidesteps). */ budget?: number; /** Seconds of wind-up before it sets off (it strikes on the move's planned time). */ wait?: number } | null;
   /** A shove from a contact hit: velocity in tiles a second and seconds left. */
   knock?: { vx: number; vy: number; t: number } | null;
   /** Moves used so far (counts casts), and the cast Life Orb last took its recoil for. */

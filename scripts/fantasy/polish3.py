@@ -130,6 +130,7 @@ def shadow_decal(r, px, py):
 
 # ---- placement machinery
 keep_out = np.zeros((rows, cols), bool)
+_names_early = {tuple(e['rect']): e['name'] for e in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', f"{m['name']}_pictures.json")))}
 def clear(cx, cy, r):
     x0, x1 = max(0, int(cx - r)), min(cols, int(cx + r + 1))
     y0, y1 = max(0, int(cy - r)), min(rows, int(cy + r + 1))
@@ -143,6 +144,14 @@ for sx_, sy_ in m['stairs']: clear(sx_, sy_, 2)
 for key in ('arena', 'finalArena'):
     a = m[key]
     keep_out[max(0, a['y0'] - 3):a['y1'] + 4, max(0, a['x0'] - 3):a['x1'] + 4] = True
+# nothing planted against a bridge (reeds stood over its posts), and the ruins keep their open
+# ground (a grove of bare trees and palms used to land among the pillars and their braziers)
+for o in objs:
+    nm_ = _names_early.get(tuple(o[:5]), '')
+    if nm_.startswith('Bridge_'):
+        clear((o[5] + o[3] / 2) / 16, (o[6] + o[4] / 2) / 16, max(o[3], o[4]) / 32 + 2)
+    elif nm_.startswith('Ruins_'):
+        clear((o[5] + o[3] / 2) / 16, (o[6] + o[4]) / 16, 4)
 lk = m['lake']
 yy, xx = np.mgrid[0:rows, 0:cols]
 keep_out |= ((xx - lk['x']) / (lk['rx'] + 2.5)) ** 2 + ((yy - lk['y']) / (lk['ry'] + 2.5)) ** 2 <= 1
@@ -213,6 +222,12 @@ def place(r, tx, ty, block):
     py = int(ty * 16 + 13 - h)
     if near_object(px + w / 2, py + h, max(10, w * 0.45)): return False
     if stands_in(px, py, w, h): return False
+    # Low flora (grass clumps, flowers, bushes) is drawn whole on land: one spread over the water's
+    # edge blurred the shoreline. Reeds are the exception (they grow at the edge).
+    if h < 48 and tuple(r) not in REEDS:
+        x0, x1 = max(0, px // 16), min(cols, (px + w + 15) // 16)
+        y0, y1 = max(0, py // 16), min(rows, (py + h + 15) // 16)
+        if water[y0:y1, x0:x1].any(): return False
     if block:
         if not can_block(tx, ty) or road[ty, tx] or tall[ty, tx]: return False
         walk[ty, tx] = False

@@ -39,6 +39,8 @@ jobs:
           cat "$DATA_DIR/server.log"; exit 1
       - name: Gameplay (Eggs, Zoroark, private matches, chests, stronger encounters)
         run: npx tsx server/checks/gameplay.ts
+      - name: Move library rebuilds to itself
+        run: bash scripts/check_moves.sh
       - name: Combat (contact reach, walls, shots in flight, shoves)
         run: npx tsx server/checks/combat.ts
       - name: Online events (sync, reconnects, movement validation)

@@ -162,6 +162,16 @@ def castle_walls(d):
     return W
 
 
+def bridge_front_posts(art, rows=11):
+    """The south posts of a stone bridge picture (its bottom `rows` rows, only the post columns: the
+    ones still opaque in its last three rows), as a picture of their own to draw in front of crossers."""
+    cut = art[-rows:].copy()
+    cols = (art[-3:, :, 3] > 0).any(axis=0)
+    cols = cols | np.roll(cols, 1) | np.roll(cols, -1)
+    cut[:, ~cols, 3] = 0
+    return cut
+
+
 SOFT = re.compile(r'Grass_|Cattail|Plant_|Hay_Dummy|Flower|Mushroom|Bridge|Shadow')
 
 
@@ -169,12 +179,15 @@ def settle(objects, placer):
     """Each placer keeps its own objects apart, but towns, farms, the castle area, road decor, the
     woods and the shores are placed by different placers, so a cactus could stand inside a house,
     a lamp inside a rune rock or a palm inside a palm. Where one solid object's base stands in the
-    base of another (the bottom 20 px, its middle 70%), the smaller one goes, with its shadow.
+    base of another (the bottom 20 px, its middle 70%), the narrower one goes, with its shadow.
     Soft things (grass, reeds, plants, flowers) may stand among others as they do in the samples."""
     def nm(o): return content3.picture_name(o['key']) if 'key' in o else o.get('name', '')
     solid = [o for o in objects if 'key' in o and not SOFT.search(nm(o))]
     gone = set()
-    by_size = sorted(solid, key=lambda o: -content3.size(o['key'])[0] * content3.size(o['key'])[1])
+    removed = []
+    # The one with the wider base stays (its footprint is the thing on the ground: a rune rock over
+    # a lamp post, a log over a skull); ties go to the bigger picture.
+    by_size = sorted(solid, key=lambda o: (-content3.size(o['key'])[0], -content3.size(o['key'])[0] * content3.size(o['key'])[1]))
     def inside(a, b):
         aw, _ = content3.size(a['key']); bw, _ = content3.size(b['key'])
         ax = a['x'] + aw / 2
@@ -186,10 +199,14 @@ def settle(objects, placer):
             if abs(a['y'] - b['y']) > 22 or abs(a['x'] - b['x']) > 200: continue
             if inside(a, b) or inside(b, a):
                 gone.add(id(a))
+                aw, _ = content3.size(a['key'])
+                removed.append({'name': nm(a), 'in': nm(b), 'x': round((a['x'] + aw / 2) / 16, 1), 'y': round(a['y'] / 16, 1)})
     out = [o for o in objects if id(o) not in gone]
     drop = [content3.shadow_decal(o['key'], o['x'], o['y']) for o in objects if id(o) in gone]
     placer.decals = [x for x in placer.decals if x not in drop]
     log(f'  settled: {len(gone)} objects standing inside others removed')
+    # what went, for review (scripts/fantasy/out/<map>_settled.json)
+    json.dump(removed, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', 'almia3_settled.json'), 'w'), indent=1)
     return out
 
 
@@ -309,10 +326,20 @@ def main():
             yi = sorted(g[0] for g in group)[len(group) // 2]
             xi = int(round(sum(g[1] for g in group) / len(group)))
             if bridge:
-                town_objects = list(town_objects) + [{'key': bridge[0] + (0,), 'x': (xi - 2) * 16 - 8, 'y': (yi + 2) * 16, 'sort': yi + 1.5}]
+                # The bridge is walked on, so it is drawn under whoever crosses it (sorted at its top
+                # row); only its south posts, cut out as their own picture, stand in front of a
+                # crosser's feet. Sorted as one picture at its bottom row, it used to hide anyone on
+                # the deck (seen in the game: a trainer crossing vanished under the stone).
+                bx, by = (xi - 2) * 16 - 8, (yi + 2) * 16
+                art = tiled.tileset(bridge[0][0]).tile_image(bridge[0][1])
+                front = bridge_front_posts(art)
+                town_objects = list(town_objects) + [
+                    {'key': bridge[0] + (0,), 'x': bx, 'y': by, 'sort': (by - art.shape[0]) / 16},
+                    {'img': front, 'name': 'bridge_front_posts', 'x': bx, 'y': by, 'sort': by / 16}]
                 bridge_deck[yi - 1:yi + 2, xi - 2:xi + 3] = True
                 n_bridges += 1
     log(f'  bridges {n_bridges}')
+    d.bridge_deck = bridge_deck          # decor3.life keeps its reeds off it
     log('farms')
     import farm3
     farm_fence = np.full(W.shape, None, dtype=object)
@@ -389,6 +416,9 @@ def main():
     log(f'  mountain {n_mountain}, ruins {n_ruins}')
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)
     water_plants = decor3.lakes(d)
+    # no reeds against a bridge (they stood over its posts)
+    near_bridge = ndimage.binary_dilation(bridge_deck, iterations=2)
+    water_plants = [o for o in water_plants if not near_bridge[min(H - 1, int(o['y'] // 16)), min(Wd - 1, int((o['x'] + 8) // 16))]]
     objects += water_plants
     log(f'  arena {n_arena}, signs {n_sign}, lamps {n_lamp}, verge plants {n_flower}, water plants {len(water_plants)}')
     log('woods')

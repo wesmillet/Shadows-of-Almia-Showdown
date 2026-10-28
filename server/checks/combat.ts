@@ -23,7 +23,7 @@ const ROOT = join(import.meta.dirname, '..', '..', 'assets');
 const map = JSON.parse(readFileSync(join(ROOT, 'maps', `${CONFIG.map.name}.json`), 'utf8')) as FanMapFile;
 const ground = FanGround.headless(map);
 const sprites = new SpriteRegistry(new NodeAssets(ROOT));
-const DEXES = ['0025', '0129', '0208', '0321', '0133', '0149', '0006', '0068', '0373', '0445'].filter((d) => SPECIES.has(d));
+const DEXES = ['0001', '0025', '0129', '0208', '0321', '0133', '0149', '0006', '0068', '0373', '0445'].filter((d) => SPECIES.has(d));
 await sprites.preload(DEXES);
 let failed = 0;
 const check = (ok: boolean, what: string) => {
@@ -75,6 +75,7 @@ function pair(aDex: string, tDex: string, ax: number, ay: number, tx: number, ty
 function fight(a: Mon, t: Mon, slot: number, seconds = 1.6, run?: (t: Mon, dt: number) => void, aimed = true): number {
   const hp = t.hp;
   const b = match.battle;
+  let hitGap: number | null = null;
   b.events = [];
   b.inFlight = [];
   if (aimed) b.tryCast(a, slot, t.x, t.y, t.id, t);
@@ -89,11 +90,15 @@ function fight(a: Mon, t: Mon, slot: number, seconds = 1.6, run?: (t: Mon, dt: n
       b.stepMon(m, dt, () => [a, t]);
     }
     b.stepFlights(dt);
+    for (const e of b.events) if (e.type === 'hit' && e.target === t && hitGap === null) hitGap = Math.hypot(a.x - t.x, a.y - t.y);
   }
   b.events = [];
+  lastHitGap = hitGap;
   return hp - t.hp;
 }
 
+/** Centre distance between attacker and target in the step the last fight's first hit landed. */
+let lastHitGap: number | null = null;
 const o = openSpot();
 console.log(`open ground at ${o.x},${o.y}`);
 
@@ -108,6 +113,11 @@ console.log(`open ground at ${o.x},${o.y}`);
     if (d >= 5.5) check(dmg === 0 && a.x - o.x <= CONFIG.battle.lunge.maxTiles * 1.2 + 0.05, `Tackle from ${d} tiles lunges ${(a.x - o.x).toFixed(1)} tiles and misses`);
   }
   console.log('     Tackle by distance:', rows.join('  '));
+  const vw = pair('0001', '0129', o.x, o.y, o.x + 3.2, o.y, ['vine-whip']);
+  const vx = vw.a.x;
+  check(fight(vw.a, vw.t, 0) > 0 && Math.abs(vw.a.x - vx) < 0.5, `Vine Whip lashes from 3.2 tiles without charging in (moved ${(vw.a.x - vx).toFixed(2)})`);
+  const vf = pair('0001', '0129', o.x, o.y, o.x + 7.5, o.y, ['vine-whip']);
+  check(fight(vf.a, vf.t, 0) === 0, 'Vine Whip does not reach 7.5 tiles');
   const qa = pair('0133', '0129', o.x, o.y, o.x + 4.4, o.y, ['quick-attack']);
   check(fight(qa.a, qa.t, 0) > 0, 'Quick Attack (a dash) lands from 4.4 tiles');
   const qb = pair('0133', '0129', o.x, o.y, o.x + 6.5, o.y, ['quick-attack']);
@@ -123,6 +133,9 @@ console.log(`open ground at ${o.x},${o.y}`);
     const dmg = fight(near.a, near.t, 0);
     const gap = Math.hypot(near.t.x - near.a.x, near.t.y - near.a.y);
     check(dmg > 0 && gap > (ra + rt) * 0.5, `${aDex} -> ${tDex} (radii ${ra.toFixed(2)}, ${rt.toFixed(2)}): lands, ending ${gap.toFixed(2)} apart (bodies touching, not overlapping)`);
+    // Seen from outside: the space left between the two drawn bodies when the hit lands.
+    const edge = (lastHitGap ?? gap) - Math.min(1.2, ra * 0.75) - rt * 0.75;
+    check(edge < 0.6, `${aDex} -> ${tDex}: ${edge.toFixed(2)} tiles of air between the bodies at the hit (under 0.6)`);
     const far = pair(aDex, tDex, o.x, o.y, o.x + 7.5 + rt, o.y, ['tackle']);
     check(fight(far.a, far.t, 0) === 0, `${aDex} -> ${tDex}: no hit from ${(7.5 + rt).toFixed(1)} tiles, big body or not`);
   }

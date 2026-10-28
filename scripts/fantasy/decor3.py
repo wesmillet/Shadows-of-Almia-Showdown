@@ -272,6 +272,10 @@ GRASS = {
 FLOWER_SETS = {D.MEADOW: [0, 96, 384, 480], D.FOREST: [0, 384], D.AUTUMN: [96, 192, 768], D.CASTLE: [0, 384, 480, 672]}
 
 
+# Animation_WaterPlants_Emerald's cattail clumps (2 x 2 tiles), by first tile id.
+CATTAILS = {331, 361}
+
+
 def life(d, placer, anim, seed=31):
     """Grass clumps on every land, patches of animated flowers on the green ones, reeds and
     lily pads swaying on the lakes, floating logs, rune rocks glowing round the crystal."""
@@ -289,7 +293,15 @@ def life(d, placer, anim, seed=31):
         b = int(d.biome[y, x])
         pool = pools.get(b)
         if not pool or blight[y, x]: continue
-        if rng.random() < 0.025 and placer.put(rng.choice(pool), x, y, clear=0, shadow=False): n += 1
+        if rng.random() >= 0.025: continue
+        k = rng.choice(pool)
+        # a clump spreads over several tiles: none of them water (a 4 x 3 clump at the shore used to
+        # drape over the water's edge and blur the shoreline)
+        w, h = content3.size(k)
+        tw, th = (w + 15) // 16, (h + 15) // 16
+        y0, x0 = max(0, y - th + 1), max(0, x - tw // 2)
+        if d.water[y0:y + 2, x0:x0 + tw + 1].any(): continue
+        if placer.put(k, x, y, clear=0, shadow=False): n += 1
     # flower patches (6 x 2 tiles of small animated flowers)
     free_anim = lambda cells: all(0 <= y < anim.shape[0] and 0 <= x < anim.shape[1] and placer.free[y, x] and anim[y, x] is None and d.land[y, x] and not d.water[y, x] and d.paths[y, x] == 0 for (y, x) in cells)
     def put_anim(ts, tid, x, yb):
@@ -306,12 +318,16 @@ def life(d, placer, anim, seed=31):
     # on the water: reeds along the banks, lily pads out on the lakes, a floating log or two
     from scipy import ndimage
     bank = d.water & ndimage.binary_dilation(~d.water & d.land, iterations=1)
+    deck = getattr(d, 'bridge_deck', None)
+    if deck is not None: bank &= ~ndimage.binary_dilation(deck, iterations=2)
     deep = d.water & ~ndimage.binary_dilation(~d.water, iterations=2)
     for (ts, where, p) in [('Animation_WaterPlants_Emerald', bank, 0.10), ('Animation_WaterPlants_Emerald', deep, 0.03), ('Animation_WaterProps', deep, 0.006)]:
         bl = animprops.blocks(ts)
         keys = list(bl)
         if ts.endswith('Emerald'):
-            keys = [k for k in keys if bl[k][0] == 1 and bl[k][1] == 1] if where is bank else [k for k in keys if bl[k][0] == 2]
+            # Reeds grow in the shallows at the bank; out on open water only pads and lotuses float.
+            # (The two big cattail clumps, 331 and 361, used to be set out in the middle of the lake.)
+            keys = [k for k in keys if bl[k][0] == 1 and bl[k][1] == 1] if where is bank else [k for k in keys if bl[k][0] == 2 and k not in CATTAILS]
         cells = list(zip(*np.nonzero(where)))
         rng.shuffle(cells)
         for (y, x) in cells:

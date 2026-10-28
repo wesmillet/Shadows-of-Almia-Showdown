@@ -5,9 +5,11 @@ The island's objects, obstacles and shadows, and every move. The move-by-move re
 
 ## Map
 
-All changes are in the generators, so they survive a rebuild (build3, then polish3, then
-center_blend and minimap_from_render; rerunning build3 and polish3 gives a byte-identical map).
-The castle's Tiled area is untouched.
+All changes are in the generators, so they survive a rebuild. The full rebuild is now one script,
+`scripts/rebuild_map.sh` (build3, polish3, pave_smooth, center_blend, minimap_from_render, with the
+renders each needs). The first version of this report left out pave_smooth (the curved paving
+overlay); the follow-up below ran the whole order. Rerunning build3 and polish3 gives a
+byte-identical map. The castle's Tiled area is untouched.
 
 ### Shadows (`scripts/fantasy/shadows3.py`, new; used by content3, build3 and polish3)
 
@@ -89,3 +91,32 @@ Summary (details and the per-move table in the audit):
 - polish3's scatter is random: the pass changed which pieces landed where in places it did not
   otherwise touch (same density and palette).
 - `scripts/moves.py` and `scripts/move_balance.py` are behind `data/moves.json` (see the audit).
+
+## Follow-up (same day)
+
+A second pass after review, on the points the first left open.
+
+- **Full rebuild.** `scripts/rebuild_map.sh` runs every stage in order and stops on any failure
+  (it caught center_blend being killed for memory twice while other jobs ran; the final run completed
+  every stage). The finished island was rendered through the game's own renderer at 5120 x 3584.
+- **Depth sorting with characters.** A trainer and its Pokémon were placed behind, at the base of and
+  in front of a house, a tree, a palm, the summit tower, a well, the river bridge and the mountain
+  stairs, in a real match at normal zoom. All sorted correctly except the bridge: it was one picture
+  sorted at its bottom row, so anyone on the deck was drawn under the stone. Now the deck sorts at its
+  top row and its south posts are a picture of their own in front of a crosser's feet.
+- **Objects removed by the overlap rule** (8, listed in `scripts/fantasy/out/almia3_settled.json`)
+  were looked at one by one, before and after: logs lying across skulls and tombstones on the blighted
+  plain, a haystack inside a hay cart, and on the mountain a lamp post and a crate inside a rune rock.
+  The rule now keeps the wider-based object (the rune rock, not the lamp; the log, not the skull),
+  and none of the removals took away a deliberate arrangement; the mountain camp lost its lamp post,
+  which stood inside the rock.
+- **Shoreline.** Looked at against the pack's lake samples: tall grass is no longer laid on tiles
+  touching water, grass clumps and low flora never spread over the water's edge, the two large cattail
+  clumps are no longer set out in open water (pads and lotuses only there; reeds stay at the bank),
+  and no reeds stand against a bridge.
+- **Ruins.** The landscaper no longer plants groves within four tiles of ruin pieces (a cluster of
+  bare trees and a palm had landed among the desert pillars and their braziers).
+- **Shadows by kind** were checked in the render: cypress, broad tree, birch, autumn and snow trees,
+  palm, bare tree, cactus, rock and stump each get their own size; banners and bushes none.
+- **Collision** agrees with what remains: the reachability check passes after every rebuild (every
+  town, outpost, spawn point and NPC reachable, no area cut off).

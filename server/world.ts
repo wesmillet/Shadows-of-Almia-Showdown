@@ -48,6 +48,37 @@ export interface MatchRules {
 
 /** A match for these players, with computer trainers filling the rest up to `size`. */
 export function createMatch(world: World, humans: Human[], size: number, seed: number, rules: MatchRules = {}): Match {
+  const m = newMatch(world, humans, size, seed, rules);
+  // Testing only (never on the live server): DEV_GATHER=1 starts every human player a few steps
+  // from the first, so a playtest with two browsers can fight at once instead of walking the island.
+  if (process.env.DEV_GATHER === '1' && process.env.SERVER_KIND === 'dev') {
+    const first = m.seats[0]?.trainer;
+    const g = m.ground;
+    for (const [i, seat] of m.seats.entries()) {
+      if (i === 0 || !first) continue;
+      const t = seat.trainer;
+      // the nearest open, reachable ground about 6 tiles from the first player
+      let spot: { x: number; y: number } | null = null;
+      for (let r = 6; r < 14 && !spot; r++) {
+        for (let k = 0; k < 16 && !spot; k++) {
+          const a = (k / 16) * Math.PI * 2;
+          const x = Math.floor(first.x + Math.cos(a) * r) + 0.5;
+          const y = Math.floor(first.y + Math.sin(a) * r) + 0.5;
+          if (g.walkable(Math.floor(x), Math.floor(y)) && g.reachable(Math.floor(x), Math.floor(y))) spot = { x, y };
+        }
+      }
+      if (!spot) continue;
+      const dx = spot.x - t.x;
+      const dy = spot.y - t.y;
+      t.x = t.px = t.x + dx;
+      t.y = t.py = t.y + dy;
+      for (const mon of t.party) if (mon) { mon.x = mon.px = mon.x + dx; mon.y = mon.py = mon.y + dy; }
+    }
+  }
+  return m;
+}
+
+function newMatch(world: World, humans: Human[], size: number, seed: number, rules: MatchRules): Match {
   return new Match({ ground: world.ground(), rng: new Rng(seed), sprites: world.sprites }, [], {
     humans: humans.map((h) => ({ name: h.name, starters: [h.starter], team: h.team })),
     rivals: rules.bots === false ? 0 : Math.max(0, size - humans.length),

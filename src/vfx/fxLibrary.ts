@@ -11,6 +11,8 @@ export interface FxMeta {
   frame_w: number;
   frame_h: number;
   frames: number;
+  /** Leading frames showing under a quarter of the fullest frame (scripts/fx_lead_in.py). */
+  lead_in?: number;
 }
 
 export const FX_MANIFEST_PATH = 'fx/guardian_signs/manifest.json';
@@ -21,6 +23,8 @@ export interface FxSheet {
   fw: number;
   fh: number;
   frames: number;
+  /** Leading frames an impact on a hit Pokémon skips (still a speck: scripts/fx_lead_in.py). */
+  leadIn: number;
   /** Dominant opaque colour, for the lighting layer. */
   color: string;
   tinted: Map<string, HTMLCanvasElement>;
@@ -73,7 +77,7 @@ export class FxLibrary {
         this.sheets.set(id, 'missing');
         return;
       }
-      this.sheets.set(id, { id, img, fw: meta.frame_w, fh: meta.frame_h, frames: Math.max(1, meta.frames), color: dominantColor(img), tinted: new Map() });
+      this.sheets.set(id, { id, img, fw: meta.frame_w, fh: meta.frame_h, frames: Math.max(1, meta.frames), leadIn: Math.max(0, Math.min(meta.frames - 1, meta.lead_in ?? 0)), color: dominantColor(img), tinted: new Map() });
     });
     return 'loading';
   }

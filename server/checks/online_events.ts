@@ -83,17 +83,20 @@ step(10);
   seatA.trainer.y = seatA.trainer.py = w.npc.y;
   seatB.trainer.x = seatB.trainer.px = w.npc.x - 1;
   seatB.trainer.y = seatB.trainer.py = w.npc.y;
-  // Both press Space in the same step: one reveal.
+  // Both press Space in the same step: one reveal. (A wild Zorua may already have grown into a
+  // Zoroark somewhere on the island: only new ones count.)
+  const earlier = new Set(m.wilds.filter((x) => x.dex === '0571'));
+  const revealed = () => m.wilds.filter((x) => x.dex === '0571' && !earlier.has(x));
   cmd(A, 'interact');
   cmd(B, 'interact');
   step(6);
-  const zs = m.wilds.filter((x) => x.dex === '0571');
-  check(zs.length === 1, 'two players pressing Space at once reveal one Zoroark');
+  const zs = revealed();
+  check(zs.length === 1, `two players pressing Space at once reveal one Zoroark (${zs.length}; ${earlier.size} grown wild elsewhere)`);
   check(view(A).wilds.filter((x) => x.dex === '0571').length === 1 && view(B).wilds.filter((x) => x.dex === '0571').length === 1, 'both browsers see it');
   check(!view(A).npcs.some((n) => n.role === 'disguise'), 'the stranger is gone from the browser');
   cmd(A, 'interact');
   step(6);
-  check(m.wilds.filter((x) => x.dex === '0571').length === 1, 'a later Space reveals nothing more');
+  check(revealed().length === 1, 'a later Space reveals nothing more');
   // Reconnect: a fresh browser gets the same world, nothing doubled.
   room.disconnect('uA');
   step(3);

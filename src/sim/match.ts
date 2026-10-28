@@ -209,6 +209,8 @@ export class Match {
     this.rng = deps.rng;
     this.sprites = deps.sprites;
     this.battle = new BattleSystem(this.rng);
+    // Shots and blasts stop at walls, rocks, trees and buildings (water and the user's own footing don't count).
+    this.battle.shotLine = (ax, ay, bx, by) => shotClear(this.ground, ax, ay, bx, by);
     // The crystal stands in the middle of its tile (the map says where); older grounds use the map's middle.
     const centre = (this.ground as { center?: { x: number; y: number } }).center;
     this.centerX = centre?.x ?? this.ground.cols / 2;
@@ -2215,7 +2217,7 @@ export class Match {
     m.dir = dirFromVector(t.x - m.x, t.y - m.y, m.dir);
     m.anim.dir = m.dir;
     // A beam from auto-battle keeps on its target (steerChannels), not the cursor.
-    if (this.battle.castToward(m, slot, t.x, t.y)) {
+    if (this.battle.castToward(m, slot, t.x, t.y, undefined, t)) {
       m.manualCast = false;
       m.target = t;
     }
@@ -2321,8 +2323,10 @@ export class Match {
     const d = Math.hypot(dx, dy) || 1;
     const remain = d - l.stop;
     if (remain > 0.02) {
-      const step = Math.min(remain, (remain * dt) / left);
-      tryMove(this.ground, m, (dx / d) * step, (dy / d) * step, 0.22);
+      // On pace to arrive as the cast runs out, but never faster than the lunge can carry it.
+      const step = Math.min(remain, (remain * dt) / left, (l.speed ?? Infinity) * dt, l.budget ?? Infinity);
+      const moved = tryMove(this.ground, m, (dx / d) * step, (dy / d) * step, 0.22);
+      if (l.budget !== undefined) l.budget -= moved;
       m.dir = dirFromVector(dx, dy, m.dir);
     }
     if (l.t >= l.dur) m.lunge = null;
@@ -4177,4 +4181,29 @@ export function dirVec(d: Dir8): { x: number; y: number } {
 /** Two trainers on the same squad (online team play). */
 export function sameTeam(a: Trainer, b: Trainer): boolean {
   return a.team !== undefined && a.team === b.team;
+}
+
+/**
+ * A clear line of fire from (ax, ay) to (bx, by): sampled every 0.35 tiles, it is stopped by two
+ * samples in a row on ground nobody can stand on that isn't water (a wall, a cliff face, a trunk, a
+ * building). The half tile round each end is skipped (a Pokémon's own footing, a big body against a wall).
+ */
+export function shotClear(g: GroundRenderer, ax: number, ay: number, bx: number, by: number): boolean {
+  const d = Math.hypot(bx - ax, by - ay);
+  if (d < 1.2) return true;
+  const steps = Math.ceil(d / 0.35);
+  let run = 0;
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    if (t * d < 0.5 || (1 - t) * d < 0.5) {
+      run = 0;
+      continue;
+    }
+    const tx = Math.floor(ax + (bx - ax) * t);
+    const ty = Math.floor(ay + (by - ay) * t);
+    const solid = !g.walkable(tx, ty) && !g.inWater(tx, ty) && !g.onStairs?.(tx, ty) && !g.onLadder?.(tx, ty);
+    run = solid ? run + 1 : 0;
+    if (run >= 2) return false;
+  }
+  return true;
 }

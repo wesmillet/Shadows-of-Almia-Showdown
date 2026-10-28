@@ -7,7 +7,7 @@ map pixels (Tiled's convention for tile objects).
 import os, re, random
 import numpy as np
 from scipy import ndimage
-import tiled
+import tiled, shadows3
 from design3 import WATER, MEADOW, FOREST, SHORE, SNOW, DESERT, AUTUMN, CASTLE, noise
 
 
@@ -79,24 +79,42 @@ class Placer:
         px = tx * 16 + 8 - w // 2
         py = ty * 16 + 14
         self.objects.append({'key': (key[0], key[1], 0), 'x': px, 'y': py})
-        if shadow and w >= 40:
-            sw = 48 if w >= 64 else 40
-            self.decals.append(shadow_decal(sw, tx * 16 + 8, py + 2))
+        # Ground shadows follow one rule (shadows3) whatever the caller asked for: trees, palms,
+        # cacti, stumps and rocks get one sized to them; props, bushes and buildings never do.
+        dcl = shadow_decal(key, px, py)
+        if dcl: self.decals.append(dcl)
         return True
 
 
 _SH = {}
 
 
-def shadow_decal(w, cx, bottom):
-    name = f'Shadow_Round_{w}x{w // 2 if w == 48 else w}_Flat'
+def picture_name(key):
+    t = tiled.tileset(key[0]).tiles[key[1]]
+    return os.path.splitext(os.path.basename(t.image))[0] if t.image else ''
+
+
+def shadow_key(s):
+    name = shadows3.decal_name(s)
     if name not in _SH:
-        cat = catalogue('Objects_Shadows', re.escape(name) + r'_Black')
+        cat = catalogue('Objects_Shadows', re.escape(name))
         _SH[name] = cat[0] if cat else None
-    k = _SH[name]
+    return _SH[name]
+
+
+def shadow_decal(key, left, bottom):
+    """The ground shadow for picture `key` standing with its left edge at `left` and its bottom at
+    `bottom` (map pixels), by the one rule in shadows3; None for things that cast none."""
+    a = tiled.tileset(key[0]).tile_image(key[1])
+    if a is None: return None
+    sh = shadows3.shadow_for(picture_name(key), a[:, :, 3])
+    if sh is None: return None
+    s, trunk = sh
+    k = shadow_key(s)
     if k is None: return None
+    x, y = shadows3.place(s, left, bottom, trunk)
     t = tiled.tileset(k[0]).tiles[k[1]]
-    return {'key': (k[0], k[1], 0), 'x': cx - t.w // 2, 'y': bottom + t.h // 3}
+    return {'key': (k[0], k[1], 0), 'x': x, 'y': y + t.h}
 
 
 def woods(d, placer, open_mask, seed=11):
@@ -123,7 +141,7 @@ def woods(d, placer, open_mask, seed=11):
         if b == AUTUMN and rng.random() < 0.12: pool = CHERRY
         k = rng.choice(pool)
         # desert trees (bare trees, palms, cacti) have no canopy to cast a round shadow
-        if placer.put(k, x, y, clear=1 if (forest_here or tier) else 2, shadow=b != DESERT): n += 1
+        if placer.put(k, x, y, clear=1 if (forest_here or tier) else 2): n += 1
     return n
 
 

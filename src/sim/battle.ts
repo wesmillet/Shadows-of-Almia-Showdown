@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, bodyRadius, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, type MoveDef, type StatusKind } from './data';
+import { CONFIG, bodyRadius, contactReach, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
@@ -186,9 +186,16 @@ export function moveReach(m: MoveDef): number {
     case 'line':
       return 3.4 * k * 0.85;
     default:
-      return isContact(m) ? 3.6 : 5;
+      // A lunge covers lunge.maxTiles (more for a dash) and ends with the bodies touching; a slam
+      // jumps a little further; anything thrown, shot or called down reaches a good way.
+      if (isContact(m)) return 0.6 + CONFIG.battle.lunge.maxTiles * (m.dash ?? 1);
+      if (m.leap) return 4.2;
+      return 5;
   }
 }
+
+/** Does a shot from (ax, ay) to (bx, by) get there? Set by the match (walls, trees, buildings stop it). */
+export type ShotLine = (ax: number, ay: number, bx: number, by: number) => boolean;
 
 /** Seconds into an attack animation to its strike frame (HitFrame), or null when it has none. */
 export function strikeSeconds(def: { durations: number[]; hitFrame: number | undefined } | undefined): number | null {
@@ -217,7 +224,9 @@ export function impactDelay(attacker: Mon, target: Mon, m: MoveDef): number {
 export class BattleSystem {
   events: BattleEvent[] = [];
   /** Hits on their way to their targets (see impactDelay). */
-  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef }> = [];
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number }> = [];
+  /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
+  shotLine: ShotLine | null = null;
   /** Seconds of hit-stop left; the match skips simulation while positive. */
   hitStop = 0;
   /** Pokémon whose Faint animation is still playing. */
@@ -287,7 +296,7 @@ export class BattleSystem {
    * single-target move lands on that point, held to `maxRange`, and hits
    * whoever is there when it lands; lines and cones point that way.
    */
-  castToward(attacker: Mon, slot: number, x: number, y: number, maxRange = 3.5 * R()): boolean {
+  castToward(attacker: Mon, slot: number, x: number, y: number, maxRange = 3.5 * R(), target: Mon | null = null): boolean {
     let dx = x - attacker.x;
     let dy = y - attacker.y;
     let d = Math.hypot(dx, dy);
@@ -299,6 +308,9 @@ export class BattleSystem {
       d = 1;
     }
     const k = Math.min(1, maxRange / d);
+    // Aimed at a Pokémon (auto-battle): a single-target move follows it, a contact move lunges after it.
+    const id = attacker.moves[slot];
+    if (target && id && move(id).shape === 'single') return this.tryCast(attacker, slot, target.x, target.y, target.id, target);
     return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, null);
   }
 
@@ -382,24 +394,28 @@ export class BattleSystem {
     const gx = target ? target.x : tx;
     const gy = target ? target.y : ty;
     // Stop with the two bodies touching, not overlapping (a Gyarados used to end up on top of its target).
-    const stop = 0.15 + bodyRadius(a.species) * 0.75 + (target ? bodyRadius(target.species) * 0.75 : 0.2);
-    const travel = Math.hypot(gx - a.x, gy - a.y) - stop;
+    const stop = 0.15 + Math.min(1.2, bodyRadius(a.species) * 0.75) + (target ? bodyRadius(target.species) * 0.75 : 0.2);
+    const m = move(a.casting.moveId);
+    const dash = m.dash ?? 1;
+    // It covers at most maxTiles (a dash further): a target further off is lunged at and missed.
+    const travel = Math.min(L.maxTiles * dash, Math.hypot(gx - a.x, gy - a.y) - stop);
     if (travel < L.minTiles) return;
-    const dur = Math.max(0.08, Math.min(L.maxSeconds, travel / (L.speed * moveSpeed(a))));
-    a.lunge = { t: 0, dur, target, tx: gx, ty: gy, stop };
+    const speed = L.speed * dash * moveSpeed(a);
+    const dur = Math.max(0.08, Math.min(L.maxSeconds, travel / speed));
+    a.lunge = { t: 0, dur, target, tx: gx, ty: gy, stop, speed: Math.max(speed, travel / dur) * 1.15, budget: travel + 0.15 };
     a.casting.t = dur + 0.04;
   }
 
   /** A contact hit shoves its target back a little (not bosses, legends, Alphas or much bigger bodies). */
   private shove(a: Mon, target: Mon, m: MoveDef): void {
-    if (target.boss || target.legend || target.landBoss || target.alpha || target.leap || target.shadow) return;
+    if (target.boss || target.legend || target.landBoss || target.alpha || target.leap || target.shadow || target.knock) return;
     if (bodyRadius(target.species) > bodyRadius(a.species) * 1.6 + 0.2) return;
     const L = CONFIG.battle.lunge;
     const dx = target.x - a.x;
     const dy = target.y - a.y;
     const d = Math.hypot(dx, dy) || 1;
     const [lo, hi] = L.knockScale;
-    const dist = L.knockTiles * Math.max(lo ?? 0.6, Math.min(hi ?? 1.6, m.power / 80));
+    const dist = L.knockTiles * Math.max(lo ?? 0.6, Math.min(hi ?? 1.6, m.power / 80)) * (m.knock ?? 1);
     const v = dist / L.knockSeconds;
     target.knock = { vx: (dx / d) * v, vy: (dy / d) * v, t: L.knockSeconds };
   }
@@ -482,6 +498,12 @@ export class BattleSystem {
         if (c === attacker || !BattleSystem.active(c)) continue;
         if (!this.isEnemy(attacker, c)) continue;
         if (!areaContains(area, c.x, c.y, hitPad(c.species))) continue;
+        // A contact move or a slam lands only on a body its user is actually touching: a lunge cut
+        // short by a wall, or a target that got away, is a miss, whatever the cast was aimed at.
+        if ((isContact(m) || m.leap) && Math.hypot(c.x - attacker.x, c.y - attacker.y) > contactReach(attacker.species, c.species, m)) continue;
+        // Shots, beams and blasts do not pass through walls, trees or buildings (one falling from the
+        // sky does, and so does a slam or a strike from right beside it).
+        if (this.shotLine && !(isContact(m) || m.leap) && !m.fx?.some((p) => p.anchor === 'sky') && !this.shotLine(attacker.x, attacker.y, c.x, c.y)) continue;
         // Mid-dodge: the move passes through.
         if (c.dodge && c.dodge.safe > 0) {
           this.events.push({ type: 'dodged', mon: c });
@@ -499,7 +521,7 @@ export class BattleSystem {
     for (const target of hits) {
       if (target === attacker) continue;
       const wait = impactDelay(attacker, target, m);
-      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m });
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y });
       else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
@@ -587,7 +609,16 @@ export class BattleSystem {
       return false;
     });
     // Only if it can still be hit and is still a foe (a snag, a calm or a change of sides in between spares it).
-    for (const f of due) if (BattleSystem.active(f.target) && this.isEnemy(f.attacker, f.target)) this.landHit(f.attacker, f.target, f.m);
+    // The shot lands where its target stood when it was thrown (that is where the effect goes): a
+    // target that has since moved well clear of that spot is missed, not chased.
+    for (const f of due) {
+      if (!BattleSystem.active(f.target) || !this.isEnemy(f.attacker, f.target)) continue;
+      if (Math.hypot(f.target.x - f.x, f.target.y - f.y) > 0.8 * R() + hitPad(f.target.species)) {
+        this.events.push({ type: 'text', mon: f.target, text: 'Missed!' });
+        continue;
+      }
+      this.landHit(f.attacker, f.target, f.m);
+    }
   }
 
   /** One Pokémon struck by a move: damage, the hit event, status and stat changes. */
@@ -599,7 +630,7 @@ export class BattleSystem {
       this.applyDamage(target, r.damage, attacker);
       target.flash = 0.06;
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
-      if (!target.fainted && isContact(m)) this.shove(attacker, target, m);
+      if (!target.fainted && (isContact(m) || m.leap)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;
       // Recoil (Double-Edge, Flare Blitz): a share of the damage dealt, never the last HP from it.
       if (m.recoil && !attacker.fainted) {
@@ -745,9 +776,13 @@ export class BattleSystem {
   chooseMove(attacker: Mon, target: Mon): number {
     let best = -1;
     let bestScore = 0;
+    const d = Math.hypot(target.x - attacker.x, target.y - attacker.y);
     attacker.moves.forEach((id, i) => {
       if ((attacker.cooldowns[i] ?? 0) > 0) return;
-      const s = moveScore(attacker, target, move(id));
+      const mv = move(id);
+      // A contact move or a slam is no use until the target is within its lunge or jump.
+      if ((isContact(mv) || mv.leap) && d > moveReach(mv) + 0.2) return;
+      const s = moveScore(attacker, target, mv);
       if (s > bestScore) {
         bestScore = s;
         best = i;

@@ -14,7 +14,7 @@ import { music, type TrackId } from '../audio/music';
 import { settings } from '../settings';
 import { areaContains, makeArea, R, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, isContact, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
 import { Match, type DuelSide } from '../sim/match';
@@ -1569,6 +1569,17 @@ export class MatchScreen implements Screen {
   }
 
   private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[]): void {
+    // A contact move or a slam that touched nobody strikes the air just in front of its user, not
+    // the spot it was aimed at (that drew a hit on a target the lunge never reached).
+    if (!hits.length && (isContact(m) || m.leap) && m.shape === 'single') {
+      const dx = area.tx - attacker.x;
+      const dy = area.ty - attacker.y;
+      const d = Math.hypot(dx, dy);
+      const front = Math.min(d, 0.5 + Math.min(1.2, bodyRadius(attacker.species) * 0.75));
+      const ux = d > 1e-3 ? dx / d : area.fx;
+      const uy = d > 1e-3 ? dy / d : area.fy;
+      area = { ...area, tx: attacker.x + ux * front, ty: attacker.y + uy * front };
+    }
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
       this.spawnFx(attacker, m.fx, area, hits);
       // Moves never shake the camera, except the three great legends' own (Aeroblast, Dark Void...).

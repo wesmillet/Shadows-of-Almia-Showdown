@@ -72,3 +72,26 @@ data) and `dropped.json` (strings judged not to be player-facing, for spot check
 with a stable id, exact wording, speaker or place, condition, sources and status; placeholders are
 explained with examples. A review section at the end lists contradictions and inconsistencies;
 no wording was changed.
+
+## Deploy and verification
+
+- Commits on `online`: `22650970` (dashboard), `6b3a6acb`, `d6ead696`, `390bc9c3`, `d4cb77b0`
+  (combat checks and connection fixes), merged with `main` as `7fa64bc7`. `main` got only these
+  documents (`4710896c`); the offline game did not change in this pass.
+- `scripts/check-server.sh` passed (TypeScript, move scripts, 90 unit tests, builds, every server
+  check including the admin dashboard). CI passed on `online`. The GitHub Pages deploy of `main`
+  succeeded.
+- **Live:** deployed and running build `4710896` (from `/health`). The smoke test against the live
+  server passed every check, including the admin endpoints refusing no session and a forged
+  cookie, and the first tab being told of the takeover at once.
+- **Wes on live:** opened `/admin` in the browser where Wes was already signed in; it showed
+  "Signed in as Wes" and live data, and the smoke test's two matches were in Match history. No
+  credentials or roles were changed.
+
+## Still open
+
+- The ice biome flag clipping behind the mountain wall was not reproduced; which flag (or where)?
+- Trapinch: its sheet's walking rows are the right way round; the sideways diagonal walk was not
+  seen. A screenshot or place would help.
+- The combat checks do not cover more than two players, mounted or Pokémon-mode fights, or real
+  network paths (delays are added on the server).

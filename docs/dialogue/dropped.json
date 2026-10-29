@@ -1,0 +1,607 @@
+[
+ {
+  "file": "src/core/loop.ts",
+  "line": 32,
+  "text": "[showdown] {what} failed this frame (the game carries on):"
+ },
+ {
+  "file": "src/core/rng.ts",
+  "line": 32,
+  "text": "Rng.pick on empty array"
+ },
+ {
+  "file": "src/core/rng.ts",
+  "line": 46,
+  "text": "Rng.weighted on empty array"
+ },
+ {
+  "file": "src/ground/sunnyside.ts",
+  "line": 162,
+  "text": "sunnyside.json has no autotile set \"{name}\""
+ },
+ {
+  "file": "src/ground/sunnysideGround.ts",
+  "line": 88,
+  "text": "assets/tiles/sunnyside/sunnyside.json is missing"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 99,
+  "text": "[showdown] BoldPixels font failed to load"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 152,
+  "text": "Shadows of Almia Showdown, build {__BUILD__}"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 183,
+  "text": "Match finished"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 184,
+  "text": "Match won"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 189,
+  "text": "[showdown] match started with {starters.join(', ')}"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 190,
+  "text": "Match started"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 558,
+  "text": "[showdown] verify: tileset or reference render missing"
+ },
+ {
+  "file": "src/main.ts",
+  "line": 587,
+  "text": "[showdown] demo_room re-render: {mismatch} of {total} pixels differ, {beyondRounding} by more than rounding (max channel diff {maxDiff}) ({result.ok ? 'MATCH' : 'MISMATCH'})"
+ },
+ {
+  "file": "src/render/lighting.ts",
+  "line": 111,
+  "text": "[showdown] WebGL unavailable; lighting falls back to Canvas 2D"
+ },
+ {
+  "file": "src/render/lighting.ts",
+  "line": 124,
+  "text": "[showdown] shader error"
+ },
+ {
+  "file": "src/render/lighting.ts",
+  "line": 137,
+  "text": "[showdown] program link error"
+ },
+ {
+  "file": "src/sim/data.ts",
+  "line": 274,
+  "text": "moves.json has no move {id}"
+ },
+ {
+  "file": "src/sim/data.ts",
+  "line": 287,
+  "text": "species.json has no entry for {dex}"
+ },
+ {
+  "file": "src/sim/match.ts",
+  "line": 1917,
+  "text": "{tx + dx},{ty + dy}"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 51,
+  "text": "AnimData: <{tag}> in {ctx} is not an integer (\"{text}\")"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 63,
+  "text": "AnimData: no <AnimData> root"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 71,
+  "text": "AnimData: <Anim> without <Name>"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 81,
+  "text": "AnimData: {name} lacks FrameWidth/FrameHeight"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 87,
+  "text": "AnimData: {name} has no <Duration> entries"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 109,
+  "text": "AnimData: {target.name} copies unknown action {target.copyOf}"
+ },
+ {
+  "file": "src/sprites/animData.ts",
+  "line": 110,
+  "text": "AnimData: CopyOf cycle through {next.name}"
+ },
+ {
+  "file": "src/sprites/assets.ts",
+  "line": 17,
+  "text": "[showdown] {message}"
+ },
+ {
+  "file": "src/sprites/assets.ts",
+  "line": 31,
+  "text": "missing asset: {path} (drawing a placeholder)"
+ },
+ {
+  "file": "src/sprites/assets.ts",
+  "line": 47,
+  "text": "missing asset: {path}"
+ },
+ {
+  "file": "src/sprites/assets.ts",
+  "line": 58,
+  "text": "asset is not valid JSON: {path}"
+ },
+ {
+  "file": "src/sprites/pokemonSprite.ts",
+  "line": 98,
+  "text": "[showdown] sprite load failed"
+ },
+ {
+  "file": "src/sprites/pokemonSprite.ts",
+  "line": 211,
+  "text": "pokemon/{this.dex}/AnimData.xml failed to parse: {(e as Error).message}"
+ },
+ {
+  "file": "src/sprites/pokemonSprite.ts",
+  "line": 213,
+  "text": "no sprite folder for pokemon/{this.dex} (drawing placeholders)"
+ },
+ {
+  "file": "src/sprites/pokemonSprite.ts",
+  "line": 282,
+  "text": "pokemon/{this.dex}: no {action} sheet, playing {alt}"
+ },
+ {
+  "file": "src/sprites/pokemonSprite.ts",
+  "line": 309,
+  "text": "#{this.dex} {action}"
+ },
+ {
+  "file": "src/sprites/rangerSprite.ts",
+  "line": 124,
+  "text": "rangers/manifest.json has no character \"{entry.character}\" for role {role} (drawing a placeholder)"
+ },
+ {
+  "file": "src/sprites/rangerSprite.ts",
+  "line": 139,
+  "text": "data/characters.json has no role \"{role}\" (drawing a placeholder)"
+ },
+ {
+  "file": "src/ui/matchScreen.ts",
+  "line": 1922,
+  "text": "{it.ball} ball"
+ },
+ {
+  "file": "src/ui/onlineScreens.ts",
+  "line": 126,
+  "text": "trade update"
+ },
+ {
+  "file": "src/ui/optionsMenu.ts",
+  "line": 111,
+  "text": "Press a key..."
+ },
+ {
+  "file": "src/ui/overlay.ts",
+  "line": 151,
+  "text": "[data-id=\"{m.id}\"]"
+ },
+ {
+  "file": "src/ui/pixelUi.ts",
+  "line": 252,
+  "text": "{style} box"
+ },
+ {
+  "file": "src/vfx/fxLibrary.ts",
+  "line": 70,
+  "text": "fx manifest has no effect {id} (procedural fallback)"
+ },
+ {
+  "file": "server/accounts.ts",
+  "line": 1066,
+  "text": "api error"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 35,
+  "text": "restore <file | s3:key>"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 42,
+  "text": "No S3 storage is set up (AWS_ENDPOINT_URL_S3, BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 48,
+  "text": "SQLite format 3"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 49,
+  "text": "That is not a database backup."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 64,
+  "text": "That backup does not pass an integrity check:"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 76,
+  "text": "Could not close out the current database (is the server still running?):"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 84,
+  "text": "Restored {a} ({Math.round(data.length / 1024)} KB).{existsSync(keep) ? ` The old database is ${keep}.` : ''} Start the server again."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 84,
+  "text": " The old database is {keep}."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 112,
+  "text": "No account named {name}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 122,
+  "text": "No open reports."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 123,
+  "text": "#{r.id} {when(r.at as number)}  {r.by} reported {r.target}: \"{r.reason}\""
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 129,
+  "text": "Report #{a} resolved."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 136,
+  "text": "{u.username} (#{u.id}, {u.role}) joined {when(u.created_at)}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 137,
+  "text": "  banned: {u.banned ? 'yes' : 'no'}  muted until: {u.muted_until > Date.now() ? when(u.muted_until) : '-'}  reports against: {reports}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 138,
+  "text": "  stats: {prof?.stats ?? '{}'}  PC: {pc} Pokémon"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 146,
+  "text": "{u.username} muted for {mins} minutes."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 146,
+  "text": "{u.username} unmuted."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 154,
+  "text": "{u.username} banned and signed out."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 161,
+  "text": "{u.username} unbanned."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 170,
+  "text": "{u.username} and everything kept for it deleted."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 175,
+  "text": "#{r.id} {when(r.at)} {r.name}: {r.text}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 185,
+  "text": "{u.username} is now {role === 'player' ? 'a player again' : (role === 'admin' ...}."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 185,
+  "text": "a player again"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 185,
+  "text": "an admin (dashboards at /admin and /mod)"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 185,
+  "text": "a moderator (the dashboard is at /mod)"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 191,
+  "text": "Backed up: {r.file} ({Math.round(r.bytes / 1024)} KB, {r.ms} ms){r.uploaded.length ? `, uploaded ${r.uploaded.join(', ')}`...}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 191,
+  "text": ", uploaded {r.uploaded.join(', ')}"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 191,
+  "text": "Backup failed."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 197,
+  "text": "No backups on the volume yet."
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 198,
+  "text": "{f}  {Math.round(statSync(join(dir, f)).size / 1024)} KB"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 202,
+  "text": "Commands: reports | resolve <id> | player <name> | mute <name> <minutes> | ban <name> | unban <name> | delete <name> | chat [n] | mod <name> | admin <name> | player-role <name> | backup | backups | restore <file|s3:key>"
+ },
+ {
+  "file": "server/adminApi.ts",
+  "line": 165,
+  "text": "admin api error"
+ },
+ {
+  "file": "server/adminApi.ts",
+  "line": 188,
+  "text": "\\{c}"
+ },
+ {
+  "file": "server/backup.ts",
+  "line": 94,
+  "text": "Backup failed:"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 598,
+  "text": "Match {room.id} ({mode}): {live.length} player(s){live.some((x) => x.team !== undefined) ? ' in squads' : ''}, {bots} computer trainer(s)"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 598,
+  "text": " in squads"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 620,
+  "text": "Match {room.id} not logged:"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 625,
+  "text": "Match {room.id} called off: {report.aborted}"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 631,
+  "text": "Match {room.id} over: {results.map((r) => `${r.name} #${r.place}`).join(', ')}"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 647,
+  "text": "Replay {room.id} not saved:"
+ },
+ {
+  "file": "server/hub.ts",
+  "line": 677,
+  "text": "{r.id}|{e.name}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 44,
+  "text": "SERVER_KIND is not set (live, demo or dev): refusing to start on Fly without it."
+ },
+ {
+  "file": "server/main.ts",
+  "line": 96,
+  "text": "Loading the world ({KIND})..."
+ },
+ {
+  "file": "server/main.ts",
+  "line": 108,
+  "text": "Unhandled rejection:"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 111,
+  "text": "World ready: {world.map.cols}x{world.map.rows}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 134,
+  "text": "Flagged {name} ({key}) in {matchId}: {summary}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 158,
+  "text": "Match {String(context.match ?? '')} failed:"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 160,
+  "text": "Match {String(context.match ?? '?')} crashed and was called off: {message}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 197,
+  "text": "Backups: every {process.env.BACKUP_MINUTES ?? 15} min on the volume{s3 ? ` and to s3://${s3.bucket}` : ' (no S3 storage set up)'}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 197,
+  "text": " and to s3://{s3.bucket}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 197,
+  "text": " (no S3 storage set up)"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 284,
+  "text": "Draining for an update"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 284,
+  "text": "Draining stopped"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 390,
+  "text": "default-src 'self'; style-src 'unsafe-inline' 'self'; img-src 'self'"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 550,
+  "text": "Match {r.id} crashed:"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 552,
+  "text": "Match {r.id} crashed and was called off: {e instanceof Error ? e.message : e}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 592,
+  "text": "The server is falling behind: {s.stepAvg.toFixed(2)} ms a step over {s.rooms} matches, ticks up to {s.lag} ms late, for 30 s. Time for a bigger machine (fly scale vm)."
+ },
+ {
+  "file": "server/main.ts",
+  "line": 598,
+  "text": "Can not serve:"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 602,
+  "text": "Shadows of Almia Showdown server ({KIND}, build {BUILD}) on :{PORT}"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 603,
+  "text": "Server started (build {BUILD})"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 617,
+  "text": "{signal}: draining ({hub.rooms.size} match(es) running)"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 623,
+  "text": "Calling off {hub.rooms.size} match(es)"
+ },
+ {
+  "file": "server/main.ts",
+  "line": 636,
+  "text": "Stopped cleanly"
+ },
+ {
+  "file": "server/modApi.ts",
+  "line": 214,
+  "text": "mod api error"
+ },
+ {
+  "file": "server/modApi.ts",
+  "line": 224,
+  "text": "body too large"
+ },
+ {
+  "file": "server/moderation.ts",
+  "line": 45,
+  "text": "[^a-z\\s]*"
+ },
+ {
+  "file": "server/moderation.ts",
+  "line": 50,
+  "text": "[^a-z]*"
+ },
+ {
+  "file": "server/remoteRoom.ts",
+  "line": 215,
+  "text": "Matches run in worker threads: up to {max}, one each, {WorkerPool.SPARES} kept ready"
+ },
+ {
+  "file": "server/remoteRoom.ts",
+  "line": 249,
+  "text": "Match worker {n} stopped (code {code}), {lost.length} match(es) called off"
+ },
+ {
+  "file": "server/roomWorker.ts",
+  "line": 14,
+  "text": "roomWorker runs as a worker thread"
+ },
+ {
+  "file": "server/s3.ts",
+  "line": 84,
+  "text": "S3 PUT {key}: {r.status} {(await r.text()).slice(0, 200)}"
+ },
+ {
+  "file": "server/s3.ts",
+  "line": 93,
+  "text": "S3 GET {key}: {r.status}"
+ },
+ {
+  "file": "server/telemetry.ts",
+  "line": 27,
+  "text": "ALERT {key}: {text}"
+ },
+ {
+  "file": "server/telemetry.ts",
+  "line": 74,
+  "text": "New {source} error: {message}\n{at.trim()}"
+ },
+ {
+  "file": "server/telemetry.ts",
+  "line": 201,
+  "text": "text/plain; version=0.0.4"
+ },
+ {
+  "file": "server/telemetry.ts",
+  "line": 205,
+  "text": "Metrics not served:"
+ },
+ {
+  "file": "server/telemetry.ts",
+  "line": 206,
+  "text": "Metrics on :{port}/metrics"
+ }
+]

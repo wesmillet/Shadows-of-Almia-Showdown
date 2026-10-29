@@ -367,6 +367,7 @@ export class BattleSystem {
     }
     // X Speed stages shorten cooldowns (10% per stage).
     attacker.cooldowns[slot] = m.cooldown * Math.max(0.4, 1 - 0.1 * attacker.stages.spe);
+    attacker.lastSlot = slot;
     // Confused: the move often flies off somewhere else.
     if (attacker.status === 'confusion' && m.shape !== 'self' && this.rng.chance(CONFIG.battle.confusionMissChance ?? 0.4)) {
       const a = Math.atan2(targetY - attacker.y, targetX - attacker.x) + (this.rng.chance(0.5) ? 1 : -1) * this.rng.range(0.9, 2.6);
@@ -824,7 +825,9 @@ export class BattleSystem {
       const mv = move(id);
       // A contact move or a slam is no use until the target is within its lunge or jump.
       if ((isContact(mv) || mv.leap) && d > moveReach(mv) + 0.2) return;
-      const s = moveScore(attacker, target, mv);
+      // The move it just used counts for a little less, so a Pokémon mixes its moves instead of
+      // firing its single best one every time it comes off cooldown.
+      const s = moveScore(attacker, target, mv) * (i === attacker.lastSlot ? 0.6 : 1);
       if (s > bestScore) {
         bestScore = s;
         best = i;

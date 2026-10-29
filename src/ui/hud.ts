@@ -895,21 +895,11 @@ export class Hud {
       ctx.rect(px + 4 * k2, py + 4 * k2, inner, inner);
       ctx.clip();
       const f = m.sprites.portraitSource();
-      // The portrait (a 40 px square with its own backdrop) sits inside the slot's border with the same
-      // margin whatever the screen size, its pixels kept whole: the largest whole-pixel scale that
-      // fits, and where even 1x is too big (small windows), its middle at 1x (a portrait is a face
-      // crop, so only backdrop and edges go). It used to be drawn at 1x at least and clipped to the
-      // border plus 2 px, so on smaller screens its edges ran into the border and the lead's brackets.
-      const avail = Math.floor(inner - 2 * k2);
-      const side = Math.max(f.w, f.h);
-      const scale = Math.max(1, Math.floor(avail / side));
-      const cw = Math.min(f.w, Math.floor(avail / scale));
-      const ch = Math.min(f.h, Math.floor(avail / scale));
-      const dw = cw * scale;
-      const dh = ch * scale;
+      // The whole portrait (a 40 px square with its own backdrop) fills the slot's square inside its
+      // border exactly, at whatever size the slot has.
       ctx.imageSmoothingEnabled = false;
       if (m.fainted) ctx.filter = 'grayscale(1) brightness(0.6)';
-      ctx.drawImage(f.image, f.sx + Math.floor((f.w - cw) / 2), f.sy + Math.floor((f.h - ch) / 2), cw, ch, Math.round(px + (ps - dw) / 2), Math.round(py + (ps - dh) / 2), dw, dh);
+      ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, px + 4 * k2, py + 4 * k2, inner, inner);
       ctx.filter = 'none';
       ctx.restore();
       if (isLead) this.ui.flat(ctx, 'select', px - 4 * s, py - 4 * s, ps + 8 * s, ps + 8 * s, k2);

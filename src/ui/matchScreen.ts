@@ -178,6 +178,11 @@ export class MatchScreen implements Screen {
 
   say(s: string, seconds = 1.6): void {
     if (!s) return;
+    // Long enough to read: about three words a second plus a moment to notice it (an NPC's line
+    // of twenty words stays up about eight seconds).
+    // Short notes ("Go, Poké Ball!") keep their own quick timing.
+    const words = s.split(/\s+/).length;
+    if (words > 6) seconds = Math.max(seconds, 1.5 + words * 0.33);
     // The same message again just refreshes its timer.
     const same = this.notices.find((n) => n.text === s);
     if (same) {
@@ -1720,8 +1725,40 @@ export class MatchScreen implements Screen {
     // The battlefields (the champion's in the castle, the final one round the crystal): painted
     // lines, a centre circle and a box at each end of the long side.
     const fields = [this.match.ground.features?.arena, this.match.ground.features?.finalArena];
+    // The champion's field in the castle is painted on the court's medallion, line on its rings: the
+    // outer oval is the medallion's dark ring, the centre oval its middle ring, and the half line runs
+    // through its side studs between the two trainers' ends (top and bottom).
+    const castle = fields[0];
+    if (castle) {
+      const cx = v.toScreenX((castle.x0 + castle.x1) / 2);
+      const cy = v.toScreenY((castle.y0 + castle.y1) / 2);
+      const rx = ((castle.x1 - castle.x0) / 2) * v.pxPerTile;
+      const ry = ((castle.y1 - castle.y0) / 2) * v.pxPerTile;
+      if (cx + rx >= 0 && cy + ry >= 0 && cx - rx <= v.width && cy - ry <= v.height) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = Math.max(3, 5 * v.baseScale);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - rx, cy);
+        ctx.lineTo(cx + rx, cy);
+        ctx.stroke();
+        const ix = rx * (14 / 31);
+        const iy = ry * (7 / 17);
+        ctx.fillStyle = 'rgba(214,72,72,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, ix, iy, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, ix, iy, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
     for (const arena of fields) {
-      if (!arena) continue;
+      if (!arena || arena === castle) continue;
       const x0 = v.toScreenX(arena.x0 + 0.5);
       const y0 = v.toScreenY(arena.y0 + 0.5);
       const x1 = v.toScreenX(arena.x1 - 0.5);
@@ -1860,7 +1897,8 @@ export class MatchScreen implements Screen {
       const y0 = -POLE + 1 + dy;
       for (let r = 0; r < FH; r++) {
         const edge = r === 0 || r === FH - 1 || c === FW - 1;
-        const cross = (r >= 3 && r <= 6 && c >= 5 && c <= 8) && (r === 4 || r === 5 || c === 6 || c === 7);
+        // a plain red cross, arms twice as long as they are thick, so it can't read as a red disc
+        const cross = ((r === 4 || r === 5) && c >= 3 && c <= 10) || ((c === 6 || c === 7) && r >= 2 && r <= 7);
         const shade = Math.sin(t * 4 - c * 0.55) < -0.4;
         const col = edge ? '#5a4a5a' : cross ? (lit ? '#ff3848' : '#d8283a') : shade ? '#dcdce6' : '#fafaff';
         px(x, y0 + r, 1, 1, col);

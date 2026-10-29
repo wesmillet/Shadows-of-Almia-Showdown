@@ -608,17 +608,37 @@ export class OnlineEndScreen implements Screen {
     return (this.info?.party ?? []).map((_, i) => ({ x: px + 40 * s + (i % 2) * (bw + 12 * s), y: y0 + Math.floor(i / 2) * 44 * s, w: bw, h: 38 * s }));
   }
 
+  /**
+   * The panel's box and where its buttons sit. With Pokémon to keep it is the full panel; otherwise
+   * it is only as tall as what it says (title, placing, the guest note), with no empty space.
+   */
+  private layout(): { py: number; ph: number; btnY: number } {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    if (this.net.me.signedIn && this.info?.picks) {
+      const ph = 420 * s;
+      return { py: v.height / 2 - ph / 2 - 20 * s, ph, btnY: v.height / 2 + 196 * s };
+    }
+    let body = 104;                                  // title and placing
+    if (!this.net.me.signedIn) body = 200;           // the guest note under them (up to three lines)
+    else if (this.net.progress && LEVELS_ON) body = 222;
+    const ph = (body + 52 + 24) * s;
+    const py = v.height / 2 - ph / 2;
+    return { py, ph, btnY: py + body * s };
+  }
+
   private doneRect(): Rect {
     const v = this.ctx.view;
     const s = v.baseScale;
-    if (this.onWatch) return { x: v.width / 2 + 6 * s, y: v.height / 2 + 196 * s, w: 220 * s, h: 52 * s };
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 196 * s, w: 220 * s, h: 52 * s };
+    const y = this.layout().btnY;
+    if (this.onWatch) return { x: v.width / 2 + 6 * s, y, w: 220 * s, h: 52 * s };
+    return { x: v.width / 2 - 110 * s, y, w: 220 * s, h: 52 * s };
   }
 
   private watchRect(): Rect {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 226 * s, y: v.height / 2 + 196 * s, w: 220 * s, h: 52 * s };
+    return { x: v.width / 2 - 226 * s, y: this.layout().btnY, w: 220 * s, h: 52 * s };
   }
 
   step(dt: number, input: Input): void {
@@ -655,9 +675,8 @@ export class OnlineEndScreen implements Screen {
     h.fillStyle = `rgba(6,3,14,${0.72 * Math.min(1, this.t / 0.8)})`;
     h.fillRect(0, 0, v.width, v.height);
     const pw = 520 * s;
-    const ph = 420 * s;
+    const { py, ph } = this.layout();
     const px = v.width / 2 - pw / 2;
-    const py = v.height / 2 - ph / 2 - 20 * s;
     panel(v, px, py, pw, ph, 22, 'rgba(18,14,34,0.92)');
     const win = this.outcome === 'win';
     text(v, win ? 'VICTORY' : 'ELIMINATED', v.width / 2, py + 50 * s, 40, { align: 'center', color: win ? INK.accent : INK.bad, shadow: false });
@@ -684,8 +703,6 @@ export class OnlineEndScreen implements Screen {
         if (!m) return;
         button(v, `${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${m.taken ? '  ✓' : ''}`, r.x, r.y, r.w, r.h, !m.taken && hit(mx, my, r.x, r.y, r.w, r.h), m.taken ? '#44405a' : '#f4e6c8');
       });
-    } else if (this.net.me.signedIn) {
-      text(v, win ? (this.note ? 'Your win and stats are saved.' : 'Saving your win...') : 'Your stats were saved.', v.width / 2, py + 232 * s, 14, { align: 'center', color: INK.text, shadow: false });
     }
     if (this.note) text(v, this.note, v.width / 2, py + ph - 110 * s, 14, { align: 'center', color: INK.good, shadow: false });
     const d = this.doneRect();

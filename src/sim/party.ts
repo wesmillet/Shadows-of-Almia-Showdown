@@ -176,17 +176,22 @@ function unstick(m: Mon, t: Trainer, w: PartyWorld, chasing: Mon | null): boolea
     m.target = null;
     return true;
   }
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const x = t.x + Math.cos(a) * 0.9;
-    const y = t.y + Math.sin(a) * 0.9;
-    if (canStand(w.ground, x, y, 0.22)) {
-      m.x = m.px = x;
-      m.y = m.py = y;
-      return true;
+  // Beside the trainer, closer in where the ground is tight (a mountain stair), or on its own spot.
+  for (const r of [0.9, 0.6, 0.3]) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const x = t.x + Math.cos(a) * r;
+      const y = t.y + Math.sin(a) * r;
+      if (canStand(w.ground, x, y, 0.22)) {
+        m.x = m.px = x;
+        m.y = m.py = y;
+        return true;
+      }
     }
   }
-  return false;
+  m.x = m.px = t.x;
+  m.y = m.py = t.y;
+  return true;
 }
 
 function setWalking(m: Mon, walking: boolean): void {
@@ -324,6 +329,13 @@ export function stepParty(t: Trainer, lead: Mon | null, dt: number, w: PartyWorl
       const hurry = distT > leash + 1;
       const moved = steer(m, t, w, desiredX, desiredY, hurry ? c.hurrySpeed : c.followSpeed, dt, 0.25, hurry ? CONFIG.battle.speed.followFloor : 0);
       setWalking(m, moved > 1e-4);
+      // Left behind (the trainer went up a mountain stair it can't find its way to, say): sliding
+      // along a cliff it never counts as stuck, so a few seconds well away from its trainer count too.
+      m.farT = distT > 8 ? (m.farT ?? 0) + dt : 0;
+      if ((m.farT ?? 0) > 3) {
+        m.farT = 0;
+        m.stuckT = 9;
+      }
       if (distT > 2) unstick(m, t, w, null);
       else m.stuckT = 0;
       m.wanderPause = w.rng.range(c.pauseMin, c.pauseMax);

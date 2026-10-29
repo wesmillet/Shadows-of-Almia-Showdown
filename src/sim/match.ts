@@ -1686,6 +1686,7 @@ export class Match {
         if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < clear) continue;
         if (this.startSpots.some((s) => Math.hypot(tx + 0.5 - s.x, ty + 0.5 - s.y) < clear)) continue;
         if (this.ground.features?.arena && inArena(this.ground.features.arena, tx + 0.5, ty + 0.5, 3)) continue;
+        if (this.inTown(tx + 0.5, ty + 0.5)) continue;
         if (this.ground.features?.finalArena && inArena(this.ground.features.finalArena, tx + 0.5, ty + 0.5, 3)) continue;
         const b = g.biomeAt(tx, ty);
         byBiome[b].push({ x: tx + 0.5, y: ty + 0.5 });
@@ -2645,7 +2646,19 @@ export class Match {
     this.stepDuels(dt);
     for (const w of this.wilds) {
       w.sinceHit += dt;
+      const ox = w.x;
+      const oy = w.y;
       this.stepWild(w, dt);
+      // Wild Pokémon keep out of the towns: a step that would take one in (chasing, fleeing, wandering)
+      // is taken back. One already inside (pushed in by a knockback) may walk out.
+      if (this.inTown(w.x, w.y) && !this.inTown(ox, oy)) {
+        w.x = ox;
+        w.y = oy;
+        if (w.moving && this.inTown(w.targetX, w.targetY)) {
+          w.moving = false;
+          w.anim.play('Idle');
+        }
+      }
     }
     this.stepItems(dt);
     this.stepOutposts(dt);
@@ -2969,6 +2982,16 @@ export class Match {
     this.battle.events.push({ type: 'styler-break', mon: m });
   }
 
+  /** Inside a town's grounds (the rectangle round it where its fence once stood, towns3.grounds). */
+  inTown(x: number, y: number): boolean {
+    for (const t of this.ground.features?.towns ?? []) {
+      const cx = Math.floor(t.x);
+      const cy = Math.floor(t.y);
+      if (x >= cx - 22 && x < cx + 23 && y >= cy - 15 && y < cy + 20) return true;
+    }
+    return false;
+  }
+
   private stepWild(w: Mon, dt: number): void {
     // Hoopa moves itself (visitors.ts); a leaping legend is mid-air.
     if (w.npc || w.leap) return;
@@ -2990,7 +3013,7 @@ export class Match {
           const tx = w.homeX + this.rng.range(-r, r);
           const ty = w.homeY + this.rng.range(-r, r);
           // Only spots it can walk straight to, so it never stands pushing into a tree or a wall.
-          if (this.ground.reachable(Math.floor(tx), Math.floor(ty)) && canStand(this.ground, tx, ty, 0.3) && this.nav.clearLine(w.x, w.y, tx, ty)) {
+          if (this.ground.reachable(Math.floor(tx), Math.floor(ty)) && !this.inTown(tx, ty) && canStand(this.ground, tx, ty, 0.3) && this.nav.clearLine(w.x, w.y, tx, ty)) {
             w.targetX = tx;
             w.targetY = ty;
             w.moving = true;
@@ -3124,7 +3147,10 @@ export class Match {
     this.visitors.check();
     const ch = this.challenge;
     const pl = ch?.human ?? this.player;
-    if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured)) this.loseChallenge(ch);
+    // A loss is settled once the last knockout has played out (its HP bar at zero, the Faint
+    // animation done), not on the hit itself, so the party shows the knockout before the patch-up.
+    const fallingIn = (t: Trainer) => this.battle.fainting.some((f) => t.party.includes(f.mon));
+    if (ch?.state === 'battle' && pl.alive && pl.party.length > 0 && !pl.party.some((m) => !m.fainted && !m.captured) && !fallingIn(pl)) this.loseChallenge(ch);
     for (const t of this.allTrainers) {
       if (t.alive && t.downUntil != null) {
         if (this.time >= t.downUntil) this.respawn(t);
@@ -3136,7 +3162,7 @@ export class Match {
       // this, the knockout was counted here first and the player was eliminated from the match.)
       if (t.duelId !== undefined && this.duels.some((d) => d.id === t.duelId && d.state !== 'over' && (d.a.trainer.legendBout || d.b.trainer.legendBout))) continue;
       // Out only when nothing is left standing; members out roaming still count.
-      if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured)) {
+      if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured) && !fallingIn(t)) {
         if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.over) this.down(t);
         else this.eliminate(t);
       }
@@ -3723,7 +3749,7 @@ export class Match {
       }
       this.afterTrainerMove(t, moved);
       // Knocked out: the next Pokémon, or the end of the battle.
-      if (s.mon && s.mon.fainted) {
+      if (s.mon && s.mon.fainted && !this.battle.fainting.some((f) => f.mon === s.mon)) {
         s.mon.duelId = undefined;
         s.mon = null;
         if (!this.canBattle(t)) return this.endDuel(d, (s === d.a ? d.b : d.a).trainer);

@@ -16,16 +16,24 @@ const check = (ok: unknown, what: string) => {
 };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number) => Promise<Record<string, unknown>>; send: (m: unknown) => void; msgs: Array<Record<string, unknown>>; closedWith: () => number | null } {
+function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number) => Promise<Record<string, unknown>>; send: (m: unknown) => void; msgs: Array<Record<string, unknown>>; closedWith: () => number | null; closedAt: () => number | null; closeReason: () => string } {
   const ws = new WebSocket(`${WS}?guest=${key}`);
   const msgs: Array<Record<string, unknown>> = [];
   let closeCode: number | null = null;
+  let closeAt: number | null = null;
+  let reason = '';
   ws.on('message', (d) => msgs.push(JSON.parse(String(d))));
-  ws.on('close', (code) => (closeCode = code));
+  ws.on('close', (code, why) => {
+    closeCode = code;
+    closeAt = Date.now();
+    reason = String(why);
+  });
   return {
     ws,
     msgs,
     closedWith: () => closeCode,
+    closedAt: () => closeAt,
+    closeReason: () => reason,
     send: (m) => ws.send(JSON.stringify(m)),
     got: async (t, timeout = 8000) => {
       const t0 = Date.now();
@@ -95,10 +103,16 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
     check(true, 'state flowing again after rejoin');
   }
   // a second tab takes over: the first gets 4000
+  // The server closes the first tab as soon as the second says hello, but the 'close' event only
+  // fires once the closing handshake is done, which over a real network (and Fly's proxy) can take
+  // longer than on localhost: wait for the event itself (up to 10 s) and report how long it took.
   const tab2 = client(key);
   await tab2.got('hello');
-  await sleep(600);
-  check(a.closedWith() === 4000, `first tab closed with 4000 (got ${a.closedWith()})`);
+  const helloAt = Date.now();
+  // The server's 'error'-free takeover: the old tab is told nothing else first.
+  while (a.closedWith() === null && Date.now() - helloAt < 10_000) await sleep(25);
+  const took = a.closedAt() !== null ? `${(a.closedAt() as number) - helloAt} ms after the second tab's hello` : 'no close within 10 s';
+  check(a.closedWith() === 4000, `first tab closed with 4000 (got ${a.closedWith()}${a.closeReason() ? `, "${a.closeReason()}"` : ''}; ${took})`);
   const restart2 = await tab2.got('start', 5000).catch(() => null);
   check(restart2 && restart2.matchId === start.matchId, 'second tab resumed the same match');
   tab2.send({ t: 'leave' });

@@ -327,7 +327,7 @@
  {
   "file": "server/admin.ts",
   "line": 185,
-  "text": "{u.username} is now {role === 'player' ? 'a player again' : `a${role === 'admi...}."
+  "text": "{u.username} is now {role === 'player' ? 'a player again' : (role === 'admin' ...}."
  },
  {
   "file": "server/admin.ts",
@@ -337,7 +337,12 @@
  {
   "file": "server/admin.ts",
   "line": 185,
-  "text": "a{role === 'admin' ? 'n admin' : ' moderator'} (the dashboard is at /mod)"
+  "text": "an admin (dashboards at /admin and /mod)"
+ },
+ {
+  "file": "server/admin.ts",
+  "line": 185,
+  "text": "a moderator (the dashboard is at /mod)"
  },
  {
   "file": "server/admin.ts",
@@ -471,62 +476,62 @@
  },
  {
   "file": "server/main.ts",
-  "line": 283,
+  "line": 284,
   "text": "Draining for an update"
  },
  {
   "file": "server/main.ts",
-  "line": 283,
+  "line": 284,
   "text": "Draining stopped"
  },
  {
   "file": "server/main.ts",
-  "line": 389,
+  "line": 390,
   "text": "default-src 'self'; style-src 'unsafe-inline' 'self'; img-src 'self'"
  },
  {
   "file": "server/main.ts",
-  "line": 549,
+  "line": 550,
   "text": "Match {r.id} crashed:"
  },
  {
   "file": "server/main.ts",
-  "line": 551,
+  "line": 552,
   "text": "Match {r.id} crashed and was called off: {e instanceof Error ? e.message : e}"
  },
  {
   "file": "server/main.ts",
-  "line": 591,
+  "line": 592,
   "text": "The server is falling behind: {s.stepAvg.toFixed(2)} ms a step over {s.rooms} matches, ticks up to {s.lag} ms late, for 30 s. Time for a bigger machine (fly scale vm)."
  },
  {
   "file": "server/main.ts",
-  "line": 597,
+  "line": 598,
   "text": "Can not serve:"
  },
  {
   "file": "server/main.ts",
-  "line": 601,
+  "line": 602,
   "text": "Shadows of Almia Showdown server ({KIND}, build {BUILD}) on :{PORT}"
  },
  {
   "file": "server/main.ts",
-  "line": 602,
+  "line": 603,
   "text": "Server started (build {BUILD})"
  },
  {
   "file": "server/main.ts",
-  "line": 616,
+  "line": 617,
   "text": "{signal}: draining ({hub.rooms.size} match(es) running)"
  },
  {
   "file": "server/main.ts",
-  "line": 622,
+  "line": 623,
   "text": "Calling off {hub.rooms.size} match(es)"
  },
  {
   "file": "server/main.ts",
-  "line": 635,
+  "line": 636,
   "text": "Stopped cleanly"
  },
  {

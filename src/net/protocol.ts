@@ -132,4 +132,10 @@ export type ServerMsg =
   /** A moderator removed a chat message. */
   | { t: 'chatDelete'; id: number }
   | { t: 'error'; text: string }
+  /**
+   * The server is closing this connection (code as on the close frame: 4000 another tab took over,
+   * 4003 banned or kicked, 4001 too many messages). Sent just before the close, because the close
+   * itself can reach the browser seconds later through a proxy (Fly's took about 5 s).
+   */
+  | { t: 'bye'; code: number; reason: string }
   | { t: 'pong'; at: number };

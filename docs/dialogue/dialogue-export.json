@@ -434,7 +434,7 @@
    "uses": [
     {
      "file": "src/net/connection.ts",
-     "line": 236,
+     "line": 243,
      "where": "error:",
      "condition": "in api()",
      "status": "active"
@@ -12719,7 +12719,7 @@
     },
     {
      "file": "server/main.ts",
-     "line": 287,
+     "line": 288,
      "where": "error:",
      "condition": "in ops()",
      "status": "active"
@@ -13979,23 +13979,6 @@
    "who": "UI"
   },
   {
-   "id": "TCA49A5",
-   "text": "n admin",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/admin.ts",
-     "line": 185,
-     "where": "",
-     "condition": "role === 'admin' ?",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "UI"
-  },
-  {
    "id": "T0C3C90",
    "text": "Administrators only",
    "placeholders": [],
@@ -15071,7 +15054,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 278,
+     "line": 279,
      "where": "error:",
      "condition": "if (!OPS_TOKEN || given.length !== want.length || !timingSafeEqual(given, want))",
      "status": "active"
@@ -15088,7 +15071,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 282,
+     "line": 283,
      "where": "chat.announce",
      "condition": "if (on)",
      "status": "active"
@@ -15114,7 +15097,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 306,
+     "line": 307,
      "where": "",
      "condition": "if (n <= 20)",
      "status": "active"
@@ -15131,7 +15114,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 333,
+     "line": 334,
      "where": "end",
      "condition": "if (rel.startsWith('assets/'))",
      "status": "active"
@@ -15148,7 +15131,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 398,
+     "line": 399,
      "where": "error:",
      "condition": "if (!file)",
      "status": "active"
@@ -15170,7 +15153,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 472,
+     "line": 473,
      "where": "text:",
      "condition": "if (who.banned)",
      "status": "active"
@@ -15187,7 +15170,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 481,
+     "line": 482,
      "where": "closeNow",
      "condition": "if (old)",
      "status": "active"
@@ -15204,7 +15187,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 516,
+     "line": 517,
      "where": "closeNow",
      "condition": "if (++c.msgs > MSG_RATE)",
      "status": "active"
@@ -15221,7 +15204,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 553,
+     "line": 554,
      "where": "r.abort",
      "condition": "",
      "status": "active"
@@ -15245,7 +15228,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 618,
+     "line": 619,
      "where": "chat.announce",
      "condition": "if (hub.rooms.size)",
      "status": "active"
@@ -15262,7 +15245,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 623,
+     "line": 624,
      "where": "hub.shutdown",
      "condition": "if (hub.rooms.size)",
      "status": "active"
@@ -15279,7 +15262,7 @@
    "uses": [
     {
      "file": "server/main.ts",
-     "line": 629,
+     "line": 630,
      "where": "close",
      "condition": "in shutdown()",
      "status": "active"

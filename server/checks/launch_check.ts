@@ -2,7 +2,7 @@
  * Launch-readiness check against a running server (MATCH_SIZE=2 LOBBY_WAIT=3 npm run server):
  * a lobby with the real players it needs (half the match) fills with bots and starts; queueing without a roll answers instead of hanging;
  * a dropped connection rejoins inside the reconnect window with the room still alive; a second
- * tab takes the session over (the first is closed with 4000, promptly) and resumes the same match;
+ * tab takes the session over (the first is told at once and closed with 4000) and resumes the same match;
  * the admin dashboard's data is refused without an admin's session.
  *
  *   npx tsx server/checks/launch_check.ts [http://localhost:8787]
@@ -18,13 +18,18 @@ const check = (ok: unknown, what: string) => {
 };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number) => Promise<Record<string, unknown>>; send: (m: unknown) => void; msgs: Array<Record<string, unknown>>; closedWith: () => number | null; closedAt: () => number | null; closeReason: () => string } {
+function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number) => Promise<Record<string, unknown>>; send: (m: unknown) => void; msgs: Array<Record<string, unknown>>; closedWith: () => number | null; closedAt: () => number | null; closeReason: () => string; byeAt: () => number | null } {
   const ws = new WebSocket(`${WS}?guest=${key}`);
   const msgs: Array<Record<string, unknown>> = [];
   let closeCode: number | null = null;
   let closeAt: number | null = null;
   let reason = '';
-  ws.on('message', (d) => msgs.push(JSON.parse(String(d))));
+  let byeAt: number | null = null;
+  ws.on('message', (d) => {
+    const m = JSON.parse(String(d)) as Record<string, unknown>;
+    if (m.t === 'bye' && byeAt === null) byeAt = Date.now();
+    msgs.push(m);
+  });
   ws.on('close', (code, why) => {
     closeCode = code;
     closeAt = Date.now();
@@ -36,6 +41,7 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
     closedWith: () => closeCode,
     closedAt: () => closeAt,
     closeReason: () => reason,
+    byeAt: () => byeAt,
     send: (m) => ws.send(JSON.stringify(m)),
     got: async (t, timeout = 8000) => {
       const t0 = Date.now();
@@ -123,9 +129,10 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
   while (a.closedWith() === null && Date.now() - helloAt < 10_000) await sleep(25);
   const took = a.closedAt() !== null ? `${(a.closedAt() as number) - helloAt} ms after the second tab's hello` : 'no close within 10 s';
   check(a.closedWith() === 4000, `first tab closed with 4000 (got ${a.closedWith()}${a.closeReason() ? `, "${a.closeReason()}"` : ''}; ${took})`);
-  // The server cuts the old connection 250 ms after its close frame (it used to wait out the
-  // closing handshake, about 5 s through Fly's proxy).
-  check(a.closedAt() !== null && (a.closedAt() as number) - helloAt < 2000, 'first tab closed within 2 s');
+  // The close event itself can take about 5 s through Fly's proxy, so the server says 'bye' (with
+  // the close code) just before closing, and the browser stands down on that: it must arrive at once.
+  const bye = a.msgs.find((m) => m.t === 'bye') as { code?: number; at?: number } | undefined;
+  check(bye?.code === 4000 && a.byeAt() !== null && (a.byeAt() as number) - helloAt < 2000, `first tab told it was taken over within 2 s (bye ${bye ? `${bye.code}, ${(a.byeAt() as number) - helloAt} ms` : 'never came'})`);
   const restart2 = await tab2.got('start', 5000).catch(() => null);
   check(restart2 && restart2.matchId === start.matchId, 'second tab resumed the same match');
   tab2.send({ t: 'leave' });

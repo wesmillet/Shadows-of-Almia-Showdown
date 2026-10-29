@@ -80,9 +80,10 @@ water (shots fly over water by design).
   Chromium waited for a closing handshake that never came. The line is now given up as soon as the
   silence is noticed.
 - **A tab taken over by another took about 5 s to close through Fly** (`server/main.ts`): the
-  server waited out the closing handshake. Connections the server ends are now cut 250 ms after the
-  close frame. This was the smoke test's "first tab closed" failure: the first tab was closed with
-  the right code, but after the check had stopped waiting. The check now waits for the close event
-  and also requires it within 2 s.
+  proxy delivers the close about 5 s after the server sends it. The server now says `bye` (with the
+  close code) just before closing and the browser acts on that at once; it also cuts the socket
+  250 ms after the close frame. This was the smoke test's "first tab closed" failure: the first tab
+  was closed with the right code, but after the check had stopped waiting. The check now waits for
+  the close event (up to 10 s) and requires the `bye` within 2 s.
 - In the harness only: separate timers for delayed messages could reorder them, which made a
   rejoin's state arrive before its start message. Fixed with one ordered queue per connection.

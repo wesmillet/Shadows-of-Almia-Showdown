@@ -149,6 +149,13 @@ export class Connection {
           return;
         }
         this.lastMsgAt = performance.now();
+        if (msg.t === 'bye') {
+          // Closed by the server: act on it now rather than when the close arrives (see protocol.ts).
+          ws.onclose = null;
+          ws.onmessage = null;
+          lost(msg.code);
+          return;
+        }
         if (msg.t === 'hello') {
           this.hello = msg;
           resolve();

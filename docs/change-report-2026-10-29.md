@@ -58,9 +58,11 @@ Bugs found and fixed:
   `server/mirrorGlide.test.ts`.
 - **A dead connection took about 21 s to notice** (`src/net/connection.ts`); now about 9 s.
 - **The smoke test's "first tab closed" failure:** the first tab was closed with the right code,
-  but the server waited for the closing handshake, which took about 5 s through Fly, longer than
-  the check waited. Connections the server ends are now cut 250 ms after the close frame, and the
-  check waits for the close itself and requires it within 2 s.
+  but the close reaches the browser about 5 s later through Fly's proxy (measured live: 5086 ms,
+  even with the server cutting the socket 250 ms after its close frame), longer than the check
+  waited. The server now also sends a `bye` message with the close code just before closing, and
+  the browser stands down on that at once (a taken-over tab, a kick or a ban). The check waits up
+  to 10 s for the close itself and requires the `bye` within 2 s.
 
 ## 3. Dialogue export
 

@@ -14,13 +14,13 @@ Exported 2026-10-29 from the `online` branch for wording review. Nothing was rew
 
 Found by reading the code and data, not only by looking at screens:
 
-1. **Code** (src/ and server/, 120 TypeScript files, tests excluded): every string and template literal, through the TypeScript compiler, kept when it reads as text a person sees and dropped when it is clearly an identifier, path, CSS, SQL, an event or animation name, a comparison or a log line. 120 text-like strings were dropped as log lines, comparisons or lookups (listed in `dropped.json` beside this file, for spot checks).
+1. **Code** (src/ and server/, 120 TypeScript files, tests excluded): every string and template literal, through the TypeScript compiler, kept when it reads as text a person sees and dropped when it is clearly an identifier, path, CSS, SQL, an event or animation name, a comparison or a log line. 121 text-like strings were dropped as log lines, comparisons or lookups (listed in `dropped.json` beside this file, for spot checks).
 2. **Data**: item names, short labels and descriptions; move names; shop, stall and challenger text; character names; fishing rods; special events.
 3. **The two dashboards** (/mod and the new /admin): the text in their HTML and the text their scripts write.
 
 Not captured: Pokémon species names (data/species.json, the official names, 361 entries); the map's place names drawn into the island art; text inside images (the logo, the title art); browser-native messages (e.g. a failed connection page); and text the server builds from other text in ways the extractor can not see whole (each piece is listed, the sentence they make may not be). Strings assembled across several statements show as their separate parts.
 
-**1338 distinct lines** (1168 active).
+**1337 distinct lines** (1168 active).
 
 ## 1. Title screen, options and offline setup
 
@@ -2221,7 +2221,7 @@ Example: "Trainer since …"
 - `server/accounts.ts:369` · error: · when `in tradeApi()`
 - `server/accounts.ts:1063` · error: · when `in handle()`
 - `server/adminApi.ts:163` · error: · when `in handle()`
-- `server/main.ts:287` · error: · when `in ops()`
+- `server/main.ts:288` · error: · when `in ops()`
 - `server/modApi.ts:212` · error: · when `in handle()`
 
 **TDE088F** · Error message · *active*
@@ -7648,7 +7648,7 @@ Example: "Lv 12"
 
 > No such replay
 
-- `server/main.ts:398` · error: · when `if (!file)`
+- `server/main.ts:399` · error: · when `if (!file)`
 
 **T293787** · UI · *active*
 
@@ -7736,13 +7736,13 @@ Example: "Automatic: impossible actions in match … (…)"
 
 > Not allowed
 
-- `server/main.ts:278` · error: · when `if (!OPS_TOKEN \|\| given.length !== want.length \|\| !timingSafeEqual(given, want))`
+- `server/main.ts:279` · error: · when `if (!OPS_TOKEN \|\| given.length !== want.length \|\| !timingSafeEqual(given, want))`
 
 **TC068ED** · UI · *active*
 
 > The server is updating in a few minutes. Matches running now will finish; new ones start right after.
 
-- `server/main.ts:282` · chat.announce · when `if (on)`
+- `server/main.ts:283` · chat.announce · when `if (on)`
 
 **TB24149** · UI · *active*
 
@@ -7751,13 +7751,13 @@ Example: "Automatic: impossible actions in match … (…)"
 Placeholders: `e.message`, `String(b.stack ?? '').slice(0, 1500)`  
 Example: "Error: …⏎ …"
 
-- `server/main.ts:306` · when `if (n <= 20)`
+- `server/main.ts:307` · when `if (n <= 20)`
 
 **T094B76** · UI · *active*
 
 > not found
 
-- `server/main.ts:333` · end · when `if (rel.startsWith('assets/'))`
+- `server/main.ts:334` · end · when `if (rel.startsWith('assets/'))`
 
 **TB7D9B7** · Screen text · *active*
 
@@ -7766,44 +7766,44 @@ Example: "Error: …⏎ …"
 Placeholders: `who.banned`  
 Example: "You can not play from here (Pikachu)"
 
-- `server/main.ts:472` · text: · when `if (who.banned)`
+- `server/main.ts:473` · text: · when `if (who.banned)`
 
 **T82DA56** · UI · *active*
 
 > Opened in another tab
 
-- `server/main.ts:481` · closeNow · when `if (old)`
+- `server/main.ts:482` · closeNow · when `if (old)`
 
 **TE922FB** · UI · *active*
 
 > Too many messages
 
-- `server/main.ts:516` · closeNow · when `if (++c.msgs > MSG_RATE)`
+- `server/main.ts:517` · closeNow · when `if (++c.msgs > MSG_RATE)`
 
 **T5CD935** · UI · *active*
 
 > Something went wrong in this match, so it was called off. It does not count as a loss, and anything you took out of your storage chest is back in it. Sorry!
 
-- `server/main.ts:553` · r.abort
+- `server/main.ts:554` · r.abort
 - `server/roomWorker.ts:120` · r.abort
 
 **TBF2C04** · UI · *active*
 
 > The server is restarting soon. Matches running now have a few minutes to finish.
 
-- `server/main.ts:618` · chat.announce · when `if (hub.rooms.size)`
+- `server/main.ts:619` · chat.announce · when `if (hub.rooms.size)`
 
 **T749C33** · UI · *active*
 
 > The server is restarting for an update, so this match was called off. It does not count as a loss, and anything you took out of your storage chest is back in it.
 
-- `server/main.ts:623` · hub.shutdown · when `if (hub.rooms.size)`
+- `server/main.ts:624` · hub.shutdown · when `if (hub.rooms.size)`
 
 **TC526F4** · UI · *active*
 
 > Server restarting
 
-- `server/main.ts:629` · close · when `in shutdown()`
+- `server/main.ts:630` · close · when `in shutdown()`
 
 **T1CB4A7** · UI · *active*
 
@@ -7839,11 +7839,11 @@ Example: "The match is over: Wes won"
 
 > Can't reach the game server
 
-- `src/net/connection.ts:236` · error: · when `in api()`
+- `src/net/connection.ts:243` · error: · when `in api()`
 
 ## 13. Moderators and the admin dashboard
 
-156 lines.
+155 lines.
 
 **T38CC9F** · UI · *admin only*
 
@@ -7860,12 +7860,6 @@ Placeholders: `a`
 Example: "report #…"
 
 - `server/admin.ts:128` · logAdmin · when `case 'resolve'`
-
-**TCA49A5** · UI · *admin only*
-
-> n admin
-
-- `server/admin.ts:185` · when `role === 'admin' ?`
 
 **T0C3C90** · Error message · *admin only*
 

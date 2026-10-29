@@ -238,6 +238,7 @@ const adminApi = new AdminApi(accounts, {
  * the socket is cut: the browser has the code from the frame and closes at once.
  */
 function closeNow(ws: WebSocket, code: number, reason: string): void {
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ t: 'bye', code, reason }));
   ws.close(code, reason);
   setTimeout(() => {
     if (ws.readyState !== ws.CLOSED) ws.terminate();

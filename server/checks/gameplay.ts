@@ -132,7 +132,8 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
     const wildsBefore = m.wilds.length;
     const ev0 = m.battle.events.length;
     m.withSeat(seat, () => crew.talk(w));
-    const zoroark = m.wilds.find((x) => x.dex === '0571');
+    // The one the reveal added (a wild Zoroark can spawn elsewhere on the island too).
+    const zoroark = m.wilds.slice(wildsBefore).find((x) => x.dex === '0571');
     // The reveal never says whether it is shiny (the colours show it, or not).
     const said = m.battle.events.slice(ev0).filter((e) => e.type === 'notice').map((e) => (e as { text: string }).text);
     check(said.includes("The girl's outline flickers... It was Zoroark all along!") && !said.some((t) => /shiny/i.test(t)), `the reveal says only that it was Zoroark (${JSON.stringify(said)})`);

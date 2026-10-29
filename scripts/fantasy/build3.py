@@ -414,7 +414,7 @@ def main():
     log('decor')
     n_arena = decor3.arena(placer)
     n_mountain = decor3.mountain(d, placer, anim, anim_block)
-    n_ruins = decor3.ruins(d, placer, anim)
+    n_ruins = decor3.ruins(d, placer, anim, anim_block)
     log(f'  mountain {n_mountain}, ruins {n_ruins}')
     n_sign, n_lamp, n_flower = decor3.roads(d, placer)
     water_plants = decor3.lakes(d)
@@ -448,7 +448,7 @@ def main():
     n_shore = decor3.shores(d, shore_placer)
     objects += shore_placer.objects
     log(f'  shores {n_shore}')
-    n_life = decor3.life(d, placer, anim)
+    n_life = decor3.life(d, placer, anim, blocked=anim_block)
     n_falls = decor3.waterfalls(d, anim, anim_block)
     log(f'  life {n_life}, waterfalls {n_falls}')
     log(f'  summit {n_summit}, blight {n_dead}, trees {n_trees}, bushes {n_bush}, rocks {n_rock}')

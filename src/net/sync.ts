@@ -29,7 +29,7 @@ const MON_SKIP = new Set([
   'statusTimer', 'farT', 'lastSlot', 'outsideDark', 'shadowStormT', 'leftoversT', 'snagHinted', 'px', 'py',
 ]);
 /** Fields of a trainer the browser never needs. */
-const TRAINER_SKIP = new Set(['ai', 'aiTimer', 'aiTarget', 'aiKey', 'aiProgress', 'aiBans', 'attackTimer', 'roamTimer', 'counter', 'px', 'py']);
+const TRAINER_SKIP = new Set(['ai', 'aiTimer', 'aiTarget', 'aiKey', 'aiProgress', 'aiBans', 'attackTimer', 'roamTimer', 'counter', 'px', 'py', 'bot', 'wedge']);
 /** Fields only the trainer's own player may see. */
 const TRAINER_PRIVATE = new Set(['items', 'held', 'storage', 'money', 'stats']);
 

@@ -144,6 +144,46 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   return { damage: Math.max(1, Math.floor(dmg)), effectiveness: eff, crit };
 }
 
+/**
+ * The damage a move does on average (computeDamage without the dice: the 0.85-1 roll at its middle,
+ * crits at their odds). For trainers sizing up a fight.
+ */
+export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef): number {
+  const eff = effectiveness(m.type, defender.types);
+  if (m.category === 'status' || m.power <= 0 || eff === 0) return 0;
+  const a = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
+  const d = Math.max(1, (m.category === 'physical' ? defender.stats.def : defender.stats.spd) * STAGE_MULT(defender.stages.def));
+  let dmg = (((2 * attacker.level) / 5 + 2) * m.power * (a / d)) / 50 + 2;
+  if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
+  dmg *= eff;
+  const held = attacker.heldItem ? ITEMS[attacker.heldItem] : undefined;
+  if (held?.effect === 'choice-band' && m.category === 'physical') dmg *= 1.5;
+  if (held?.effect === 'life-orb') dmg *= 1.3;
+  if (held?.effect === 'type-boost' && held.boostType === m.type) dmg *= 1.2;
+  dmg *= 1 + 0.5 * CONFIG.battle.critChance;
+  if (attacker.status === 'burn' && m.category === 'physical') dmg *= 0.5;
+  if (attacker.boss) dmg *= CONFIG.battle.bossDamageScale;
+  dmg *= (CONFIG.battle as typeof CONFIG.battle & { damageScale?: number }).damageScale ?? 1;
+  return dmg * 0.925;
+}
+
+/**
+ * Damage a second `attacker` deals `defender` while it keeps casting: each damaging move's average
+ * hit over its cooldown, capped by how often a Pokémon gets a move off at all (`actEvery` seconds).
+ */
+export function damageRate(attacker: Mon, defender: Mon, actEvery = 1.1): number {
+  let sum = 0;
+  let top = 0;
+  for (const id of attacker.moves) {
+    const mv = move(id);
+    const dmg = expectedDamage(attacker, defender, mv);
+    if (dmg <= 0) continue;
+    sum += dmg / Math.max(0.5, mv.cooldown + (mv.cast ?? CONFIG.battle.castSeconds));
+    top = Math.max(top, dmg);
+  }
+  return Math.min(sum, top / actEvery);
+}
+
 /** Score a move for AI selection: expected damage with a bonus for applying a fresh status. */
 export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
   const eff = effectiveness(m.type, target.types);
@@ -816,16 +856,26 @@ export class BattleSystem {
     return done;
   }
 
-  /** AI: pick the best ready move against a target, or -1. */
-  chooseMove(attacker: Mon, target: Mon): number {
+  /**
+   * AI: pick the best ready move against a target, or -1. `careful` (trainers' Pokémon) also skips a
+   * move that would be wasted from here: out of its reach (a ring or cone short of the target, a
+   * shot past its range) or with a wall, cliff or building in the way.
+   */
+  chooseMove(attacker: Mon, target: Mon, careful = false): number {
     let best = -1;
     let bestScore = 0;
     const d = Math.hypot(target.x - attacker.x, target.y - attacker.y);
+    const blocked = careful && !!this.shotLine && !this.shotLine(attacker.x, attacker.y, target.x, target.y);
+    const pad = careful ? bodyRadius(target.species) * 0.5 : 0;
     attacker.moves.forEach((id, i) => {
       if ((attacker.cooldowns[i] ?? 0) > 0) return;
       const mv = move(id);
       // A contact move or a slam is no use until the target is within its lunge or jump.
       if ((isContact(mv) || mv.leap) && d > moveReach(mv) + 0.2) return;
+      if (careful && mv.shape !== 'self') {
+        if (d > moveReach(mv) + pad) return;
+        if (blocked && !isContact(mv) && !mv.leap) return;
+      }
       // The move it just used counts for a little less, so a Pokémon mixes its moves instead of
       // firing its single best one every time it comes off cooldown.
       const s = moveScore(attacker, target, mv) * (i === attacker.lastSlot ? 0.6 : 1);

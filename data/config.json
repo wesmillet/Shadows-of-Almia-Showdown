@@ -41,9 +41,6 @@
     "catchXpShare": 0.75,
     "_fieldComment": "Every trainer has at most fieldLimit Pokémon out at once (the first ones in party order that can fight); the rest wait in their balls and come out as others faint or on a swap.",
     "fieldLimit": 2,
-    "aiRoamEverySeconds": 45,
-    "aiRoamChance": 0.4,
-    "aiRoamSeconds": 40,
     "wildDropChance": 0.4
   },
   "wild": {
@@ -82,14 +79,11 @@
   },
   "trainers": {
     "count": 9,
+    "_speedComment": "speed: how fast trainers walk to their spots in a one-on-one battle. Out on the map computer trainers walk at the player's pace (player.speedTilesPerSec), start like a new player (one starter rolled from the new-player tiers, the player's level, bag and money) and play by the same rules (src/sim/bot.ts).",
     "speed": 4.8,
     "fleeHpFraction": 0.3,
-    "partySize": 3,
-    "level": 5,
-    "aggroRange": 7,
-    "_huntComment": "Rivals with no fainted member and party HP above huntHpFraction walk to the best wild within huntRange tiles that is at most huntOverLevel levels above their team, so they level up through the match; worn down (party HP at or under huntHpFraction, or half the team fainted), they go back to an outpost within healTripRange tiles to heal, then hunt again. Passing an outpost, they stop only when the team is under three quarters of its HP or someone fainted.",
+    "_huntComment": "Computer trainers hunt the wild Pokemon within huntRange tiles that their team beats comfortably (src/sim/ai.ts fightMargin: the matchup in HP, moves, types and stats, not level alone; Alphas and land bosses only with a clear edge), catch the ones worth a slot, and go back to an outpost within healTripRange tiles when worn down (party HP at or under huntHpFraction, or half the team fainted). Passing a healer, they ask for a heal only when under three quarters HP or someone fainted.",
     "huntRange": 30,
-    "huntOverLevel": 3,
     "huntHpFraction": 0.35,
     "healTripRange": 45
   },

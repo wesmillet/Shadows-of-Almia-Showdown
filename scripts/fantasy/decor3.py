@@ -281,7 +281,7 @@ FLOWER_SETS = {D.MEADOW: [0, 96, 384, 480], D.FOREST: [0, 384], D.AUTUMN: [96, 1
 CATTAILS = {331, 361}
 
 
-def life(d, placer, anim, seed=31):
+def life(d, placer, anim, seed=31, blocked=None):
     """Patches of animated flowers on the green lands, reeds and
     lily pads swaying on the lakes, floating logs, rune rocks glowing round the crystal."""
     import animprops
@@ -342,7 +342,10 @@ def life(d, placer, anim, seed=31):
     x0, y0, x1, y1 = D.FINAL_ARENA
     for (x, y) in [(cx - 9, y0 - 4), (cx + 8, y0 - 4), (cx - 9, y1 + 3), (cx + 8, y1 + 3)]:
         placer.free[y - 2:y + 1, x:x + 2] = True
-        if put_anim('Animation_Ruins_Brazier', 24, x, y): n += 1
+        if put_anim('Animation_Ruins_Brazier', 24, x, y):
+            n += 1
+            # a stone post: solid at its foot (it was walked straight through)
+            if blocked is not None: blocked[y, x:x + 2] = True
     return n
 
 
@@ -360,7 +363,7 @@ def waterfalls(d, anim, blocked):
 
 # ---------------------------------------------------------------------------- the desert ruins and the shores
 
-def ruins(d, placer, anim, centre=(86, 186), seed=41):
+def ruins(d, placer, anim, blocked, centre=(86, 186), seed=41):
     """A ruined temple in the desert: fallen walls, pillars and arches from the desert props,
     rune rocks glowing among them, braziers still burning, a brazier-lit way in."""
     import animprops
@@ -383,7 +386,9 @@ def ruins(d, placer, anim, centre=(86, 186), seed=41):
         want = [(y - h + 1 + yy, x + xx) for xx, yy, _ in cells]
         if all(placer.free[yy, xx] and anim[yy, xx] is None for (yy, xx) in want):
             animprops.place(anim, 'Animation_Rock_Gray_Desert', rng.choice(runes), x, y)
-            for (yy, xx) in want: placer.free[yy, xx] = False
+            for (yy, xx) in want:
+                placer.free[yy, xx] = False
+                if yy == y: blocked[yy, xx] = True          # solid at its foot
             n += 1
     for (dx, dy) in [(-4, 9), (3, 9)]:
         x, y = cx + dx, cy + dy
@@ -391,7 +396,9 @@ def ruins(d, placer, anim, centre=(86, 186), seed=41):
         want = [(y - h + 1 + yy, x + xx) for xx, yy, _ in cells]
         if all(placer.free[yy, xx] and anim[yy, xx] is None for (yy, xx) in want):
             animprops.place(anim, 'Animation_Ruins_Brazier', 24, x, y)
-            for (yy, xx) in want: placer.free[yy, xx] = False
+            for (yy, xx) in want:
+                placer.free[yy, xx] = False
+                if yy == y: blocked[yy, xx] = True          # the post is solid at its foot
             n += 1
     return n
 

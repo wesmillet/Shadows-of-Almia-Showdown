@@ -22,7 +22,7 @@ import { loadLook, lookHooks, saveLook } from './look';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
-import { starterChoices, unlockedFromPc } from './sim/starters';
+import { BASE_TIERS, STARTER_TIERS, starterChoices, unlockedFromPc } from './sim/starters';
 import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
@@ -56,11 +56,13 @@ function withEvolutions(dexes: Iterable<string>): Set<string> {
 }
 
 /**
- * Every species a match can show: wild tables, land bosses, rivals, the champion, the demo team, and their evolutions.
+ * Every species a match can show: wild tables, land bosses, rivals' starters, the champion, the demo team, and their evolutions.
  * The starter roll's pool is not in here (it is large): the roll loads its own reel, and a match loads its starter's line.
  */
 function matchCast(): Set<string> {
-  const out = new Set<string>(['0491', '0491-final', ...DEMO_PARTY, ...SPAWNS.trainerPool, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
+  // Computer trainers start like new players: one starter from the new-player tiers.
+  const botStarters = STARTER_TIERS.filter((t) => BASE_TIERS.includes(t.id)).flatMap((t) => t.dex);
+  const out = new Set<string>(['0491', '0491-final', ...DEMO_PARTY, ...botStarters, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
   for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
   for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
   // The rotation pools, the starters and pseudo-legendaries (rare) and the stronger encounters.

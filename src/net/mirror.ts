@@ -226,6 +226,11 @@ export class MirrorMatch {
       const cur: Record<string, number> = {};
       for (const k of SMOOTH) if (typeof o[k] === 'number') cur[k] = o[k] as number;
       before.set(o, cur);
+      // Still gliding: what it holds now is a point on the way, not the server's word. Put the glide's
+      // end back first, so a field this update leaves out (it did not change on the server) keeps the
+      // server's value instead of freezing wherever the glide had got to.
+      const g = this.glides.get(o);
+      if (g) for (const k of Object.keys(g.to)) o[k] = g.to[k];
     }
     // Where this player's own trainer (or steered Pokémon) is shown now, before the server's word on it.
     const avatar = this.avatar;
@@ -252,8 +257,12 @@ export class MirrorMatch {
       }
       // A jump (respawn, teleport) snaps instead of sliding across the map.
       const far = Math.hypot((to.x ?? 0) - (cur.x ?? 0), (to.y ?? 0) - (cur.y ?? 0)) > 4;
-      if (far) for (const k of Object.keys(to)) o[k] = to[k];
-      if (moved && !far) this.glides.set(o, { from: cur, to, t: 0, d: this.interval });
+      if (far) {
+        for (const k of Object.keys(to)) o[k] = to[k];
+        // and an older glide must not carry it back toward where it was
+        this.glides.delete(o);
+      } else if (moved) this.glides.set(o, { from: cur, to, t: 0, d: this.interval });
+      else this.glides.delete(o);
       // Evolved or Mega Evolved: new sprites.
       if (isMon(o) && o.$dex !== o.dex) {
         const m = o as unknown as Mon;

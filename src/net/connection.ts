@@ -130,8 +130,15 @@ export class Connection {
         for (const m of this.queue.splice(0)) ws.send(JSON.stringify(m));
         pinger = window.setInterval(() => {
           this.send({ t: 'ping', at: performance.now() });
-          // The server answers every ping; a silent line this long is dead. Closing it starts the retries.
-          if (performance.now() - this.lastMsgAt > 9000) ws.close();
+          // The server answers every ping; a silent line this long is dead. It is given up at once:
+          // closing a dead socket waits for a closing handshake that never comes (about 12 s more in
+          // Chromium), so the retries start now and the old socket is left to close on its own.
+          if (performance.now() - this.lastMsgAt > 9000) {
+            ws.onclose = null;
+            ws.onmessage = null;
+            ws.close();
+            lost(1006);
+          }
         }, 3000);
       };
       ws.onmessage = (e) => {
@@ -164,12 +171,13 @@ export class Connection {
         }
         for (const l of this.listeners) l(msg);
       };
-      ws.onclose = (e) => {
+      const lost = (code: number): void => {
+        if (this.ws !== ws) return;
         this.connected = false;
         // Banned, or a moderator's kick: no reconnecting. 4000: another tab or device took over,
         // and reconnecting would only kick it back out, so this one stands down until asked.
-        if (e.code === 4003) this.closedByUs = true;
-        if (e.code === 4000) {
+        if (code === 4003) this.closedByUs = true;
+        if (code === 4000) {
           this.closedByUs = true;
           this.takenOver = true;
           for (const l of this.statusListeners) l('takenOver');
@@ -184,6 +192,7 @@ export class Connection {
         const wait = Math.min(10_000, 500 * 2 ** this.retry++);
         window.setTimeout(() => void this.open(), wait);
       };
+      ws.onclose = (e) => lost(e.code);
     });
   }
 

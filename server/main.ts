@@ -24,6 +24,7 @@ import { ModApi } from './modApi';
 import { MOD_PAGE } from './modPage';
 import { AdminApi } from './adminApi';
 import { ADMIN_PAGE } from './adminPage';
+import { devProbe } from './devProbe';
 import { privacyPage } from './privacyPage';
 import { Room, STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
@@ -61,6 +62,30 @@ const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 const MSG_RATE = 120;
 /** Testing only: pretend every message takes this long each way (to try the game on a slow connection). */
 const LAG = KIND === 'live' ? 0 : Number(process.env.SIM_LATENCY_MS ?? 0);
+// Testing only (never live): up to this much more delay on each message, at random, each way. Order
+// is kept (a message never overtakes the one before it), as on a real connection.
+const JITTER = KIND === 'live' ? 0 : Number(process.env.SIM_JITTER_MS ?? 0);
+/**
+ * A delayed message on a line (testing only): each waits its own random delay, but they go out in
+ * the order they were sent, from one queue per line (separate timers with the same due time can
+ * fire in any order, which reordered messages: a rejoin's state arrived before its 'start').
+ */
+interface Line { q: Array<{ at: number; fn: () => void }>; timer: ReturnType<typeof setTimeout> | null }
+function delayed(line: Line, fn: () => void): void {
+  const last = line.q.length ? (line.q[line.q.length - 1] as { at: number }).at : 0;
+  line.q.push({ at: Math.max(last, Date.now() + LAG + Math.random() * JITTER), fn });
+  pump(line);
+}
+function pump(line: Line): void {
+  if (line.timer) return;
+  const head = line.q[0];
+  if (!head) return;
+  line.timer = setTimeout(() => {
+    line.timer = null;
+    while (line.q.length && (line.q[0] as { at: number }).at <= Date.now()) (line.q.shift() as { fn: () => void }).fn();
+    pump(line);
+  }, Math.max(0, head.at - Date.now()));
+}
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
 /** A shared secret for /api/ops (the deploy workflow drains the server with it). */
@@ -152,7 +177,7 @@ accounts.onSignedOut = (userId, reason) => {
   const c = hub.clients.get(`u${userId}`) as Conn | undefined;
   if (!c) return;
   c.send({ t: 'error', text: reason });
-  c.ws.close(4003, reason.slice(0, 100));
+  closeNow(c.ws, 4003, reason.slice(0, 100));
 };
 const chat = new Chat((msg) => {
   for (const c of hub.clients.values()) c.send(msg);
@@ -185,7 +210,7 @@ const modApi = new ModApi(accounts, {
     const c = hub.clients.get(`u${userId}`) as Conn | undefined;
     if (!c) return;
     c.send({ t: 'error', text: reason });
-    c.ws.close(4003, reason.slice(0, 100));
+    closeNow(c.ws, 4003, reason.slice(0, 100));
   },
   removeChat: (id) => chat.remove(id),
   announce: (text) => chat.announce(text),
@@ -204,6 +229,20 @@ const adminApi = new AdminApi(accounts, {
   awaySeats: () => hub.awaySeats(),
   live: () => hub.liveMatches(),
 });
+
+/**
+ * Closes a connection the server is done with, promptly. ws.close() sends the close frame (with
+ * its code, which tells the browser why: 4000 another tab, 4003 banned or kicked) and waits for the
+ * closing handshake to finish; through Fly's proxy that took about 5 s (the live smoke test measured
+ * 5087 ms), so the old tab carried on looking connected. Once the frame has had a moment to go out,
+ * the socket is cut: the browser has the code from the frame and closes at once.
+ */
+function closeNow(ws: WebSocket, code: number, reason: string): void {
+  ws.close(code, reason);
+  setTimeout(() => {
+    if (ws.readyState !== ws.CLOSED) ws.terminate();
+  }, 250).unref();
+}
 
 interface Conn extends Client {
   ws: WebSocket;
@@ -325,6 +364,11 @@ const http = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }).end(MOD_PAGE);
     return;
   }
+  // Testing only: the online combat checks read and stage matches (dev server, DEV_PROBE=1, ROOM_WORKERS=0).
+  if (KIND === 'dev' && process.env.DEV_PROBE === '1' && WORKERS === 0 && url.startsWith('/api/dev/')) {
+    devProbe(hub, req, res, url.split('?')[0] as string);
+    return;
+  }
   if (url.split('?')[0] === '/admin' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }).end(ADMIN_PAGE);
     return;
@@ -426,7 +470,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   if (who.banned) {
     // A banned device or address: told why, and nothing else.
     ws.send(JSON.stringify({ t: 'error', text: `You can not play from here (${who.banned})` }));
-    ws.close(4003, 'banned');
+    closeNow(ws, 4003, 'banned');
     return;
   }
   const key = who.key;
@@ -434,8 +478,10 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   const old = hub.clients.get(key) as Conn | undefined;
   if (old) {
     hub.disconnect(old);
-    old.ws.close(4000, 'Opened in another tab');
+    closeNow(old.ws, 4000, 'Opened in another tab');
   }
+  const outLine: Line = { q: [], timer: null };
+  const inLine: Line = { q: [], timer: null };
   const c: Conn = {
     ws, key, name: who.name, look: who.look, title: who.title, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
     watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '', connectedAt: Date.now(),
@@ -450,7 +496,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
         return;
       }
       metrics.sent(data.length);
-      if (LAG) setTimeout(() => ws.readyState === ws.OPEN && ws.send(data), LAG);
+      if (LAG || JITTER) delayed(outLine, () => ws.readyState === ws.OPEN && ws.send(data));
       else ws.send(data);
     },
   };
@@ -467,11 +513,11 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     (c as Conn & { heartbeatDue?: boolean }).heartbeatDue = false;
     metrics.received();
     if (++c.msgs > MSG_RATE) {
-      ws.close(4001, 'Too many messages');
+      closeNow(ws, 4001, 'Too many messages');
       return;
     }
     const raw = String(data);
-    if (LAG) setTimeout(() => onMessage(c, raw), LAG);
+    if (LAG || JITTER) delayed(inLine, () => onMessage(c, raw));
     else onMessage(c, raw);
   });
   ws.on('close', () => {

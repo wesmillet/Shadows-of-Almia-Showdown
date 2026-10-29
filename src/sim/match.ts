@@ -925,8 +925,8 @@ export class Match {
         if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2) {
           th.phase = 'done';
           this.battle.events.push({ type: 'scene-fx', id: 'fx_187', x: sh.x, y: sh.y, scale: 1.4, fps: 16, tint: '#8a3dff' });
-          this.battle.events.push({ type: 'text', mon: sh, text: 'The ball bounced off!' });
-          this.battle.events.push({ type: 'notice', text: 'Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine', seconds: 2.6 });
+          // Only that it bounced: how a Shadow Pokémon is caught is for players to find out.
+          this.battle.events.push({ type: 'text', mon: sh, text: 'The Poké Ball bounced off!' });
           continue;
         }
         let best: Mon | null = null;
@@ -3252,7 +3252,7 @@ export class Match {
     const p = this.player;
     if (!L) return '';
     const below = CONFIG.shadowLugia.snagBelow;
-    if (L.hp / L.maxHp >= below) return `${L.name} is too strong to snag. Wear it under ${Math.round(below * 100)}% HP first`;
+    if (L.hp / L.maxHp >= below) return `${L.name} resisted the Snag Machine!`;
     if (partySize(p) >= this.partyCap) return `Your party is full (${this.partyCap}). Release one from its card first`;
     const d = this.playerDuel as Duel;
     const host = L.owner as Trainer;
@@ -3293,7 +3293,7 @@ export class Match {
     this.battle.interrupt(L);
     if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
     this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 4, ground: true, fps: 12, tint: '#3a1458', shake: 0.5, epic: true });
-    this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm... you needed to snag it under 10% HP`, seconds: 4 });
+    this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm...`, seconds: 4 });
     if (d) this.endDuel(d, this.player);
     this.endLegendBout(host);
   }
@@ -3334,10 +3334,6 @@ export class Match {
     for (let i = 0; i < m.cooldowns.length; i++) m.cooldowns[i] = Math.max(0, (m.cooldowns[i] ?? 0) - dt * haste);
     if (m.shadow) {
       const sl = CONFIG.shadowLugia;
-      if (!m.snagHinted && m.hp / m.maxHp < sl.snagBelow) {
-        m.snagHinted = true;
-        this.battle.events.push({ type: 'notice', text: this.snagSlot(this.player) >= 0 ? `${m.name} is weakened! Use the Snag Machine NOW!` : `${m.name} is weakened... but you have no Snag Machine`, seconds: 3 });
-      }
       // Shadow Storm: a ring of dark gusts round it every few seconds (faster each phase).
       m.shadowStormT = (m.shadowStormT ?? 0) - dt;
       if (m.shadowStormT <= 0 && !m.casting && !m.channel && !incapable(m)) {

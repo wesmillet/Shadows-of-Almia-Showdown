@@ -78,7 +78,6 @@ export const FOLK_POOL: Folk[] = [
   },
   {
     name: 'Veteran Sarge', role: 'villager_h', lines: [
-      'Snag Machine rule one: wear the dark ones down under ten percent, THEN fire. Rule two: see rule one.',
       'I was at the first showdown. Back then the storm was just weather. Now it hunts.',
     ],
   },
@@ -273,7 +272,7 @@ export class TownsfolkCrew {
     mon.homeY = y;
     m.wilds.push(mon);
     m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x, y, scale: 2, ground: true, fps: 14, tint: '#3a1458' });
-    m.battle.events.push({ type: 'notice', seconds: 4, text: `The girl's outline flickers... It was ${shiny ? 'a shiny ' : ''}Zoroark all along!` });
+    m.battle.events.push({ type: 'notice', seconds: 4, text: `The girl's outline flickers... It was Zoroark all along!` });
     return `${z.name}: "Hee hee... you saw through me!"`;
   }
 

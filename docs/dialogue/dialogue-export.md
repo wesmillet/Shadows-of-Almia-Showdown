@@ -20,11 +20,11 @@ Found by reading the code and data, not only by looking at screens:
 
 Not captured: Pokémon species names (data/species.json, the official names, 361 entries); the map's place names drawn into the island art; text inside images (the logo, the title art); browser-native messages (e.g. a failed connection page); and text the server builds from other text in ways the extractor can not see whole (each piece is listed, the sentence they make may not be). Strings assembled across several statements show as their separate parts.
 
-**1336 distinct lines** (1167 active).
+**1466 distinct lines** (1283 active).
 
 ## 1. Title screen, options and offline setup
 
-70 lines.
+73 lines.
 
 **T33CE41** · UI · *active*
 
@@ -250,6 +250,15 @@ Example: "Num K7Q2D"
 
 - `src/settings.ts:84` · return · when `if (code.startsWith('Numpad'))`
 
+**T525B03** · UI · *active*
+
+> {code.slice(5)} arrow
+
+Placeholders: `code.slice(5)`  
+Example: "K7Q2D arrow"
+
+- `src/settings.ts:85` · return · when `if (code.startsWith('Arrow'))`
+
 **T494064** · UI · *active*
 
 > Left Shift
@@ -292,6 +301,15 @@ Example: "Num K7Q2D"
 
 - `src/settings.ts:86` · CapsLock: · when `in keyName()`
 
+**TD7F1A5** · UI · *active*
+
+> {CharacterScreen.label(c)} unlocks with: {why}
+
+Placeholders: `CharacterScreen.label(c)`, `why`  
+Example: "3 unlocks with: (a reason)"
+
+- `src/ui/characterScreen.ts:80` · when `if (why)`
+
 **TC8F48E** · Screen text · *active*
 
 > CHOOSE YOUR TRAINER
@@ -309,15 +327,6 @@ Example: "Num K7Q2D"
 > Pick the trainer you play as
 
 - `src/ui/characterScreen.ts:118` · heading · when `anyLocked ?`
-
-**TD1488E** · Screen text · *active*
-
-> 🔒 {locked}
-
-Placeholders: `locked`  
-Example: "🔒 …"
-
-- `src/ui/characterScreen.ts:151` · text · when `locked ?`
 
 **TF6F337** · UI · *active*
 
@@ -339,6 +348,24 @@ Placeholders: `mv.power`
 Example: "Power …"
 
 - `src/ui/moveGallery.ts:187` · facts = · when `mv.power > 0 ?`
+
+**T967FF3** · UI · *active*
+
+> {mv.cooldown}s cooldown
+
+Placeholders: `mv.cooldown`  
+Example: "3s cooldown"
+
+- `src/ui/moveGallery.ts:189` · facts = · when `in drawOverlay()`
+
+**T8262FC** · UI · *active*
+
+> {this.index + 1} / {this.list.length}{this.typeFilter ? ` (${this.typeFilter} only)` : ''}  ·  cast by {caster}
+
+Placeholders: `this.index + 1`, `this.list.length`, `this.typeFilter ? ` (${this.typeFilter} only)` : ''`, `caster`  
+Example: "0025 / ……  ·  cast by …"
+
+- `src/ui/moveGallery.ts:194` · where = · when `in drawOverlay()`
 
 **T435AA2** · UI · *active*
 
@@ -605,7 +632,7 @@ Example: "Evolves: 3"
 
 ## 3. Online hub, lobbies, parties, private matches, friends and trades
 
-230 lines.
+265 lines.
 
 **TE583A6** · UI · *active*
 
@@ -652,6 +679,15 @@ Example: "Backups are failing: (a reason)"
 
 - `server/chat.ts:79` · sys · when `if (norm && mine.some((x) => x.text === norm))`
 
+**TE328F5** · UI · *active*
+
+> {minutes} min for {why}
+
+Placeholders: `minutes`, `why`  
+Example: "… min for (a reason)"
+
+- `server/chat.ts:113` · logMod · when `in strike()`
+
 **T1A00BE** · UI · *active*
 
 > Automatic: muted {before + 1} times this week (last for {why})
@@ -670,13 +706,40 @@ Example: "You are muted from chat for … ((a reason))."
 
 - `server/chat.ts:115` · text: · when `in strike()`
 
+**T61EC23** · Screen text · *active*
+
+> {minutes / 60} hour{minutes === 60 ? '' : 's'}
+
+Placeholders: `minutes / 60`, `minutes === 60 ? '' : 's'`  
+Example: "… hour…"
+
+- `server/chat.ts:115` · text: · when `minutes >= 60 ?`
+
+**T24F934** · Screen text · *active*
+
+> {minutes} minutes
+
+Placeholders: `minutes`  
+Example: "… minutes"
+
+- `server/chat.ts:115` · text: · when `minutes >= 60 ?`
+
+**TD23392** · UI · *admin only*
+
+> {foe.name} {Math.hypot(foe.x - aim.x, foe.y - aim.y).toFixed(1)} tiles from the aim
+
+Placeholders: `foe.name`, `Math.hypot(foe.x - aim.x, foe.y - aim.y).toFixed(1)`  
+Example: "Pikachu Wes tiles from the aim"
+
+- `server/commands.ts:68` · flag · when `if (foe && aim && Math.hypot(foe.x - aim.x, foe.y - aim.y) > AIM_SLACK * 2.5)`
+
 **T6CFEA6** · UI · *active*
 
 > Your Pokémon is asleep
 
 - `server/commands.ts:75` · return · when `r === 'asleep' ?`
 
-**T9C83B2** · UI · *active*
+**T9C83B2** · UI · *admin only*
 
 > tried to steer {mon.name}
 
@@ -694,7 +757,7 @@ Example: "Pokémon mode: you steer Pikachu. Esc or click your trainer to go back
 
 - `server/commands.ts:87` · return · when `mon && mon.owner === p && m.takeControl(mon) ?`
 
-**TC18D24** · UI · *active*
+**TC18D24** · UI · *admin only*
 
 > sold away from a shop
 
@@ -707,7 +770,7 @@ Example: "Pokémon mode: you steer Pikachu. Esc or click your trainer to go back
 - `server/commands.ts:127` · return · when `if (m.nearService()?.kind !== 'shop')`
 - `server/commands.ts:135` · return · when `s?.kind === 'shop' ?`
 
-**T391521** · UI · *active*
+**T391521** · UI · *admin only*
 
 > bought away from a shop
 
@@ -720,11 +783,38 @@ Example: "Pokémon mode: you steer Pikachu. Esc or click your trainer to go back
 - `server/commands.ts:142` · return · when `if (m.nearService()?.kind !== 'chest')`
 - `server/commands.ts:148` · return · when `if (m.nearService()?.kind !== 'chest')`
 
-**T627B09** · UI · *active*
+**T627B09** · UI · *admin only*
 
 > styler loop without a Capture Styler
 
 - `server/commands.ts:165` · flag · when `if (!m.hasStyler(p))`
+
+**T11BF56** · UI · *admin only*
+
+> {d.toFixed(1)} tiles
+
+Placeholders: `d.toFixed(1)`  
+Example: "… tiles"
+
+- `server/commands.ts:170` · flag · when `if (d > CONFIG.styler.maxRange + 2)`
+
+**T71090A** · UI · *admin only*
+
+> {((m.time - last) * 1000).toFixed(0)} ms between loops
+
+Placeholders: `((m.time - last) * 1000).toFixed(0)`  
+Example: "45 ms between loops"
+
+- `server/commands.ts:176` · flag · when `if (c === 'stylerLoop' && m.time - last < STYLER_COOLDOWN)`
+
+**T1B028C** · UI · *admin only*
+
+> {Math.hypot(x - p.x, y - p.y).toFixed(1)} tiles
+
+Placeholders: `Math.hypot(x - p.x, y - p.y).toFixed(1)`  
+Example: "… tiles"
+
+- `server/commands.ts:259` · flag · when `if (Math.hypot(x - p.x, y - p.y) > CONFIG.catch.throwRange + 3)`
 
 **TA85CCD** · UI · *active*
 
@@ -759,6 +849,15 @@ Example: "The amount must be between … and …"
 
 - `server/events.ts:65` · return · when `if (kind !== 'message' && !(value >= lo && value <= hi))`
 
+**T9A734F** · UI · *active*
+
+> {e.name} has started! It runs until {new Date(e.endsAt).toUTCString().slice(0, 22)} UTC
+
+Placeholders: `e.name`, `new Date(e.endsAt).toUTCString().slice(0, 22)`  
+Example: "Pikachu has started! It runs until … UTC"
+
+- `server/events.ts:93` · announce · when `if (now < e.endsAt)`
+
 **TC6B7AD** · UI · *active*
 
 > An event just ended. Thanks for playing!
@@ -770,6 +869,27 @@ Example: "The amount must be between … and …"
 > (KO)
 
 - `server/headless.ts:45` · map · when `m.fainted ?`
+
+**T515128** · UI · *active*
+
+> {c.name} left the queue
+
+Placeholders: `c.name`  
+Example: "Pikachu left the queue"
+
+- `server/hub.ts:204` · leaveQueue · when `case 'leaveQueue'`
+- `server/hub.ts:472` · leaveQueue · when `case 'create'`
+- `server/hub.ts:490` · leaveQueue · when `case 'join'`
+
+**T5519FF** · UI · *active*
+
+> {c.name} left
+
+Placeholders: `c.name`  
+Example: "Pikachu left"
+
+- `server/hub.ts:205` · cancelPick · when `case 'leaveQueue'`
+- `server/hub.ts:559` · cancelPick · when `in leavePrivate()`
 
 **T9D74FB** · Screen text · *active*
 
@@ -801,6 +921,15 @@ Example: "The amount must be between … and …"
 
 - `server/hub.ts:335` · text: · when `if (c.accountId === null)`
 
+**T36A000** · Screen text · *active*
+
+> {name} is not online
+
+Placeholders: `name`  
+Example: "Pikachu is not online"
+
+- `server/hub.ts:336` · text: · when `if (!target \|\| target.accountId === null)`
+
 **T050D96** · Screen text · *active*
 
 > You can invite friends to your party
@@ -822,17 +951,54 @@ Example: "A party is at most … trainers"
 
 - `server/hub.ts:346` · text: · when `if (p.members.length + p.invited.size >= PARTY_MAX)`
 
+**T171AE1** · Screen text · *active*
+
+> {c.name} invited you to their party
+
+Placeholders: `c.name`  
+Example: "Pikachu invited you to their party"
+
+- `server/hub.ts:349` · text: · when `case 'invite'`
+
 **TEF9084** · Screen text · *active*
 
 > That invite is gone
 
 - `server/hub.ts:359` · text: · when `if (!p \|\| !p.invited.has(c))`
 
+**TA9E311** · UI · *active*
+
+> {c.name} joined a party
+
+Placeholders: `c.name`  
+Example: "Pikachu joined a party"
+
+- `server/hub.ts:363` · leaveQueue · when `case 'accept'`
+
 **TA2DDFD** · Screen text · *active*
 
 > That party is full
 
 - `server/hub.ts:365` · text: · when `if (p.members.length >= PARTY_MAX)`
+
+**T24920E** · UI · *active*
+
+> {c.name} joined the party
+
+Placeholders: `c.name`  
+Example: "Pikachu joined the party"
+
+- `server/hub.ts:367` · leaveQueue · when `case 'accept'`
+- `server/hub.ts:370` · text: · when `if (m !== c)`
+
+**T3815D9** · Screen text · *active*
+
+> {c.name} declined your invite
+
+Placeholders: `c.name`  
+Example: "Pikachu declined your invite"
+
+- `server/hub.ts:380` · text: · when `if (p && p.leader.name.toLowerCase() === name.toLowerCase())`
 
 **T9073BA** · Screen text · *active*
 
@@ -851,6 +1017,17 @@ Example: "A party is at most … trainers"
 > Someone in your party is still in a match
 
 - `server/hub.ts:402` · text: · when `if (p.members.some((m) => m.room \|\| m.pick))`
+
+**T380B59** · UI · *active*
+
+> {c.name} left the party
+
+Placeholders: `c.name`  
+Example: "Pikachu left the party"
+
+- `server/hub.ts:422` · leaveQueue · when `in leaveParty()`
+- `server/hub.ts:423` · cancelPick · when `in leaveParty()`
+- `server/hub.ts:441` · text: · when `in leaveParty()`
 
 **T588944** · Screen text · *active*
 
@@ -890,6 +1067,15 @@ Example: "No lobby with the code K7Q2D"
 > Everyone is on one team: split up, or add computer trainers
 
 - `server/hub.ts:535` · text: · when `if (sides.size < 2 && !(lobby.rules.bots && members.length < lobby.rules.size))`
+
+**T9DDB24** · Screen text · *active*
+
+> {msg.name} is not in a match
+
+Placeholders: `msg.name`  
+Example: "Pikachu is not in a match"
+
+- `server/hub.ts:726` · text: · when `if (!f?.room)`
 
 **T49C708** · Screen text · *active*
 
@@ -982,6 +1168,15 @@ Example: " (title: Master Ranger)"
 
 - `server/profilePage.ts:37` · return · when `a.title ?`
 
+**T6F3E72** · Dashboard page · *active*
+
+> {p.name}: {LEVELS_ON ? `level ${p.progress.level} ` : ''}trainer{p.title ? `, ${p.title}` : ''}. {s.wins} wins in {s.matches} matches.
+
+Placeholders: `p.name`, `LEVELS_ON ? `level ${p.progress.level} ` : ''`, `p.title ? `, ${p.title}` : ''`, `s.wins`, `s.matches`  
+Example: "Pikachu: 12trainerMaster Ranger. 3 wins in 3 matches."
+
+- `server/profilePage.ts:52` · esc · when `in profilePage()`
+
 **T1A1BC6** · Dashboard page · *unused (switched off)*
 
 > level {p.progress.level} 
@@ -991,14 +1186,14 @@ Example: "level 12 "
 
 - `server/profilePage.ts:52` · esc · when `LEVELS_ON ?`
 
-**TE42DBF** · Dashboard page · *active*
+**T5D1E48** · Dashboard page · *active*
 
-> , {p.title}
+> {p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1}
 
-Placeholders: `p.title`  
-Example: ", Master Ranger"
+Placeholders: `p.progress.into`, `p.progress.next`, `p.progress.level + 1`  
+Example: "… / … XP to level 12"
 
-- `server/profilePage.ts:52` · esc · when `p.title ?`
+- `server/profilePage.ts:92` · when `p.progress.next ?`
 
 **T1EFC64** · Dashboard page · *active*
 
@@ -1006,7 +1201,16 @@ Example: ", Master Ranger"
 
 - `server/profilePage.ts:92` · when `p.progress.next ?`
 
-**T095141** · UI · *active*
+**TD26142** · UI · *admin only*
+
+> {msg.f.length} frames in one message
+
+Placeholders: `msg.f.length`  
+Example: "(a reason) frames in one message"
+
+- `server/room.ts:384` · flag · when `if (msg.f.length > 12)`
+
+**T095141** · UI · *admin only*
 
 > move keys {fr[1]},{fr[2]}
 
@@ -1014,6 +1218,15 @@ Placeholders: `fr[1]`, `fr[2]`
 Example: "move keys …,…"
 
 - `server/room.ts:387` · flag · when `if (Math.hypot(Number(fr[1]) \|\| 0, Number(fr[2]) \|\| 0) > 1.01)`
+
+**T96C43D** · UI · *admin only*
+
+> {Math.hypot(msg.ax - me.x, msg.ay - me.y).toFixed(0)} tiles away
+
+Placeholders: `Math.hypot(msg.ax - me.x, msg.ay - me.y).toFixed(0)`  
+Example: "(a reason) tiles away"
+
+- `server/room.ts:400` · flag · when `if (Math.hypot(msg.ax - me.x, msg.ay - me.y) > 45)`
 
 **T1B3369** · UI · *active*
 
@@ -1187,6 +1400,24 @@ Example: "You have 3 trade update3 waiting"
 - `src/ui/onlineScreens.ts:264` · heading · when `if (hubLogo)`
 - `src/ui/titleScreen.ts:1043` · button · when `if (this.onOnline)`
 
+**TC612F1** · UI · *active*
+
+> {Math.round(m / 60)} h left
+
+Placeholders: `Math.round(m / 60)`  
+Example: "… h left"
+
+- `src/ui/onlineScreens.ts:269` · return · when `m >= 120 ?`
+
+**T3A36DD** · UI · *active*
+
+> {m} min left
+
+Placeholders: `m`  
+Example: "… min left"
+
+- `src/ui/onlineScreens.ts:269` · return · when `m >= 120 ?`
+
 **T12EAF8** · Screen text · *active*
 
 > ★ {ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join(' ★ ')}
@@ -1204,6 +1435,15 @@ Placeholders: `pr.level`
 Example: "  ·  Lv 12"
 
 - `src/ui/onlineScreens.ts:280` · text · when `pr && LEVELS_ON ?`
+
+**T5BD53D** · Screen text · *active*
+
+> {st.wins} wins · {st.eliminations ?? 0} eliminations · {st.matches} matches · {st.catches} catches
+
+Placeholders: `st.wins`, `st.eliminations ?? 0`, `st.matches`, `st.catches`  
+Example: "3 wins · … eliminations · 3 matches · … catches"
+
+- `src/ui/onlineScreens.ts:290` · text · when `st ?`
 
 **TDC1649** · Button · *active*
 
@@ -1295,6 +1535,15 @@ Example: " · 42 ms"
 **TCE0010** · UI · *active*
 
 > You host: share the code, set the rules, start when ready.
+
+- `src/ui/onlineScreens.ts:362` · el · when `host ?`
+
+**T338ED0** · UI · *active*
+
+> {l.host} hosts this lobby.
+
+Placeholders: `l.host`  
+Example: "Wes hosts this lobby."
 
 - `src/ui/onlineScreens.ts:362` · el · when `host ?`
 
@@ -1443,6 +1692,15 @@ Example: "Finding trainers…"
 
 - `src/ui/onlineScreens.ts:548` · heading · when `in render()`
 
+**T7484A6** · Screen text · *active*
+
+> {this.players.length} / {this.size} trainers
+
+Placeholders: `this.players.length`, `this.size`  
+Example: "Wes / … trainers"
+
+- `src/ui/onlineScreens.ts:553` · text · when `in render()`
+
 **T2EA225** · Button · *active*
 
 > Start now (admin)
@@ -1460,6 +1718,15 @@ Example: "Finding trainers…"
 > Leave queue
 
 - `src/ui/onlineScreens.ts:562` · button · when `in render()`
+
+**T65B2C1** · UI · *active*
+
+> {r.name} was sent to your PC
+
+Placeholders: `r.name`  
+Example: "Pikachu was sent to your PC"
+
+- `src/ui/onlineScreens.ts:670` · when `r.ok ?`
 
 **T36C3EA** · Screen text · *active*
 
@@ -1500,15 +1767,6 @@ Example: "  ·  Level 12"
 
 - `src/ui/onlineScreens.ts:692` · text · when `up ?`
 
-**T45A4DF** · Screen text · *unused (switched off)*
-
-> ★ {a.name}{a.title ? ` · new title: ${a.title}` : ''}{a.look ? ' · new look' : ''}
-
-Placeholders: `a.name`, `a.title ? ` · new title: ${a.title}` : ''`, `a.look ? ' · new look' : ''`  
-Example: "★ PikachuMaster Ranger…"
-
-- `src/ui/onlineScreens.ts:696` · text · when `if (prog && this.net.me.signedIn && LEVELS_ON)`
-
 **T6A3EF7** · Screen text · *active*
 
 >  · new title: {a.title}
@@ -1539,6 +1797,15 @@ Example: "up to 3 Pokémon"
 
 - `src/ui/onlineScreens.ts:704` · text · when `this.info.picks > 1 ?`
 
+**T3A8296** · Button · *active*
+
+> {m.shiny ? '★ ' : ''}{m.name} Lv {m.level}{m.taken ? ' ✓' : ''}
+
+Placeholders: `m.shiny ? '★ ' : ''`, `m.name`, `m.level`, `m.taken ? ' ✓' : ''`  
+Example: "…Pikachu Lv 123"
+
+- `src/ui/onlineScreens.ts:708` · button · when `if (this.info?.picks)`
+
 **TBA2A08** · UI · *active*
 
 > ⏎ .almia-ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: "BoldPixels", "Segoe UI", system-ui, sans-serif; }⏎ .almia-ui * { box-sizing: border-box; }⏎ .almia-panel { pointer-events: auto; background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; image-rendering: pixelated; }⏎ .almia-chat { position: absolute; left: 16px; bottom: 16px; width: min(380px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }⏎ .almia-chat.side { left: auto; right: 16px; top: 16px; bottom: 16px; width: min(300px, calc(100vw - 32px)); }⏎ .almia-chat.side .almia-chat-log { flex: 1; height: auto; }⏎ .almia-chat.side.collapsed { bottom: auto; }⏎ .almia-chat.compact { opacity: 0.88; top: 96px; bottom: auto; width: min(300px, calc(100vw - 32px)); }⏎ .almia-chat.compact .almia-chat-log { height: 120px; }⏎ .almia-chat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #4a3424; color: #f4ecdc; font-size: 14px; letter-spacing: 0.5px; cursor: pointer; }⏎ .almia-chat-log { height: 180px; overflow-y: auto; padding: 6px 10px; line-height: 1.35; overflow-wrap: anywhere; }⏎ .almia-chat.collapsed .almia-chat-log, .almia-chat.collapsed .almia-chat-row { display: none; }⏎ .almia-chat-log .who { color: #c2611a; cursor: pointer; }⏎ .almia-chat-log .sys { color: #8a6a4a; font-style: italic; }⏎ .almia-chat-log .announce { display: block; color: #c2611a; font-style: normal; border: 2px solid #c2611a; padding: 3px 6px; margin: 3px 0; }⏎ .almia-chat-log .modbadge { color: #fff; background: #1f6aa0; font-size: 11px; padding: 0 4px; margin-right: 4px; }⏎ .almia-chat-row { display: flex; border-top: 2px solid #4a3424; }⏎ .almia-chat-row input { flex: 1; min-width: 0; border: 0; padding: 7px 10px; font: inherit; background: #fffaf0; color: #4a3424; outline: none; }⏎ .almia-chat-row button, .almia-btn { font: inherit; border: 0; background: #c2611a; color: #fff; padding: 7px 12px; cursor: pointer; text-shadow: 0 1px 0 #8a3a0a; }⏎ .almia-btn.alt { background: #e9dcc2; color: #4a3424; text-shadow: none; }⏎ .almia-btn:disabled { background: #b8ad98; cursor: default; }⏎ .almia-menu { position: absolute; padding: 4px; display: flex; flex-direction: column; gap: 4px; }⏎ .almia-modal-wrap { position: absolute; inset: 0; background: rgba(8,4,20,0.55); display: flex; align-items: center; justify-content: center; pointer-events: auto; }⏎ .almia-modal { width: min(380px, calc(100vw - 32px)); padding: 18px 20px 20px; font-size: 16px; }⏎ .almia-modal h2 { margin: 0 0 4px; font-size: 26px; font-weight: normal; }⏎ .almia-modal p { margin: 4px 0 12px; color: #8a6a4a; font-size: 14px; line-height: 1.35; }⏎ .almia-modal label { display: block; margin: 10px 0 4px; font-size: 14px; }⏎ .almia-modal input { width: 100%; padding: 9px 10px; font: inherit; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; outline: none; }⏎ .almia-modal .row { display: flex; gap: 8px; margin-top: 14px; }⏎ .almia-modal .row .almia-btn { flex: 1; }⏎ .almia-modal .err { color: #b0302a; min-height: 18px; margin-top: 8px; font-size: 14px; }⏎ .almia-modal .google { display: block; text-align: center; margin-top: 10px; background: #fff; color: #4a3424; border: 2px solid #4a3424; padding: 8px; text-decoration: none; }⏎ .almia-modal .switch { margin-top: 12px; font-size: 14px; text-align: center; color: #8a6a4a; }⏎ .almia-modal .switch a { color: #c2611a; cursor: pointer; }⏎ .almia-side { position: absolute; right: 16px; top: 16px; bottom: 16px; width: min(300px, calc(100vw - 32px)); display: flex; flex-direction: column; font-size: 15px; }⏎ .almia-side.collapsed { bottom: auto; }⏎ .almia-side.collapsed .almia-side-body { display: none; }⏎ .almia-side-body { flex: 1; overflow-y: auto; padding: 8px 10px; }⏎ .almia-side h3 { margin: 10px 0 4px; font-size: 14px; font-weight: normal; color: #8a6a4a; letter-spacing: 0.5px; text-transform: uppercase; }⏎ .almia-side h3:first-child { margin-top: 2px; }⏎ .almia-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px dashed #d8c7a6; }⏎ .almia-row:last-child { border-bottom: 0; }⏎ .almia-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }⏎ .almia-row .sub { display: block; font-size: 12px; color: #8a6a4a; }⏎ .almia-row .dot { width: 9px; height: 9px; flex: none; border: 2px solid #4a3424; background: #b8ad98; }⏎ .almia-row .dot.on { background: #5bbf5b; } .almia-row .dot.busy { background: #e0a030; } .almia-row .dot.watch { background: #6aa8e8; }⏎ .almia-small { font: inherit; font-size: 12px; border: 0; background: #c2611a; color: #fff; padding: 4px 7px; cursor: pointer; }⏎ .almia-small.alt { background: #e9dcc2; color: #4a3424; }⏎ .almia-small:disabled { background: #b8ad98; cursor: default; }⏎ .almia-add { display: flex; gap: 6px; margin: 6px 0 2px; }⏎ .almia-add input { flex: 1; min-width: 0; padding: 5px 7px; font: inherit; font-size: 14px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; outline: none; }⏎ .almia-note { font-size: 13px; color: #8a6a4a; line-height: 1.35; margin: 4px 0; }⏎ .almia-toasts { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; }⏎ .almia-toast { padding: 8px 14px; font-size: 15px; animation: almia-in 0.2s ease-out; }⏎ @keyframes almia-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }⏎ .almia-modal.wide { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }⏎ .almia-modal .list { overflow-y: auto; margin-top: 8px; border-top: 2px solid #4a3424; }⏎ .almia-tabs { display: flex; gap: 6px; margin: 6px 0 2px; }⏎ .almia-tabs .almia-small { font-size: 14px; padding: 5px 10px; }⏎ .almia-board { width: 100%; border-collapse: collapse; font-size: 14px; }⏎ .almia-board td, .almia-board th { padding: 4px 6px; text-align: left; border-bottom: 1px dashed #d8c7a6; font-weight: normal; }⏎ .almia-board th { color: #8a6a4a; font-size: 12px; text-transform: uppercase; }⏎ .almia-board td.r, .almia-board th.r { text-align: right; }⏎ .almia-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 140px); overflow-y: auto; padding: 16px 18px; font-size: 15px; }⏎ .almia-center h2 { margin: 0; font-size: 24px; font-weight: normal; }⏎ .almia-code { font-size: 34px; letter-spacing: 6px; color: #c2611a; }⏎ .almia-rules { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin: 8px 0; font-size: 14px; }⏎ @media (min-width: 1000px) { .almia-center.beside-chat { left: max(50%, 700px); } }⏎ .almia-row select { font: inherit; font-size: 13px; padding: 2px 4px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; }⏎ .almia-rules select, .almia-rules input[type=number] { font: inherit; font-size: 14px; padding: 3px 5px; border: 2px solid #4a3424; background: #fffaf0; color: #4a3424; }⏎ .almia-rules select:disabled, .almia-rules input:disabled { opacity: 0.75; }⏎ .almia-actions { display: flex; gap: 8px; margin-top: 12px; }⏎ .almia-actions .almia-btn { flex: 1; }⏎ 
@@ -1562,24 +1829,6 @@ Example: "up to 3 Pokémon"
 > Say something nice
 
 - `src/ui/overlay.ts:137` · when `net.me.signedIn ?`
-
-**TC61D15** · UI · *active*
-
-> 📣 {m.text}
-
-Placeholders: `m.text`  
-Example: "📣 (a reason)"
-
-- `src/ui/overlay.ts:175` · el · when `if (m.announce)`
-
-**TF19ABA** · UI · *active*
-
-> : {m.text}
-
-Placeholders: `m.text`  
-Example: ": (a reason)"
-
-- `src/ui/overlay.ts:181` · document.createTextNode · when `if (m.system)`
 
 **TA462F6** · UI · *active*
 
@@ -1687,6 +1936,15 @@ Example: "Thanks, Wes was reported to the moderators."
 
 - `src/ui/socialPanel.ts:84` · el · when `if (!net.me.signedIn)`
 
+**T12EF38** · UI · *active*
+
+> {from} invited you
+
+Placeholders: `from`  
+Example: "Wes invited you"
+
+- `src/ui/socialPanel.ts:91` · el · when `in render()`
+
 **TFFB006** · UI · *active*
 
 > Party · {party.members.length}/4
@@ -1695,6 +1953,15 @@ Placeholders: `party.members.length`
 Example: "Party · …/4"
 
 - `src/ui/socialPanel.ts:100` · el · when `if (party)`
+
+**TDF7DFC** · UI · *active*
+
+> {n} (invited)
+
+Placeholders: `n`  
+Example: "3 (invited)"
+
+- `src/ui/socialPanel.ts:116` · el · when `if (party)`
 
 **T957ABF** · UI · *active*
 
@@ -1705,6 +1972,15 @@ Example: "Party · …/4"
 **T1F753F** · UI · *active*
 
 > You lead: Find a Match takes everyone, as one squad.
+
+- `src/ui/socialPanel.ts:121` · el · when `lead ?`
+
+**TEA0430** · UI · *active*
+
+> {party.leader} starts the matches.
+
+Placeholders: `party.leader`  
+Example: "… starts the matches."
 
 - `src/ui/socialPanel.ts:121` · el · when `lead ?`
 
@@ -1770,6 +2046,24 @@ Example: "dot …"
 - `src/ui/watchScreens.ts:51` · mode = · when `header.mode === 'private' ?`
 - `src/ui/watchScreens.ts:203` · mode = · when `this.header.mode === 'private' ?`
 
+**T818F98** · UI · *active*
+
+> {x.winner ? `${x.winner} won` : 'No winner'} · {Math.floor(x.seconds / 60)}:{String(Math.floor(x.seconds % 60)).padStart(2, '0')} · {when.toLocaleDateString()} {when.toLocaleTimeString([], { hour: '2-digit', minute: '2...}
+
+Placeholders: `x.winner ? `${x.winner} won` : 'No winner'`, `Math.floor(x.seconds / 60)`, `String(Math.floor(x.seconds % 60)).padStart(2, '0')`, `when.toLocaleDateString()`, `when.toLocaleTimeString([], { hour: '2-digit', minute: '2...`  
+Example: "Wes · 45:45 · 3 3"
+
+- `src/ui/socialPanel.ts:300` · el
+
+**T4AE312** · UI · *active*
+
+> {x.winner} won
+
+Placeholders: `x.winner`  
+Example: "Wes won"
+
+- `src/ui/socialPanel.ts:300` · el · when `x.winner ?`
+
 **TBEF204** · UI · *active*
 
 > No winner
@@ -1796,6 +2090,24 @@ Placeholders: `pr.level`
 Example: "Trainer level 12"
 
 - `src/ui/socialPanel.ts:391` · el · when `if (p.error)`
+
+**T5E63A7** · UI · *active*
+
+> {pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...}{p.online ? 'Online now · ' : ''}trainer since {new Date(p.joined).toLocaleDateString()} · {p.pc} Pokémon in their PC
+
+Placeholders: `pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...`, `p.online ? 'Online now · ' : ''`, `new Date(p.joined).toLocaleDateString()`, `p.pc`  
+Example: "12…trainer since … · … Pokémon in their PC"
+
+- `src/ui/socialPanel.ts:398` · el · when `if (p.error)`
+
+**TD351A8** · UI · *active*
+
+> {pr.into} / {pr.next} XP to level {pr.level + 1} · 
+
+Placeholders: `pr.into`, `pr.next`, `pr.level + 1`  
+Example: "… / … XP to level 12 · "
+
+- `src/ui/socialPanel.ts:398` · el · when `pr.next ?`
 
 **T3D88A3** · UI · *active*
 
@@ -2004,6 +2316,15 @@ Example: "You're back in. 3 recovery code3 leftWes."
 
 - `src/ui/tradeMenu.ts:62` · return · when `if (!c)`
 
+**T6E4DAF** · UI · *active*
+
+> {c.shiny ? '★ ' : ''}{c.shadow ? 'Shadow ' : ''}{c.name} Lv {c.level}{c.alpha ? ' · Alpha' : ''}
+
+Placeholders: `c.shiny ? '★ ' : ''`, `c.shadow ? 'Shadow ' : ''`, `c.name`, `c.level`, `c.alpha ? ' · Alpha' : ''`  
+Example: "……Pikachu Lv 12…"
+
+- `src/ui/tradeMenu.ts:63` · return · when `in cardText()`
+
 **T8AAE16** · UI · *active*
 
 >  · Alpha
@@ -2030,6 +2351,15 @@ Placeholders: `cardText(n.gave)`, `n.partner`, `cardText(n.got)`
 Example: "Your 3 went to 3, who sent you 3!"
 
 - `src/ui/tradeMenu.ts:130` · el
+
+**T4A360C** · UI · *active*
+
+> {cardText(wonder.waiting)} is out on Wonder Trade. It swaps with the next trainer who sends one.
+
+Placeholders: `cardText(wonder.waiting)`  
+Example: "(a reason) is out on Wonder Trade. It swaps with the next trainer who sends one."
+
+- `src/ui/tradeMenu.ts:133` · el · when `if (wonder.waiting)`
 
 **TC950D1** · UI · *active*
 
@@ -2059,20 +2389,20 @@ Example: "Offers for you…"
 
 - `src/ui/tradeMenu.ts:162` · el · when `in openTrades()`
 
-**TB90BD6** · UI · *active*
-
->  ({incoming.length})
-
-Placeholders: `incoming.length`  
-Example: " (…)"
-
-- `src/ui/tradeMenu.ts:162` · el · when `incoming.length ?`
-
 **T4144FE** · UI · *active*
 
 > None right now.
 
 - `src/ui/tradeMenu.ts:163` · el · when `if (!incoming.length)`
+
+**TD414E1** · UI · *active*
+
+> {o.from} offers {cardText(o.give)} for your {cardText(o.want)}
+
+Placeholders: `o.from`, `cardText(o.give)`, `cardText(o.want)`  
+Example: "Wes offers (a reason) for your (a reason)"
+
+- `src/ui/tradeMenu.ts:166` · el
 
 **T96884D** · UI · *active*
 
@@ -2114,6 +2444,15 @@ Example: "To …: your (a reason) for their (a reason)"
 - `src/ui/tradeMenu.ts:206` · el
 - `server/modPage.ts:93` · moderators page HTML
 
+**T729D8A** · On-screen notice · *active*
+
+> {r.name} has no Pokémon in their PC yet
+
+Placeholders: `r.name`  
+Example: "Pikachu has no Pokémon in their PC yet"
+
+- `src/ui/tradeMenu.ts:216` · say · when `r.pc.length ?`
+
 **T0F0C1F** · UI · *active*
 
 > You give
@@ -2140,6 +2479,15 @@ Example: "You get from Pikachu"
 > Offer sent
 
 - `src/ui/tradeMenu.ts:238` · say · when `if (theirs && theirs.pc.length)`
+
+**TE24F2E** · On-screen notice · *active*
+
+> {r.name} has no Pokémon to trade yet
+
+Placeholders: `r.name`  
+Example: "Pikachu has no Pokémon to trade yet"
+
+- `src/ui/tradeMenu.ts:257` · say · when `if (!r.pc.length)`
 
 **TE08071** · UI · *unused (switched off)*
 
@@ -2186,7 +2534,7 @@ Example: "Trainer since …"
 
 ## 4. Accounts: sign-in, registration, recovery, profiles
 
-74 lines.
+77 lines.
 
 **T3C46AA** · Error message · *active*
 
@@ -2321,6 +2669,15 @@ Example: "Trade complete! Pikachu is in your PC"
 
 - `server/accounts.ts:396` · error: · when `if (this.db.prepare("SELECT 1 FROM wonder WHERE user_id = ? AND status = 'waiting'").get(me.id))`
 
+**TFF7C65** · Screen text · *active*
+
+> {give.name} is out on Wonder Trade. It swaps with the next trainer who sends one
+
+Placeholders: `give.name`  
+Example: "Pikachu is out on Wonder Trade. It swaps with the next trainer who sends one"
+
+- `server/accounts.ts:432` · text: · when `if (!got)`
+
 **TC2522F** · Screen text · *active*
 
 > Wonder Trade! {nameOf(partnerId)} sent you {got.name}
@@ -2330,11 +2687,29 @@ Example: "Wonder Trade! … sent you Pikachu"
 
 - `server/accounts.ts:434` · text: · when `in wonderSend()`
 
+**TB0740A** · UI · *active*
+
+> {xpBoost}x XP event
+
+Placeholders: `xpBoost`  
+Example: "120x XP event"
+
+- `server/accounts.ts:605` · what: · when `if (xpBoost > 1 && lines.length)`
+
 **T442D4E** · Screen text · *active*
 
 > No trainer by that name
 
 - `server/accounts.ts:809` · text: · when `if (!u \|\| u.banned)`
+
+**T72C7F8** · Screen text · *active*
+
+> {u.username} is already your friend
+
+Placeholders: `u.username`  
+Example: "Pikachu is already your friend"
+
+- `server/accounts.ts:811` · text: · when `if (this.areFriends(userId, u.id))`
 
 **TC88DAF** · Screen text · *active*
 
@@ -2678,7 +3053,16 @@ Example: "Welcome, Pikachu!"
 
 ## 5. In a match: HUD, prompts and controls
 
-94 lines.
+108 lines.
+
+**T9AB83E** · Screen text · *active*
+
+> {name}  Lv {level}
+
+Placeholders: `name`, `level`  
+Example: "Pikachu  Lv 12"
+
+- `src/ui/hud.ts:92` · label = · when `in drawInfoBar()`
 
 **TBCDC5E** · UI · *active*
 
@@ -2688,15 +3072,6 @@ Placeholders: `chest.town ? ` · ${chest.town}` : ''`
 Example: "Storage Chest3"
 
 - `src/ui/hud.ts:217` · title = · when `in drawChestPanel()`
-
-**T93FA75** · UI · *active*
-
->  · {chest.town}
-
-Placeholders: `chest.town`  
-Example: " · 3"
-
-- `src/ui/hud.ts:217` · title = · when `chest.town ?`
 
 **TDC54B8** · UI · *active*
 
@@ -2710,14 +3085,14 @@ Example: " · 3"
 
 - `src/ui/hud.ts:221` · wrapLines · when `in drawChestPanel()`
 
-**T4CB6C5** · UI · *active*
+**T0E6918** · Screen text · *active*
 
->  ×{it.count}
+> {used}/{chest.slots.length} slots used
 
-Placeholders: `it.count`  
-Example: " ×3"
+Placeholders: `used`, `chest.slots.length`  
+Example: "…/… slots used"
 
-- `src/ui/hud.ts:472` · map · when `it.count > 1 ?`
+- `src/ui/hud.ts:256` · ink · when `in drawChestPanel()`
 
 **TFB7481** · UI · *active*
 
@@ -2779,6 +3154,15 @@ Example: "Held item · …Held & TMs tab"
 
 - `src/ui/hud.ts:493` · when `def?.kind === 'ball' ?`
 
+**T4696D9** · UI · *active*
+
+> {def.desc ?? ''} · its number key
+
+Placeholders: `def.desc ?? ''`  
+Example: "… · its number key"
+
+- `src/ui/hud.ts:494` · when `def?.kind === 'styler' ?`
+
 **T3BD773** · UI · *active*
 
 > Press its number key to use it
@@ -2834,15 +3218,6 @@ Example: "You have ₽1,500 · 1-9 to buy · E or Esc to leave"
 - `src/ui/hud.ts:527` · fitWidth · when `if (st.shop)`
 - `src/ui/hud.ts:534` · ink · when `if (st.shop)`
 
-**TA45DF7** · Screen text · *active*
-
-> ₽{e.price.toLocaleString()}
-
-Placeholders: `e.price.toLocaleString()`  
-Example: "₽1,500"
-
-- `src/ui/hud.ts:544` · ink · when `if (st.shop)`
-
 **TFD6EBE** · UI · *active*
 
 > Snag Machine · beat {st.snag.from}
@@ -2859,6 +3234,24 @@ Example: "Snag Machine · beat Wes"
 
 - `src/ui/hud.ts:551` · fitWidth · when `if (st.snag)`
 - `src/ui/hud.ts:557` · ink · when `if (st.snag)`
+
+**TF65476** · Screen text · *active*
+
+> {st.armedBall}: release to throw
+
+Placeholders: `st.armedBall`  
+Example: "Great Ball: release to throw"
+
+- `src/ui/hud.ts:577` · creamStrip · when `st.armedBall ?`
+
+**T702126** · Screen text · *active*
+
+> {match.ground.label} · lighting: {st.lightingMode}
+
+Placeholders: `match.ground.label`, `st.lightingMode`  
+Example: "Great Ball · lighting: …"
+
+- `src/ui/hud.ts:581` · label · when `if (DEBUG_STAMP)`
 
 **T5860FA** · UI · *active*
 
@@ -2893,6 +3286,24 @@ Example: "Darkness pulse 3/… in "
 
 - `src/ui/hud.ts:623` · head = · when `urgent ?`
 
+**T909B00** · UI · *active*
+
+> {m.shiny ? '★ ' : ''}{m.name}  Lv {m.level}
+
+Placeholders: `m.shiny ? '★ ' : ''`, `m.name`, `m.level`  
+Example: "…Pikachu  Lv 12"
+
+- `src/ui/hud.ts:953` · tabText = · when `in drawParty()`
+
+**T0CE1D8** · UI · *active*
+
+> {Math.hypot(m.x - p.x, m.y - p.y).toFixed(0)} tiles · R
+
+Placeholders: `Math.hypot(m.x - p.x, m.y - p.y).toFixed(0)`  
+Example: "… tiles · R"
+
+- `src/ui/hud.ts:975` · info = · when `roaming ?`
+
 **T0ED6CE** · UI · *active*
 
 > Take {ITEMS[m.heldItem]?.name ?? 'item'}
@@ -2911,6 +3322,15 @@ Example: "Take Pikachu"
 **T9DA706** · UI · *active*
 
 > It moves!
+
+- `src/ui/hud.ts:1089` · info = · when `left < 60 ?`
+
+**T5312F1** · UI · *active*
+
+> {left} steps to go
+
+Placeholders: `left`  
+Example: "3 steps to go"
 
 - `src/ui/hud.ts:1089` · info = · when `left < 60 ?`
 
@@ -2998,6 +3418,24 @@ Example: "Storm Mask: your team lasts 3 in the storm"
 
 - `src/ui/hud.ts:1235` · text = · when `if (masked && p.party.some((m) => m.inDark && !m.fainted && !m.stowed))`
 
+**T274820** · UI · *active*
+
+> {h.def.name} · sells for ₽{st.shop.sellPrice(h.def.id).toLocaleString()}
+
+Placeholders: `h.def.name`, `st.shop.sellPrice(h.def.id).toLocaleString()`  
+Example: "Pikachu · sells for ₽1,500"
+
+- `src/ui/hud.ts:1307` · name = · when `st.shop ?`
+
+**T4BDEC6** · Screen text · *active*
+
+> {L.mon} wants to learn
+
+Placeholders: `L.mon`  
+Example: "Pikachu wants to learn"
+
+- `src/ui/hud.ts:1335` · ink · when `in drawLearn()`
+
 **TFFA2A2** · Screen text · *active*
 
 > +{L.queued} more
@@ -3012,6 +3450,15 @@ Example: "+… more"
 > Physical, lunge
 
 - `src/ui/hud.ts:1355` · when `isContact(def) ?`
+
+**T263C05** · UI · *active*
+
+> {def.power > 0 ? `Pow ${def.power}` : 'No damage'} · {def.cooldown}s
+
+Placeholders: `def.power > 0 ? `Pow ${def.power}` : 'No damage'`, `def.cooldown`  
+Example: "… · 3s"
+
+- `src/ui/hud.ts:1357` · nums = · when `in drawLearn()`
 
 **TB56F37** · UI · *active*
 
@@ -3125,6 +3572,15 @@ Example: "Charge …s"
 
 - `src/ui/hud.ts:1433` · self: · when `in describeMove()`
 
+**TEA577E** · UI · *active*
+
+> {Math.round(def.status.chance * 100)}% chance to {STATUS_VERB[def.status.kind] ?? def.status.kind}
+
+Placeholders: `Math.round(def.status.chance * 100)`, `STATUS_VERB[def.status.kind] ?? def.status.kind`  
+Example: "…% chance to …"
+
+- `src/ui/hud.ts:1436` · out.push · when `if (def.status)`
+
 **TA61D49** · UI · *active*
 
 > its own
@@ -3136,15 +3592,6 @@ Example: "Charge …s"
 > the target's
 
 - `src/ui/hud.ts:1439` · when `if (def.stages)`
-
-**TFA9C18** · UI · *active*
-
->  ({Math.round(def.stages.chance * 100)}%)
-
-Placeholders: `Math.round(def.stages.chance * 100)`  
-Example: " (…%)"
-
-- `src/ui/hud.ts:1445` · out.push · when `def.stages.chance < 1 ?`
 
 **T52FB60** · UI · *active*
 
@@ -3207,6 +3654,24 @@ Example: "Ball target: Pikachu"
 
 - `src/ui/matchScreen.ts:328` · say · when `if (this.match.lockTarget === w)`
 
+**T268F66** · On-screen notice · *active*
+
+> {m.name} is {Math.hypot(m.x - this.match.player.x, m.y - this.match.pl...} tiles away (see minimap)
+
+Placeholders: `m.name`, `Math.hypot(m.x - this.match.player.x, m.y - this.match.pl...`  
+Example: "Pikachu is Wes tiles away (see minimap)"
+
+- `src/ui/matchScreen.ts:354` · say · when `if (m && isRoaming(m))`
+
+**T0B88DE** · On-screen notice · *active*
+
+> {lead(this.match.player)?.name} takes the lead
+
+Placeholders: `lead(this.match.player)?.name`  
+Example: "Pikachu takes the lead"
+
+- `src/ui/matchScreen.ts:355` · say · when `if (this.match.swapLead(h.index))`
+
 **TBF6C95** · On-screen notice · *active*
 
 > Click "Release?" again to let {m.name} go
@@ -3245,20 +3710,47 @@ Example: "Ball target: Pikachu"
 
 - `src/ui/matchScreen.ts:716` · say · when `if (input.pressed('KeyC') && !this.match.hasStyler(p))`
 
-**TCBDD2C** · On-screen notice · *active*
+**TA42E02** · On-screen notice · *active*
 
->  · {cur.desc}
+> {cur.name} ready: click a wild Pokémon, then F to throw{cur.desc ? ` · ${cur.desc}` : ''}
 
-Placeholders: `cur.desc`  
-Example: " · …"
+Placeholders: `cur.name`, `cur.desc ? ` · ${cur.desc}` : ''`  
+Example: "Pikachu ready: click a wild Pokémon, then F to throw…"
 
-- `src/ui/matchScreen.ts:1242` · say · when `cur.desc ?`
+- `src/ui/matchScreen.ts:1242` · say · when `if (cur)`
 
 **TF519C9** · On-screen notice · *active*
 
 > Couldn't reach your PC (this browser blocks saving)
 
 - `src/ui/matchScreen.ts:1325` · say · when `if (!saved)`
+
+**T5BFEC1** · On-screen notice · *active*
+
+> {ev.mon.name} is calm: throw a ball now (F) for a much better catch
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu is calm: throw a ball now (F) for a much better catch"
+
+- `src/ui/matchScreen.ts:1341` · say · when `case 'calmed'`
+
+**T473D3B** · On-screen notice · *active*
+
+> {ev.mon.name} forgot {ev.forgot} and learned {move(ev.moveId).name}!
+
+Placeholders: `ev.mon.name`, `ev.forgot`, `move(ev.moveId).name`  
+Example: "Pikachu forgot … and learned Pikachu!"
+
+- `src/ui/matchScreen.ts:1366` · say · when `ev.forgot ?`
+
+**TAE5BA4** · On-screen notice · *active*
+
+> {ev.mon.name} learned {move(ev.moveId).name}!
+
+Placeholders: `ev.mon.name`, `move(ev.moveId).name`  
+Example: "Pikachu learned Pikachu!"
+
+- `src/ui/matchScreen.ts:1366` · say · when `ev.forgot ?`
 
 **T771553** · UI · *active*
 
@@ -3268,6 +3760,16 @@ Placeholders: `move(ev.moveId).name`
 Example: "New move: Pikachu"
 
 - `src/ui/matchScreen.ts:1367` · add · when `if (ev.mon.owner === this.match.player)`
+
+**TAE4846** · UI · *active*
+
+> {m.shiny ? '★ ' : ''}{m.name}  Lv {m.level}{m.fainted ? ' (fainted)' : ''}
+
+Placeholders: `m.shiny ? '★ ' : ''`, `m.name`, `m.level`, `m.fainted ? ' (fainted)' : ''`  
+Example: "…Pikachu  Lv 12…"
+
+- `src/ui/matchScreen.ts:2146` · map · when `this.match.snagOffer ?`
+- `src/ui/matchScreen.ts:2148` · map · when `this.extractPick ?`
 
 **TCBB78B** · UI · *active*
 
@@ -3364,7 +3866,7 @@ Example: "Space · Challenge the Pikachu"
 
 ## 6. NPC dialogue: townsfolk, the Breeder, visitors, healers, the challenger
 
-105 lines.
+110 lines.
 
 **T0A8A5D** · Game data · *active*
 
@@ -3656,153 +4158,147 @@ Example: "Space · Challenge the Pikachu"
 
 - `src/sim/townsfolk.ts:80` · name:
 
-**TF2FD3E** · Townsfolk, the Breeder or the wandering stranger · *active*
-
-> Snag Machine rule one: wear the dark ones down under ten percent, THEN fire. Rule two: see rule one.
-
-- `src/sim/townsfolk.ts:81` · lines:
-
 **T52D40C** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I was at the first showdown. Back then the storm was just weather. Now it hunts.
 
-- `src/sim/townsfolk.ts:82` · lines:
+- `src/sim/townsfolk.ts:81` · lines:
 
 **T6CABFF** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Poké Maniac Gus
 
-- `src/sim/townsfolk.ts:86` · name:
+- `src/sim/townsfolk.ts:85` · name:
 
 **TE6846C** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I collect Pokémon shaped like balls. Voltorb, Jigglypuff, Marill... my collection ROLLS.
 
-- `src/sim/townsfolk.ts:87` · lines:
+- `src/sim/townsfolk.ts:86` · lines:
 
 **TF74D86** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > An Electrode beat me at hide and seek once. Round object. Flat field. Explain THAT.
 
-- `src/sim/townsfolk.ts:88` · lines:
+- `src/sim/townsfolk.ts:87` · lines:
 
 **TAFEA1E** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Swimmer Lena
 
-- `src/sim/townsfolk.ts:92` · name:
+- `src/sim/townsfolk.ts:91` · name:
 
 **T7E773E** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > They say Latios will carry a trainer he trusts. The sky, the spray, the speed... imagine it.
 
-- `src/sim/townsfolk.ts:93` · lines:
+- `src/sim/townsfolk.ts:92` · lines:
 
 **T131F90** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I swim everywhere. Piers are for people who fear fun.
 
-- `src/sim/townsfolk.ts:94` · lines:
+- `src/sim/townsfolk.ts:93` · lines:
 
 **T491B42** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Blacksmith Orin
 
-- `src/sim/townsfolk.ts:98` · name:
+- `src/sim/townsfolk.ts:97` · name:
 
 **T11426F** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I shape quarry ore into charms. The crystal ones hum at night. I stopped asking why.
 
-- `src/sim/townsfolk.ts:99` · lines:
+- `src/sim/townsfolk.ts:98` · lines:
 
 **T41AB1A** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Evolution stones turn up in the town stalls. Each town stocks its own, so check them all.
 
-- `src/sim/townsfolk.ts:100` · lines:
+- `src/sim/townsfolk.ts:99` · lines:
 
 **T8FC1E7** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Mystic Vela
 
-- `src/sim/townsfolk.ts:104` · name:
+- `src/sim/townsfolk.ts:103` · name:
 
 **T137529** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I read fortunes. Yours says 'beware the final two'. That will be 200 Poké Dollars.
 
-- `src/sim/townsfolk.ts:105` · lines:
+- `src/sim/townsfolk.ts:104` · lines:
 
 **T593D4F** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > The darkness does not close in to kill you, dear. It closes in to WAKE something.
 
-- `src/sim/townsfolk.ts:106` · lines:
+- `src/sim/townsfolk.ts:105` · lines:
 
 **T4772EB** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Tourist Chad
 
-- `src/sim/townsfolk.ts:110` · name:
+- `src/sim/townsfolk.ts:109` · name:
 
 **T8A53E9** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Back home we don't have giant storms or ghost whales. We have a mall. This is better.
 
-- `src/sim/townsfolk.ts:111` · lines:
+- `src/sim/townsfolk.ts:110` · lines:
 
 **T61D551** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I asked a Ranger where the gift shop is. Still waiting on that answer.
 
-- `src/sim/townsfolk.ts:112` · lines:
+- `src/sim/townsfolk.ts:111` · lines:
 
 **TF739D7** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Picnicker June
 
-- `src/sim/townsfolk.ts:116` · name:
+- `src/sim/townsfolk.ts:115` · name:
 
 **TAE3645** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > I set out six sandwiches and turned my back for ONE second. Six Pidgey. Zero sandwiches.
 
-- `src/sim/townsfolk.ts:117` · lines:
+- `src/sim/townsfolk.ts:116` · lines:
 
 **TBD9E9D** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Stock potions before you pick fights. The healer cannot reach you mid-battle, friend.
 
-- `src/sim/townsfolk.ts:118` · lines:
+- `src/sim/townsfolk.ts:117` · lines:
 
 **TA077D6** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Breeder Maribel
 
-- `src/sim/townsfolk.ts:193` · m.makeTrainer · when `if (s)`
-- `src/sim/townsfolk.ts:195` · name: · when `if (s)`
+- `src/sim/townsfolk.ts:192` · m.makeTrainer · when `if (s)`
+- `src/sim/townsfolk.ts:194` · name: · when `if (s)`
 
-**TC953F6** · Townsfolk, the Breeder or the wandering stranger · *active*
+**TF500ED** · Townsfolk, the Breeder or the wandering stranger · *active*
 
-> The girl's outline flickers... It was {shiny ? 'a shiny ' : ''}Zoroark all along!
+> The girl's outline flickers... It was Zoroark all along!
 
-Placeholders: `shiny ? 'a shiny ' : ''`  
-Example: "The girl's outline flickers... It was …Zoroark all along!"
+- `src/sim/townsfolk.ts:275` · m.noticeFor · when `in revealZoroark()`
 
-- `src/sim/townsfolk.ts:276` · m.noticeFor · when `in revealZoroark()`
+**TFB5A1F** · Townsfolk, the Breeder or the wandering stranger · *active*
 
-**T3456AE** · Townsfolk, the Breeder or the wandering stranger · *active*
+> {z.name}: "Hee hee... you saw through me!"
 
-> a shiny 
+Placeholders: `z.name`  
+Example: "Pikachu: "Hee hee... you saw through me!""
 
-- `src/sim/townsfolk.ts:276` · m.noticeFor · when `shiny ?`
+- `src/sim/townsfolk.ts:276` · return · when `in revealZoroark()`
 
 **T09893B** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Breeder Maribel: "Take good care of that Egg now. Keep walking with it and it'll hatch."
 
-- `src/sim/townsfolk.ts:284` · return · when `if (this.traded.has(p.id))`
+- `src/sim/townsfolk.ts:283` · return · when `if (this.traded.has(p.id))`
 
 **T7DBEF8** · Townsfolk, the Breeder or the wandering stranger · *active*
 
@@ -3811,13 +4307,13 @@ Example: "The girl's outline flickers... It was …Zoroark all along!"
 Placeholders: `wantName`  
 Example: "Breeder Maribel: "If you bring me a Pikachu, I'll trade you an Egg from my best stock. A real mystery, straight from the ranch!""
 
-- `src/sim/townsfolk.ts:287` · return · when `if (idx < 0)`
+- `src/sim/townsfolk.ts:286` · return · when `if (idx < 0)`
 
 **TDB982B** · Townsfolk, the Breeder or the wandering stranger · *active*
 
 > Breeder Maribel: "Finish your battle first, dear."
 
-- `src/sim/townsfolk.ts:290` · return · when `if (p.duelId)`
+- `src/sim/townsfolk.ts:289` · return · when `if (p.duelId)`
 
 **TD6FBC7** · Townsfolk, the Breeder or the wandering stranger · *active*
 
@@ -3826,7 +4322,7 @@ Example: "Breeder Maribel: "If you bring me a Pikachu, I'll trade you an Egg fro
 Placeholders: `wantName`  
 Example: "Breeder Maribel: "A Pikachu! Marvelous! Here, one Egg. Keep walking with it and it'll hatch.""
 
-- `src/sim/townsfolk.ts:304` · return · when `in talkBreeder()`
+- `src/sim/townsfolk.ts:303` · return · when `in talkBreeder()`
 
 **T9E147A** · Townsfolk, the Breeder or the wandering stranger · *active*
 
@@ -3835,7 +4331,7 @@ Example: "Breeder Maribel: "A Pikachu! Marvelous! Here, one Egg. Keep walking wi
 Placeholders: `baby.name`  
 Example: "The Egg hatched into Pikachu, but your party is full! It leaves you an Extraction Voucher"
 
-- `src/sim/townsfolk.ts:345` · m.noticeFor · when `if (partySize(t) >= m.partyCap)`
+- `src/sim/townsfolk.ts:344` · m.noticeFor · when `if (partySize(t) >= m.partyCap)`
 
 **TC08BFB** · Townsfolk, the Breeder or the wandering stranger · *active*
 
@@ -3844,7 +4340,7 @@ Example: "The Egg hatched into Pikachu, but your party is full! It leaves you an
 Placeholders: `baby.name`  
 Example: "Oh? The Egg is glowing... the Mythical Pikachu hatched from it!"
 
-- `src/sim/townsfolk.ts:351` · m.noticeFor · when `inside.mythical ?`
+- `src/sim/townsfolk.ts:350` · m.noticeFor · when `inside.mythical ?`
 
 **T543B22** · Townsfolk, the Breeder or the wandering stranger · *active*
 
@@ -3853,7 +4349,7 @@ Example: "Oh? The Egg is glowing... the Mythical Pikachu hatched from it!"
 Placeholders: `baby.name`  
 Example: "Oh? The Egg is hatching... Pikachu hatched from the Egg!"
 
-- `src/sim/townsfolk.ts:351` · m.noticeFor · when `inside.mythical ?`
+- `src/sim/townsfolk.ts:350` · m.noticeFor · when `inside.mythical ?`
 
 **TC36E67** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
@@ -3933,89 +4429,149 @@ Example: "Celeste: "Let's see if you're worth my best!" (Lv …)"
 
 - `src/sim/visitors.ts:352` · return · when `in askHoopa()`
 
+**T7325A0** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} tears out of the dark portal and attacks!
+
+Placeholders: `L.name`  
+Example: "Pikachu tears out of the dark portal and attacks!"
+
+- `src/sim/visitors.ts:378` · text: · when `bout ?`
+
+**TAD356B** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} tears out of the dark portal!
+
+Placeholders: `L.name`  
+Example: "Pikachu tears out of the dark portal!"
+
+- `src/sim/visitors.ts:378` · text: · when `bout ?`
+
+**T001282** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you
+
+Placeholders: `L.name`  
+Example: "Pikachu came through the portal and challenges you! Wear it down to its last HP and it joins you"
+
+- `src/sim/visitors.ts:379` · text: · when `bout ?`
+
+**T51E49E** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} came through the portal! Wear it down and it will join you
+
+Placeholders: `L.name`  
+Example: "Pikachu came through the portal! Wear it down and it will join you"
+
+- `src/sim/visitors.ts:379` · text: · when `bout ?`
+
 **T40C203** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "Hey! Quit it!"
 
-- `src/sim/visitors.ts:424` · text = · when `this.hoopaHits === 1 ?`
+- `src/sim/visitors.ts:423` · text = · when `this.hoopaHits === 1 ?`
 
 **T64AB5F** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "One more and you'll be sorry!"
 
-- `src/sim/visitors.ts:424` · text = · when `this.hoopaHits === 1 ?`
+- `src/sim/visitors.ts:423` · text = · when `this.hoopaHits === 1 ?`
 
 **T6CEA33** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "That HURT! Fine... no more holding back!" Hoopa is unbound!
 
-- `src/sim/visitors.ts:445` · text: · when `in unbind()`
+- `src/sim/visitors.ts:444` · text: · when `in unbind()`
 
 **T665C28** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa Unbound (Lv 100) battles you! Wear it down or catch it
 
-- `src/sim/visitors.ts:448` · text: · when `bout ?`
+- `src/sim/visitors.ts:447` · text: · when `bout ?`
 
 **T317F04** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa Unbound (Lv 100) is loose!
 
-- `src/sim/visitors.ts:448` · text: · when `bout ?`
+- `src/sim/visitors.ts:447` · text: · when `bout ?`
 
 **T909695** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > You hooked it... the black lake heaves!
 
-- `src/sim/visitors.ts:544` · text: · when `shadow ?`
+- `src/sim/visitors.ts:543` · text: · when `shadow ?`
 
 **T0978D8** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Something huge took the bait... Tide Lake churns!
 
-- `src/sim/visitors.ts:544` · text: · when `shadow ?`
+- `src/sim/visitors.ts:543` · text: · when `shadow ?`
 
 **T7F9CE3** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > SHADOW LUGIA rises from the storm-black lake!
 
-- `src/sim/visitors.ts:566` · text: · when `s.shadow ?`
+- `src/sim/visitors.ts:565` · text: · when `s.shadow ?`
 
 **TCC8B2C** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Lugia bursts out of the lake!
 
-- `src/sim/visitors.ts:566` · text: · when `s.shadow ?`
+- `src/sim/visitors.ts:565` · text: · when `s.shadow ?`
 
 **T0E24BE** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Shadow Lugia circles over the shore, waiting for you...
 
-- `src/sim/visitors.ts:583` · text: · when `if (s.shadow && !bout)`
+- `src/sim/visitors.ts:582` · text: · when `if (s.shadow && !bout)`
 
 **TCA6BD7** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Shadow Lugia sank back into the black water...
 
-- `src/sim/visitors.ts:594` · text: · when `if (!m.player.alive \|\| m.finalStarted \|\| s.t > 30 \|\| L.fainted \|\| L.captured)`
+- `src/sim/visitors.ts:592` · text: · when `if (!m.player.alive \|\| m.finalStarted \|\| s.t > 30 \|\| L.fainted \|\| L.captured)`
 
-**TC11496** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+**TC067C8** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
-> Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!
+> {L.name} wanted to join, but your party is full. It leaves you an Extraction Voucher
 
-- `src/sim/visitors.ts:612` · text: · when `snag ?`
+Placeholders: `L.name`  
+Example: "Pikachu wanted to join, but your party is full. It leaves you an Extraction Voucher"
 
-**TC73CB4** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+- `src/sim/visitors.ts:626` · m.noticeFor · when `t.isPlayer ?`
 
-> Balls bounce off it, and you have no Snag Machine... survive if you can!
+**T534349** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
-- `src/sim/visitors.ts:612` · text: · when `snag ?`
+> {L.name} flew off
+
+Placeholders: `L.name`  
+Example: "Pikachu flew off"
+
+- `src/sim/visitors.ts:626` · m.noticeFor · when `t.isPlayer ?`
+
+**TCCA403** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} acknowledges your strength and joins your team!
+
+Placeholders: `L.name`  
+Example: "Pikachu acknowledges your strength and joins your team!"
+
+- `src/sim/visitors.ts:631` · m.noticeFor · when `t.isPlayer ?`
+
+**T200E83** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
+
+> {L.name} joined {t.name}'s team!
+
+Placeholders: `L.name`, `t.name`  
+Example: "Pikachu joined Pikachu's team!"
+
+- `src/sim/visitors.ts:631` · m.noticeFor · when `t.isPlayer ?`
 
 **T36C94F** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!
 
-- `src/sim/visitors.ts:681` · text: · when `if (partySize(pl) >= m.partyCap)`
+- `src/sim/visitors.ts:668` · text: · when `if (partySize(pl) >= m.partyCap)`
 
 **T12D14B** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
@@ -4024,17 +4580,17 @@ Example: "Celeste: "Let's see if you're worth my best!" (Lv …)"
 Placeholders: `prize.name`  
 Example: "Celeste: "You earned this." She gives you a shiny Pikachu!"
 
-- `src/sim/visitors.ts:686` · text: · when `if (partySize(pl) >= m.partyCap)`
+- `src/sim/visitors.ts:673` · text: · when `if (partySize(pl) >= m.partyCap)`
 
 **T9CD13E** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Celeste wins this one. She patched your Pokémon up. Try again in a minute
 
-- `src/sim/visitors.ts:701` · text: · when `if (won)`
+- `src/sim/visitors.ts:688` · text: · when `if (won)`
 
 ## 7. Shops, items, TMs and fishing
 
-182 lines.
+184 lines.
 
 **T3D3739** · Screen text · *active*
 
@@ -5044,6 +5600,15 @@ Example: "Celeste: "You earned this." She gives you a shiny Pikachu!"
 
 - `src/sim/data.ts:143` · how = · when `role === 'physical' ?`
 
+**T913DCD** · UI · *active*
+
+> {m.name} cannot learn {mv.name}: {how}{mv.category === 'status' ? '' : ` and ${mv.name} is a ${m...}
+
+Placeholders: `m.name`, `mv.name`, `how`, `mv.category === 'status' ? '' : ` and ${mv.name} is a ${m...`  
+Example: "Pikachu cannot learn Pikachu: …Pikachu"
+
+- `src/sim/data.ts:144` · return · when `in tmRefusal()`
+
 **T61ABEB** · UI · *active*
 
 >  and {mv.name} is a {mv.category} move
@@ -5127,6 +5692,15 @@ Example: "You fished up a Pikachu! (Space to open it)"
 > Rare catch! 
 
 - `src/sim/fishing.ts:218` · label = · when `kind === 'rare' ?`
+
+**T406F38** · Screen text · *active*
+
+> {label}A wild {shiny ? 'shiny ' : ''}{w.name} (Lv {w.level}) bit!
+
+Placeholders: `label`, `shiny ? 'shiny ' : ''`, `w.name`, `w.level`  
+Example: "Great BallA wild …Pikachu (Lv 12) bit!"
+
+- `src/sim/fishing.ts:219` · text: · when `in land()`
 
 **T94676C** · UI · *active*
 
@@ -6193,7 +6767,7 @@ Example: "TM Pikachu"
 
 ## 9. Battle and match messages (catching, evolving, the storm, legends)
 
-136 lines.
+188 lines.
 
 **TCC7AED** · Screen text · *active*
 
@@ -6227,6 +6801,16 @@ Placeholders: `d.phase`
 Example: "darkness phase …"
 
 - `src/sim/darkness.ts:53` · return · when `in phaseLabel()`
+
+**TE4596D** · UI · *active*
+
+> {secs / 60} min
+
+Placeholders: `secs / 60`  
+Example: "45 min"
+
+- `src/sim/match.ts:107` · return · when `secs % 60 ?`
+- `src/ui/hud.ts:1235` · text = · when `secs % 60 ?`
 
 **T1CD326** · UI · *active*
 
@@ -6316,6 +6900,24 @@ Example: "Bought Pikachu for ₽1,500"
 
 - `src/sim/match.ts:533` · return · when `in buy()`
 
+**TD9B9B2** · UI · *active*
+
+> {SHOPS.challenger.name}: "Rest up first. Come back in {Math.ceil(c.readyAt - this.time)}s."
+
+Placeholders: `SHOPS.challenger.name`, `Math.ceil(c.readyAt - this.time)`  
+Example: "Pikachu: "Rest up first. Come back in 45s.""
+
+- `src/sim/match.ts:540` · return · when `if (this.time < c.readyAt)`
+
+**TC2D2F3** · UI · *active*
+
+> {SHOPS.challenger.name}: "Show me what you've got!" (Lv {lvl})
+
+Placeholders: `SHOPS.challenger.name`, `lvl`  
+Example: "Pikachu: "Show me what you've got!" (Lv …)"
+
+- `src/sim/match.ts:558` · return · when `in startChallenge()`
+
 **T73500C** · UI · *active*
 
 > Outpost staff
@@ -6344,6 +6946,24 @@ Example: "Alpha prize dropped: …"
 
 - `src/sim/match.ts:689` · return · when `if (!m)`
 
+**T1E0684** · UI · *active*
+
+> {m.name} can't Mega Evolve
+
+Placeholders: `m.name`  
+Example: "Pikachu can't Mega Evolve"
+
+- `src/sim/match.ts:691` · return · when `if (!form)`
+
+**T4EA63C** · UI · *active*
+
+> {m.name} needs to hold its {ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'}
+
+Placeholders: `m.name`, `ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'`  
+Example: "Pikachu needs to hold its Pikachu"
+
+- `src/sim/match.ts:692` · return · when `if (m.heldItem !== form.stone)`
+
 **TFA6354** · UI · *active*
 
 > Mega Stone
@@ -6352,11 +6972,29 @@ Example: "Alpha prize dropped: …"
 - `src/sim/match.ts:713` · return · when `if (previous && ITEMS[previous]?.effect === 'mega' && (m.mega \|\| m.evolving?.mega))`
 - `src/ui/matchScreen.ts:1433` · say · when `if (ev.mon.owner?.isPlayer)`
 
+**TBECC26** · UI · *active*
+
+> {m.name} can't Mega Evolve right now
+
+Placeholders: `m.name`  
+Example: "Pikachu can't Mega Evolve right now"
+
+- `src/sim/match.ts:693` · return · when `if (!canMega(t, m))`
+
 **TAE5BAD** · UI · *active*
 
 > No Pokémon to hold it
 
 - `src/sim/match.ts:710` · return · when `if (!m)`
+
+**TCAD465** · UI · *active*
+
+> {m.name} needs its {ITEMS[previous]?.name ?? 'Mega Stone'} while Mega Evolved
+
+Placeholders: `m.name`, `ITEMS[previous]?.name ?? 'Mega Stone'`  
+Example: "Pikachu needs its Pikachu while Mega Evolved"
+
+- `src/sim/match.ts:713` · return · when `if (previous && ITEMS[previous]?.effect === 'mega' && (m.mega \|\| m.evolving?.mega))`
 
 **TD28063** · UI · *active*
 
@@ -6366,6 +7004,24 @@ Placeholders: `ITEMS[previous]?.name ?? 'item'`
 Example: "No room in your Held & TMs tab for its Pikachu"
 
 - `src/sim/match.ts:723` · return · when `if (previous && !this.giveItem(t, previous))`
+
+**T6D474A** · UI · *active*
+
+> {m.name} holds the {def.name}
+
+Placeholders: `m.name`, `def.name`  
+Example: "Pikachu holds the Pikachu"
+
+- `src/sim/match.ts:725` · return · when `in equip()`
+
+**T960A79** · UI · *active*
+
+> {m.name} needs its {def.name} while Mega Evolved
+
+Placeholders: `m.name`, `def.name`  
+Example: "Pikachu needs its Pikachu while Mega Evolved"
+
+- `src/sim/match.ts:734` · return · when `if (m.mega && def?.effect === 'mega')`
 
 **T561BD1** · UI · *active*
 
@@ -6383,6 +7039,78 @@ Example: "Took the Pikachu from Pikachu"
 - `src/sim/match.ts:746` · return · when `if (!m)`
 - `src/ui/matchScreen.ts:1221` · say · when `if (!m)`
 
+**T2CC04C** · UI · *active*
+
+> {m.name} already knows {move(def.move).name}
+
+Placeholders: `m.name`, `move(def.move).name`  
+Example: "Pikachu already knows Pikachu"
+
+- `src/sim/match.ts:748` · return · when `if (m.moves.includes(def.move))`
+
+**T64EDD4** · UI · *active*
+
+> {m.name} learned {move(def.move).name}!
+
+Placeholders: `m.name`, `move(def.move).name`  
+Example: "Pikachu learned Pikachu!"
+
+- `src/sim/match.ts:753` · return · when `if (m.moves.length < MOVE_SLOTS)`
+
+**TDCF7B7** · UI · *active*
+
+> {m.name} forgot {old ? move(old).name : '?'} and learned {move(def.move).name}!
+
+Placeholders: `m.name`, `old ? move(old).name : '?'`, `move(def.move).name`  
+Example: "Pikachu forgot Pikachu and learned Pikachu!"
+
+- `src/sim/match.ts:760` · return · when `in teach()`
+
+**T9AD7E6** · Screen text · *active*
+
+> {m.name} wants to learn {asked[0]}
+
+Placeholders: `m.name`, `asked[0]`  
+Example: "Pikachu wants to learn …"
+
+- `src/sim/match.ts:803` · text: · when `asked.length === 1 ?`
+
+**TFE7196** · Screen text · *active*
+
+> {m.name} wants to learn {asked.length} new moves
+
+Placeholders: `m.name`, `asked.length`  
+Example: "Pikachu wants to learn … new moves"
+
+- `src/sim/match.ts:803` · text: · when `asked.length === 1 ?`
+
+**T42AA0A** · UI · *active*
+
+> {p.mon.name} did not learn {name}
+
+Placeholders: `p.mon.name`, `name`  
+Example: "Pikachu did not learn Pikachu"
+
+- `src/sim/match.ts:831` · return · when `if (slot < 0 \|\| slot >= p.mon.moves.length)`
+
+**TD21784** · UI · *active*
+
+> {p.mon.name} will not forget its signature move
+
+Placeholders: `p.mon.name`  
+Example: "Pikachu will not forget its signature move"
+
+- `src/sim/match.ts:834` · return · when `if (move(p.mon.moves[slot] as string).signature)`
+
+**T2A90FC** · UI · *active*
+
+> {p.mon.name} forgot {old} and learned {name}!
+
+Placeholders: `p.mon.name`, `old`, `name`  
+Example: "Pikachu forgot … and learned Pikachu!"
+
+- `src/sim/match.ts:842` · return · when `in answerLearn()`
+
 **T789FAE** · UI · *active*
 
 > Hold F to aim, release to throw
@@ -6395,11 +7123,38 @@ Example: "Took the Pikachu from Pikachu"
 
 - `src/sim/match.ts:856` · return · when `if (!m)`
 
+**T2A0F6C** · UI · *active*
+
+> {m.name} is at full HP
+
+Placeholders: `m.name`  
+Example: "Pikachu is at full HP"
+
+- `src/sim/match.ts:857` · return · when `if (m.hp >= m.maxHp)`
+
+**TB1A823** · UI · *active*
+
+> {m.name} recovered HP
+
+Placeholders: `m.name`  
+Example: "Pikachu recovered HP"
+
+- `src/sim/match.ts:861` · return · when `case 'heal'`
+
 **T225F9C** · UI · *active*
 
 > Nobody has fainted
 
 - `src/sim/match.ts:865` · return · when `if (!down)`
+
+**T34ABA9** · UI · *active*
+
+> {down.name} was revived!
+
+Placeholders: `down.name`  
+Example: "Pikachu was revived!"
+
+- `src/sim/match.ts:873` · return · when `case 'revive'`
 
 **T9D5080** · UI · *active*
 
@@ -6407,11 +7162,29 @@ Example: "Took the Pikachu from Pikachu"
 
 - `src/sim/match.ts:877` · return · when `if (!target \|\| !target.status)`
 
+**T01B791** · UI · *active*
+
+> {target.name} is cured
+
+Placeholders: `target.name`  
+Example: "Pikachu is cured"
+
+- `src/sim/match.ts:881` · return · when `case 'cure'`
+
 **T989E06** · UI · *active*
 
 > No Pokémon
 
 - `src/sim/match.ts:884` · return · when `if (!m)`
+
+**TA8DE91** · UI · *active*
+
+> {m.name}'s {label} rose sharply!
+
+Placeholders: `m.name`, `label`  
+Example: "Pikachu's Great Ball rose sharply!"
+
+- `src/sim/match.ts:888` · return · when `case 'boost'`
 
 **T0203D8** · UI · *active*
 
@@ -6419,6 +7192,24 @@ Example: "Took the Pikachu from Pikachu"
 
 - `src/sim/match.ts:893` · return · when `if (!m)`
 - `src/sim/match.ts:903` · return · when `if (!m)`
+
+**T354678** · UI · *active*
+
+> {m.name} can't level up any more
+
+Placeholders: `m.name`  
+Example: "Pikachu can't level up any more"
+
+- `src/sim/match.ts:894` · return · when `if (m.level >= 100)`
+
+**T006DDF** · UI · *active*
+
+> {m.name} grew to Lv {m.level}!
+
+Placeholders: `m.name`, `m.level`  
+Example: "Pikachu grew to Lv 12!"
+
+- `src/sim/match.ts:900` · return · when `case 'candy'`
 
 **T8985B1** · UI · *active*
 
@@ -6499,15 +7290,9 @@ Example: "Snagged Pikachu's Pikachu!"
 
 - `src/sim/match.ts:1004` · return · when `in snag()`
 
-**TB7EC53** · Screen text · *active*
+**T19EEE0** · Screen text · *active*
 
-> The ball bounced off!
-
-- `src/sim/match.ts:1062` · text: · when `if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2)`
-
-**TA34BC3** · Screen text · *active*
-
-> Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine
+> The Poké Ball bounced off!
 
 - `src/sim/match.ts:1063` · text: · when `if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2)`
 
@@ -6604,6 +7389,15 @@ Example: "Paid ₽1,500. Your Pokémon are fully healed!"
 
 - `src/sim/match.ts:1606` · text: · when `t.isPlayer ?`
 
+**TCF71A2** · Screen text · *active*
+
+> {t.name} passed out in the storm and was dragged into the shadows
+
+Placeholders: `t.name`  
+Example: "Pikachu passed out in the storm and was dragged into the shadows"
+
+- `src/sim/match.ts:1606` · text: · when `t.isPlayer ?`
+
 **T2DA9CE** · UI · *active*
 
 > You can't ride during a battle
@@ -6634,6 +7428,15 @@ Example: "You ride Pikachu! (V to get off)"
 
 - `src/sim/match.ts:2475` · return · when `if (!force && !canStand(this.ground, t.x, t.y, CONFIG.player.radius))`
 
+**TF2F07C** · UI · *active*
+
+> {mt.mon.name} sets you down
+
+Placeholders: `mt.mon.name`  
+Example: "Pikachu sets you down"
+
+- `src/sim/match.ts:2479` · return · when `in dismount()`
+
 **T2E7FD8** · UI · *active*
 
 > You can't release a Pokémon during a battle
@@ -6645,6 +7448,15 @@ Example: "You ride Pikachu! (V to get off)"
 > You can't release your last Pokémon
 
 - `src/sim/match.ts:2522` · return · when `if (p.party.length <= 1)`
+
+**T94C998** · UI · *active*
+
+> {m.name} was released
+
+Placeholders: `m.name`  
+Example: "Pikachu was released"
+
+- `src/sim/match.ts:2541` · return · when `m.fainted ?`
 
 **TCBC8EC** · UI · *active*
 
@@ -6674,6 +7486,15 @@ Example: "Bye, Pikachu! It heads off into the wild"
 
 - `src/sim/match.ts:2556` · return · when `if (!p.party.some((o) => o !== m && !o.fainted && !o.captured))`
 
+**T8F592D** · UI · *active*
+
+> {m.name} was extracted to your PC!
+
+Placeholders: `m.name`  
+Example: "Pikachu was extracted to your PC!"
+
+- `src/sim/match.ts:2564` · return · when `in extractWithVoucher()`
+
 **T74EE9B** · Screen text · *active*
 
 > Go, {next.name}! You're steering it now (Esc for trainer mode)
@@ -6683,11 +7504,38 @@ Example: "Go, Pikachu! You're steering it now (Esc for trainer mode)"
 
 - `src/sim/match.ts:2782` · text: · when `if (next && Math.hypot(next.x - p.x, next.y - p.y) < 10 && this.takeControl(next))`
 
+**TA01D17** · Screen text · *active*
+
+> {target.name} is weak: your team holds back. Throw a ball (F)!
+
+Placeholders: `target.name`  
+Example: "Pikachu is weak: your team holds back. Throw a ball (F)!"
+
+- `src/sim/match.ts:2944` · text: · when `if (this.sparedNotice !== target && engaged && Math.hypot(target.x - p.x, target.y - p.y) < 10)`
+
+**TA7759E** · Screen text · *active*
+
+> {ev.mon.name} dissolved into the storm...
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu dissolved into the storm..."
+
+- `src/sim/match.ts:3081` · text: · when `if (host)`
+
 **T5ABC34** · Screen text · *active*
 
 > Darkrai is down! It left a Cherish Ball behind
 
 - `src/sim/match.ts:3108` · text: · when `if (ev.type === 'faint' && ev.mon.boss)`
+
+**T0E95DD** · Screen text · *active*
+
+> {SHOPS.challenger.name} wins this bout. Your Pokémon were patched up.
+
+Placeholders: `SHOPS.challenger.name`  
+Example: "Pikachu wins this bout. Your Pokémon were patched up."
+
+- `src/sim/match.ts:3156` · text: · when `in loseChallengeAs()`
 
 **TBD8004** · UI · *active*
 
@@ -6740,6 +7588,24 @@ Example: "Darkness pulse …: the night closes in"
 
 - `src/sim/match.ts:3260` · text: · when `if (m.drowsy >= this.drowsySeconds(m))`
 
+**TB9E86D** · On-screen notice · *active*
+
+> {b.name} wants to battle!
+
+Placeholders: `b.name`  
+Example: "Pikachu wants to battle!"
+
+- `src/sim/match.ts:3455` · noticeFor · when `if (a.isPlayer)`
+
+**T9C0FEB** · On-screen notice · *active*
+
+> {a.name} wants to battle!
+
+Placeholders: `a.name`  
+Example: "Pikachu wants to battle!"
+
+- `src/sim/match.ts:3456` · noticeFor · when `if (b.isPlayer)`
+
 **TC4ECB8** · Screen text · *active*
 
 > You caught {L.name}!
@@ -6748,6 +7614,15 @@ Placeholders: `L.name`
 Example: "You caught Pikachu!"
 
 - `src/sim/match.ts:3533` · text: · when `in catchBoutLegend()`
+
+**TB30E23** · UI · *active*
+
+> {L.name} resisted the Snag Machine!
+
+Placeholders: `L.name`  
+Example: "Pikachu resisted the Snag Machine!"
+
+- `src/sim/match.ts:3553` · return · when `if (L.hp / L.maxHp >= below)`
 
 **T4A4FF3** · UI · *active*
 
@@ -6767,6 +7642,51 @@ Example: "You snagged Pikachu! It joins your team, still wrapped in darkness"
 
 - `src/sim/match.ts:3583` · return · when `in snagShadow()`
 
+**T7FB129** · Screen text · *active*
+
+> {L.name} dissolved into the storm...
+
+Placeholders: `L.name`  
+Example: "Pikachu dissolved into the storm..."
+
+- `src/sim/match.ts:3594` · text: · when `in shadowVanishes()`
+
+**TE0283C** · Screen text · *active*
+
+> {m.name}'s aura thickens: it shook off its status and moves faster!
+
+Placeholders: `m.name`  
+Example: "Pikachu's aura thickens: it shook off its status and moves faster!"
+
+- `src/sim/match.ts:3621` · text: · when `m.shadow ?`
+
+**TB8AB81** · Screen text · *active*
+
+> {m.name} is getting serious!
+
+Placeholders: `m.name`  
+Example: "Pikachu is getting serious!"
+
+- `src/sim/match.ts:3621` · text: · when `m.shadow ?`
+
+**T3EBF37** · Screen text · *active*
+
+> {m.name} is enraged!
+
+Placeholders: `m.name`  
+Example: "Pikachu is enraged!"
+
+- `src/sim/match.ts:3626` · text: · when `if (phase === 1)`
+
+**T4DFAF1** · UI · *active*
+
+> {m.name} can't battle
+
+Placeholders: `m.name`  
+Example: "Pikachu can't battle"
+
+- `src/sim/match.ts:3718` · return · when `m ?`
+
 **T73A375** · UI · *active*
 
 > Go, {m.name}!
@@ -6774,13 +7694,13 @@ Example: "You snagged Pikachu! It joins your team, still wrapped in darkness"
 Placeholders: `m.name`  
 Example: "Go, Pikachu!"
 
-- `src/sim/match.ts:3724` · return · when `in duelPick()`
+- `src/sim/match.ts:3720` · return · when `in duelPick()`
 
 **TD58DE6** · Screen text · *active*
 
 > Final two! The Shadow Crystal calls you both to its arena
 
-- `src/sim/match.ts:3987` · text: · when `if (this.finalCountdown === null)`
+- `src/sim/match.ts:3983` · text: · when `if (this.finalCountdown === null)`
 
 **T10D575** · Screen text · *active*
 
@@ -6789,7 +7709,7 @@ Example: "Go, Pikachu!"
 Placeholders: `a.name`, `b.name`  
 Example: "Final showdown: Pikachu vs Pikachu! Both teams are restored"
 
-- `src/sim/match.ts:4043` · text: · when `in stepFinalShowdown()`
+- `src/sim/match.ts:4039` · text: · when `in stepFinalShowdown()`
 
 **TB4762B** · Screen text · *active*
 
@@ -6798,7 +7718,25 @@ Example: "Final showdown: Pikachu vs Pikachu! Both teams are restored"
 Placeholders: `loser.name`  
 Example: "Snag Machine ready: take one of Pikachu's Pokémon (1-6), Esc to keep it"
 
-- `src/sim/match.ts:4079` · text: · when `if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured))`
+- `src/sim/match.ts:4075` · text: · when `if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured))`
+
+**T04BE1C** · Screen text · *active*
+
+> {winner.name} sinks back into the storm. It won't surface again this match
+
+Placeholders: `winner.name`  
+Example: "Pikachu sinks back into the storm. It won't surface again this match"
+
+- `src/sim/match.ts:4096` · text: · when `shadow ?`
+
+**TCE74A2** · Screen text · *active*
+
+> {winner.name} was too strong and vanished. Your Pokémon were patched up
+
+Placeholders: `winner.name`  
+Example: "Pikachu was too strong and vanished. Your Pokémon were patched up"
+
+- `src/sim/match.ts:4096` · text: · when `shadow ?`
 
 **TC7F252** · UI · *active*
 
@@ -6871,6 +7809,15 @@ Example: "Go, Pikachu!"
 
 - `src/ui/matchScreen.ts:665` · say · when `if (!t \|\| t.fainted \|\| t.captured \|\| !m.wilds.includes(t))`
 
+**T41FD90** · On-screen notice · *active*
+
+> {t.name} is out of range
+
+Placeholders: `t.name`  
+Example: "Pikachu is out of range"
+
+- `src/ui/matchScreen.ts:667` · say · when `if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange)`
+
 **TC98108** · On-screen notice · *active*
 
 > Go, {ballName}!
@@ -6900,15 +7847,6 @@ Placeholders: `ITEMS[e.id]?.name ?? e.id`, `e.count > 1 ? ` ×${e.count}` : ''`
 Example: "Threw away Pikachu3"
 
 - `src/ui/matchScreen.ts:1210` · say · when `in discardSlot()`
-
-**T034D4C** · On-screen notice · *active*
-
->  ×{e.count}
-
-Placeholders: `e.count`  
-Example: " ×3"
-
-- `src/ui/matchScreen.ts:1210` · say · when `e.count > 1 ?`
 
 **T2B50FF** · On-screen notice · *active*
 
@@ -6965,11 +7903,38 @@ Example: " ×3"
 
 - `src/ui/matchScreen.ts:1289` · confusion: · when `case 'status'`
 
+**T8E6FB4** · UI · *active*
+
+> {ev.mon.name} fainted
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu fainted"
+
+- `src/ui/matchScreen.ts:1310` · add · when `case 'faint'`
+
+**TBE21A1** · UI · *active*
+
+> {ev.mon.name} → PC
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu → PC"
+
+- `src/ui/matchScreen.ts:1324` · add · when `saved ?`
+
 **T3651FC** · UI · *active*
 
 > PC unavailable
 
 - `src/ui/matchScreen.ts:1324` · add · when `saved ?`
+
+**T65668B** · UI · *active*
+
+> {ev.mon.name} stops fighting
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu stops fighting"
+
+- `src/ui/matchScreen.ts:1329` · add · when `case 'yield'`
 
 **T6B16BB** · UI · *active*
 
@@ -6985,6 +7950,15 @@ Example: "Loop …/3"
 > The line broke!
 
 - `src/ui/matchScreen.ts:1336` · add · when `case 'styler-break'`
+
+**TF3F72F** · UI · *active*
+
+> {ev.mon.name} calmed down!
+
+Placeholders: `ev.mon.name`  
+Example: "Pikachu calmed down!"
+
+- `src/ui/matchScreen.ts:1339` · add · when `case 'calmed'`
 
 **T2567D5** · UI · *active*
 
@@ -7019,12 +7993,30 @@ Example: "Go, Pikachu!"
 
 - `src/ui/matchScreen.ts:1375` · say · when `mine ?`
 
+**T44A24F** · On-screen notice · *active*
+
+> {ev.trainer.name} sent out {ev.mon.name}!
+
+Placeholders: `ev.trainer.name`, `ev.mon.name`  
+Example: "Pikachu sent out Pikachu!"
+
+- `src/ui/matchScreen.ts:1375` · say · when `mine ?`
+
 **TBF0830** · On-screen notice · *active*
 
 > You defeated {foe.name}!
 
 Placeholders: `foe.name`  
 Example: "You defeated Pikachu!"
+
+- `src/ui/matchScreen.ts:1383` · say · when `ev.winner === p ?`
+
+**T0F3402** · On-screen notice · *active*
+
+> {foe.name} won the battle
+
+Placeholders: `foe.name`  
+Example: "Pikachu won the battle"
 
 - `src/ui/matchScreen.ts:1383` · say · when `ev.winner === p ?`
 
@@ -7076,14 +8068,50 @@ Example: "What? Pikachu is evolving!"
 
 - `src/ui/matchScreen.ts:1425` · say · when `if (ev.mon.owner?.isPlayer)`
 
-**T340BB2** · UI · *active*
+**TC6B574** · On-screen notice · *active*
 
-> +₽{ev.amount}
+> {ev.mon.name}'s {ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'} is reacting!
 
-Placeholders: `ev.amount`  
-Example: "+₽…"
+Placeholders: `ev.mon.name`, `ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'`  
+Example: "Pikachu's Pikachu is reacting!"
 
-- `src/ui/matchScreen.ts:1447` · add · when `if (ev.trainer.isPlayer)`
+- `src/ui/matchScreen.ts:1433` · say · when `if (ev.mon.owner?.isPlayer)`
+
+**T35D251** · On-screen notice · *active*
+
+> {ev.mon.owner.name}'s {ev.mon.name} is Mega Evolving!
+
+Placeholders: `ev.mon.owner.name`, `ev.mon.name`  
+Example: "Pikachu's Pikachu is Mega Evolving!"
+
+- `src/ui/matchScreen.ts:1434` · say · when `if (ev.mon.owner)`
+
+**T23A94A** · On-screen notice · *active*
+
+> {ev.from} Mega Evolved into {ev.mon.name}!
+
+Placeholders: `ev.from`, `ev.mon.name`  
+Example: "Wes Mega Evolved into Pikachu!"
+
+- `src/ui/matchScreen.ts:1439` · say · when `if (ev.mon.owner?.isPlayer)`
+
+**T67B576** · On-screen notice · *active*
+
+> {ev.from} evolved into {ev.mon.name}!
+
+Placeholders: `ev.from`, `ev.mon.name`  
+Example: "Wes evolved into Pikachu!"
+
+- `src/ui/matchScreen.ts:1443` · say · when `if (ev.mon.owner?.isPlayer)`
+
+**T5CE068** · On-screen notice · *active*
+
+> {ev.trainer.name} was wiped out by wild Pokémon
+
+Placeholders: `ev.trainer.name`  
+Example: "Pikachu was wiped out by wild Pokémon"
+
+- `src/ui/matchScreen.ts:1450` · say · when `if (!ev.trainer.isPlayer)`
 
 **T258C49** · On-screen notice · *active*
 
@@ -7094,6 +8122,15 @@ Example: "+₽…"
 **T0EA875** · On-screen notice · *active*
 
 > Your whole party fainted…
+
+- `src/ui/matchScreen.ts:1459` · say · when `ev.trainer.isPlayer ?`
+
+**T20DAF6** · On-screen notice · *active*
+
+> {ev.trainer.name} was eliminated!
+
+Placeholders: `ev.trainer.name`  
+Example: "Pikachu was eliminated!"
 
 - `src/ui/matchScreen.ts:1459` · say · when `ev.trainer.isPlayer ?`
 
@@ -7142,6 +8179,15 @@ Example: "Respawning in 3s"
 
 - `src/ui/matchScreen.ts:2415` · text · when `in drawDuelHud()`
 
+**T21F8D4** · Screen text · *active*
+
+> {m.name}  Lv {m.level}
+
+Placeholders: `m.name`, `m.level`  
+Example: "Pikachu  Lv 12"
+
+- `src/ui/matchScreen.ts:2422` · text · when `in drawDuelHud()`
+
 **T0E0541** · UI · *active*
 
 > Legendary {m.name}
@@ -7171,7 +8217,7 @@ Example: "Shiny …"
 
 ## 10. Results screens
 
-18 lines.
+22 lines.
 
 **T3AB9ED** · Screen text · *active*
 
@@ -7206,11 +8252,38 @@ Example: "Extract up to 3 Pokémon to your PC: 1 free + 3 Extraction Voucher3 (1
 
 - `src/ui/endScreen.ts:144` · head = · when `this.picks > 1 ?`
 
+**T869AC0** · UI · *active*
+
+> {this.sent.map((m) => m.name).join(', ')} sent! {left} more with your voucher{left > 1 ? 's' : ''}
+
+Placeholders: `this.sent.map((m) => m.name).join(', ')`, `left`, `left > 1 ? 's' : ''`  
+Example: "Pikachu sent! 3 more with your voucher3"
+
+- `src/ui/endScreen.ts:145` · head = · when `this.sent.length === 0 ?`
+
+**T8AB94C** · Screen text · *active*
+
+> {i + 1}  {m.shiny ? '★ ' : ''}{m.name} Lv {m.level}{done ? ' ✓ in PC' : ''}
+
+Placeholders: `i + 1`, `m.shiny ? '★ ' : ''`, `m.name`, `m.level`, `done ? ' ✓ in PC' : ''`  
+Example: "…  …Pikachu Lv 123"
+
+- `src/ui/endScreen.ts:150` · label = · when `if (this.choosing)`
+
 **TF83EC2** · Screen text · *active*
 
 >   ✓ in PC
 
 - `src/ui/endScreen.ts:150` · label = · when `done ?`
+
+**TB1D34C** · UI · *active*
+
+> {m.name} Lv {m.level}{m.fainted ? ' (fainted)' : ''}
+
+Placeholders: `m.name`, `m.level`, `m.fainted ? ' (fainted)' : ''`  
+Example: "Pikachu Lv 12…"
+
+- `src/ui/endScreen.ts:156` · map · when `in render()`
 
 **TE1615A** · UI · *active*
 
@@ -7225,6 +8298,15 @@ Example: "Extract up to 3 Pokémon to your PC: 1 free + 3 Extraction Voucher3 (1
 > Couldn't save to your PC (this browser blocks saving)
 
 - `src/ui/endScreen.ts:162` · msg = · when `this.saveFailed ?`
+
+**TD9C75A** · UI · *active*
+
+> {names} {this.sent.length > 1 ? 'were' : 'was'} sent to your PC ({loadPc().length} stored)
+
+Placeholders: `names`, `this.sent.length > 1 ? 'were' : 'was'`, `loadPc().length`  
+Example: "… … sent to your PC (… stored)"
+
+- `src/ui/endScreen.ts:163` · msg = · when `this.saveFailed ?`
 
 **T576766** · Button · *active*
 
@@ -7294,7 +8376,7 @@ Example: "Keep Pikachu: it goes to your PC on the server"
 
 ## 10b. Achievements, titles and XP
 
-44 lines.
+47 lines.
 
 **T55E121** · UI · *active*
 
@@ -7316,6 +8398,33 @@ Example: "Outlasted 3 trainer3"
 > Squad victory
 
 - `src/net/progression.ts:50` · what: · when `f.squad ?`
+
+**T473439** · UI · *active*
+
+> {f.stats.eliminations} elimination{f.stats.eliminations === 1 ? '' : 's'}
+
+Placeholders: `f.stats.eliminations`, `f.stats.eliminations === 1 ? '' : 's'`  
+Example: "… elimination…"
+
+- `src/net/progression.ts:51` · what: · when `if (f.stats.eliminations)`
+
+**T9E8C3C** · UI · *active*
+
+> {f.stats.knockouts} knockout{f.stats.knockouts === 1 ? '' : 's'}
+
+Placeholders: `f.stats.knockouts`, `f.stats.knockouts === 1 ? '' : 's'`  
+Example: "… knockout…"
+
+- `src/net/progression.ts:52` · what: · when `if (f.stats.knockouts)`
+
+**T099740** · UI · *active*
+
+> {f.stats.catches} catch{f.stats.catches === 1 ? '' : 'es'}
+
+Placeholders: `f.stats.catches`, `f.stats.catches === 1 ? '' : 'es'`  
+Example: "… catch…"
+
+- `src/net/progression.ts:53` · what: · when `if (f.stats.catches)`
 
 **TBB3CEE** · UI · *active*
 
@@ -7569,7 +8678,7 @@ Example: "Survived … min"
 
 ## 10c. The PC and storage
 
-9 lines.
+10 lines.
 
 **T38B13B** · UI · *active*
 
@@ -7582,6 +8691,15 @@ Example: "Survived … min"
 > MY PC
 
 - `src/ui/pcScreen.ts:118` · heading · when `in render()`
+
+**TB0E730** · Screen text · *active*
+
+> {this.list.length} Pokémon extracted · {this.where} · A/D or the arrows change box · Esc back
+
+Placeholders: `this.list.length`, `this.where`  
+Example: "… Pokémon extracted · … · A/D or the arrows change box · Esc back"
+
+- `src/ui/pcScreen.ts:119` · heading · when `this.list.length ?`
 
 **TCF6852** · Screen text · *active*
 
@@ -7633,7 +8751,7 @@ Example: "Lv 12"
 
 ## 11. Spectating and replays
 
-11 lines.
+12 lines.
 
 **T5AF822** · Error message · *active*
 
@@ -7683,6 +8801,15 @@ Example: "Lv 12"
 
 - `src/ui/watchScreens.ts:30` · nameOf =
 
+**T4DB9C9** · UI · *active*
+
+> {mode}Watching {nameOf(mirror.roster, follow)} · {header.delay} s behind
+
+Placeholders: `mode`, `nameOf(mirror.roster, follow)`, `header.delay`  
+Example: "…Watching … · … s behind"
+
+- `src/ui/watchScreens.ts:52` · bar · when `in draw()`
+
 **TCFA8FB** · UI · *active*
 
 > ← → switch trainer   ·   Esc leave
@@ -7706,13 +8833,23 @@ Example: "Replay · …… · … / … · …"
 
 ## 12. Connection, server and error messages
 
-18 lines.
+19 lines.
 
 **T8F8EDC** · UI · *active*
 
 > The server is updating in a few minutes. Matches already running will finish; new ones start right after
 
 - `server/hub.ts:29` · DRAIN_TEXT =
+
+**TC1A122** · UI · *active*
+
+> {c.name} disconnected
+
+Placeholders: `c.name`  
+Example: "Pikachu disconnected"
+
+- `server/hub.ts:179` · leaveQueue · when `in disconnect()`
+- `server/hub.ts:180` · cancelPick · when `in disconnect()`
 
 **T53323A** · UI · *active*
 
@@ -7834,7 +8971,7 @@ Example: "The match is over: Wes won"
 
 ## 13. Moderators and the admin dashboard
 
-155 lines.
+159 lines.
 
 **T38CC9F** · UI · *admin only*
 
@@ -7851,6 +8988,15 @@ Placeholders: `a`
 Example: "report #…"
 
 - `server/admin.ts:128` · logAdmin · when `case 'resolve'`
+
+**T155352** · UI · *admin only*
+
+> {mins} min
+
+Placeholders: `mins`  
+Example: "… min"
+
+- `server/admin.ts:145` · logAdmin · when `case 'mute'`
 
 **T0C3C90** · Error message · *admin only*
 
@@ -8352,6 +9498,24 @@ Example: "report #…"
 
 - `server/modApi.ts:105` · reason = · when `if (req.method === 'POST' && path === '/api/mod/action')`
 
+**TC14E53** · UI · *admin only*
+
+> {minutes} min: {reason}
+
+Placeholders: `minutes`, `reason`  
+Example: "… min: 3"
+
+- `server/modApi.ts:110` · logMod · when `minutes ?`
+
+**T73FA0B** · UI · *admin only*
+
+> {reason}{b.devices ? ` (+${r.devices} device${r.devices === 1 ? ''...}
+
+Placeholders: `reason`, `b.devices ? ` (+${r.devices} device${r.devices === 1 ? ''...`  
+Example: "3…"
+
+- `server/modApi.ts:116` · logMod · when `case 'ban'`
+
 **T62FD01** · UI · *admin only*
 
 >  (+{r.devices} device{r.devices === 1 ? '' : 's'}, {r.ips} address{r.ips === 1 ? '' : 'es'} for a week)
@@ -8399,6 +9563,15 @@ Example: " (+… device…, … address… for a week)"
 > Say something
 
 - `server/modApi.ts:171` · error: · when `if (!text)`
+
+**T549F2A** · UI · *admin only*
+
+> {String(b.kind)}: {String(b.name)} ({String(b.hours ?? 0)} h, x{String(b.value ?? '')})
+
+Placeholders: `String(b.kind)`, `String(b.name)`, `String(b.hours ?? 0)`, `String(b.value ?? '')`  
+Example: "…: Pikachu (… h, x…)"
+
+- `server/modApi.ts:200` · logMod · when `if (req.method === 'POST' && path === '/api/mod/events')`
 
 **TCAC977** · Dashboard page · *admin only*
 
@@ -8797,13 +9970,31 @@ Example: " (+… device…, … address… for a week)"
 
 ## 14. Other
 
-1 lines.
+3 lines.
+
+**T05092E** · UI · *active*
+
+> {map.name} · {map.cols}x{map.rows} · {map.credits ?? 'The Fan-tasy Tileset'} at 3x
+
+Placeholders: `map.name`, `map.cols`, `map.rows`, `map.credits ?? 'The Fan-tasy Tileset'`  
+Example: "Pikachu · …x… · 3 at 3x"
+
+- `src/ground/fanGround.ts:119`
 
 **T70BCF5** · UI · *active*
 
 > The Fan-tasy Tileset
 
 - `src/ground/fanGround.ts:119`
+
+**TA1A78F** · UI · *active*
+
+> {map.name} · authored map {map.cols}x{map.rows} · Sunnyside World tileset (Daniel Diggle) at 3x
+
+Placeholders: `map.name`, `map.cols`, `map.rows`  
+Example: "Pikachu · authored map …x… · Sunnyside World tileset (Daniel Diggle) at 3x"
+
+- `src/ground/staticGround.ts:128`
 
 ## Review: contradictions, stale references and confusing wording
 
@@ -8815,8 +10006,10 @@ Collected automatically by the checks listed beside each, plus the notes below. 
 | TCFA600 | Reach trainer level 25 | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | T86E23B | Reach trainer level 50 | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | T07499C | The first Ranger is free; more Rangers unlock with your trainer level online, and more trainers are coming soon | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
-| T4AA9A9 | SPA {st.spa}  SPD {st.spd}  SPE {st.spe} | two spaces in a row |
 | T40B8A5 | Trainer level {pr.level} | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
+| T5E63A7 | {pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...}{p.online ? 'Online now · ' : ''}trainer since {new Date(p.joined).toLocaleDateString()} · {p.pc} Pokémon in their PC | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
+| TD351A8 | {pr.into} / {pr.next} XP to level {pr.level + 1} ·  | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
+| T5D1E48 | {p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1} | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | TCC7AED, T49B53D | paralyzed! / Paralyzed! | the same words with different capitals or punctuation |
 | T538164, T574F1F |   ·  Level {prog.after.level}! /   ·  Level {prog.after.level} | the same words with different capitals or punctuation |
 | T3D88A3, TC93011, TCCA0ED, T7396A2 | Online now ·  / Online now / online now / online now ( | the same words with different capitals or punctuation |
@@ -8831,5 +10024,4 @@ Collected automatically by the checks listed beside each, plus the notes below. 
 | TB04B1E | Team Dim Sun Grunt (placeholder) | a character name that says "(placeholder)"; shown wherever that character is named |
 | T4C8790 | Gardevoi | Mega Stone short labels are cut to 8 letters (Gardevoi, Tyranita, Steelixi, Latiosit...); fine as a slot label, reads as a typo if it appears anywhere wider |
 | TEE6974 | Works from the bag: your Pokémon last 2 minutes in the storm before falling asleep | the Storm Mask describes Pokémon falling asleep in the storm; the trainer now passes out and is taken by Darkrai, so check the two read as one rule |
-| TA34BC3 | Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine | Shadow Pokémon catching is given as "under 10% HP" here and "under ten percent" by Veteran Sarge; same rule, two spellings |
 | TE830A8 | Auto-battle is fine for walking. For a real fight, take the controls yourself. R, trainer. R. | refers to the R key for auto-battle; R is still the key, keep in mind if controls are remapped |

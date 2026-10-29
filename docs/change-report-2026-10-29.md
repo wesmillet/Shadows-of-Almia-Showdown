@@ -68,7 +68,7 @@ Bugs found and fixed:
 
 `docs/dialogue/dialogue-export.md` (source), `dialogue-export.pdf` (readable), `.json` (the same
 data) and `dropped.json` (strings judged not to be player-facing, for spot checks). Regenerate with
-`bash tools/dialogue/make.sh`. 1337 distinct lines, grouped by where the player meets them, each
+`bash tools/dialogue/make.sh`. 1466 distinct lines (the first export missed lines that begin with a name, such as "{name} fainted"; fixed 29 October), grouped by where the player meets them, each
 with a stable id, exact wording, speaker or place, condition, sources and status; placeholders are
 explained with examples. A review section at the end lists contradictions and inconsistencies;
 no wording was changed.

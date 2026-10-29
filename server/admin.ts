@@ -182,7 +182,7 @@ switch (cmd) {
     const role = cmd === 'player-role' ? 'player' : cmd;
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, u.id);
     logAdmin('role', u.username, role);
-    console.log(`${u.username} is now ${role === 'player' ? 'a player again' : `a${role === 'admin' ? 'n admin' : ' moderator'} (the dashboard is at /mod)`}.`);
+    console.log(`${u.username} is now ${role === 'player' ? 'a player again' : (role === 'admin' ? 'an admin (dashboards at /admin and /mod)' : 'a moderator (the dashboard is at /mod)')}.`);
     break;
   }
   case 'backup': {

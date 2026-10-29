@@ -146,8 +146,10 @@ async function until(fn, ms, step = 100) {
         if (!corner && !W(x + 1, y) && !W(x, y + 1) && !W(x + 1, y + 1) && W(x - 1, y) && W(x - 2, y) && W(x - 3, y) && W(x, y - 1) && W(x - 1, y - 1)) corner = { x, y };
         // a one-tile passage running east-west: blocked north and south, open east and west
         if (!narrow && !W(x, y - 1) && !W(x, y + 1) && W(x - 1, y) && W(x - 2, y) && W(x - 3, y) && W(x + 1, y) && !W(x - 1, y - 1) && !W(x - 1, y + 1)) narrow = { x, y };
-        // a thin wall (one or two tiles thick) with open ground on both sides
-        if (!thin && W(x - 1, y) && W(x - 2, y) && W(x - 3, y) && !W(x + 1, y) && (!W(x + 2, y) ? W(x + 3, y) && W(x + 4, y) : W(x + 2, y) && W(x + 3, y))) thin = { x, y, far: !W(x + 2, y) ? x + 3 : x + 2 };
+        // a thin wall (one or two tiles thick) with open ground on both sides; a wall, not water
+        // (shots fly over water: battle.ts shotClear)
+        const Wall = (x, y) => !W(x, y) && !g.inWater(x, y);
+        if (!thin && Wall(x + 1, y) && (W(x + 2, y) || Wall(x + 2, y)) && W(x - 1, y) && W(x - 2, y) && W(x - 3, y) && !W(x + 1, y) && (!W(x + 2, y) ? W(x + 3, y) && W(x + 4, y) : W(x + 2, y) && W(x + 3, y))) thin = { x, y, far: !W(x + 2, y) ? x + 3 : x + 2 };
       }
     }
     return { openSpot, wall, corner, narrow, thin };
@@ -163,16 +165,23 @@ async function until(fn, ms, step = 100) {
     const at = await A.p.evaluate(([x, y]) => {
       const g = window.showdown.match.ground;
       const ok = (px, py) => g.walkable(Math.floor(px), Math.floor(py));
-      // two standing spots 10 tiles apart, either side of the spot, nearest first
-      for (let r = 0; r < 12; r++) for (const dy of [r, -r]) for (let dx = 0; dx < 6; dx++) {
+      // two standing spots 10 tiles apart, either side of the spot, nearest first; A stays within
+      // about 6 tiles of it, so the fight is on A's screen (half a screen is about 10 tiles wide)
+      for (let r = 0; r < 12; r++) for (const dy of [r, -r]) for (let dx = 0; dx < 2; dx++) {
         const a = [x - 5 - dx + 0.5, y + dy + 0.5];
         const b = [a[0] + 10, a[1]];
         if (ok(a[0], a[1]) && ok(b[0], b[1])) return { a, b };
       }
       return { a: [x - 5.5, y + 0.5], b: [x + 4.5, y + 0.5] };
     }, [spot.x, spot.y]);
+    // A trainer knocked down (wild Pokémon near a spawn can do it before they are cleared) is
+    // back on their feet at an outpost in a few seconds: wait for that before staging.
+    await until(async () => { const rr = await server(); return rr.trainers.every((t) => t.down === null) || null; }, 20000);
     await placeTrainer(A, at.a[0], at.a[1]);
     await placeTrainer(B, at.b[0], at.b[1]);
+    // and keep wild Pokémon out of the staged fight
+    await api('/api/dev/clear', { trainer: A.tname, r: 30 });
+    await api('/api/dev/clear', { trainer: B.tname, r: 30 });
     await sleep(600);
     // Staged fights are open-field ones: a trainer battle under way would change the rules (leads
     // stowed, one Pokémon each), so say so rather than let the scenario fail for no clear reason.
@@ -188,9 +197,14 @@ async function until(fn, ms, step = 100) {
       const t = [...m.mons()].find((q) => q.id === targetId);
       if (!t) return null;
       const k = v.dpr || window.devicePixelRatio || 1;
-      return { x: v.toScreenX(t.x) / k, y: v.toScreenY(t.y - 0.3) / k };
+      const x = v.toScreenX(t.x) / k, y = v.toScreenY(t.y - 0.3) / k;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return { off: true, x, y };
+      const el = document.elementFromPoint(x, y);
+      window.__lastClick = { x, y, el: el ? `${el.tagName}#${el.id}.${el.className}` : null, cam: [v.camX, v.camY], zoom: v.zoom };
+      return { x, y };
     }, targetId);
     if (!at) return 'target not on this screen';
+    if (at.off) return `target off the edge of this screen (${Math.round(at.x)},${Math.round(at.y)})`;
     await c.p.mouse.move(at.x, at.y);
     await sleep(60);
     await c.p.mouse.click(at.x, at.y, { button: slot === 1 ? 'right' : 'left' });
@@ -258,7 +272,16 @@ async function until(fn, ms, step = 100) {
     const bv = await view(B);
     const row = bv.party.find((q) => q.id === target);
     const evs = (await events(ev0)).filter((e) => e.target === target || e.mon === target);
-    note('1 faint: server knocks out the target', !!fainted, { cast: res, events: evs.map((e) => `${e.type}${e.damage ? ` ${e.damage}` : ''}`) });
+    // what both sides looked like at the cast, for a failure's sake
+    const why = fainted ? undefined : await (async () => {
+      const rr = await server();
+      const ta = sTrainer(rr, A.id), am = sMon(rr, aLead()), bm = sMon(rr, target);
+      const scr = await A.p.evaluate((tid) => { const m = window.showdown.match; const a = m.actingMon; const t = [...m.mons()].find((q) => q.id === tid); return { party: m.player.party.map((q) => [q.id, q.stowed ? 'stowed' : '', q.fainted ? 'fainted' : '', q.captured ? 'captured' : '', q.behavior]), acting: a && a.id, actingAt: a && [a.x, a.y], cooldowns: a && a.cooldowns, status: a && a.status, target: t ? [t.x, t.y] : null, me: [m.player.x, m.player.y], conn: window.__conn }; }, target);
+      await A.p.screenshot({ path: `${OUT}/${LABEL}_faint_fail_A.png` });
+      const click = await A.p.evaluate(() => window.__lastClick);
+      return { click, serverParty: ta.party.map((q) => [q.id, q.stowed ? 'stowed' : '', q.fainted ? 'fainted' : '', q.behavior]), trainerA: { x: ta.x, y: ta.y, duel: ta.duel, down: ta.down, mount: ta.mount }, attacker: am && { id: am.id, x: am.x, y: am.y, casting: am.casting, cooldowns: am.cooldowns, status: am.status, stowed: am.stowed, moves: am.moves }, target: bm && { x: bm.x, y: bm.y }, screenA: scr };
+    })();
+    note('1 faint: server knocks out the target', !!fainted, { cast: res, events: evs.map((e) => `${e.type}${e.damage ? ` ${e.damage}` : ''}`), why });
     note('1 faint: both screens agree on HP 0 and fainted', ag.ok, ag.out);
     note("1 faint: B's party shows it fainted", !!row && row.fainted && row.hp === 0, row);
     // removed from combat: nothing lands on it afterwards
@@ -350,11 +373,12 @@ async function until(fn, ms, step = 100) {
     await sleep(500);
     const hp0 = sMon(await server(), target).hp;
     const ev0 = (await events(0)).length;
-    // B runs off to the north the moment A fires
-    await B.p.keyboard.down('ArrowUp');
+    // B runs off east, away from A, the moment A fires (north could bring the trainers within
+    // battle range of each other, and a trainer battle changes the rules)
+    await B.p.keyboard.down('ArrowRight');
     const res = await castFromA(0, target);
     await sleep(1500);
-    await B.p.keyboard.up('ArrowUp');
+    await B.p.keyboard.up('ArrowRight');
     const evs = (await events(ev0)).filter((e) => e.attacker === aLead());
     const hp1 = sMon(await server(), target).hp;
     const ag = await agree(target, 'shot', 0.6);
@@ -498,7 +522,9 @@ async function until(fn, ms, step = 100) {
     note('7 dropped connection: B sees the line drop', !!dropped, { casts, droppedAt: dropAt, connection: await B.p.evaluate(() => window.__conn) });
     note('7 dropped connection: A fights on meanwhile (the server takes the hits)', hpAway < hp0, { hp: [hp0, hpAway], BshowsWhileAway: bAway && bAway.hp });
     note('7 dropped connection: B reconnects into the running match', !!back);
-    note('7 dropped connection: after it, B shows the HP its Pokémon lost while away', ag.ok && ag.out.B && ag.out.B.hp === hpAway, ag.out);
+    note('7 dropped connection: after it, B shows the HP its Pokémon lost while away', ag.ok && ag.out.B && ag.out.B.hp === ag.out.server.hp && ag.out.server.hp <= hpAway, { hpAway, ...ag.out });
+    // (a move cast just before B came back can still land after hpAway was read: B must show the
+    // server's HP now, which is at most what it was while B was away)
   } catch (e) { note('7 reconnect', false, String(e)); }
 
   {

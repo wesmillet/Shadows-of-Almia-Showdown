@@ -2,13 +2,15 @@
  * Launch-readiness check against a running server (MATCH_SIZE=2 LOBBY_WAIT=3 npm run server):
  * a lobby with the real players it needs (half the match) fills with bots and starts; queueing without a roll answers instead of hanging;
  * a dropped connection rejoins inside the reconnect window with the room still alive; a second
- * tab takes the session over (the first is closed with 4000) and resumes the same match.
+ * tab takes the session over (the first is closed with 4000, promptly) and resumes the same match;
+ * the admin dashboard's data is refused without an admin's session.
  *
  *   npx tsx server/checks/launch_check.ts [http://localhost:8787]
  */
 import WebSocket from 'ws';
 
-const WS = (process.argv[2] ?? 'http://localhost:8787').replace(/^http/, 'ws') + '/ws';
+const HTTP = process.argv[2] ?? 'http://localhost:8787';
+const WS = HTTP.replace(/^http/, 'ws') + '/ws';
 let failed = false;
 const check = (ok: unknown, what: string) => {
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`);
@@ -48,6 +50,14 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
 }
 
 (async () => {
+  // The admin dashboard: its page loads for anyone (it holds no data), its data only for an admin.
+  const page = await fetch(`${HTTP}/admin`);
+  check(page.status === 200, `admin page served (${page.status})`);
+  for (const path of ['/api/admin/online', '/api/admin/accounts?q=a', '/api/admin/matches']) {
+    const bare = await fetch(HTTP + path);
+    const forged = await fetch(HTTP + path, { headers: { cookie: 'almia_session=forged-not-a-real-session' } });
+    check(bare.status === 403 && forged.status === 403, `${path} refused without an admin session (${bare.status}, forged cookie ${forged.status})`);
+  }
   const key = 'checkkey' + Math.random().toString(36).slice(2).padEnd(18, 'x');
   let a = client(key);
   await a.got('hello');
@@ -113,6 +123,9 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
   while (a.closedWith() === null && Date.now() - helloAt < 10_000) await sleep(25);
   const took = a.closedAt() !== null ? `${(a.closedAt() as number) - helloAt} ms after the second tab's hello` : 'no close within 10 s';
   check(a.closedWith() === 4000, `first tab closed with 4000 (got ${a.closedWith()}${a.closeReason() ? `, "${a.closeReason()}"` : ''}; ${took})`);
+  // The server cuts the old connection 250 ms after its close frame (it used to wait out the
+  // closing handshake, about 5 s through Fly's proxy).
+  check(a.closedAt() !== null && (a.closedAt() as number) - helloAt < 2000, 'first tab closed within 2 s');
   const restart2 = await tab2.got('start', 5000).catch(() => null);
   check(restart2 && restart2.matchId === start.matchId, 'second tab resumed the same match');
   tab2.send({ t: 'leave' });

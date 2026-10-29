@@ -165,7 +165,7 @@ export interface TrainerStats {
   timeSurvived: number;
 }
 
-export type TrainerAi = 'roam' | 'seekItem' | 'engage' | 'flee' | 'heal' | 'hunt';
+export type TrainerAi = 'roam' | 'seekItem' | 'engage' | 'flee' | 'heal' | 'hunt' | 'shop';
 
 export interface Trainer {
   id: number;
@@ -211,6 +211,10 @@ export interface Trainer {
   aiProgress?: { best: number; since: number };
   /** AI: targets it gave up on (unreachable), by key, until a match time. */
   aiBans?: Record<string, number>;
+  /** AI: where it was a second ago, and until when it is working itself free of a notch (Match.stepAi). */
+  wedge?: { x: number; y: number; at: number; until: number };
+  /** A computer trainer's hands (src/sim/bot.ts): the wild it is out to catch, balls thrown at it, timers. */
+  bot?: BotState;
   /** Ranger outpost heal progress. */
   healing: number;
   /** Match time the trainer may next use an outpost. */
@@ -241,6 +245,31 @@ export interface Trainer {
   hidden?: boolean;
   /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */
   legendBout?: boolean;
+}
+
+/** What a computer trainer is doing with its hands (src/sim/bot.ts). */
+export interface BotState {
+  /** The wild Pokémon it is wearing down to catch: its team holds back once it is weak. */
+  catchTarget: Mon | null;
+  /** Balls thrown at the current catch target. */
+  balls: number;
+  /** Seconds until it next looks through its bag. */
+  bagT: number;
+  /** Boost items used in the current trainer battle (one per Pokémon sent out). */
+  boosted: Set<number>;
+  /** Items it has used and balls it has thrown this match (the bot report counts them). */
+  used: number;
+  thrown: number;
+  /** Spots it backed away from (a wild that would beat it), until a match time. */
+  avoid?: Array<{ x: number; y: number; until: number }>;
+  /** Seconds it has spent wandering with nothing to hunt, and where it set off exploring to. */
+  idleT?: number;
+  sinceHunt?: number;
+  exploring?: { x: number; y: number } | null;
+  /** Why it last fled (for the bot report). */
+  why?: 'hurt' | 'rival' | 'wild';
+  /** The hunt it is on: since when, and its target's HP when it last went down. */
+  hunt?: { key: string; since: number; hp: number };
 }
 
 /** An Egg in a party slot: what it holds is known only to the server (TownsfolkCrew). */

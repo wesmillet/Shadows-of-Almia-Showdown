@@ -356,20 +356,6 @@
     "0802",
     "0808"
   ],
-  "trainerPool": [
-    "0387",
-    "0390",
-    "0393",
-    "0025",
-    "0133",
-    "0447",
-    "0443",
-    "0147",
-    "0246",
-    "0403",
-    "0074",
-    "0054"
-  ],
   "_starterBaseComment": "A new player rolls from these tiers only; every Pokémon kept in the PC adds the first form of its line to the pool (src/sim/starters.ts).",
   "starterBaseTiers": [
     "common",

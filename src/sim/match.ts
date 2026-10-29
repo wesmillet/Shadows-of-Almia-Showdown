@@ -9,6 +9,7 @@ import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, partyHpFraction, type AiWorld } from './ai';
+import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, wantsCatch } from './bot';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
@@ -37,6 +38,13 @@ const AI_NAMES: Array<[string, string]> = [
   ['Tamsin', 'trainer_e'],
   ['Dale', 'trainer_f'],
   ['Juniper', 'trainer_g'],
+  ['Corin', 'trainer_a'],
+  ['Petra', 'trainer_b'],
+  ['Ansel', 'trainer_c'],
+  ['Lark', 'trainer_d'],
+  ['Odette', 'trainer_e'],
+  ['Fenwick', 'trainer_f'],
+  ['Sable', 'trainer_g'],
 ];
 
 export interface MatchDeps {
@@ -117,7 +125,7 @@ export class Match {
   wilds: Mon[] = [];
   items: GroundItem[] = [];
   /** Healing spots. `cost`: the paid one by the Shadow Crystal charges this much per heal. */
-  outposts: Array<{ x: number; y: number; users: Trainer[]; beacon: number; cost?: number }> = [];
+  outposts: Array<{ x: number; y: number; users: Trainer[]; cost?: number }> = [];
   /** Market stall vendors (maps with towns). */
   shops: Shop[] = [];
   /** The castle challenger and his battlefield (maps with one). */
@@ -180,7 +188,7 @@ export class Match {
     for (const dex of starterDexes) this.player.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, this.player, spawn.x, spawn.y));
     this.placeParty(this.player);
     this.spawnWilds();
-    this.spawnTrainers();
+    this.spawnTrainers(opts.level);
     this.placeOutposts();
     this.scatterItems();
     this.visitors = new Visitors(this);
@@ -189,18 +197,17 @@ export class Match {
   /** The merchant, Ace Trainer Celeste, Hoopa and Lugia (visitors.ts). */
   visitors!: Visitors;
 
-  private spawnTrainers(): void {
+  private spawnTrainers(level?: number): void {
     for (let i = 0; i < CONFIG.trainers.count; i++) {
       const [name, role] = AI_NAMES[i % AI_NAMES.length] as [string, string];
       const spot = this.startSpots[i + 1] ?? this.edgeSpawn(this.startSpots);
       const t = this.makeTrainer(name, role, false, spot.x, spot.y);
-      const pool = this.rng.shuffle([...SPAWNS.trainerPool]);
-      for (let k = 0; k < CONFIG.trainers.partySize; k++) {
-        t.party.push(this.makeMon(pool[k % pool.length] as string, CONFIG.trainers.level, t, spot.x, spot.y));
-      }
+      // A new player's start: one starter of three rolled from the new-player pool, at the players'
+      // level, the same bag and money (botStarter; makeTrainer, giveStartingKit).
+      t.party.push(this.makeMon(botStarter(this.rng), level ?? CONFIG.player.level, t, spot.x, spot.y));
       this.giveStartingKit(t);
+      botState(t);
       t.aiTimer = this.rng.range(0.5, 2);
-      t.roamTimer = CONFIG.party.aiRoamEverySeconds * this.rng.range(0.6, 1.2);
       this.placeParty(t);
       this.trainers.push(t);
     }
@@ -211,7 +218,7 @@ export class Match {
     let v = 0;
     for (const n of npcs) {
       if (n.role === 'healer') {
-        this.outposts.push({ x: n.x, y: n.y, users: [], beacon: 0 });
+        this.outposts.push({ x: n.x, y: n.y, users: [] });
         this.npcs.push(this.makeTrainer('Healer', 'healer', false, n.x, n.y - 0.6));
       } else if (n.role === 'vendor') {
         const npc = this.makeTrainer('Vendor', ['vendor_a', 'vendor_b', 'vendor_c'][v++ % 3] as string, false, n.x, n.y);
@@ -253,7 +260,7 @@ export class Match {
       }
     }
     if (!best) return;
-    this.outposts.push({ x: best.x, y: best.y, users: [], beacon: 0, cost });
+    this.outposts.push({ x: best.x, y: best.y, users: [], cost });
     this.npcs.push(this.makeTrainer('Crystal Healer', 'healer', false, best.x, best.y - 0.6));
   }
 
@@ -421,10 +428,9 @@ export class Match {
     return `Sold ${name} for ₽${price.toLocaleString()}`;
   }
 
-  buy(shop: Shop, i: number): string {
+  buy(shop: Shop, i: number, p: Trainer = this.player): string {
     const e = shop.stock[i];
     if (!e) return '';
-    const p = this.player;
     const name = ITEMS[e.id]?.name ?? e.id;
     if (p.money < e.price) return `Not enough money for ${name} (₽${e.price})`;
     if (!this.giveItem(p, e.id, 1)) return 'Your bag is full';
@@ -477,7 +483,7 @@ export class Match {
       const planned = this.ground.outposts[i];
       if (!planned) continue;
       const best = { x: planned.x + 0.5, y: planned.y + 0.5 };
-      this.outposts.push({ ...best, users: [], beacon: 0 });
+      this.outposts.push({ ...best, users: [] });
       const npc = this.makeTrainer(i === 0 ? 'Outpost staff' : 'Outpost staff', i === 0 ? 'staff_a' : 'staff_b', false, best.x + 1.5, best.y + 1.2);
       const pts = [
         { x: best.x + 1.5, y: best.y + 1.2 },
@@ -1103,9 +1109,15 @@ export class Match {
 
   /** Space beside a healer: the whole party is restored (once every 20 s; the Crystal Healer charges). */
   healAtHealer(): string {
-    const t = this.player;
     const s = this.nearService();
-    const o = s?.kind === 'healer' ? this.outposts[s.index] : undefined;
+    return this.healAt(this.player, s?.kind === 'healer' ? this.outposts[s.index] : undefined);
+  }
+
+  /**
+   * A trainer asks the healer beside them for a heal (a player's Space, a computer trainer arriving):
+   * the same rules for both. Returns what the healer says.
+   */
+  healAt(t: Trainer, o: { x: number; y: number; cost?: number } | undefined): string {
     const cost = o?.cost ?? 0;
     if (t.duelId) return "The healer can't help mid-battle";
     if (this.time < t.outpostReady) return `The healer needs a moment (${Math.ceil(t.outpostReady - this.time)}s)`;
@@ -1116,7 +1128,7 @@ export class Match {
     t.money -= cost;
     t.outpostReady = this.time + 20;
     for (const m of t.party) {
-      if (isRoaming(m)) continue;
+      if (isRoaming(m) || m.captured) continue;
       m.fainted = false;
       m.hp = m.maxHp;
       m.status = null;
@@ -1164,7 +1176,8 @@ export class Match {
           t.healing = 0;
           continue;
         }
-        if (t.isPlayer && this.ground.features?.npcs?.length) continue;
+        // Maps with healers: a heal is asked for (a player's Space, a computer trainer in stepAi).
+        if (this.ground.features?.npcs?.length) continue;
         if (Math.hypot(t.x - o.x, t.y - o.y) > CONFIG.outpost.radius) {
           if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;
           continue;
@@ -1196,8 +1209,6 @@ export class Match {
           if (t.isPlayer) this.battle.events.push({ type: 'notice', text: 'Party fully healed!', seconds: 1.5 });
         }
       }
-      // The beacon broadcasts whoever is healing to every trainer.
-      o.beacon = o.users.length ? 1 : Math.max(0, o.beacon - dt * 0.5);
     }
   }
 
@@ -1248,6 +1259,21 @@ export class Match {
    * inside a building): after `stuckSeconds` without a tile of progress it is banned for a while.
    */
   private watchAiProgress(t: Trainer): void {
+    // Backing off and getting nowhere (a wall that way): back off another way.
+    if (t.ai === 'flee' && !t.aiKey && t.aiTarget) {
+      const d = Math.hypot(t.aiTarget.x - t.x, t.aiTarget.y - t.y);
+      const p = t.aiProgress;
+      if (!p || d < p.best - 0.5) t.aiProgress = { best: d, since: this.time };
+      else if (d > 1 && this.time - p.since > 2) {
+        const a = (this.rng.chance(0.5) ? 1 : -1) * (Math.PI / 2);
+        const vx = t.aiTarget.x - t.x;
+        const vy = t.aiTarget.y - t.y;
+        t.aiTarget = { x: t.x + vx * Math.cos(a) - vy * Math.sin(a), y: t.y + vx * Math.sin(a) + vy * Math.cos(a) };
+        t.aiProgress = undefined;
+        t.aiTimer = Math.max(t.aiTimer, 1.5);
+      }
+      return;
+    }
     if (!t.aiKey || !t.aiTarget) {
       t.aiProgress = undefined;
       return;
@@ -1258,7 +1284,7 @@ export class Match {
       t.aiProgress = { best: d, since: this.time };
       return;
     }
-    const near = t.ai === 'hunt' ? 4 : t.ai === 'heal' ? CONFIG.outpost.radius : 1;
+    const near = t.ai === 'hunt' ? 4 : t.ai === 'heal' ? CONFIG.outpost.radius : t.ai === 'shop' ? 0.6 : 1;
     if (d > near && this.time - p.since > 6) {
       (t.aiBans ??= {})[t.aiKey] = this.time + 40;
       t.aiKey = null;
@@ -1282,36 +1308,60 @@ export class Match {
   private stepAi(t: Trainer, dt: number): void {
     const world = this.aiWorld();
     world.rivals = this.allTrainers.filter((o) => o !== t && o.alive && !o.challenger && !o.visitor);
-    // Beacons draw healthy trainers in.
+    const st = botState(t);
     t.aiTimer -= dt;
     if (t.aiTimer <= 0) {
       t.aiTimer = this.rng.range(0.4, 0.9);
       const bans = t.aiBans ?? {};
       world.banned = (key) => (bans[key] ?? 0) > this.time;
       world.time = this.time;
+      world.fieldLimit = (CONFIG.party as typeof CONFIG.party & { fieldLimit?: number }).fieldLimit ?? 2;
+      world.wantsCatch = (w) => wantsCatch(this, t, w);
+      st.avoid = (st.avoid ?? []).filter((a) => a.until > this.time);
+      world.avoid = st.avoid;
+      world.idle = st.idleT ?? 0;
+      world.sinceHunt = st.sinceHunt ?? 0;
+      // A wild fighting its team, or the one it was hunting, already hurt: a fight it is in the middle of.
+      // (One inside a ball it threw counts: it waits to see the ball click or burst.)
+      const inBall = (w: Mon) => w.captured && this.throws.some((th) => th.thrower === t && th.target === w);
+      world.fighting = this.wilds.find((w) => !w.fainted && (BattleSystem.active(w) || inBall(w)) && Math.hypot(w.x - t.x, w.y - t.y) < 9 && (inBall(w) || w.target?.owner === t || (t.aiKey === `m${w.id}` && w.hp < w.maxHp))) ?? null;
+      world.exploring = st.exploring ?? null;
+      const shop = shopFor(this, t);
+      world.shop = shop ? this.shopSpot(shop) : null;
       const left = this.allTrainers.filter((o) => o.alive && !o.challenger && !o.visitor);
       world.lastFoe = left.length === 2 && left.includes(t) ? (left.find((o) => o !== t) ?? null) : null;
       const d = decide(t, world);
       t.ai = d.ai;
+      st.why = d.why;
+      // Time with nothing to do (wandering): long enough, and it sets off exploring.
+      st.idleT = d.ai === 'roam' && d.key !== 'explore' ? (st.idleT ?? 0) + t.aiTimer : d.ai === 'roam' ? (st.idleT ?? 0) : 0;
+      st.sinceHunt = d.ai === 'hunt' ? 0 : (st.sinceHunt ?? 0) + t.aiTimer;
+      st.exploring = d.key === 'explore' ? d.target : null;
+      if (d.key === 'explore' && !world.exploring) st.idleT = 0;
+      // Backing off from a wild that would beat it: keep clear of that spot for a while.
+      if (d.why === 'wild' && d.target) st.avoid?.push({ x: 2 * t.x - d.target.x, y: 2 * t.y - d.target.y, until: this.time + 25 });
       t.aiTarget = d.target;
       if ((d.key ?? null) !== (t.aiKey ?? null)) t.aiProgress = undefined;
       t.aiKey = d.key ?? null;
-      if (d.ai === 'roam') {
-        const beacon = this.outposts.find((o) => o.beacon > 0.5 && o.users.some((u) => u !== t));
-        if (beacon && Math.hypot(beacon.x - t.x, beacon.y - t.y) < 20) {
-          t.aiTarget = { x: beacon.x, y: beacon.y };
-          t.ai = 'engage';
-          t.aiKey = null;
-        }
-      }
-      // Use a potion when the lead is low.
-      const m = lead(t);
-      if (m && m.hp < m.maxHp * 0.5) {
-        const slot = t.items.findIndex((s) => s && ITEMS[s.id]?.kind === 'heal');
-        if (slot >= 0) this.useItem(t, slot);
+      // Hunting to catch: keep at it (a ball may be in the air); hunting anything else ends a catch.
+      if (d.ai === 'hunt') setCatchTarget(t, d.catchTarget ?? (st.catchTarget && d.key === `m${st.catchTarget.id}` ? st.catchTarget : null));
+      else if (d.ai !== 'flee' || !st.catchTarget) setCatchTarget(t, null);
+    }
+    // A hunt going nowhere (its target out of the team's reach across a cliff or water, or never
+    // landing a hit): after 20 s with the target's HP no lower, give up on it for three minutes.
+    if (t.ai === 'hunt' && t.aiKey) {
+      const prey = this.wilds.find((w) => `m${w.id}` === t.aiKey);
+      if (st.hunt?.key !== t.aiKey || (prey && prey.hp < st.hunt.hp - 0.5)) st.hunt = { key: t.aiKey, since: this.time, hp: prey?.hp ?? 0 };
+      else if (this.time - st.hunt.since > 20) {
+        (t.aiBans ??= {})[t.aiKey] = this.time + 180;
+        st.hunt = undefined;
+        t.aiTimer = 0;
       }
     }
-    // Movement toward the target.
+    // A catch target that a ball is holding, or that the team is wearing down, stays the target.
+    const ct = st.catchTarget;
+    if (ct && !ct.fainted && ct.wild && t.ai === 'hunt') t.aiTarget = { x: ct.x, y: ct.y };
+    // Movement toward the target, at a player's walking pace.
     let moved = 0;
     const target = t.aiTarget;
     if (target) {
@@ -1321,7 +1371,11 @@ export class Match {
       let stop = 0.35;
       if (t.ai === 'engage') stop = 2.4;
       if (t.ai === 'heal') stop = 0.5;
-      if (t.ai === 'hunt') stop = 3;
+      if (t.ai === 'shop') stop = 0.3;
+      // Hunting: close enough for the team to reach it; catching: inside throwing range too.
+      if (t.ai === 'hunt') stop = ct ? Math.min(3, CONFIG.catch.throwRange - 2) : 3;
+      // Close but across a cliff, a river or a wall: not there yet (the team can't get at it from here).
+      if ((t.ai === 'hunt' || t.ai === 'engage') && d <= stop && !this.nav.clearLine(t.x, t.y, target.x, target.y)) stop = 0.5;
       if (d > stop) {
         dx /= d;
         dy /= d;
@@ -1332,27 +1386,92 @@ export class Match {
             dy = step.y;
           }
         }
-        const speed = CONFIG.trainers.speed * (t.ai === 'flee' ? 1.1 : 1);
-        moved = moveAround(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius, dt);
+        const speed = this.trainerSpeed(t);
+        // Wedged in a notch of a staircase cliff (stepping round it just rocks it back and forth):
+        // it steps to the middle of its tile, as a player wiggling free would, and from there takes
+        // the way straight; from a tile's middle the next tile's middle is always a clear step.
+        const w = (t.wedge ??= { x: t.x, y: t.y, at: this.time, until: 0 });
+        if (this.time >= w.until && this.time - w.at > 1) {
+          if (Math.hypot(t.x - w.x, t.y - w.y) < 0.3) w.until = this.time + 0.6;
+          w.x = t.x;
+          w.y = t.y;
+          w.at = this.time;
+        }
+        if (this.time < w.until) {
+          const mx = Math.floor(t.x) + 0.5 - t.x;
+          const my = Math.floor(t.y) + 0.5 - t.y;
+          const ml = Math.hypot(mx, my);
+          const step = speed * dt;
+          moved = ml > 0.04 ? tryMove(this.ground, t, (mx / ml) * Math.min(ml, step), (my / ml) * Math.min(ml, step), CONFIG.player.radius) : tryMove(this.ground, t, dx * step, dy * step, CONFIG.player.radius);
+        } else moved = moveAround(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius, dt);
         t.dir = dirFromVector(dx, dy, t.dir);
         if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
+      } else if (t.wedge) {
+        // Standing where it means to: not wedged.
+        t.wedge.x = t.x;
+        t.wedge.y = t.y;
+        t.wedge.at = this.time;
       }
     }
     this.watchAiProgress(t);
     this.separate(t);
     this.afterTrainerMove(t, moved);
-    // Occasionally send one member roaming so lone enemy Pokémon can be met on the map.
-    t.roamTimer -= dt;
-    if (t.roamTimer <= 0) {
-      t.roamTimer = CONFIG.party.aiRoamEverySeconds;
-      const standing = t.party.filter((m) => BattleSystem.active(m) && !isRoaming(m));
-      const roamer = t.party.find((m) => isRoaming(m));
-      if (roamer) roamer.recall = true;
-      else if (standing.length >= 2 && this.rng.chance(CONFIG.party.aiRoamChance)) {
-        const pick = standing[standing.length - 1] as Mon;
-        pick.behavior = 'roam';
+    // At the healer: ask for a heal, by a player's rules (healAt).
+    if (this.ground.features?.npcs?.length && this.time >= t.outpostReady) {
+      const o = this.outposts.find((p) => Math.hypot(p.x - t.x, p.y - t.y) <= CONFIG.outpost.radius);
+      const needs = t.ai === 'heal' || t.party.some((m) => !m.captured && m.fainted) || partyHpFraction(t) < 0.75;
+      if (o && needs) this.healAt(t, o);
+    }
+    // At an item ball it could not take (no room for what is in it): leave it be for a while.
+    if (t.ai === 'seekItem' && t.aiKey && t.aiTarget && Math.hypot(t.aiTarget.x - t.x, t.aiTarget.y - t.y) < CONFIG.items.pickupRadius * 0.8) {
+      const key = t.aiKey;
+      if (this.items.some((it) => `i${it.id}` === key)) {
+        (t.aiBans ??= {})[key] = this.time + 120;
+        t.aiTimer = 0;
       }
     }
+    // At the stall: restock.
+    if (t.ai === 'shop') {
+      const shop = this.shops.find((s) => Math.hypot(s.npc.x - t.x, s.npc.y - t.y) <= 1.8 + (s.npc.counter ? 0.8 : 0) + 0.3);
+      if (shop) {
+        shopAt(this, t, shop);
+        (t.aiBans ??= {}).shop = this.time + 90;
+        t.aiTimer = 0;
+      }
+    }
+    botTick(this, t, dt);
+    pilotLead(this, t);
+  }
+
+  /** Where a trainer stands to be served at a stall: open, reachable ground within a player's reach of its vendor. */
+  private shopSpots = new Map<Shop, { x: number; y: number } | null>();
+  shopSpot(shop: Shop): { x: number; y: number } | null {
+    if (this.shopSpots.has(shop)) return this.shopSpots.get(shop) ?? null;
+    const reach = 1.8 + (shop.npc.counter ? 0.8 : 0) - 0.2;
+    let best: { x: number; y: number; d: number } | null = null;
+    const nx = Math.floor(shop.npc.x);
+    const ny = Math.floor(shop.npc.y);
+    for (let y = ny - 3; y <= ny + 3; y++) {
+      for (let x = nx - 3; x <= nx + 3; x++) {
+        const cx = x + 0.5;
+        const cy = y + 0.5;
+        const d = Math.hypot(cx - shop.npc.x, cy - shop.npc.y);
+        if (d > reach || !this.ground.reachable(x, y) || !canStand(this.ground, cx, cy, CONFIG.player.radius)) continue;
+        // In front of the stall (south of the vendor) first.
+        const score = d + (cy < shop.npc.y ? 1 : 0);
+        if (!best || score < best.d) best = { x: cx, y: cy, d: score };
+      }
+    }
+    const spot = best ? { x: best.x, y: best.y } : null;
+    this.shopSpots.set(shop, spot);
+    return spot;
+  }
+
+  /** How fast a trainer walks here (slower on a ladder, faster riding or flying): the same for everyone. */
+  trainerSpeed(p: Trainer): number {
+    const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
+    const ride = p.mount ? (p.mount.fly ? CONFIG.riding.flySpeed : CONFIG.riding.rideSpeed) : 1;
+    return CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1) * ride;
   }
 
   /** A reachable, open tile as far from the centre as possible: the map edge. */
@@ -2541,9 +2660,7 @@ export class Match {
         p.y = p.py = spot.y;
       }
     }
-    const climbing = this.ground.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
-    const ride = p.mount ? (p.mount.fly ? CONFIG.riding.flySpeed : CONFIG.riding.rideSpeed) : 1;
-    const speed = CONFIG.player.speedTilesPerSec * (climbing ? 0.6 : 1) * ride;
+    const speed = this.trainerSpeed(p);
     let moved = 0;
     // In a one-on-one battle the trainer stands back; the movement keys steer the Pokémon instead.
     if (p.duelId) {
@@ -2681,7 +2798,7 @@ export class Match {
     };
   }
 
-  private inHostileTelegraph(m: Mon): boolean {
+  inHostileTelegraph(m: Mon): boolean {
     for (const o of this.mons()) {
       if (!o.casting || o === m || !this.battle.isEnemy(o, m)) continue;
       const def = move(o.casting.moveId);
@@ -2695,6 +2812,8 @@ export class Match {
    * their own (moves fired by hand still hit), so it is not knocked out before the ball goes.
    */
   sparing(attacker: Mon, target: Mon): boolean {
+    // A computer trainer's team holds back from the wild it is catching, once it is weak.
+    if (spares(attacker, target)) return true;
     const p = this.player;
     if (attacker.owner !== p || !target.wild) return false;
     // Catch mode spares every weak wild Pokémon; otherwise only the one picked as the ball's target.
@@ -2716,7 +2835,8 @@ export class Match {
     if (m.casting || incapable(m) || this.sparing(m, target)) return;
     if (Math.hypot(target.x - m.x, target.y - m.y) > range) return;
     if (m.busy > 0) return;
-    const slot = this.battle.chooseMove(m, target);
+    // Trainers' Pokémon don't waste a move on a target out of its reach or behind a wall.
+    const slot = this.battle.chooseMove(m, target, !!m.owner);
     if (slot < 0) return;
     m.dir = dirFromVector(target.x - m.x, target.y - m.y, m.dir);
     if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = this.rng.range(0.8, 1.6);
@@ -3111,6 +3231,12 @@ export class Match {
   }
 
   /** Has a Pokémon able to come out. */
+  /** The trainer battle a trainer is in (not over yet), if any. */
+  duelOf(t: Trainer): Duel | null {
+    if (t.duelId === undefined) return null;
+    return this.duels.find((d) => d.id === t.duelId && d.state !== 'over') ?? null;
+  }
+
   private canBattle(t: Trainer): boolean {
     return t.party.some((m) => !m.fainted && !m.captured);
   }
@@ -3177,6 +3303,8 @@ export class Match {
       }
     }
     this.duels.push(duel);
+    duelBegins(a);
+    duelBegins(b);
     this.battle.events.push({ type: 'duel-start', duel });
     if (a.isPlayer || b.isPlayer) {
       const foe = a.isPlayer ? b : a;
@@ -3508,7 +3636,10 @@ export class Match {
       const foe = (s === d.a ? d.b : d.a).mon;
       if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
       else if (s.trainer.legendBout) this.stepLegendMon(m, foe, dt);
-      else this.stepDuelAiMon(m, foe, dt);
+      else {
+        this.stepDuelAiMon(m, foe, dt);
+        if (!s.trainer.challenger && !s.trainer.visitor) duelHands(this, s.trainer, m, dt);
+      }
       // The battle stays in its ring.
       const r = Math.hypot(m.x - d.cx, m.y - d.cy);
       if (r > c.arenaRadius) {
@@ -3576,10 +3707,17 @@ export class Match {
     const slot = this.planMove(m, foe);
     const reach = slot >= 0 ? moveReach(move(m.moves[slot] as string)) : 3.5;
     const inReach = this.holdRange(m, foe, reach, dt, { speed: CONFIG.duel.monSpeed * 0.8 * moveSpeed(m), stepEvery: 2.6 });
-    if (slot >= 0 && inReach && m.busy <= 0 && (m.cooldowns[slot] ?? 0) <= 0) {
-      // A beat of reaction time before the next one.
-      m.busy = this.rng.range(0.45, 1.0);
+    // A computer trainer's Pokémon: the move fires once it would land (in reach, a clear line), after
+    // a player's reaction time. The challenger and visitors keep their own pace.
+    const trainer = m.owner && !m.owner.challenger && !m.owner.visitor && !m.owner.isPlayer;
+    const ready = slot >= 0 && (m.cooldowns[slot] ?? 0) <= 0;
+    if (ready && m.busy <= 0 && (trainer ? this.battle.chooseMove(m, foe, true) === slot : inReach)) {
+      m.busy = trainer ? this.rng.range(0.2, 0.4) : this.rng.range(0.45, 1.0);
       this.battle.castAt(m, slot, this.mons(), 6);
+    } else if (trainer && m.busy <= 0 && !inReach) {
+      // Nothing it would land yet: another ready move that would, while it closes in.
+      const other = this.battle.chooseMove(m, foe, true);
+      if (other >= 0 && this.battle.castAt(m, other, this.mons(), 6)) m.busy = this.rng.range(0.2, 0.4);
     }
   }
 
@@ -3677,11 +3815,10 @@ export class Match {
     if (this.controlled) this.releaseControl();
     const cy = (arena.y0 + arena.y1) / 2;
     const spots = [{ x: arena.x0 + 1, y: cy }, { x: arena.x1 - 1, y: cy }];
-    // The crystal lifts a rival team that fell far behind to a few levels under the strongest
-    // finalist's, so the last battle is worth fighting.
+    // The crystal lifts a team that fell far behind to a few levels under the strongest
+    // finalist's, so the last battle is worth fighting (the same for players and computer trainers).
     const best = Math.max(...[a, b].flatMap((t) => t.party.filter((m) => !m.captured).map((m) => m.level)));
     for (const t of [a, b]) {
-      if (t.isPlayer) continue;
       for (const m of t.party) {
         if (m.captured || m.level >= best - 3) continue;
         const before = m.level;
@@ -3796,7 +3933,7 @@ export class Match {
         out++;
         if (m.stowed) {
           m.stowed = false;
-          const a = Math.random() * Math.PI * 2;
+          const a = this.rng.next() * Math.PI * 2;
           const x = t.x + Math.cos(a) * 0.9;
           const y = t.y + Math.sin(a) * 0.9;
           const ok = canStand(this.ground, x, y, 0.22);

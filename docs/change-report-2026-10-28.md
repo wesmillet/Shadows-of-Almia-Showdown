@@ -290,3 +290,22 @@ after close-ups in `docs/polish-2026-10-28/castle-corrections/`. Changes are in 
 - **Checks:** `scripts/check-server.sh` passes. `server/checks/gameplay.ts` stood the player on the
   tile east of the Breeder, which the new map happens to block, so the egg-hatching walk never moved
   (the check ran on for twenty minutes); it now picks an open tile beside her.
+
+## Night: Wesley's castle from Tiled
+
+Wesley's own edit of `Almia castle.tmx` is now the castle (`scripts/fantasy/areas/castle.tmx`),
+commit `e84aa34c` on `online`, `241f2e1d` on `main`. Live server verified on build 241f2e1.
+
+- **Importer** (`areas.py`): layers hidden in Tiled still count (his Solid, Paving and Markers were
+  hidden), pictures come from every object layer (his new `Objects 2`), blank tiles are skipped.
+- **Cleaned:** 4937 fully transparent tiles filled across `Castle Walls 2` (invisible, removed); a
+  stray 2.75 px offset on the Gatehouse group (the game ignores it, so Tiled now matches the game).
+- **West gate tower** moved up 2 rows to mirror the east one (its base stood in the road). Wesley chose this.
+- **Solid** extended over the new north wall face (stairs left open), the west wall's inner edge,
+  the corner tower tops and bottoms, and the fountain rim.
+- **North wall** cleared of props and plants (Wesley's request): weapon stand, tower-top crates,
+  barrels and logs, the crates and barrels against the wall, three flowers on the wall face.
+  The two trees in front of it stay.
+- **Checks:** full rebuild (every point of interest reachable, every object a whole picture);
+  every gate walked in game (walkable, reachable, drawn right); `scripts/check-server.sh` passes;
+  smoke test as before (only the known "first tab closed" failure).

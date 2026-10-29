@@ -203,6 +203,18 @@ export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alph
   const climbing = ground?.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
   const f = sheet.frame(climbing ? 'up' : dir8To4(t.dir), t.walkPhase, t.moving);
   if (t.mount) return drawRider(view, t, f, sx, sy, s, alpha);
+  if (t.grabbed != null) {
+    // In Darkrai's grip: after a moment the trainer is pulled down into the shadow pool, darkening.
+    const k = Math.max(0, Math.min(1, (t.grabbed - 1.1) / 1.5));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx - f.w * s, sy - f.h * s * 2, f.w * s * 2, f.h * s * 2);
+    ctx.clip();
+    ctx.filter = `brightness(${1 - 0.65 * Math.min(1, t.grabbed / 1.2)})`;
+    drawSheetFrame(ctx, f, sx, sy + Math.round(k * f.footY * s), s);
+    ctx.restore();
+    return;
+  }
   drawSheetFrame(ctx, f, sx, sy, s);
 }
 

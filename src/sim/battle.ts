@@ -38,6 +38,7 @@ export type BattleEvent =
   | { type: 'styler-loop'; mon: Mon; loops: number; needed: number }
   | { type: 'styler-break'; mon: Mon }
   | { type: 'calmed'; mon: Mon }
+  | { type: 'darkrai-grab'; trainer: Trainer; x: number; y: number }
   | { type: 'scene-fx'; id: string; x: number; y: number; scale: number; ground?: boolean; tint?: string; fps?: number; lift?: number; shake?: number; /** Lugia, Darkrai or Shadow Mewtwo: the only moments the camera shakes. */ epic?: boolean }
   | { type: 'yield'; mon: Mon; by: Mon | null }
   | { type: 'confused'; mon: Mon }

@@ -206,24 +206,29 @@ export class Hud {
   private drawChestPanel(ctx: CanvasRenderingContext2D, st: HudState, chest: { slots: Array<InventorySlot | null>; town: string }): void {
     const v = this.view;
     const s = v.baseScale;
-    const cols = 6;
+    // Two rows of five.
+    const cols = 5;
     const rows = Math.ceil(chest.slots.length / cols);
     const gap = 6 * s;
-    // Clear of the bag (its slots and tabs take the bottom 120 px) and the top strips: big chests use smaller slots.
-    const room = v.height - 130 * s - 64 * s;
-    const slot = Math.max(28 * s, Math.min(44 * s, (room - (96 + 26) * s - (rows - 1) * gap) / rows));
+    const slot = 44 * s;
     const gridW = cols * slot + (cols - 1) * gap;
-    const w = Math.max(gridW + 48 * s, 380 * s);
-    const h = (96 + 26) * s + rows * slot + (rows - 1) * gap;
+    const title = `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`;
+    // The window is as wide as the slots (or the title) and the help wraps to that width.
+    const w = this.fitWidth(ctx, [[title, 15]], Math.max(gridW + 48 * s, 330 * s));
+    const help = this.wrapLines(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', 9.5, w - 40 * s);
+    const keep = this.wrapLines(ctx, "Every town's chest holds the same things, kept between games and safe if you're wiped out · E to close", 9.5, w - 40 * s);
+    const lineH = 14 * s;
+    const textH = (help.length + keep.length) * lineH;
+    const h = 44 * s + textH + 10 * s + rows * slot + (rows - 1) * gap + 34 * s;
     const x = v.width / 2 - w / 2;
     // Below the trainer when it fits, so the open chest stays in view; never over the bag.
     const y = Math.max(64 * s, Math.min(v.height / 2 + 56 * s, v.height - 130 * s - h));
     this.popupBox(ctx, x, y, w, h);
-    this.ink(ctx, `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`, x + w / 2, y + 32 * s, 15, FLAT_INK.accent, 'center', w - 36 * s);
-    this.ink(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
-    this.ink(ctx, "Every town's chest holds the same things, kept between games and safe if you're wiped out · E to close", x + w / 2, y + 65 * s, 9.5, FLAT_INK.good, 'center', w - 36 * s);
+    this.ink(ctx, title, x + w / 2, y + 32 * s, 15, FLAT_INK.accent, 'center', w - 36 * s);
+    help.forEach((l, i) => this.ink(ctx, l, x + w / 2, y + 50 * s + i * lineH, 9.5, FLAT_INK.dim, 'center'));
+    keep.forEach((l, i) => this.ink(ctx, l, x + w / 2, y + 50 * s + (help.length + i) * lineH, 9.5, FLAT_INK.good, 'center'));
     const gx = x + (w - gridW) / 2;
-    const gy = y + 80 * s;
+    const gy = y + 44 * s + textH + 10 * s;
     let hovered: string | null = null;
     chest.slots.forEach((entry, i) => {
       const sx = gx + (i % cols) * (slot + gap);
@@ -246,7 +251,7 @@ export class Hud {
       this.chestRects.push({ x: sx, y: sy, w: slot, h: slot });
     });
     const used = chest.slots.filter(Boolean).length;
-    this.ink(ctx, hovered ?? `${used}/${chest.slots.length} slots used`, x + w / 2, y + h - 18 * s, 11, hovered ? FLAT_INK.text : FLAT_INK.dim, 'center', w - 36 * s);
+    this.ink(ctx, hovered ?? `${used}/${chest.slots.length} slots used`, x + w / 2, y + h - 14 * s, 11, hovered ? FLAT_INK.text : FLAT_INK.dim, 'center', w - 36 * s);
   }
 
   /**
@@ -315,6 +320,37 @@ export class Hud {
       if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'tab', index: i };
     }
     return null;
+  }
+
+  /** Text width at a HUD size (the same font ink draws with). */
+  private textW(ctx: CanvasRenderingContext2D, t: string, size: number): number {
+    ctx.font = this.font(size, '700');
+    return ctx.measureText(t).width;
+  }
+
+  /**
+   * A menu window's width fitted to what it holds: its widest line plus the margins, at least
+   * `min` (the slots or rows it lays out) and at most the screen allows.
+   */
+  private fitWidth(ctx: CanvasRenderingContext2D, lines: Array<[string, number]>, min: number): number {
+    const s = this.view.baseScale;
+    const widest = Math.max(0, ...lines.map(([t, size]) => this.textW(ctx, t, size)));
+    return Math.min(this.view.width - 24 * s, Math.max(min, widest + 48 * s));
+  }
+
+  /** Splits `t` into lines no wider than `maxW` at a HUD size. */
+  private wrapLines(ctx: CanvasRenderingContext2D, t: string, size: number, maxW: number): string[] {
+    const out: string[] = [];
+    let line = '';
+    for (const word of t.split(' ')) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && this.textW(ctx, next, size) > maxW) {
+        out.push(line);
+        line = word;
+      } else line = next;
+    }
+    if (line) out.push(line);
+    return out;
   }
 
   private font(size: number, weight = '600'): string {
@@ -458,12 +494,13 @@ export class Hud {
       this.ink(ctx, hint, tx, y + 44 * s, 10, FLAT_INK.dim, 'left', w - (tx - x) - 16 * s);
     }
     if (st.teach) {
-      const w = 360 * s;
-      const h = 156 * s;
+      const head = st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`;
+      const w = this.fitWidth(ctx, [[head, 14], ['Press 1 or 2 to replace a move, Esc to keep them', 10], ...st.teach.moves.map((m): [string, number] => [`    ${m}`, 12])], 260 * s);
+      const h = (78 + (st.teach.moves.length - 1) * 20 + 24) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
-      this.ink(ctx, st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`, x + w / 2, y + 32 * s, 14, FLAT_INK.text, 'center', w - 36 * s);
+      this.ink(ctx, head, x + w / 2, y + 32 * s, 14, FLAT_INK.text, 'center', w - 36 * s);
       this.ink(ctx, 'Press 1 or 2 to replace a move, Esc to keep them', x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
       st.teach.moves.forEach((mv, i) => {
         this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
@@ -471,8 +508,8 @@ export class Hud {
       });
     }
     if (st.extract) {
-      const w = 380 * s;
-      const h = (90 + st.extract.names.length * 20) * s;
+      const w = this.fitWidth(ctx, [['Extraction Voucher', 15], ['Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', 9.5], ...st.extract.names.map((n): [string, number] => [`    ${n}`, 12])], 260 * s);
+      const h = (78 + (st.extract.names.length - 1) * 20 + 24) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
@@ -484,8 +521,9 @@ export class Hud {
       });
     }
     if (st.shop) {
-      const w = 380 * s;
-      const h = (100 + st.shop.entries.length * 21) * s;
+      const widestRow = Math.max(0, ...st.shop.entries.map((e) => this.textW(ctx, `${e.name}   ₽${e.price.toLocaleString()}`, 12)));
+      const w = this.fitWidth(ctx, [[st.shop.name, 15], [`You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, 10], ['Sell: click a bag slot or Shift+1-6 (half price)', 10]], widestRow + 100 * s);
+      const h = (94 + (st.shop.entries.length - 1) * 21 + 22) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
@@ -500,7 +538,7 @@ export class Hud {
           ctx.fillRect(x + 20 * s, yy - 15 * s, w - 40 * s, 21 * s);
         }
         this.ink(ctx, String((i + 1) % 10), x + 30 * s, yy, 12, e.affordable ? FLAT_INK.accent : '#b8a890');
-        this.ink(ctx, e.name, x + 48 * s, yy, 12, col, 'left', w - 150 * s);
+        this.ink(ctx, e.name, x + 48 * s, yy, 12, col, 'left', w - 130 * s);
         this.ink(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, e.affordable ? FLAT_INK.good : '#b8a890', 'right');
       });
     }
@@ -508,8 +546,8 @@ export class Hud {
     if (st.chest) this.drawChestPanel(ctx, st, st.chest);
     this.snagRects = [];
     if (st.snag) {
-      const w = 400 * s;
-      const h = (100 + st.snag.names.length * 26) * s;
+      const w = this.fitWidth(ctx, [[`Snag Machine · beat ${st.snag.from}`, 15], ['Take one of their Pokémon: 1-6 or click · Esc keeps the machine', 9.5], ...st.snag.names.map((n): [string, number] => [`      ${n}`, 12])], 280 * s);
+      const h = (64 + st.snag.names.length * 26 + 16) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);

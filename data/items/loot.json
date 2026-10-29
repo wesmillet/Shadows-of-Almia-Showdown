@@ -44,14 +44,6 @@
           "weight": 6
         },
         {
-          "id": "net-ball",
-          "weight": 1
-        },
-        {
-          "id": "dusk-ball",
-          "weight": 1
-        },
-        {
           "id": "quick-ball",
           "weight": 1
         },
@@ -179,14 +171,6 @@
         },
         {
           "id": "silk-scarf",
-          "weight": 1
-        },
-        {
-          "id": "net-ball",
-          "weight": 1
-        },
-        {
-          "id": "dusk-ball",
           "weight": 1
         },
         {

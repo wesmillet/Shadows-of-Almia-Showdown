@@ -244,9 +244,18 @@ def load(name, shape, statue_fn=None):
                 elif c.tag == 'group':
                     buildings.add('Buildings/' + c.get('name') + '/')
     baked = {}
+    # Tiled's eye only hides a layer in the editor: a hidden layer still counts (the Solid layer is
+    # usually hidden while one works, and must still keep people off the walls).
+    blank = {}
+    def empty(rs):
+        """A tile with nothing drawn on it (a fill with a blank tile leaves thousands of them)."""
+        if rs not in blank:
+            a = tiled.tileset(rs[0]).tile_image(rs[1])
+            blank[rs] = a is None or not (a[:, :, 3] > 0).any()
+        return blank[rs]
     for kind, lname, data in m.layers:
         meta = m.meta.get(lname, {})
-        if kind != 'tiles' or not meta.get('visible', True): continue
+        if kind != 'tiles': continue
         if lname.endswith(PREVIEW): continue
         base = lname.split('/')[-1]
         if base == 'Solid':
@@ -259,7 +268,7 @@ def load(name, shape, statue_fn=None):
             for y in range(h):
                 for x in range(w):
                     g = int(data[y, x]); rs = m.resolve(g)
-                    if not rs: continue
+                    if not rs or empty(rs): continue
                     a = tiled.tileset(rs[0]).tile_image(rs[1])
                     if a is not None: tiled.blit(img, tiled.apply_flips(a, g), x * 16, y * 16, meta.get('opacity', 1.0))
             continue
@@ -268,7 +277,7 @@ def load(name, shape, statue_fn=None):
         for y in range(h):
             for x in range(w):
                 g = int(data[y, x]); rs = m.resolve(g)
-                if rs: keys[y, x] = (rs[0], rs[1], g & 0xE0000000)
+                if rs and not empty(rs): keys[y, x] = (rs[0], rs[1], g & 0xE0000000)
         area['layers'].append((base, place(keys), meta.get('opacity', 1.0)))
     for grp, img in baked.items():
         img8 = img.clip(0, 255).astype(np.uint8)
@@ -295,7 +304,10 @@ def load(name, shape, statue_fn=None):
             area['pave'].append(r)
             # a "corner" property (pixels): the rectangle's outer corners are rounded that much
             if o['props'].get('corner'): area.setdefault('rounded', []).append(r[1:5] + (int(o['props']['corner']),))
-    for o in m.shapes.get('Objects', []):
+    # pictures from every object layer but Paving and Markers ("Objects", and any others added in
+    # Tiled, such as "Objects 2")
+    pictures = [o for name, objs in m.shapes.items() if name not in ('Paving', 'Markers') for o in objs]
+    for o in pictures:
         if not o['visible'] or not o['gid']: continue
         rs = m.resolve(o['gid'])
         if not rs: continue

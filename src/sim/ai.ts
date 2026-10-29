@@ -43,6 +43,12 @@ export interface AiWorld {
   wantsCatch?: (m: Mon) => boolean;
   /** A shop to restock at (no balls left and the money for them), if one is in reach. */
   shop?: { x: number; y: number } | null;
+  /** A straight walk from one point to another stays on open ground (Nav.clearLine). */
+  clearLine?: (ax: number, ay: number, bx: number, by: number) => boolean;
+  /** With a team too weak to fight what is about: a wild to throw a ball at from out of its reach. */
+  throwAt?: Mon | null;
+  /** Its nerve: 0 cautious to 1 bold (how readily it seeks or avoids a trainer battle). */
+  bold?: number;
   /** Spots it backed away from lately (a wild that would beat it): no wandering or hunting back there. */
   avoid?: Array<{ x: number; y: number }>;
   /** Seconds it has had nothing to hunt: past half a minute it sets off to look further afield. */
@@ -63,6 +69,8 @@ export interface AiDecision {
   key?: string | null;
   /** Hunting this wild Pokémon to catch it (its team holds back once it is weak, then a ball). */
   catchTarget?: Mon | null;
+  /** Catching it with a ball alone, from out of its reach (no fight first). */
+  throwOnly?: boolean;
   /** Why it is fleeing: low HP, a stronger rival, a wild that would beat it (reports and tests). */
   why?: 'hurt' | 'rival' | 'wild';
 }
@@ -93,29 +101,32 @@ export function fightMargin(t: Trainer, w: Mon, fieldLimit = 2): number {
   // The wild picks on whoever is nearest: on average the ones out first.
   let toLose = 0;
   for (const m of team) {
-    const r = damageRate(w, m, 1.45);
+    const r = damageRate(w, m, 1.45, true);
     toLose += r > 0 ? m.hp / r : 999;
   }
   return toLose / Math.max(0.01, toBeat);
 }
 
 /**
- * Two trainers' teams one-on-one (a trainer battle): seconds for the rival's team to knock out
- * this one's over seconds for this one to knock out the rival's. Each side's rate is its Pokémon's
- * average against the other side's.
+ * Two trainers' teams one-on-one (a trainer battle), judged on what can be seen of the rival: the
+ * Pokémon it has out (their species, level and HP), not its whole party. Its bench is unknown, so a
+ * rival with a full field out counts as half again as tough. Seconds for the rival to knock out this
+ * team over seconds for this team to knock out the rival.
  */
-export function duelMargin(t: Trainer, rival: Trainer): number {
+export function duelMargin(t: Trainer, rival: Trainer, fieldLimit = 2): number {
   const a = fighters(t);
-  const b = fighters(rival);
+  const b = rival.party.filter((m) => !m.fainted && !m.captured && !m.stowed);
   if (!a.length) return 0;
-  if (!b.length) return 99;
-  const rate = (xs: Mon[], ys: Mon[]) => xs.reduce((s, x) => s + ys.reduce((q, y) => q + damageRate(x, y, 1.0), 0) / ys.length, 0) / xs.length;
+  // Nothing of its team in sight (all in their balls): no idea, call it even.
+  if (!b.length) return 1;
+  const rate = (xs: Mon[], ys: Mon[], seen: boolean) => xs.reduce((s, x) => s + ys.reduce((q, y) => q + damageRate(x, y, 1.0, seen), 0) / ys.length, 0) / xs.length;
   const hp = (xs: Mon[]) => xs.reduce((s, x) => s + x.hp, 0);
-  const ours = rate(a, b);
-  const theirs = rate(b, a);
+  const ours = rate(a, b, false);
+  const theirs = rate(b, a, true);
   if (ours <= 0) return 0;
   if (theirs <= 0) return 99;
-  return hp(a) / theirs / (hp(b) / ours);
+  const unseen = b.length >= fieldLimit ? 1.5 : 1;
+  return hp(a) / theirs / ((hp(b) * unseen) / ours);
 }
 
 /** Margins under which a wild Pokémon is trouble, and over which one is worth taking on. */
@@ -127,9 +138,10 @@ export const CLOSE_MARGIN = 1.35;
 export const EVEN_MARGIN = 1.0;
 /** An Alpha or a land boss hits hard and hits often: only with a clear edge and a healthy team. */
 export const BIG_MARGIN = 2.6;
-/** Against a rival team: battle it with this edge or better (a bigger one in the first three minutes); short of it, keep away. */
-export const SEEK_DUEL = 1.3;
-export const SEEK_DUEL_EARLY = 2;
+/** Against a rival team: the edge it wants before seeking a battle (none in the first two minutes, more up to four) and below which it keeps away; a trainer's nerve adds to both (decide). */
+export const SEEK_DUEL = 1.15;
+export const SEEK_DUEL_EARLY = 1.7;
+export const AVOID_DUEL = 0.75;
 
 /** A wild Pokémon nobody hunts: legends in their bouts, Darkrai, Hoopa, Shadow Pokémon, mid-leap. */
 function untouchable(m: Mon): boolean {
@@ -137,7 +149,7 @@ function untouchable(m: Mon): boolean {
 }
 
 /** The closest wild Pokémon within `range` (of the trainer, or of x, y) that would beat the team. */
-export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, x = t.x, y = t.y, fieldLimit = 2): Mon | null {
+export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, x = t.x, y = t.y, fieldLimit = 2, skip: Mon | null = null): Mon | null {
   if (!wilds) return null;
   let best: Mon | null = null;
   let bd = range;
@@ -148,8 +160,8 @@ export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, 
     if (d >= bd) continue;
     // Far below the team: no threat whatever its matchup (and spares the sums).
     if (m.level < lv - 4 && !m.alpha && !m.landBoss && !m.boss) continue;
-    // Already fighting the team: the matchup is being played out, not avoided.
-    if (m.target?.owner === t) continue;
+    // The one it is creeping up on to throw a ball at, while it hasn't noticed the team.
+    if (m === skip && m.target?.owner !== t) continue;
     if (fightMargin(t, m, fieldLimit) >= DANGER_MARGIN) continue;
     bd = d;
     best = m;
@@ -178,7 +190,11 @@ export function huntTarget(
     const d = Math.hypot(m.x - t.x, m.y - t.y);
     if (d > range || !inLight(m.x, m.y) || banned(`m${m.id}`)) continue;
     const big = !!(m.alpha || m.landBoss);
-    const margin = fightMargin(t, m, fieldLimit);
+    // Others close by join in once the fight starts (a wild fights whatever hits its neighbours'
+    // attackers): each one there that could matter cuts the margin.
+    let pack = 0;
+    for (const o of wilds) if (o !== m && !o.fainted && !o.captured && o.level >= lv - 4 && Math.hypot(o.x - m.x, o.y - m.y) < 5) pack++;
+    const margin = fightMargin(t, m, fieldLimit) / (1 + pack);
     // Next to something that would beat the team: it would only have to back off again.
     if (margin >= minMargin && dangerNear(t, wilds, 8, m.x, m.y, fieldLimit)) continue;
     if (margin < (big ? Math.max(BIG_MARGIN, minMargin) : minMargin)) continue;
@@ -237,33 +253,38 @@ export function nearestItem(t: Trainer, items: GroundItem[], range: number, bann
 }
 
 /**
- * A point `dist` tiles from the trainer, away from (x, y), and never out into the storm: when straight
- * away would leave the light it veers round toward the crystal instead.
+ * Where to back off to: a point `dist` tiles from the trainer, away from (x, y). It prefers the
+ * straight-away direction but takes the nearest one (up to a right angle off it) that is open
+ * walking ground in a straight line and out of the storm, so it doesn't run into a wall or a cliff
+ * and stand there, or out into the dark. This only picks where to walk; the walking, the storm's
+ * exposure and everything else are as for anyone.
  */
 function awayFrom(t: Trainer, x: number, y: number, dist: number, w?: AiWorld): { x: number; y: number } {
   const dx = t.x - x;
   const dy = t.y - y;
   const d = Math.hypot(dx, dy) || 1;
-  let ux = dx / d;
-  let uy = dy / d;
-  if (w && Number.isFinite(w.darkRadius)) {
-    const safe = w.darkRadius - 4;
-    for (let k = 0; k < 4; k++) {
-      const px = t.x + ux * dist;
-      const py = t.y + uy * dist;
-      if (Math.hypot(px - w.centerX, py - w.centerY) < safe) break;
-      // turn part of the way toward the centre
+  const base = Math.atan2(dy / d, dx / d);
+  const safe = w && Number.isFinite(w.darkRadius) ? w.darkRadius - 4 : Infinity;
+  const lit = (px: number, py: number) => !w || Math.hypot(px - w.centerX, py - w.centerY) < safe;
+  if (w) {
+    for (const off of [0, 0.5, -0.5, 1, -1, 1.5, -1.5]) {
+      for (const len of [dist, dist * 0.6]) {
+        const px = t.x + Math.cos(base + off) * len;
+        const py = t.y + Math.sin(base + off) * len;
+        if (!lit(px, py) || !w.ground.reachable(Math.floor(px), Math.floor(py))) continue;
+        if (w.clearLine && !w.clearLine(t.x, t.y, px, py)) continue;
+        return { x: px, y: py };
+      }
+    }
+    // Nothing open that way: toward the crystal (the light), then straight away as a last resort.
+    if (Number.isFinite(safe)) {
       const cx = w.centerX - t.x;
       const cy = w.centerY - t.y;
       const cl = Math.hypot(cx, cy) || 1;
-      ux = ux + (cx / cl) * 0.8;
-      uy = uy + (cy / cl) * 0.8;
-      const ul = Math.hypot(ux, uy) || 1;
-      ux /= ul;
-      uy /= ul;
+      if (!lit(t.x, t.y)) return { x: t.x + (cx / cl) * dist, y: t.y + (cy / cl) * dist };
     }
   }
-  return { x: t.x + ux * dist, y: t.y + uy * dist };
+  return { x: t.x + Math.cos(base) * dist, y: t.y + Math.sin(base) * dist };
 }
 
 /** Picks the next state for a trainer. Pure: returns the state and target without moving anyone. */
@@ -312,23 +333,37 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
   // A rival close by: battle one this team can take, keep away from one that would crush it.
   // (Within the battle range a battle starts either way: backing off is the only way out.)
   if (rival) {
-    const edge = duelMargin(t, rival);
-    // Early on (one Pokémon each, everyone still levelling) only a big edge is worth the risk.
-    const seek = (w.time ?? 999) < 180 ? SEEK_DUEL_EARLY : SEEK_DUEL;
+    const edge = duelMargin(t, rival, field);
+    // Each trainer has its own nerve (`bold`, 0 cautious to 1 bold): how big an edge it wants before
+    // it goes looking for a battle, and how far behind it has to be before it runs. In the first two
+    // minutes (one Pokémon each, everyone still levelling) nobody goes looking for one; up to four
+    // minutes in, only with a big edge.
+    const bold = w.bold ?? 0.5;
+    const time = w.time ?? 999;
+    const seek = time < 120 ? Infinity : (time < 240 ? SEEK_DUEL_EARLY : SEEK_DUEL) + 0.4 * (1 - bold);
+    const avoid = AVOID_DUEL + 0.2 * (1 - bold);
     const dr = Math.hypot(rival.x - t.x, rival.y - t.y);
     // The last two have to settle it: no running from that one (unless hurt, above).
     if (rival === w.lastFoe && hpFrac > CONFIG.trainers.huntHpFraction) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival, key: 'last' };
-    if (edge >= seek && dr < 9) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival };
-    // Behind, or about even: keep well out of battle range (a battle starts within it either way),
-    // so it doesn't wander straight back in.
-    if (edge < seek) return { ai: 'flee', target: awayFrom(t, rival.x, rival.y, 5, w), rival: null, why: 'rival' };
+    // Goes after it; one that keeps running is given up on (the walk-progress check bans its key).
+    if (edge >= seek && dr < 9 && !banned(`r${rival.id}`)) return { ai: 'engage', target: { x: rival.x, y: rival.y }, rival, key: `r${rival.id}` };
+    // Clearly behind: keep well out of battle range (a battle starts within it either way).
+    if (edge < avoid) return { ai: 'flee', target: awayFrom(t, rival.x, rival.y, 5, w), rival: null, why: 'rival' };
+    // In between: neither looks for the battle nor runs from it; it gets on with its own business.
   }
   // The last two: go and find the other one (after patching up if the team is in a bad way).
+  // (Where the other one is can't be seen from here, as for a player: it heads in toward the crystal,
+  // where the storm is pushing them both, and battles them on sight above.)
   if (w.lastFoe && w.lastFoe.alive && hpFrac > CONFIG.trainers.huntHpFraction && !(w.banned?.('last') ?? false)) {
-    return { ai: 'engage', target: { x: w.lastFoe.x, y: w.lastFoe.y }, rival: null, key: 'last' };
+    const inner = Number.isFinite(w.darkRadius) ? Math.max(4, w.darkRadius * 0.4) : 30;
+    const dc = Math.hypot(t.x - w.centerX, t.y - w.centerY);
+    if (dc > inner) {
+      const k = inner / dc;
+      return { ai: 'engage', target: { x: w.centerX + (t.x - w.centerX) * k, y: w.centerY + (t.y - w.centerY) * k }, rival: null, key: 'last' };
+    }
   }
   // Back away from a wild Pokémon that would beat the team as it stands.
-  const danger = dangerNear(t, w.wilds, 8, t.x, t.y, field);
+  const danger = dangerNear(t, w.wilds, 8, t.x, t.y, field, w.throwAt ?? null);
   if (danger) return { ai: 'flee', target: awayFrom(t, danger.x, danger.y, 6, w), rival: null, why: 'wild' };
   // Already in a fight with a wild it can take: finish it (no walking off to a shop or an item mid-fight).
   const foe = w.fighting;
@@ -336,7 +371,8 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
     return { ai: 'hunt', target: { x: foe.x, y: foe.y }, rival: null, key: `m${foe.id}`, catchTarget: w.wantsCatch?.(foe) ? foe : null };
   }
   // Items close by first, then the best wild to train on, then items further off.
-  const item = nearestItem(t, w.items, 9, banned);
+  const lightItems = Number.isFinite(w.darkRadius) ? w.items.filter((it) => Math.hypot(it.x - w.centerX, it.y - w.centerY) < w.darkRadius - 3) : w.items;
+  const item = nearestItem(t, lightItems, 9, banned);
   const itemOk = item && !dangerNear(t, w.wilds, 8, item.x, item.y, field);
   const seek = (it: GroundItem): AiDecision => ({ ai: 'seekItem', target: { x: it.x, y: it.y }, rival: null, key: `i${it.id}` });
   if (item && itemOk && Math.hypot(item.x - t.x, item.y - t.y) < 4) return seek(item);
@@ -358,11 +394,12 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
     const inLight = (x: number, y: number) => Math.hypot(x - w.centerX, y - w.centerY) < lightR && !avoided(x, y);
     // Something it beats comfortably; failing that, with the team fresh, a closer fight it still wins.
     const pick = huntTarget(t, w.wilds, CONFIG.trainers.huntRange, inLight, banned, field, w.wantsCatch)
-      ?? (hpFrac > 0.8 ? huntTarget(t, w.wilds, CONFIG.trainers.huntRange, inLight, banned, field, w.wantsCatch, (w.sinceHunt ?? 0) > 45 ? EVEN_MARGIN : CLOSE_MARGIN) : null)
-      // Nothing near: look further afield before wandering.
-      ?? huntTarget(t, w.wilds, CONFIG.trainers.huntRange * 1.8, inLight, banned, field, w.wantsCatch);
+      ?? (hpFrac > 0.8 ? huntTarget(t, w.wilds, CONFIG.trainers.huntRange, inLight, banned, field, w.wantsCatch, (w.sinceHunt ?? 0) > 45 ? EVEN_MARGIN : CLOSE_MARGIN) : null);
     if (pick) return { ai: 'hunt', target: { x: pick.mon.x, y: pick.mon.y }, rival: null, key: `m${pick.mon.id}`, catchTarget: pick.catch ? pick.mon : null };
   }
+  // Nothing it can beat in sight, a small team and a ball: try for a catch from out of reach.
+  const shot = w.throwAt;
+  if (shot && !shot.fainted && !banned(`m${shot.id}`)) return { ai: 'hunt', target: { x: shot.x, y: shot.y }, rival: null, key: `m${shot.id}`, catchTarget: shot, throwOnly: true };
   if (item && itemOk) return seek(item);
   // Nothing to hunt here for a while: set off for another part of the island (another land has other
   // Pokémon, some its team can beat), as a player would rather than pace the same few tiles.
@@ -370,7 +407,7 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
   if (w.exploring && Math.hypot(w.exploring.x - t.x, w.exploring.y - t.y) > 2 && Math.hypot(w.exploring.x - w.centerX, w.exploring.y - w.centerY) < safeR && !banned('explore')) {
     return { ai: 'roam', target: w.exploring, rival: null, key: 'explore' };
   }
-  if ((w.idle ?? 0) > 30 && !banned('explore')) {
+  if ((w.idle ?? 0) > 12 && !banned('explore')) {
     for (let i = 0; i < 16; i++) {
       const ang = w.rng.range(0, Math.PI * 2);
       const dist = w.rng.range(25, 45);

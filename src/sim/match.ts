@@ -9,7 +9,7 @@ import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, partyHpFraction, type AiWorld } from './ai';
-import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, wantsCatch } from './bot';
+import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
@@ -206,7 +206,7 @@ export class Match {
       // level, the same bag and money (botStarter; makeTrainer, giveStartingKit).
       t.party.push(this.makeMon(botStarter(this.rng), level ?? CONFIG.player.level, t, spot.x, spot.y));
       this.giveStartingKit(t);
-      botState(t);
+      botState(t).bold = this.rng.next();
       t.aiTimer = this.rng.range(0.5, 2);
       this.placeParty(t);
       this.trainers.push(t);
@@ -497,25 +497,35 @@ export class Match {
   }
 
   private scatterItems(): void {
+    const starts = this.allTrainers.map((t) => ({ x: t.x, y: t.y }));
     const spots: Array<{ x: number; y: number }> = [];
     for (let ty = 1; ty < this.ground.rows - 1; ty++) {
       for (let tx = 1; tx < this.ground.cols - 1; tx++) {
         if (!this.ground.reachable(tx, ty)) continue;
-        if (Math.hypot(tx + 0.5 - this.player.x, ty + 0.5 - this.player.y) < 2.5) continue;
+        if (starts.some((p) => Math.hypot(tx + 0.5 - p.x, ty + 0.5 - p.y) < 2.5)) continue;
         spots.push({ x: tx + 0.5, y: ty + 0.5 });
       }
     }
     this.rng.shuffle(spots);
-    // Guarantee the player a few balls nearby, then weight the rest.
-    const near = spots.filter((p) => Math.hypot(p.x - this.player.x, p.y - this.player.y) < 9).slice(0, 3);
+    // Every trainer finds the same near their start: a few Poké Balls, and a Quick Ball (best thrown
+    // before the first pulse). (Only the first player's start used to get them.)
+    const taken = new Set<{ x: number; y: number }>();
     let id = 0;
-    for (const p of near) this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 1 }], x: p.x, y: p.y, bob: id++ });
-    // And a pair of Quick Balls, best thrown before the first pulse.
-    const quick = spots.find((p) => !near.includes(p) && Math.hypot(p.x - this.player.x, p.y - this.player.y) < 12);
-    if (quick) this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 1 }], x: quick.x, y: quick.y, bob: id++ });
+    for (const p0 of starts) {
+      const near = spots.filter((p) => !taken.has(p) && Math.hypot(p.x - p0.x, p.y - p0.y) < 9).slice(0, 3);
+      for (const p of near) {
+        taken.add(p);
+        this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 1 }], x: p.x, y: p.y, bob: id++ });
+      }
+      const quick = spots.find((p) => !taken.has(p) && Math.hypot(p.x - p0.x, p.y - p0.y) < 12);
+      if (quick) {
+        taken.add(quick);
+        this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 1 }], x: quick.x, y: quick.y, bob: id++ });
+      }
+    }
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };
-      if (near.includes(p)) continue;
+      if (taken.has(p)) continue;
       this.dropLoot(p.x, p.y);
     }
   }
@@ -1251,6 +1261,7 @@ export class Match {
       centerY: this.centerY,
       wilds: this.wilds,
       comfortRadius: (level: number) => this.comfortRadius(level),
+      clearLine: (ax, ay, bx, by) => this.nav.clearLine(ax, ay, bx, by),
     };
   }
 
@@ -1327,24 +1338,32 @@ export class Match {
       world.fighting = this.wilds.find((w) => !w.fainted && (BattleSystem.active(w) || inBall(w)) && Math.hypot(w.x - t.x, w.y - t.y) < 9 && (inBall(w) || w.target?.owner === t || (t.aiKey === `m${w.id}` && w.hp < w.maxHp))) ?? null;
       world.exploring = st.exploring ?? null;
       const shop = shopFor(this, t);
-      world.shop = shop ? this.shopSpot(shop) : null;
+      const spot = shop ? this.shopSpot(shop) : null;
+      // (Not one the storm has already swallowed.)
+      world.shop = spot && Math.hypot(spot.x - this.centerX, spot.y - this.centerY) < this.darkRadius - 3 ? spot : null;
+      world.throwAt = throwOnlyTarget(this, t, world.banned);
+      world.bold = st.bold;
       const left = this.allTrainers.filter((o) => o.alive && !o.challenger && !o.visitor);
       world.lastFoe = left.length === 2 && left.includes(t) ? (left.find((o) => o !== t) ?? null) : null;
       const d = decide(t, world);
       t.ai = d.ai;
       st.why = d.why;
       // Time with nothing to do (wandering): long enough, and it sets off exploring.
-      st.idleT = d.ai === 'roam' && d.key !== 'explore' ? (st.idleT ?? 0) + t.aiTimer : d.ai === 'roam' ? (st.idleT ?? 0) : 0;
+      // (Backing off from something counts as nothing to do: it is not getting anywhere either.)
+      st.idleT = (d.ai === 'roam' && d.key !== 'explore') || d.ai === 'flee' ? (st.idleT ?? 0) + t.aiTimer : d.ai === 'roam' ? (st.idleT ?? 0) : 0;
       st.sinceHunt = d.ai === 'hunt' ? 0 : (st.sinceHunt ?? 0) + t.aiTimer;
       st.exploring = d.key === 'explore' ? d.target : null;
       if (d.key === 'explore' && !world.exploring) st.idleT = 0;
+      // Turned back by a wild (or a rival) that would beat it on the way to something: leave that errand for a
+      // while (a different one, or a way round, rather than straight back into it).
+      if ((d.why === 'wild' || d.why === 'rival') && t.aiKey && t.aiKey !== 'explore' && !t.aiKey.startsWith('r')) (t.aiBans ??= {})[t.aiKey] = this.time + 25;
       // Backing off from a wild that would beat it: keep clear of that spot for a while.
       if (d.why === 'wild' && d.target) st.avoid?.push({ x: 2 * t.x - d.target.x, y: 2 * t.y - d.target.y, until: this.time + 25 });
       t.aiTarget = d.target;
       if ((d.key ?? null) !== (t.aiKey ?? null)) t.aiProgress = undefined;
       t.aiKey = d.key ?? null;
       // Hunting to catch: keep at it (a ball may be in the air); hunting anything else ends a catch.
-      if (d.ai === 'hunt') setCatchTarget(t, d.catchTarget ?? (st.catchTarget && d.key === `m${st.catchTarget.id}` ? st.catchTarget : null));
+      if (d.ai === 'hunt') setCatchTarget(t, d.catchTarget ?? (st.catchTarget && d.key === `m${st.catchTarget.id}` ? st.catchTarget : null), !!d.throwOnly);
       else if (d.ai !== 'flee' || !st.catchTarget) setCatchTarget(t, null);
     }
     // A hunt going nowhere (its target out of the team's reach across a cliff or water, or never
@@ -1357,6 +1376,12 @@ export class Match {
         st.hunt = undefined;
         t.aiTimer = 0;
       }
+    }
+    // A ball-only try that used up its balls (or the wild noticed it): leave that one be.
+    if (st.throwOnly && st.catchTarget && ((st.balls >= THROW_ONLY_BALLS && !this.throws.some((th) => th.thrower === t && th.phase !== 'done')) || st.catchTarget.target?.owner === t)) {
+      (t.aiBans ??= {})[`m${st.catchTarget.id}`] = this.time + 120;
+      setCatchTarget(t, null);
+      t.aiTimer = 0;
     }
     // A catch target that a ball is holding, or that the team is wearing down, stays the target.
     const ct = st.catchTarget;
@@ -1374,6 +1399,8 @@ export class Match {
       if (t.ai === 'shop') stop = 0.3;
       // Hunting: close enough for the team to reach it; catching: inside throwing range too.
       if (t.ai === 'hunt') stop = ct ? Math.min(3, CONFIG.catch.throwRange - 2) : 3;
+      // A ball-only try: just outside the wild's notice, inside throwing range.
+      if (t.ai === 'hunt' && st.throwOnly) stop = Math.max(CONFIG.wild.aggroRange + 0.6, CONFIG.catch.throwRange - 0.9);
       // Close but across a cliff, a river or a wall: not there yet (the team can't get at it from here).
       if ((t.ai === 'hunt' || t.ai === 'engage') && d <= stop && !this.nav.clearLine(t.x, t.y, target.x, target.y)) stop = 0.5;
       if (d > stop) {
@@ -1387,23 +1414,23 @@ export class Match {
           }
         }
         const speed = this.trainerSpeed(t);
-        // Wedged in a notch of a staircase cliff (stepping round it just rocks it back and forth):
-        // it steps to the middle of its tile, as a player wiggling free would, and from there takes
-        // the way straight; from a tile's middle the next tile's middle is always a clear step.
+        // Stuck: in the last 1.2 s it got less than 0.6 tiles from where it was, though it means to go
+        // somewhere (pressed into a staircase cliff's notch, a corner of a building, a chest, a fence
+        // end, and stepping round it only rocks it back and forth). It then walks the grid for a moment,
+        // as a player would pick their way out: to the middle of its tile, then tile middle to tile
+        // middle along the route (from a tile's middle the next tile's middle is always a clear step).
         const w = (t.wedge ??= { x: t.x, y: t.y, at: this.time, until: 0 });
-        if (this.time >= w.until && this.time - w.at > 1) {
-          if (Math.hypot(t.x - w.x, t.y - w.y) < 0.3) w.until = this.time + 0.6;
+        if (this.time >= w.until && this.time - w.at > 1.2) {
+          if (Math.hypot(t.x - w.x, t.y - w.y) < 0.6) w.until = this.time + 1.5;
           w.x = t.x;
           w.y = t.y;
           w.at = this.time;
         }
-        if (this.time < w.until) {
-          const mx = Math.floor(t.x) + 0.5 - t.x;
-          const my = Math.floor(t.y) + 0.5 - t.y;
-          const ml = Math.hypot(mx, my);
-          const step = speed * dt;
-          moved = ml > 0.04 ? tryMove(this.ground, t, (mx / ml) * Math.min(ml, step), (my / ml) * Math.min(ml, step), CONFIG.player.radius) : tryMove(this.ground, t, dx * step, dy * step, CONFIG.player.radius);
-        } else moved = moveAround(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius, dt);
+        if (this.time < w.until) moved = this.walkTiles(t, target, speed * dt);
+        else {
+          w.wp = undefined;
+          moved = moveAround(this.ground, t, dx * speed * dt, dy * speed * dt, CONFIG.player.radius, dt);
+        }
         t.dir = dirFromVector(dx, dy, t.dir);
         if (moved < speed * dt * 0.2) t.aiTimer = Math.min(t.aiTimer, 0.1);
       } else if (t.wedge) {
@@ -1441,6 +1468,33 @@ export class Match {
     }
     botTick(this, t, dt);
     pilotLead(this, t);
+  }
+
+  /**
+   * One step of a trainer picking its way along the walking grid: to the middle of its tile first,
+   * then straight to the middle of the next tile on the route to `to` (the movement rules are the
+   * usual ones: tryMove, the trainer's radius). Returns the distance moved.
+   */
+  private walkTiles(t: Trainer, to: { x: number; y: number }, step: number): number {
+    const w = t.wedge as NonNullable<Trainer['wedge']>;
+    // The tile middle it is walking to: its own tile's first, then the next one on the route.
+    let wp = w.wp;
+    if (!wp) wp = w.wp = { x: Math.floor(t.x) + 0.5, y: Math.floor(t.y) + 0.5 };
+    if (Math.hypot(wp.x - t.x, wp.y - t.y) < 0.06) {
+      const way = this.nav.dir(wp.x, wp.y, to.x, to.y);
+      if (!way) {
+        // Its own tile holds the goal (or there is no way): straight at it.
+        w.wp = undefined;
+        const d = Math.hypot(to.x - t.x, to.y - t.y);
+        return d > 0.05 ? tryMove(this.ground, t, ((to.x - t.x) / d) * Math.min(d, step), ((to.y - t.y) / d) * Math.min(d, step), CONFIG.player.radius) : 0;
+      }
+      wp = w.wp = { x: Math.floor(wp.x + way.x * 1.2) + 0.5, y: Math.floor(wp.y + way.y * 1.2) + 0.5 };
+    }
+    const d = Math.hypot(wp.x - t.x, wp.y - t.y);
+    const moved = tryMove(this.ground, t, ((wp.x - t.x) / d) * Math.min(d, step), ((wp.y - t.y) / d) * Math.min(d, step), CONFIG.player.radius);
+    // Pushed off its line (a Pokémon in the way): start again from the tile it is on.
+    if (moved < 1e-4) w.wp = undefined;
+    return moved;
   }
 
   /** Where a trainer stands to be served at a stall: open, reachable ground within a player's reach of its vendor. */
@@ -2781,6 +2835,10 @@ export class Match {
 
   /** The length of the step being simulated (seconds). */
   private lastDt = 1 / 60;
+  /** The length of the step being simulated (seconds), for anyone reading a speed off px/py. */
+  get lastStep(): number {
+    return this.lastDt || 1 / 60;
+  }
 
   /** The world a party sees when it steers and fights. */
   private partyWorld(): PartyWorld {
@@ -3710,14 +3768,17 @@ export class Match {
     // A computer trainer's Pokémon: the move fires once it would land (in reach, a clear line), after
     // a player's reaction time. The challenger and visitors keep their own pace.
     const trainer = m.owner && !m.owner.challenger && !m.owner.visitor && !m.owner.isPlayer;
+    if (trainer) {
+      // The best ready move that lands from here, fired as soon as it is ready (it keeps closing in
+      // on the move it is working towards meanwhile).
+      const now = m.busy <= 0 ? this.battle.chooseMove(m, foe, true) : -1;
+      if (now >= 0 && this.battle.castAt(m, now, this.mons(), 6)) m.busy = this.rng.range(0.2, 0.4);
+      return;
+    }
     const ready = slot >= 0 && (m.cooldowns[slot] ?? 0) <= 0;
-    if (ready && m.busy <= 0 && (trainer ? this.battle.chooseMove(m, foe, true) === slot : inReach)) {
-      m.busy = trainer ? this.rng.range(0.2, 0.4) : this.rng.range(0.45, 1.0);
+    if (ready && m.busy <= 0 && inReach) {
+      m.busy = this.rng.range(0.45, 1.0);
       this.battle.castAt(m, slot, this.mons(), 6);
-    } else if (trainer && m.busy <= 0 && !inReach) {
-      // Nothing it would land yet: another ready move that would, while it closes in.
-      const other = this.battle.chooseMove(m, foe, true);
-      if (other >= 0 && this.battle.castAt(m, other, this.mons(), 6)) m.busy = this.rng.range(0.2, 0.4);
     }
   }
 
@@ -3815,27 +3876,7 @@ export class Match {
     if (this.controlled) this.releaseControl();
     const cy = (arena.y0 + arena.y1) / 2;
     const spots = [{ x: arena.x0 + 1, y: cy }, { x: arena.x1 - 1, y: cy }];
-    // The crystal lifts a team that fell far behind to a few levels under the strongest
-    // finalist's, so the last battle is worth fighting (the same for players and computer trainers).
-    const best = Math.max(...[a, b].flatMap((t) => t.party.filter((m) => !m.captured).map((m) => m.level)));
-    for (const t of [a, b]) {
-      for (const m of t.party) {
-        if (m.captured || m.level >= best - 3) continue;
-        const before = m.level;
-        // Fainted Pokémon gain no XP (gainXp ignores them), so stand it back up first: the whole
-        // team is restored for the final anyway. (Before this, a fainted member below the bar
-        // looped forever and froze the game as the final two were called.)
-        m.fainted = false;
-        for (let guard = 0; guard < 120 && m.level < best - 3; guard++) gainXp(m, Math.max(1, xpToNext(m.level) - m.xp));
-        this.learnOnLevelUp(m, before);
-        // Evolve straight away (no animation): it walks into the arena in its new form.
-        for (let k = 0; k < 3; k++) {
-          const to = pickEvolution(m.species, m.level, this.rng);
-          if (!to) break;
-          applyEvolution(m, species(to), this.sprites.get(to, !!m.shiny));
-        }
-      }
-    }
+    // Everyone walks in with the levels they earned (no catch-up boost for a team that fell behind).
     for (const [i, t] of [a, b].entries()) {
       const s = spots[i] as { x: number; y: number };
       t.x = t.px = s.x;

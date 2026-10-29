@@ -23,12 +23,17 @@ import type { Nav } from './nav';
 
 export type Behavior = 'aggressive' | 'guard' | 'catch' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
 /**
- * The choices the player cycles through: Attack (go after anything in range), Guard (fight what
- * comes near), Catch (fight like Guard but never knock out a wild Pokémon: hits leave it at 1 HP
- * and the team holds back once it is weak, ready for a ball) and Passive (stay out of fights).
- * Hold and the roaming modes are for rivals and scripts.
+ * The choices the player cycles through: Attack (go after anything in range), Catch (fight what
+ * comes near you but never knock out a wild Pokémon: hits leave it at 1 HP and the team holds back
+ * once it is weak, ready for a ball) and Passive (stay out of fights). Guard (fight what comes near)
+ * is for computer trainers and wild Pokémon only; Hold and the roaming modes are for rivals and scripts.
  */
-export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'guard', 'catch', 'passive'];
+export const BEHAVIORS: readonly Behavior[] = ['aggressive', 'catch', 'passive'];
+
+/** What a Pokémon does when it joins a trainer: a player's starts on Attack, anyone else's on Guard. */
+export function joinBehavior(owner: { isPlayer: boolean } | null | undefined): Behavior {
+  return owner?.isPlayer ? 'aggressive' : 'guard';
+}
 export const BEHAVIOR_LABEL: Record<Behavior, string> = {
   aggressive: 'Attack',
   guard: 'Guard',

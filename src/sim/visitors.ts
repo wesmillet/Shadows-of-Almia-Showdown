@@ -18,6 +18,7 @@ import type { BattleEvent } from './battle';
 import type { Mon, Trainer } from './entities';
 import { activeParty, partySize } from './entities';
 import type { Match } from './match';
+import { joinBehavior } from './party';
 import { canStand, tryMove } from './movement';
 import type { Shop } from './town';
 import { TownsfolkCrew } from './townsfolk';
@@ -629,7 +630,7 @@ export class Visitors {
     L.target = null;
     this.m.battle.interrupt(L);
     L.status = null;
-    L.behavior = 'guard';
+    L.behavior = joinBehavior(t);
     m.wilds = m.wilds.filter((w) => w !== L);
     if (partySize(t) >= m.partyCap) {
       // No room: it flies off, leaving the trainer a voucher to remember it by.
@@ -680,7 +681,7 @@ export class Visitors {
         m.battle.events.push({ type: 'notice', text: 'Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!', seconds: 4 });
       } else {
         const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8, true);
-        prize.behavior = 'guard';
+        prize.behavior = joinBehavior(pl);
         pl.party.push(prize);
         m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you a shiny ${prize.name}!`, seconds: 4 });
       }

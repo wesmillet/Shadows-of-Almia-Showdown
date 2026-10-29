@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formationOffset, gainXp, shareKnockoutXp, xpForKnockout, xpToNext } from './party';
+import { formationOffset, gainXp, joinBehavior, nextBehavior, shareKnockoutXp, xpForKnockout, xpToNext } from './party';
 import { species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 
@@ -47,5 +47,20 @@ describe('xp', () => {
     const solo = shareKnockoutXp(roamer, target, [dealer, near, roamer], 8);
     expect(solo).toHaveLength(1);
     expect(solo[0]?.mon).toBe(roamer);
+  });
+});
+
+describe('the player\'s behaviour choices', () => {
+  it('cycle Attack, Catch, Passive; Guard is not one of them', () => {
+    expect(nextBehavior('aggressive')).toBe('catch');
+    expect(nextBehavior('catch')).toBe('passive');
+    expect(nextBehavior('passive')).toBe('aggressive');
+    // a Pokémon left on Guard (a computer trainer's, say) moves on to Attack
+    expect(nextBehavior('guard')).toBe('aggressive');
+  });
+  it('a Pokémon joining a player starts on Attack, joining anyone else on Guard', () => {
+    expect(joinBehavior({ isPlayer: true })).toBe('aggressive');
+    expect(joinBehavior({ isPlayer: false })).toBe('guard');
+    expect(joinBehavior(null)).toBe('guard');
   });
 });

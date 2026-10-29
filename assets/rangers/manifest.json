@@ -65,7 +65,7 @@
   },
   "civ_04": {
    "file": "civ_04.png",
-   "frame_w": 20,
+   "frame_w": 22,
    "frame_h": 32,
    "frames": 15,
    "anchor": "bottom-center"

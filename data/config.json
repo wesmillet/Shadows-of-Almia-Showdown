@@ -87,11 +87,11 @@
     "partySize": 3,
     "level": 5,
     "aggroRange": 7,
-    "_huntComment": "Rivals with no fainted member and party HP above huntHpFraction walk to the best wild within huntRange tiles that is at most huntOverLevel levels above their team, so they level up through the match; worn down, they go back to an outpost within healTripRange tiles to heal, then hunt again.",
+    "_huntComment": "Rivals with no fainted member and party HP above huntHpFraction walk to the best wild within huntRange tiles that is at most huntOverLevel levels above their team, so they level up through the match; worn down (party HP at or under huntHpFraction, or half the team fainted), they go back to an outpost within healTripRange tiles to heal, then hunt again. Passing an outpost, they stop only when the team is under three quarters of its HP or someone fainted.",
     "huntRange": 30,
     "huntOverLevel": 3,
-    "huntHpFraction": 0.5,
-    "healTripRange": 70
+    "huntHpFraction": 0.35,
+    "healTripRange": 45
   },
   "battle": {
     "_channelComment": "Channelled beams: these moves keep firing for channel.seconds after they go off, a pulse every channel.tick seconds, and the user steers the beam (the player with the cursor, others at their target) turning at most channel.turnDegPerSec. The user stands still meanwhile. The whole channel deals powerMult x the move's power, spread over the pulses.",

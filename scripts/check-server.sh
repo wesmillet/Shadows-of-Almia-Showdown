@@ -22,6 +22,7 @@ npx tsx server/checks/online_events.ts | tail -1
 npx tsx server/checks/lagcomp.ts > /dev/null && echo "lag compensation ok"
 npx tsx server/checks/social.ts | tail -1
 npx tsx server/checks/moderation.ts | tail -1
+npx tsx server/checks/admin_dashboard.ts | tail -1
 npx tsx server/checks/ops.ts 2>/dev/null | tail -1
 npx tsx server/bots.ts 3 30 > /dev/null && echo "bots ok"
 # A second server with the standard lobby (ten trainers, five real players): the admin start.

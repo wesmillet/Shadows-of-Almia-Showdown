@@ -22,6 +22,8 @@ import { replayDir, replayFile } from './replays';
 import { notFoundPage, profilePage } from './profilePage';
 import { ModApi } from './modApi';
 import { MOD_PAGE } from './modPage';
+import { AdminApi } from './adminApi';
+import { ADMIN_PAGE } from './adminPage';
 import { privacyPage } from './privacyPage';
 import { Room, STEP, type RoomHooks } from './room';
 import { loadWorld } from './world';
@@ -197,6 +199,12 @@ const modApi = new ModApi(accounts, {
   events,
 });
 
+const adminApi = new AdminApi(accounts, {
+  online: () => hub.onlineEntries(),
+  awaySeats: () => hub.awaySeats(),
+  live: () => hub.liveMatches(),
+});
+
 interface Conn extends Client {
   ws: WebSocket;
   msgs: number;
@@ -317,6 +325,14 @@ const http = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }).end(MOD_PAGE);
     return;
   }
+  if (url.split('?')[0] === '/admin' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }).end(ADMIN_PAGE);
+    return;
+  }
+  if (url.startsWith('/api/admin/')) {
+    void adminApi.handle(req, res, url.split('?')[0] as string, new URL(url, 'http://x'));
+    return;
+  }
   if (url.startsWith('/api/mod/')) {
     void modApi.handle(req, res, url.split('?')[0] as string, new URL(url, 'http://x'));
     return;
@@ -422,7 +438,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   }
   const c: Conn = {
     ws, key, name: who.name, look: who.look, title: who.title, accountId: who.accountId, guest: who.accountId === null, rollSeed: null, rollPool: [], room: null, msgs: 0,
-    watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '',
+    watching: null, party: null, invites: new Set(), private: null, pick: null, shown: '', connectedAt: Date.now(),
     send(msg: ServerMsg) {
       this.sendRaw(JSON.stringify(msg));
     },
@@ -441,6 +457,8 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
   c.send({ t: 'hello', name: c.name, guest: c.guest, server: KIND, build: BUILD });
   chat.history(c);
   hub.connect(c);
+  // Last seen, for the admin dashboard: written when an account connects and when it leaves.
+  if (c.accountId !== null) accounts.touchSeen(c.accountId);
   metrics.counters.connections++;
   ws.on('pong', () => {
     (c as Conn & { heartbeatDue?: boolean }).heartbeatDue = false;
@@ -456,7 +474,10 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
     if (LAG) setTimeout(() => onMessage(c, raw), LAG);
     else onMessage(c, raw);
   });
-  ws.on('close', () => hub.disconnect(c));
+  ws.on('close', () => {
+    hub.disconnect(c);
+    if (c.accountId !== null) accounts.touchSeen(c.accountId);
+  });
 }
 
 // ---------------------------------------------------------------- the clock

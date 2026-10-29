@@ -86,7 +86,7 @@ function create(m: Extract<ToWorker, { op: 'create' }>): void {
     hooks,
     (r, report) => {
       rooms.delete(r.id);
-      void report.replay.then((replay) => post({ ev: 'end', room: r.id, results: report.results, botPlaces: report.botPlaces, flags: report.flags, aborted: report.aborted, replay }));
+      void report.replay.then((replay) => post({ ev: 'end', room: r.id, results: report.results, botPlaces: report.botPlaces, trainers: report.trainers, seconds: report.seconds, winner: report.winner, flags: report.flags, aborted: report.aborted, replay }));
     },
     { ...s.opts, recorder: dir ? (r) => new ReplayRecorder(dir, r.id, s.seed, s.opts.mode, r.roster, r.match, r.ids) : undefined },
   );

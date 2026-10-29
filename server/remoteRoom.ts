@@ -60,7 +60,7 @@ export type FromWorker =
   | { ev: 'chestSave'; key: string; box: Array<InventorySlot | null> }
   | { ev: 'extracted'; key: string; mon: PcFields; matchId: string }
   | { ev: 'flagged'; key: string; name: string; matchId: string; summary: string }
-  | { ev: 'end'; room: string; results: RoomResult[]; botPlaces: number[]; flags: EndReport['flags']; aborted: string | null; replay: ReplaySummary | null }
+  | { ev: 'end'; room: string; results: RoomResult[]; botPlaces: number[]; trainers?: EndReport['trainers']; seconds?: number; winner?: string | null; flags: EndReport['flags']; aborted: string | null; replay: ReplaySummary | null }
   | { ev: 'error'; room: string; message: string; stack: string; time: number }
   | { ev: 'stats'; n: number; total: number; max: number };
 
@@ -168,7 +168,7 @@ export class RemoteRoom implements RoomHandle {
   finish(m: Extract<FromWorker, { ev: 'end' }>): void {
     if (this.ended) return;
     this.ended = true;
-    this.onEnd(this, { results: m.results, botPlaces: m.botPlaces, flags: m.flags, aborted: m.aborted, replay: Promise.resolve(m.replay) });
+    this.onEnd(this, { results: m.results, botPlaces: m.botPlaces, trainers: m.trainers ?? [], seconds: m.seconds ?? this.time, winner: m.winner ?? null, flags: m.flags, aborted: m.aborted, replay: Promise.resolve(m.replay) });
   }
 }
 

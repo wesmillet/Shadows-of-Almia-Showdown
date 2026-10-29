@@ -20,6 +20,7 @@ import type { Events } from './events';
 import { Room, type Peer, type RoomHooks, type RoomMode, type RoomOptions } from './room';
 import type { Human } from './world';
 import type { World } from './world';
+import type { LiveMatch, OnlineEntry } from './adminApi';
 
 /** Seconds a party or private lobby has to pick starters. */
 export const PICK_SECONDS = 40;
@@ -44,6 +45,8 @@ export interface Client extends Peer {
   pick: PickSession | null;
   /** What friends last saw them doing (pushed again when it changes). */
   shown: string;
+  /** When this connection opened (the admin dashboard's online list). */
+  connectedAt?: number;
 }
 
 export interface Party {
@@ -605,6 +608,17 @@ export class Hub {
       this.presenceChanged(c);
     }
     for (const f of report.flags) this.o.accounts.addFlags(f.key, f.name, room.id, new Map(f.flags));
+    // The admin's match history: every match that ends, called off or not (it says which).
+    try {
+      if (report.trainers.length) {
+        this.o.accounts.logMatch({
+          id: room.id, mode: room.mode, startedAt: room.startedAt, endedAt: Date.now(), seconds: report.seconds,
+          winner: report.winner, aborted: report.aborted, trainers: report.trainers,
+        });
+      }
+    } catch (e) {
+      this.o.log(`Match ${room.id} not logged:`, e);
+    }
     this.o.onMatchEnd?.(room, report);
     if (report.aborted) {
       // Called off (a shutdown): nothing is counted, for anyone.
@@ -632,6 +646,58 @@ export class Hub {
     } catch (e) {
       this.o.log(`Replay ${room.id} not saved:`, e);
     }
+  }
+
+  // ---------------------------------------------------------------- the admin dashboard
+
+  /** Where a connected player is: playing, watching, in a lobby (queue, party, picking, private), or on the menu. */
+  activity(c: Client): OnlineEntry['state'] {
+    if (c.room && c.room.playing(c.key)) return 'match';
+    if (c.watching) return 'spectating';
+    if (c.private || c.party || c.pick || this.matchmaker.has(c.key)) return 'lobby';
+    return 'hub';
+  }
+
+  /** Everyone connected, one entry per player (a second tab replaces the first: main.ts). */
+  onlineEntries(): OnlineEntry[] {
+    return [...this.clients.values()].map((c) => {
+      const state = this.activity(c);
+      const room = state === 'match' ? c.room : state === 'spectating' ? c.watching : null;
+      return { name: c.name, accountId: c.accountId, guest: c.accountId === null, state, room: room?.id ?? null, connectedAt: c.connectedAt ?? 0 };
+    });
+  }
+
+  /** Players whose connection dropped during a match that still holds their seat. */
+  awaySeats(): Array<{ name: string; accountId: number | null; guest: boolean; room: string }> {
+    const here = new Set([...this.clients.values()].filter((c) => this.activity(c) === 'match').map((c) => `${c.room?.id}|${c.name}`));
+    const out: Array<{ name: string; accountId: number | null; guest: boolean; room: string }> = [];
+    for (const r of this.rooms) {
+      if (r.closed) continue;
+      for (const e of r.roster) {
+        if (!e.human || here.has(`${r.id}|${e.name}`)) continue;
+        const u = this.o.accounts.db.prepare('SELECT id FROM users WHERE username = ?').get(e.name) as { id: number } | undefined;
+        // Only those the match still counts as playing (out of it, or gone for good, they are not waiting).
+        const key = u ? `u${u.id}` : null;
+        if (key && !r.playing(key)) continue;
+        out.push({ name: e.name, accountId: u?.id ?? null, guest: !u, room: r.id });
+      }
+    }
+    return out;
+  }
+
+  /** Matches running now, with everyone in them. */
+  liveMatches(): LiveMatch[] {
+    return [...this.rooms].filter((r) => !r.closed).map((r) => {
+      const inIt = new Set([...this.clients.values()].filter((c) => c.room === r && r.playing(c.key)).map((c) => c.name));
+      return {
+        id: r.id, mode: r.mode, startedAt: r.startedAt, time: r.time, watchers: r.watcherCount,
+        trainers: r.roster.map((e) => {
+          const c = e.human ? [...this.clients.values()].find((x) => x.name === e.name) : undefined;
+          const guest = e.human && (c ? c.accountId === null : /^Guest\d{4}$/.test(e.name));
+          return { name: e.name, human: e.human, guest, accountId: c?.accountId ?? null, connected: e.human && inIt.has(e.name) };
+        }),
+      };
+    });
   }
 
   // ---------------------------------------------------------------- spectating

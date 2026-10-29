@@ -547,8 +547,30 @@ export class Room implements RoomHandle {
     }
     const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';
     this.releaseWatchers(this.aborted ?? `The match is over: ${winner} won`);
+    // Every trainer in it for the admin's match history: players with their results, computer
+    // trainers with their places and the stats the match kept for them.
+    const byName = new Map(results.map((r) => [r.name, r]));
+    const trainers: EndReport['trainers'] = this.roster.map((e) => {
+      const r = e.human ? byName.get(e.name) : undefined;
+      if (e.human) {
+        const key = r?.key ?? '';
+        return {
+          name: e.name, human: true, guest: !key.startsWith('u'), accountId: key.startsWith('u') ? Number(key.slice(1)) : null,
+          place: r?.place ?? 0, outcome: r?.outcome ?? 'loss', stats: r ? { ...r.stats } : null,
+        };
+      }
+      const bot = this.match.trainers.find((t) => t.id === e.trainerId);
+      const place = bot ? (this.botPlaces.get(bot) ?? 0) : 0;
+      return {
+        name: e.name, human: false, guest: false, accountId: null, place, outcome: place === 1 && this.match.over && !this.aborted ? 'win' : 'loss',
+        stats: bot ? { catches: bot.stats.catches, knockouts: bot.stats.knockouts, eliminations: bot.stats.eliminations ?? 0, damage: bot.stats.damage, timeSurvived: bot.stats.timeSurvived } : null,
+      };
+    });
     this.onEnd(this, {
       results,
+      trainers,
+      seconds: this.match.time,
+      winner: this.aborted ? null : winner,
       botPlaces: [...this.botPlaces.values()],
       flags: this.flagsOf().map((f) => ({ key: f.key, name: f.name, flags: [...f.flags].map(([k, v]): [string, { n: number; detail: string }] => [k, { n: v.n, detail: v.detail }]) })),
       aborted: this.aborted,

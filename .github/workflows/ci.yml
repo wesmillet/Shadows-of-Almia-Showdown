@@ -53,6 +53,8 @@ jobs:
         run: npx tsx server/checks/social.ts
       - name: Anti-cheat and moderation
         run: npx tsx server/checks/moderation.ts
+      - name: Admin dashboard (authorization, online counts, accounts, match history)
+        run: npx tsx server/checks/admin_dashboard.ts
       - name: Running the server
         run: npx tsx server/checks/ops.ts
       - name: Bots play for 30 s

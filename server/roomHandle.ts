@@ -12,6 +12,15 @@ export interface EndReport {
   results: RoomResult[];
   /** Computer trainers' places. */
   botPlaces: number[];
+  /** Every trainer in the match (players and computer trainers), for the admin's history. */
+  trainers: Array<{
+    name: string; human: boolean; guest: boolean; accountId: number | null; place: number; outcome: 'win' | 'loss';
+    stats: { catches: number; knockouts: number; eliminations?: number; damage: number; timeSurvived: number } | null;
+  }>;
+  /** Match time played, in seconds. */
+  seconds: number;
+  /** Who won (names), or null when called off. */
+  winner: string | null;
   /** Anti-cheat flags per player: kind -> count and an example. */
   flags: Array<{ key: string; name: string; flags: Array<[string, { n: number; detail: string }]> }>;
   /** Called off before its end (nothing is counted): why. */

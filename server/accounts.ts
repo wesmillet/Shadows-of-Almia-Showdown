@@ -103,6 +103,21 @@ interface Stats {
 
 const EMPTY_STATS: Stats = { matches: 0, wins: 0, catches: 0, knockouts: 0, eliminations: 0, damage: 0, bestPlace: null };
 
+/** One finished match for the admin's history (Accounts.logMatch). */
+export interface MatchLogEntry {
+  id: string;
+  mode: string;
+  startedAt: number;
+  endedAt: number;
+  seconds: number;
+  winner: string | null;
+  aborted: string | null;
+  trainers: Array<{
+    name: string; human: boolean; guest: boolean; accountId: number | null; place: number; outcome: 'win' | 'loss';
+    stats: { catches: number; knockouts: number; eliminations?: number; damage: number; timeSurvived: number } | null;
+  }>;
+}
+
 export class Accounts {
   readonly db: DatabaseSync;
   /** Failed sign-ins per IP and per username: [count, window start]. */
@@ -201,8 +216,25 @@ export class Accounts {
       );
     `);
     this.db.exec(COLLECTION_LOG_SQL);
+    // The admin dashboard's match history (server/adminApi.ts): every match that ends, with every
+    // trainer in it (bots marked), from the release that added it. Older matches only have the
+    // signed-in players' rows in match_players. meta.history_since says when this log began.
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS match_log (
+        id TEXT PRIMARY KEY, mode TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER NOT NULL, seconds REAL NOT NULL,
+        winner TEXT, trainers_n INTEGER NOT NULL, humans INTEGER NOT NULL, bots INTEGER NOT NULL, aborted TEXT, trainers TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS match_log_ended ON match_log(ended_at);
+      CREATE TABLE IF NOT EXISTS match_log_players (
+        match_id TEXT NOT NULL REFERENCES match_log(id) ON DELETE CASCADE, user_id INTEGER NOT NULL, place INTEGER NOT NULL, outcome TEXT NOT NULL,
+        PRIMARY KEY (match_id, user_id)
+      );
+      CREATE INDEX IF NOT EXISTS match_log_players_user ON match_log_players(user_id);
+    `);
+    this.db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('history_since', ?)").run(String(Date.now()));
     // Columns added after the first release (older databases get them here).
-    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER']] as const) {
+    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER'], ['users', 'last_seen', 'INTEGER']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }
@@ -578,6 +610,39 @@ export class Accounts {
       progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: this.checkAchievements(userId, facts) });
     }
     return progress;
+  }
+
+  /** When the full match log (match_log) began recording on this database. */
+  historySince(): number | null {
+    const r = this.db.prepare("SELECT value FROM meta WHERE key = 'history_since'").get() as { value: string } | undefined;
+    return r ? Number(r.value) : null;
+  }
+
+  /** Level from XP (the same rule the game uses). */
+  level(xp: number): ReturnType<typeof levelOf> {
+    return levelOf(xp);
+  }
+
+  /** An account connected or disconnected just now (one write each way, never per message). */
+  touchSeen(userId: number): void {
+    this.db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(Date.now(), userId);
+  }
+
+  /** A match that ended (or was called off): one row, with every trainer, for the admin's history. */
+  logMatch(m: MatchLogEntry): void {
+    const humans = m.trainers.filter((t) => t.human).length;
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare('INSERT OR IGNORE INTO match_log (id, mode, started_at, ended_at, seconds, winner, trainers_n, humans, bots, aborted, trainers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(m.id, m.mode, m.startedAt, m.endedAt, m.seconds, m.winner, m.trainers.length, humans, m.trainers.length - humans, m.aborted, JSON.stringify(m.trainers));
+      for (const t of m.trainers) {
+        if (t.accountId !== null && t.human) this.db.prepare('INSERT OR IGNORE INTO match_log_players (match_id, user_id, place, outcome) VALUES (?, ?, ?, ?)').run(m.id, t.accountId, t.place, t.outcome);
+      }
+      this.db.exec('COMMIT');
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
   }
 
   xp(userId: number): number {

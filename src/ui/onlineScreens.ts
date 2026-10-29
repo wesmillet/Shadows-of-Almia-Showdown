@@ -30,7 +30,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'options' | 'back' | 'me' | 'privacy';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -156,6 +156,8 @@ export class OnlineScreen implements Screen {
       options: signedIn ? { x: L.cx + 8 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
+      // The admin dashboard (only for an account the server made an administrator; the server checks again).
+      admin: this.net.me.user?.role === 'admin' ? { x: 24 * s, y: 80 * s, w: 180 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
     };
   }
 
@@ -205,6 +207,7 @@ export class OnlineScreen implements Screen {
         return;
       }
       if (on(c, 'privacy')) window.open(`${this.net.base}/privacy`, '_blank', 'noopener');
+      else if (this.net.me.user?.role === 'admin' && on(c, 'admin')) window.open(`${this.net.base}/admin`, '_blank', 'noopener');
       else if (!signedIn && on(c, 'signin')) void this.account('signin');
       else if (!signedIn && on(c, 'register')) void this.account('register');
       else if (signedIn && on(c, 'signout')) void this.signOut();
@@ -303,6 +306,7 @@ export class OnlineScreen implements Screen {
     if (this.message) text(v, this.message, cx, sy + 22 * s, 13, { align: 'center', color: '#f4ecdc', maxWidth: v.width - 60 * s });
     if (this.net.hello?.server === 'demo') text(v, 'DEMO SERVER: progress here is separate', cx, sy + 42 * s, 11, { align: 'center', color: '#ff9a9a' });
     button(v, 'Back (Esc)', r.back.x, r.back.y, r.back.w, r.back.h, over('back'), '#f4e6c8');
+    if (me.user?.role === 'admin') button(v, 'Admin dashboard', r.admin.x, r.admin.y, r.admin.w, r.admin.h, over('admin'), '#f4e6c8');
     text(v, 'Privacy', cx, r.privacy.y + 15 * s, 11, { align: 'center', color: over('privacy') ? '#f4ecdc' : '#9f97bb' });
   }
 }

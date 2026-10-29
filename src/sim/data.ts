@@ -91,7 +91,13 @@ export function movesAt(sp: SpeciesDef, level: number): string[] {
       if (!known.includes(id) && MOVES.has(id)) known.push(id);
     }
   }
-  return pickMoves(sp, known);
+  const kit = pickMoves(sp, known);
+  // A very young Pokémon (under level 5: the wilds at the island's edge) knows just its best attack.
+  if (level < 5 && kit.length > 1) {
+    const best = [...kit].sort((a, b) => moveValue(sp, b) - moveValue(sp, a))[0] as string;
+    return [best];
+  }
+  return kit;
 }
 
 /** The MOVE_SLOTS moves to carry out of `known` (see movesAt). Ties go to the move learned later. */

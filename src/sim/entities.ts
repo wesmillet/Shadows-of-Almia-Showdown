@@ -26,6 +26,10 @@ export interface Mon {
   types: string[];
   moves: string[];
   cooldowns: number[];
+  /** The slot of the move it used last (the AI mixes its moves). */
+  lastSlot?: number;
+  /** Seconds spent well away from its trainer while following (party.ts: a hop back after a while). */
+  farT?: number;
   x: number;
   y: number;
   px: number;

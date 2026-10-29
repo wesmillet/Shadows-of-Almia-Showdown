@@ -64,6 +64,9 @@ function client(key: string): { ws: WebSocket; got: (t: string, timeout?: number
     const forged = await fetch(HTTP + path, { headers: { cookie: 'almia_session=forged-not-a-real-session' } });
     check(bare.status === 403 && forged.status === 403, `${path} refused without an admin session (${bare.status}, forged cookie ${forged.status})`);
   }
+  // The daily Egg is for signed-in players only.
+  const egg = await fetch(`${HTTP}/api/egg`);
+  check(egg.status === 401, `daily Egg refused without an account (${egg.status})`);
   const key = 'checkkey' + Math.random().toString(36).slice(2).padEnd(18, 'x');
   let a = client(key);
   await a.got('hello');

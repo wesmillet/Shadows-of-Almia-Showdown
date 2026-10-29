@@ -215,7 +215,7 @@ export class SocialPanel {
 }
 
 /** A modal box; resolves when closed. */
-function modal(build: (box: HTMLDivElement, close: () => void) => void, wide = true): Promise<void> {
+export function modal(build: (box: HTMLDivElement, close: () => void) => void, wide = true): Promise<void> {
   return new Promise((resolve) => {
     const wrap = el('div', 'almia-modal-wrap');
     const box = el('div', `almia-panel almia-modal${wide ? ' wide' : ''}`);

@@ -25,7 +25,7 @@ export interface PcEntry {
   moves: string[];
   heldItem?: string | null;
   /** How it got here. */
-  via: 'win' | 'voucher';
+  via: 'win' | 'voucher' | 'egg';
   /** When (ISO date) and from which match seed. */
   at: string;
   seed?: number;

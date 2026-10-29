@@ -191,7 +191,7 @@
  },
  {
   "file": "src/ui/onlineScreens.ts",
-  "line": 126,
+  "line": 136,
   "text": "trade update"
  },
  {
@@ -216,7 +216,7 @@
  },
  {
   "file": "server/accounts.ts",
-  "line": 1066,
+  "line": 1120,
   "text": "api error"
  },
  {

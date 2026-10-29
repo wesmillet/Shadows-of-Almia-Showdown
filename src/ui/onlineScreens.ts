@@ -10,6 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
+import { eggDialog, eggReady } from './eggDialog';
 import { LEVELS_ON } from '../net/progression';
 import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
@@ -30,7 +31,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'options' | 'back' | 'me' | 'privacy' | 'admin' | 'egg';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -98,7 +99,10 @@ export class OnlineScreen implements Screen {
   enter(): void {
     loadHubLogo();
     this.chat = new ChatPanel(this.net, { side: true, collapsed: window.innerWidth < 900, onName: (n) => void openTrainerCard(this.net, n).then(() => this.checkTrades()) });
-    void this.net.refreshMe().then(() => this.checkTrades());
+    void this.net.refreshMe().then(() => {
+      void this.checkTrades();
+      void this.checkEgg();
+    });
     this.unsubTrades = this.net.on((m) => {
       if (m.t === 'trades') void this.checkTrades();
     });
@@ -113,6 +117,12 @@ export class OnlineScreen implements Screen {
   }
 
   private unsubTrades: (() => void) | null = null;
+  /** Today's Egg is waiting to hatch (the button lights up). */
+  private eggWaiting = false;
+
+  private async checkEgg(): Promise<void> {
+    this.eggWaiting = await eggReady(this.net);
+  }
   /** Trade offers waiting for this player (the Trade button's badge). */
   private tradesWaiting = 0;
 
@@ -152,8 +162,10 @@ export class OnlineScreen implements Screen {
       register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
       signout: signedIn ? { x: L.cx + 36 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
-      trade: signedIn ? { x: L.cx - 172 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      options: signedIn ? { x: L.cx + 8 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      trade: signedIn ? { x: L.cx - 256 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      // The daily Egg (signed in): one a day, hatched into the PC.
+      egg: signedIn ? { x: L.cx - 82 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      options: signedIn ? { x: L.cx + 92 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
       // The admin dashboard (only for an account the server made an administrator; the server checks again).
@@ -198,6 +210,14 @@ export class OnlineScreen implements Screen {
         void openTrades(this.net).then(() => {
           this.busy = false;
           void this.checkTrades();
+        });
+        return;
+      }
+      if (signedIn && on(c, 'egg')) {
+        this.busy = true;
+        void eggDialog(this.net).then(() => {
+          this.busy = false;
+          void this.checkEgg();
         });
         return;
       }
@@ -302,6 +322,7 @@ export class OnlineScreen implements Screen {
     button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
     text(v, 'Ten trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
     if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
+    if (me.signedIn) button(v, this.eggWaiting ? 'Daily Egg!' : 'Daily Egg', r.egg.x, r.egg.y, r.egg.w, r.egg.h, over('egg'), this.eggWaiting ? undefined : '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
     const sy = r.options.y + r.options.h + 34 * s;
     text(v, this.net.connected ? `Connected${this.net.ping ? ` · ${this.net.ping} ms` : ''}` : 'Connecting...', cx, sy, 12, { align: 'center', color: this.net.connected ? '#9fe8b8' : '#ffe2a0' });

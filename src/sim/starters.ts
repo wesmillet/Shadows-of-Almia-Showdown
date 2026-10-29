@@ -112,6 +112,14 @@ export function poolSize(unlocked: readonly string[] = []): number {
   return poolTiers(unlocked).reduce((n, t) => n + t.dex.length, 0);
 }
 
+/**
+ * The daily Egg (online): a tier by the full starter weights (Common 50, Uncommon 27, Rare 13, Epic 7,
+ * Mythic 3), every tier in full whatever the player's pool, then a Pokémon in it.
+ */
+export function rollEgg(rng: Rng): { tier: StarterTier; dex: string } {
+  return rollStarter(rng, STARTER_TIERS.filter((t) => t.dex.length));
+}
+
 /** Rolls a tier by weight, then a Pokémon in it. */
 export function rollStarter(rng: Rng, tiers: StarterTier[] = poolTiers()): { tier: StarterTier; dex: string } {
   const tier = rng.weighted(tiers, (t) => t.weight);

@@ -20,7 +20,7 @@ Found by reading the code and data, not only by looking at screens:
 
 Not captured: Pokémon species names (data/species.json, the official names, 361 entries); the map's place names drawn into the island art; text inside images (the logo, the title art); browser-native messages (e.g. a failed connection page); and text the server builds from other text in ways the extractor can not see whole (each piece is listed, the sentence they make may not be). Strings assembled across several statements show as their separate parts.
 
-**1337 distinct lines** (1168 active).
+**1336 distinct lines** (1167 active).
 
 ## 1. Title screen, options and offline setup
 
@@ -3859,8 +3859,8 @@ Example: "Oh? The Egg is hatching... Pikachu hatched from the Egg!"
 
 > Wandering Merchant
 
-- `src/sim/visitors.ts:125` · m.makeTrainer
-- `src/sim/visitors.ts:131` · name:
+- `src/sim/visitors.ts:126` · m.makeTrainer
+- `src/sim/visitors.ts:132` · name:
 - `src/ui/matchScreen.ts:2559` · name = · when `n.role === 'merchant' ?`
 - `data/characters.json` · role merchant: name
 
@@ -3868,8 +3868,8 @@ Example: "Oh? The Egg is hatching... Pikachu hatched from the Egg!"
 
 > Ace Trainer Celeste
 
-- `src/sim/visitors.ts:135` · m.makeTrainer
-- `src/sim/visitors.ts:307` · m.makeTrainer · when `in challengeAce()`
+- `src/sim/visitors.ts:136` · m.makeTrainer
+- `src/sim/visitors.ts:308` · m.makeTrainer · when `in challengeAce()`
 - `src/ui/matchScreen.ts:2559` · name = · when `n.role === 'merchant' ?`
 - `data/characters.json` · role ace: name
 
@@ -3877,25 +3877,25 @@ Example: "Oh? The Egg is hatching... Pikachu hatched from the Egg!"
 
 > A Wandering Merchant is nearby: rare items for sale (Space to shop)
 
-- `src/sim/visitors.ts:189` · announce · when `if (this.merchant)`
+- `src/sim/visitors.ts:190` · announce · when `if (this.merchant)`
 
 **TEE72DF** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Ace Trainer Celeste is looking for a challenge (Space to battle)
 
-- `src/sim/visitors.ts:190` · announce · when `if (this.ace && this.aceState === 'idle')`
+- `src/sim/visitors.ts:191` · announce · when `if (this.ace && this.aceState === 'idle')`
 
 **T4DD401** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa is floating nearby, giggling... (Space to talk)
 
-- `src/sim/visitors.ts:191` · announce · when `if (this.hoopa && !this.hoopaUsed)`
+- `src/sim/visitors.ts:192` · announce · when `if (this.hoopa && !this.hoopaUsed)`
 
 **TF4CE5A** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > A Pokémon Breeder is wandering nearby, hoping to trade an Egg... (Space to talk)
 
-- `src/sim/visitors.ts:196` · announce · when `if (this.folk.breeder)`
+- `src/sim/visitors.ts:197` · announce · when `if (this.folk.breeder)`
 
 **TF80B7F** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
@@ -3904,13 +3904,13 @@ Example: "Oh? The Egg is hatching... Pikachu hatched from the Egg!"
 Placeholders: `Math.ceil(this.aceReadyAt - m.time)`  
 Example: "Celeste: "Catch your breath first. 45s.""
 
-- `src/sim/visitors.ts:303` · return · when `if (m.time < this.aceReadyAt)`
+- `src/sim/visitors.ts:304` · return · when `if (m.time < this.aceReadyAt)`
 
 **TF97899** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Celeste: "Come back with a Pokémon that can fight."
 
-- `src/sim/visitors.ts:305` · return · when `if (!activeParty(m.player).length)`
+- `src/sim/visitors.ts:306` · return · when `if (!activeParty(m.player).length)`
 
 **TBEEF7D** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
@@ -3919,103 +3919,103 @@ Example: "Celeste: "Catch your breath first. 45s.""
 Placeholders: `lvl`  
 Example: "Celeste: "Let's see if you're worth my best!" (Lv …)"
 
-- `src/sim/visitors.ts:322` · return · when `in challengeAce()`
+- `src/sim/visitors.ts:323` · return · when `in challengeAce()`
 
 **T9953F4** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "Out here in the storm? Let's see what the dark is hiding!" A black ring tears open...
 
-- `src/sim/visitors.ts:350` · return · when `if (storm)`
+- `src/sim/visitors.ts:351` · return · when `if (storm)`
 
 **T7AA6AB** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "Ta-da! Want to see something AMAZING?" A ring portal opens!
 
-- `src/sim/visitors.ts:351` · return · when `in askHoopa()`
+- `src/sim/visitors.ts:352` · return · when `in askHoopa()`
 
 **T40C203** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "Hey! Quit it!"
 
-- `src/sim/visitors.ts:423` · text = · when `this.hoopaHits === 1 ?`
+- `src/sim/visitors.ts:424` · text = · when `this.hoopaHits === 1 ?`
 
 **T64AB5F** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "One more and you'll be sorry!"
 
-- `src/sim/visitors.ts:423` · text = · when `this.hoopaHits === 1 ?`
+- `src/sim/visitors.ts:424` · text = · when `this.hoopaHits === 1 ?`
 
 **T6CEA33** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa: "That HURT! Fine... no more holding back!" Hoopa is unbound!
 
-- `src/sim/visitors.ts:444` · text: · when `in unbind()`
+- `src/sim/visitors.ts:445` · text: · when `in unbind()`
 
 **T665C28** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa Unbound (Lv 100) battles you! Wear it down or catch it
 
-- `src/sim/visitors.ts:447` · text: · when `bout ?`
+- `src/sim/visitors.ts:448` · text: · when `bout ?`
 
 **T317F04** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Hoopa Unbound (Lv 100) is loose!
 
-- `src/sim/visitors.ts:447` · text: · when `bout ?`
+- `src/sim/visitors.ts:448` · text: · when `bout ?`
 
 **T909695** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > You hooked it... the black lake heaves!
 
-- `src/sim/visitors.ts:543` · text: · when `shadow ?`
+- `src/sim/visitors.ts:544` · text: · when `shadow ?`
 
 **T0978D8** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Something huge took the bait... Tide Lake churns!
 
-- `src/sim/visitors.ts:543` · text: · when `shadow ?`
+- `src/sim/visitors.ts:544` · text: · when `shadow ?`
 
 **T7F9CE3** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > SHADOW LUGIA rises from the storm-black lake!
 
-- `src/sim/visitors.ts:565` · text: · when `s.shadow ?`
+- `src/sim/visitors.ts:566` · text: · when `s.shadow ?`
 
 **TCC8B2C** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Lugia bursts out of the lake!
 
-- `src/sim/visitors.ts:565` · text: · when `s.shadow ?`
+- `src/sim/visitors.ts:566` · text: · when `s.shadow ?`
 
 **T0E24BE** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Shadow Lugia circles over the shore, waiting for you...
 
-- `src/sim/visitors.ts:582` · text: · when `if (s.shadow && !bout)`
+- `src/sim/visitors.ts:583` · text: · when `if (s.shadow && !bout)`
 
 **TCA6BD7** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Shadow Lugia sank back into the black water...
 
-- `src/sim/visitors.ts:593` · text: · when `if (!m.player.alive \|\| m.finalStarted \|\| s.t > 30 \|\| L.fainted \|\| L.captured)`
+- `src/sim/visitors.ts:594` · text: · when `if (!m.player.alive \|\| m.finalStarted \|\| s.t > 30 \|\| L.fainted \|\| L.captured)`
 
 **TC11496** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!
 
-- `src/sim/visitors.ts:611` · text: · when `snag ?`
+- `src/sim/visitors.ts:612` · text: · when `snag ?`
 
 **TC73CB4** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Balls bounce off it, and you have no Snag Machine... survive if you can!
 
-- `src/sim/visitors.ts:611` · text: · when `snag ?`
+- `src/sim/visitors.ts:612` · text: · when `snag ?`
 
 **T36C94F** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!
 
-- `src/sim/visitors.ts:680` · text: · when `if (partySize(pl) >= m.partyCap)`
+- `src/sim/visitors.ts:681` · text: · when `if (partySize(pl) >= m.partyCap)`
 
 **T12D14B** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
@@ -4024,13 +4024,13 @@ Example: "Celeste: "Let's see if you're worth my best!" (Lv …)"
 Placeholders: `prize.name`  
 Example: "Celeste: "You earned this." She gives you a shiny Pikachu!"
 
-- `src/sim/visitors.ts:685` · text: · when `if (partySize(pl) >= m.partyCap)`
+- `src/sim/visitors.ts:686` · text: · when `if (partySize(pl) >= m.partyCap)`
 
 **T9CD13E** · A visitor (merchant, Celeste, Hoopa, the ace trainer) · *active*
 
 > Celeste wins this one. She patched your Pokémon up. Try again in a minute
 
-- `src/sim/visitors.ts:700` · text: · when `if (won)`
+- `src/sim/visitors.ts:701` · text: · when `if (won)`
 
 ## 7. Shops, items, TMs and fishing
 
@@ -6193,7 +6193,7 @@ Example: "TM Pikachu"
 
 ## 9. Battle and match messages (catching, evolving, the storm, legends)
 
-137 lines.
+136 lines.
 
 **TCC7AED** · Screen text · *active*
 
@@ -6592,32 +6592,23 @@ Example: "Paid ₽1,500. Your Pokémon are fully healed!"
 
 - `src/sim/match.ts:1237` · return · when `cost > 0 ?`
 
-**TB1E165** · Screen text · *active*
-
-> Beacon: {t.name} is healing at an outpost
-
-Placeholders: `t.name`  
-Example: "Beacon: Pikachu is healing at an outpost"
-
-- `src/sim/match.ts:1287` · text: · when `if (t.healing === 0 && !t.isPlayer)`
-
 **T3F68B1** · On-screen notice · *active*
 
 > Party fully healed!
 
-- `src/sim/match.ts:1303` · noticeFor · when `t.isPlayer ?`
+- `src/sim/match.ts:1306` · noticeFor · when `if (t.isPlayer)`
 
 **TCCFE85** · Screen text · *active*
 
 > You pass out in the storm... Darkrai takes you into the shadows
 
-- `src/sim/match.ts:1603` · text: · when `t.isPlayer ?`
+- `src/sim/match.ts:1606` · text: · when `t.isPlayer ?`
 
 **T2DA9CE** · UI · *active*
 
 > You can't ride during a battle
 
-- `src/sim/match.ts:2451` · return · when `if (p.duelId)`
+- `src/sim/match.ts:2454` · return · when `if (p.duelId)`
 
 **TEA3E29** · UI · *active*
 
@@ -6626,7 +6617,7 @@ Example: "Beacon: Pikachu is healing at an outpost"
 Placeholders: `mon.name`  
 Example: "You take off on Pikachu! It can fly over water (V to land)"
 
-- `src/sim/match.ts:2465` · return · when `fly ?`
+- `src/sim/match.ts:2468` · return · when `fly ?`
 
 **TF292EF** · UI · *active*
 
@@ -6635,25 +6626,25 @@ Example: "You take off on Pikachu! It can fly over water (V to land)"
 Placeholders: `mon.name`  
 Example: "You ride Pikachu! (V to get off)"
 
-- `src/sim/match.ts:2465` · return · when `fly ?`
+- `src/sim/match.ts:2468` · return · when `fly ?`
 
 **TFBED62** · UI · *active*
 
 > You can't land here
 
-- `src/sim/match.ts:2472` · return · when `if (!force && !canStand(this.ground, t.x, t.y, CONFIG.player.radius))`
+- `src/sim/match.ts:2475` · return · when `if (!force && !canStand(this.ground, t.x, t.y, CONFIG.player.radius))`
 
 **T2E7FD8** · UI · *active*
 
 > You can't release a Pokémon during a battle
 
-- `src/sim/match.ts:2518` · return · when `if (p.duelId)`
+- `src/sim/match.ts:2521` · return · when `if (p.duelId)`
 
 **TFF4277** · UI · *active*
 
 > You can't release your last Pokémon
 
-- `src/sim/match.ts:2519` · return · when `if (p.party.length <= 1)`
+- `src/sim/match.ts:2522` · return · when `if (p.party.length <= 1)`
 
 **TCBC8EC** · UI · *active*
 
@@ -6662,26 +6653,26 @@ Example: "You ride Pikachu! (V to get off)"
 Placeholders: `m.name`  
 Example: "Bye, Pikachu! It heads off into the wild"
 
-- `src/sim/match.ts:2538` · return · when `m.fainted ?`
+- `src/sim/match.ts:2541` · return · when `m.fainted ?`
 
 **TDB60DC** · UI · *active*
 
 > Nothing leaves a private match: vouchers do nothing here
 
-- `src/sim/match.ts:2551` · return · when `if (!this.keepsResults)`
+- `src/sim/match.ts:2554` · return · when `if (!this.keepsResults)`
 
 **TE30BEA** · UI · *active*
 
 > You can't extract a Pokémon during a battle
 
-- `src/sim/match.ts:2552` · return · when `if (p.duelId)`
+- `src/sim/match.ts:2555` · return · when `if (p.duelId)`
 - `src/ui/matchScreen.ts:1246` · say · when `if (p.duelId)`
 
 **TBE9E9D** · UI · *active*
 
 > You can't extract your last Pokémon that can fight
 
-- `src/sim/match.ts:2553` · return · when `if (!p.party.some((o) => o !== m && !o.fainted && !o.captured))`
+- `src/sim/match.ts:2556` · return · when `if (!p.party.some((o) => o !== m && !o.fainted && !o.captured))`
 
 **T74EE9B** · Screen text · *active*
 
@@ -6690,13 +6681,13 @@ Example: "Bye, Pikachu! It heads off into the wild"
 Placeholders: `next.name`  
 Example: "Go, Pikachu! You're steering it now (Esc for trainer mode)"
 
-- `src/sim/match.ts:2779` · text: · when `if (next && Math.hypot(next.x - p.x, next.y - p.y) < 10 && this.takeControl(next))`
+- `src/sim/match.ts:2782` · text: · when `if (next && Math.hypot(next.x - p.x, next.y - p.y) < 10 && this.takeControl(next))`
 
 **T5ABC34** · Screen text · *active*
 
 > Darkrai is down! It left a Cherish Ball behind
 
-- `src/sim/match.ts:3105` · text: · when `if (ev.type === 'faint' && ev.mon.boss)`
+- `src/sim/match.ts:3108` · text: · when `if (ev.type === 'faint' && ev.mon.boss)`
 
 **TBD8004** · UI · *active*
 
@@ -6705,13 +6696,13 @@ Example: "Go, Pikachu! You're steering it now (Esc for trainer mode)"
 Placeholders: `mon.name`  
 Example: " and a shiny Pikachu"
 
-- `src/sim/match.ts:3204` · when `if (pool.length && partySize(this.player) < this.partyCap)`
+- `src/sim/match.ts:3207` · when `if (pool.length && partySize(this.player) < this.partyCap)`
 
 **T8AE003** · UI · *active*
 
 >  (no room in your party for his shiny Pokémon)
 
-- `src/sim/match.ts:3205` · when `if (pool.length)`
+- `src/sim/match.ts:3208` · when `if (pool.length)`
 
 **TA763C9** · Screen text · *active*
 
@@ -6720,13 +6711,13 @@ Example: " and a shiny Pikachu"
 Placeholders: `SHOPS.challenger.name`, `r.money`, `prize`  
 Example: "You beat the Pikachu! +₽1,500, his items…"
 
-- `src/sim/match.ts:3206` · text: · when `in winChallenge()`
+- `src/sim/match.ts:3209` · text: · when `in winChallenge()`
 
 **T71AD42** · Screen text · *active*
 
 > The crystal shatters. Darkrai awakens!
 
-- `src/sim/match.ts:3232` · text: · when `d.finale ?`
+- `src/sim/match.ts:3235` · text: · when `d.finale ?`
 
 **T31C935** · Screen text · *active*
 
@@ -6735,19 +6726,19 @@ Example: "You beat the Pikachu! +₽1,500, his items…"
 Placeholders: `d.phase`  
 Example: "Darkness pulse …: the night closes in"
 
-- `src/sim/match.ts:3232` · text: · when `d.finale ?`
+- `src/sim/match.ts:3235` · text: · when `d.finale ?`
 
 **T14A370** · Screen text · *active*
 
 > A Master Ball glints beside the crystal
 
-- `src/sim/match.ts:3237` · text: · when `if (d.finale && !this.darkrai)`
+- `src/sim/match.ts:3240` · text: · when `if (d.finale && !this.darkrai)`
 
 **T78DC4E** · Screen text · *active*
 
 > The darkness lulls it to sleep…
 
-- `src/sim/match.ts:3257` · text: · when `if (m.drowsy >= this.drowsySeconds(m))`
+- `src/sim/match.ts:3260` · text: · when `if (m.drowsy >= this.drowsySeconds(m))`
 
 **TC4ECB8** · Screen text · *active*
 
@@ -6756,7 +6747,7 @@ Example: "Darkness pulse …: the night closes in"
 Placeholders: `L.name`  
 Example: "You caught Pikachu!"
 
-- `src/sim/match.ts:3530` · text: · when `in catchBoutLegend()`
+- `src/sim/match.ts:3533` · text: · when `in catchBoutLegend()`
 
 **T4A4FF3** · UI · *active*
 
@@ -6765,7 +6756,7 @@ Example: "You caught Pikachu!"
 Placeholders: `this.partyCap`  
 Example: "Your party is full (…). Release one from its card first"
 
-- `src/sim/match.ts:3551` · return · when `if (partySize(p) >= this.partyCap)`
+- `src/sim/match.ts:3554` · return · when `if (partySize(p) >= this.partyCap)`
 
 **T7E80C5** · UI · *active*
 
@@ -6774,7 +6765,7 @@ Example: "Your party is full (…). Release one from its card first"
 Placeholders: `L.name`  
 Example: "You snagged Pikachu! It joins your team, still wrapped in darkness"
 
-- `src/sim/match.ts:3580` · return · when `in snagShadow()`
+- `src/sim/match.ts:3583` · return · when `in snagShadow()`
 
 **T73A375** · UI · *active*
 
@@ -6783,13 +6774,13 @@ Example: "You snagged Pikachu! It joins your team, still wrapped in darkness"
 Placeholders: `m.name`  
 Example: "Go, Pikachu!"
 
-- `src/sim/match.ts:3721` · return · when `in duelPick()`
+- `src/sim/match.ts:3724` · return · when `in duelPick()`
 
 **TD58DE6** · Screen text · *active*
 
 > Final two! The Shadow Crystal calls you both to its arena
 
-- `src/sim/match.ts:3984` · text: · when `if (this.finalCountdown === null)`
+- `src/sim/match.ts:3987` · text: · when `if (this.finalCountdown === null)`
 
 **T10D575** · Screen text · *active*
 
@@ -6798,7 +6789,7 @@ Example: "Go, Pikachu!"
 Placeholders: `a.name`, `b.name`  
 Example: "Final showdown: Pikachu vs Pikachu! Both teams are restored"
 
-- `src/sim/match.ts:4040` · text: · when `in stepFinalShowdown()`
+- `src/sim/match.ts:4043` · text: · when `in stepFinalShowdown()`
 
 **TB4762B** · Screen text · *active*
 
@@ -6807,13 +6798,13 @@ Example: "Final showdown: Pikachu vs Pikachu! Both teams are restored"
 Placeholders: `loser.name`  
 Example: "Snag Machine ready: take one of Pikachu's Pokémon (1-6), Esc to keep it"
 
-- `src/sim/match.ts:4076` · text: · when `if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured))`
+- `src/sim/match.ts:4079` · text: · when `if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured))`
 
 **TC7F252** · UI · *active*
 
 > Roam (Aggr.)
 
-- `src/sim/party.ts:39` · BEHAVIOR_LABEL =
+- `src/sim/party.ts:44` · BEHAVIOR_LABEL =
 
 **T9C69AD** · On-screen notice · *testing only*
 

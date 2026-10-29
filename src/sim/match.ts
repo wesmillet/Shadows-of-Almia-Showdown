@@ -8,7 +8,7 @@ import type { Input } from '../core/input';
 import { Rng } from '../core/rng';
 import type { GroundRenderer, Biome } from '../ground/types';
 import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
-import { decide, type AiWorld } from './ai';
+import { decide, partyHpFraction, type AiWorld } from './ai';
 import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
 import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
@@ -1279,12 +1279,14 @@ export class Match {
           if (t.healing > 0 && !this.outposts.some((p) => p !== o && Math.hypot(t.x - p.x, t.y - p.y) <= CONFIG.outpost.radius)) t.healing = 0;
           continue;
         }
-        const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
+        // A computer trainer passing by stops only for real damage (not every scratch).
+        const needs = t.isPlayer
+          ? t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status))
+          : t.ai === 'heal' || t.party.some((m) => !isRoaming(m) && m.fainted && !m.captured) || partyHpFraction(t) < 0.75;
         if (!needs) continue;
         // Rivals pay at the Crystal Healer too (and pass it by when they can't).
         if ((o.cost ?? 0) > t.money || (o.cost && this.finalStarted)) continue;
         o.users.push(t);
-        if (t.healing === 0 && !t.isPlayer) this.battle.events.push({ type: 'notice', text: `Beacon: ${t.name} is healing at an outpost`, seconds: 2 });
         t.healing += dt;
         if (t.healing >= CONFIG.outpost.healSeconds) {
           t.healing = 0;
@@ -1300,7 +1302,8 @@ export class Match {
             m.x = t.x;
             m.y = t.y;
           }
-          this.noticeFor(t, t.isPlayer ? 'Party fully healed!' : `${t.name} healed at the outpost`, 1.5);
+          // Only the trainer who healed hears of it (nobody is told when someone else heals).
+          if (t.isPlayer) this.noticeFor(t, 'Party fully healed!', 1.5);
         }
       }
       // The beacon broadcasts whoever is healing to every trainer.

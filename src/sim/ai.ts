@@ -188,7 +188,9 @@ export function decide(t: Trainer, w: AiWorld): AiDecision {
   if (item && itemOk && Math.hypot(item.x - t.x, item.y - t.y) < 4) return seek(item);
   // Worn down (or a member fainted): patch up at the nearest outpost it can reach, then hunt again.
   // Just healed (the outpost is cooling down) and the rest are fine: keep training meanwhile.
-  const fainted = t.party.some((m) => m.fainted && !m.captured);
+  // (One Pokémon down is not a reason on its own: only when half the team or more is.)
+  const team = t.party.filter((m) => !m.captured);
+  const fainted = team.filter((m) => m.fainted).length >= Math.max(1, Math.ceil(team.length / 2));
   const standing = activeParty(t);
   const standingHp = standing.reduce((a, m) => a + m.hp, 0) / Math.max(1, standing.reduce((a, m) => a + m.maxHp, 0));
   const cooling = (w.time ?? 0) < t.outpostReady && standing.length > 0 && standingHp > CONFIG.trainers.huntHpFraction;

@@ -45,6 +45,8 @@ export interface HudState {
   /** Messages to show, oldest first (stacked down from the top). */
   notices: string[];
   selectedItem: number;
+  /** An item being dragged from the bag (drawn under the cursor; a party card under it lights up). */
+  dragItem?: { id: string; tmType?: string; from: number } | null;
   /** Which bag tab is open. */
   gearTab: boolean;
   /** Pickup popup: item id and seconds left. */
@@ -451,6 +453,19 @@ export class Hud {
     this.drawCounter(ctx, match, st, s);
     this.drawMinimap(ctx, match, st, s);
     this.drawParty(ctx, match, st, s);
+    // An item dragged over a party card: that card lights up (the item would go to that Pokémon).
+    if (st.dragItem) {
+      for (const r of this.portraitRects) {
+        if (!r || !hit(st.mouseX, st.mouseY, r.x, r.y, r.w, r.h)) continue;
+        ctx.save();
+        ctx.strokeStyle = '#ffd66e';
+        ctx.lineWidth = Math.max(2, 3 * s);
+        ctx.shadowColor = 'rgba(255,214,110,0.9)';
+        ctx.shadowBlur = 10 * s;
+        ctx.strokeRect(r.x - 3 * s, r.y - 3 * s, r.w + 6 * s, r.h + 6 * s);
+        ctx.restore();
+      }
+    }
     this.drawMoves(ctx, match, st, s);
     this.drawItems(ctx, match, st, s);
     this.drawLearn(ctx, st, s);
@@ -1266,8 +1281,12 @@ export class Hud {
       if (id) {
         const def = ITEMS[id];
         if (def) {
-          // Balls are drawn a touch smaller than the bag icons, so every item sits at one size.
-          this.icons.draw(ctx, def.id, cx, cyc + 1 * s, (def.kind === 'ball' ? 27 : 34) * s, def.tmType);
+          // Balls (small art) scale to their size exactly; every icon stays inside the slot's face,
+          // clear of its top edge and the lip (a potion's cap used to touch the top border).
+          const face = { top: y + 6 * k + 3 * s, bottom: y + sh - 5 * k - 2 * s };
+          // Balls a quarter bigger than they used to be drawn (whole steps of their 18-pixel art at 27 * s).
+          if (def.kind === 'ball') this.icons.draw(ctx, def.id, cx, cyc + 1 * s, Math.max(1, Math.floor((27 * s) / 18)) * 18 * 1.25, def.tmType, { exact: true, ...face });
+          else this.icons.draw(ctx, def.id, cx, cyc + 1 * s, 34 * s, def.tmType, face);
           const count = entry?.count ?? 1;
           if (count > 1) this.countBadge(ctx, count, x + sw, y + sh - 4 * k);
           if (hover) {
@@ -1293,8 +1312,15 @@ export class Hud {
       }
       this.itemRects.push({ x, y, w: sw, h: sh + lift });
     });
+    // The dragged item follows the cursor.
+    if (st.dragItem) {
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      this.icons.draw(ctx, st.dragItem.id, st.mouseX, st.mouseY, 34 * s, st.dragItem.tmType);
+      ctx.restore();
+    }
     // The hovered item's name above the bag.
-    if (hovered) {
+    if (hovered && !st.dragItem) {
       const h = hovered as { def: (typeof ITEMS)[string]; x: number };
       const name = st.shop ? `${h.def.name} · sells for ₽${st.shop.sellPrice(h.def.id).toLocaleString()}` : h.def.name;
       const tw = this.creamWidth(ctx, name, 11);

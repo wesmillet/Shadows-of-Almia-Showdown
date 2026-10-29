@@ -26,7 +26,7 @@ import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
-import { gainXp, isRoaming, joinBehavior, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
+import { gainXp, isRoaming, joinBehavior, nextBehavior, type Behavior, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 import { pickStrong, rarePlacements, weightedPicks, type RareConfig, type SpawnRow, type StrongConfig, type StrongPool } from './spawning';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -598,11 +598,32 @@ export class Match {
     return '';
   }
 
-  /** Equips a held item from the gear tab on the lead; the previous item returns to the tab. */
-  equip(t: Trainer, slot: number): string {
+  /** Party member `index`'s next behaviour (Attack, Catch, Passive); returns the new one, or null. */
+  cycleBehavior(index: number): Behavior | null {
+    const m = this.player.party[index];
+    if (!m || m.fainted || m.captured || isRoaming(m)) return null;
+    m.behavior = nextBehavior(m.behavior);
+    m.recall = false;
+    return m.behavior;
+  }
+
+  /**
+   * The Pokémon an item is used on: party member `target` when one was picked (an item dragged onto
+   * its card), else the lead.
+   */
+  itemTarget(t: Trainer, target?: number | null): Mon | null {
+    if (target !== undefined && target !== null && target >= 0) {
+      const m = t.party[target];
+      return m && !m.captured ? m : null;
+    }
+    return lead(t);
+  }
+
+  /** Equips a held item from the gear tab on the lead (or party member `target`); the previous item returns to the tab. */
+  equip(t: Trainer, slot: number, target?: number | null): string {
     const entry = t.held[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
-    const m = lead(t);
+    const m = this.itemTarget(t, target);
     if (!entry || !def || def.kind !== 'hold') return '';
     if (!m) return 'No Pokémon to hold it';
     const previous = m.heldItem;
@@ -635,10 +656,10 @@ export class Match {
   }
 
   /** Teaches a TM's move to the lead in move slot `replace` (0 or 1: MOVE_SLOTS is 2). */
-  teach(t: Trainer, slot: number, replace: number): string {
+  teach(t: Trainer, slot: number, replace: number, target?: number | null): string {
     const entry = t.held[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
-    const m = lead(t);
+    const m = this.itemTarget(t, target);
     if (!entry || !def || def.kind !== 'tm' || !def.move) return '';
     if (!m) return 'No Pokémon to teach';
     if (!canLearnTm(m.species, def.move)) return tmRefusal(m, def.move);
@@ -735,12 +756,15 @@ export class Match {
   }
 
   /** Uses a non-ball item from a bag slot. Returns a message for the HUD. */
-  useItem(t: Trainer, slot: number): string {
+  useItem(t: Trainer, slot: number, target?: number | null): string {
     const entry = t.items[slot];
     if (!entry) return '';
     const def = ITEMS[entry.id];
     if (!def) return '';
-    const m = lead(t);
+    const picked = target !== undefined && target !== null && target >= 0;
+    const m = this.itemTarget(t, target);
+    // Dropped on a fainted Pokémon: only a Revive does anything for it.
+    if (picked && m?.fainted && def.kind !== 'revive') return `${m.name} has fainted`;
     switch (def.kind) {
       case 'ball':
         return 'Hold F to aim, release to throw';
@@ -753,8 +777,8 @@ export class Match {
         return `${m.name} recovered HP`;
       }
       case 'revive': {
-        const down = t.party.find((p) => p.fainted);
-        if (!down) return 'Nobody has fainted';
+        const down = picked ? (m?.fainted ? m : null) : t.party.find((p) => p.fainted);
+        if (!down) return picked && m ? `${m.name} has not fainted` : 'Nobody has fainted';
         down.fainted = false;
         down.hp = Math.max(1, Math.floor(down.maxHp * (def.fraction ?? 0.5)));
         down.x = t.x;
@@ -765,12 +789,12 @@ export class Match {
         return `${down.name} was revived!`;
       }
       case 'cure': {
-        const target = t.party.find((p) => !p.fainted && p.status) ?? m;
-        if (!target || !target.status) return 'No status to cure';
-        this.battle.cureStatus(target);
-        target.drowsy = 0;
+        const who = picked ? m : t.party.find((p) => !p.fainted && p.status) ?? m;
+        if (!who || !who.status) return picked && who ? `${who.name} has no status to cure` : 'No status to cure';
+        this.battle.cureStatus(who);
+        who.drowsy = 0;
         this.takeItem(t, slot);
-        return `${target.name} is cured`;
+        return `${who.name} is cured`;
       }
       case 'boost': {
         if (!m) return 'No Pokémon';
@@ -780,7 +804,7 @@ export class Match {
         return `${m.name}'s ${label} rose sharply!`;
       }
       case 'hold':
-        return this.equip(t, slot);
+        return this.equip(t, slot, target);
       case 'candy': {
         if (!m) return 'No Pokémon to use it on';
         if (m.level >= 100) return `${m.name} can't level up any more`;

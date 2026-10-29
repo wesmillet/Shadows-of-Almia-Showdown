@@ -58,7 +58,12 @@ export class ItemIcons {
    * Draws an icon centred at (x, y), scaled by whole pixels to fit `fit` pixels (18 px balls draw
    * larger than 32 px bag icons), or the labeled placeholder when the asset is missing.
    */
-  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, fit: number, tmType?: string): void {
+  /**
+   * `opts.exact`: scale to `fit` exactly instead of by whole pixels (a small icon that whole-pixel
+   * steps would leave much smaller than its neighbours). `opts.top`/`opts.bottom`: keep the drawn
+   * art between these lines (centring on its weight can push a tall icon's top out of its slot).
+   */
+  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, fit: number, tmType?: string, opts: { exact?: boolean; top?: number; bottom?: number } = {}): void {
     // The bag icon for a ball, falling back to the ground sprite until (or unless) it loads.
     const img = (itemId.endsWith('-ball') && !tmType ? this.get(itemId, tmType, true) : null) ?? this.get(itemId, tmType);
     ctx.imageSmoothingEnabled = false;
@@ -66,12 +71,15 @@ export class ItemIcons {
       // Scale the visible art (transparent margins trimmed) by whole pixels to fill `fit`, and centre it
       // on its weight rather than its box (an icon with a handle or cable to one side still sits in the middle).
       const b = opaqueBounds(img);
-      const scale = Math.max(1, Math.floor(fit / Math.max(b.w, b.h)));
-      const w = b.w * scale;
-      const h = b.h * scale;
+      const scale = opts.exact ? fit / Math.max(b.w, b.h) : Math.max(1, Math.floor(fit / Math.max(b.w, b.h)));
+      const w = Math.round(b.w * scale);
+      const h = Math.round(b.h * scale);
       const ox = Math.round((b.cx - b.x) * scale);
       const oy = Math.round((b.cy - b.y) * scale);
-      ctx.drawImage(img, b.x, b.y, b.w, b.h, Math.round(x - ox), Math.round(y - oy), w, h);
+      let top = Math.round(y - oy);
+      if (opts.bottom !== undefined && top + h > opts.bottom) top = Math.round(opts.bottom - h);
+      if (opts.top !== undefined && top < opts.top) top = Math.round(opts.top);
+      ctx.drawImage(img, b.x, b.y, b.w, b.h, Math.round(x - ox), top, w, h);
     } else {
       const ph = this.assets.placeholder(itemId, 32, 32);
       ctx.drawImage(ph, Math.round(x - fit / 2), Math.round(y - fit / 2), fit, fit);

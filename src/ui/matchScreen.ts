@@ -21,7 +21,7 @@ import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
-import { BEHAVIOR_LABEL, isRoaming, nextBehavior } from '../sim/party';
+import { BEHAVIOR_LABEL, isRoaming } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
@@ -97,7 +97,9 @@ export class MatchScreen implements Screen {
   private stylerHeld = false;
   private gearTab = false;
   private popup: { items: InventorySlot[]; ball: BallKind; healed: boolean; t: number } | null = null;
-  private teach: { slot: number } | null = null;
+  private teach: { slot: number; target?: number } | null = null;
+  /** A bag slot being dragged (pressed on it; a drop on a party card uses it on that Pokémon, a plain click uses it as before). */
+  private drag: { index: number; gear: boolean; x: number; y: number; moved: boolean } | null = null;
   /** The Extraction Voucher in this bag slot is waiting for a Pokémon to be picked. */
   private extractPick: { slot: number } | null = null;
   /** The vendor whose stall is open (the match waits while you shop). */
@@ -207,6 +209,11 @@ export class MatchScreen implements Screen {
 
   step(dt: number, input: Input): void {
     music.want(this.musicNow());
+    // A dialog over the game pauses the match.
+    if (document.querySelector('.almia-modal-wrap')) {
+      input.takeClicks();
+      return;
+    }
     // N: music on or off (remembered in this browser).
     if (input.pressed('KeyN')) this.say(music.toggleMute() ? 'Music off (N)' : 'Music on (N)', 1.2);
     if (this.match.outcome) {
@@ -311,18 +318,15 @@ export class MatchScreen implements Screen {
       if (h?.kind === 'move') this.castFeedback(this.match.playerCast(h.index));
       else if (h?.kind === 'behavior') {
         const m = this.match.player.party[h.index];
-        if (m && !m.fainted) {
-          m.behavior = nextBehavior(m.behavior);
-          m.recall = false;
-          this.say(`${m.name}: ${BEHAVIOR_LABEL[m.behavior]}`, 1);
-        }
+        const b = this.match.cycleBehavior(h.index);
+        if (m && b) this.say(`${m.name}: ${BEHAVIOR_LABEL[b]}`, 1);
       } else if (h?.kind === 'portrait') {
         const m = this.match.player.party[h.index];
         if (m && isRoaming(m)) {
           this.hud.ping = { mon: m, t: 3 };
           this.say(`${m.name} is ${Math.hypot(m.x - this.match.player.x, m.y - this.match.player.y).toFixed(0)} tiles away (see minimap)`, 1.5);
         } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
-      } else if (h?.kind === 'item') this.onItemSlot(h.index);
+      } else if (h?.kind === 'item') this.drag = { index: h.index, gear: this.gearTab, x: c.x, y: c.y, moved: false };
       else if (h?.kind === 'discard') this.discardSlot(h.index);
       else if (h?.kind === 'held') this.say(this.match.unequip(this.match.player, h.index), 1.6);
       else if (h?.kind === 'learn') this.say(this.match.answerLearn(h.index === 2 ? -1 : h.index), 2.2);
@@ -359,10 +363,29 @@ export class MatchScreen implements Screen {
       this.match.releaseControl();
       this.say('Trainer mode', 1);
     }
+    // A bag slot under the mouse button: dragged far enough it follows the cursor, and let go over a
+    // party card it is used on that Pokémon (a potion, a held item, a TM...); let go where it was
+    // pressed, it is a click as before.
+    if (this.drag) {
+      const d = this.drag;
+      if (Math.hypot(input.mouseX - d.x, input.mouseY - d.y) > 10 * v.baseScale) d.moved = true;
+      if (!input.mouseDown) {
+        this.drag = null;
+        if (d.gear !== this.gearTab) {
+          // the bag's tab changed under the drag: nothing
+        } else if (!d.moved) this.onItemSlot(d.index);
+        else {
+          const h = this.hud.hitTest(input.mouseX, input.mouseY);
+          const onCard = h && (h.kind === 'portrait' || h.kind === 'behavior' || h.kind === 'held') ? h.index : -1;
+          if (onCard >= 0) this.useItemOn(d.index, onCard);
+        }
+        this.holdBlocked = true;
+      }
+    }
     // Holding a mouse button on the field keeps casting that move as it comes off cooldown
-    // (not the click that switched modes).
+    // (not the click that switched modes, nor a dragged item).
     if (this.holdBlocked && !input.mouseDown) this.holdBlocked = false;
-    if (!overHud && !duelSide?.awaitingPick && !this.holdBlocked) {
+    if (!overHud && !duelSide?.awaitingPick && !this.holdBlocked && !this.drag) {
       if (input.mouseDown) this.match.playerCast(0);
       if (input.rightDown) this.match.playerCast(1);
     }
@@ -1134,7 +1157,7 @@ export class MatchScreen implements Screen {
     const slot = this.teach.slot;
     for (let i = 0; i < MOVE_SLOTS; i++) {
       if (input.pressed(`Digit${i + 1}`)) {
-        const msg = this.match.teach(this.match.player, slot, i);
+        const msg = this.match.teach(this.match.player, slot, i, this.teach.target);
         this.say(msg || 'Could not teach that move', 2.2);
         this.teach = null;
         break;
@@ -1203,6 +1226,34 @@ export class MatchScreen implements Screen {
       return;
     }
     const msg = this.match.useItem(p, index);
+    if (msg) this.say(msg, 1.4);
+  }
+
+  /** A bag (or Held & TMs) slot dropped on party card `target`: used on, held by or taught to that Pokémon. */
+  private useItemOn(index: number, target: number): void {
+    const p = this.match.player;
+    const m = p.party[target];
+    if (!m || m.captured) return;
+    if (this.gearTab) {
+      const entry = p.held[index];
+      const def = entry ? ITEMS[entry.id] : undefined;
+      if (!entry || !def) return;
+      if (def.kind === 'tm') {
+        if (!canLearnTm(m.species, def.move ?? '')) return this.say(tmRefusal(m, def.move ?? ''), 2.4);
+        if (m.moves.length < MOVE_SLOTS) return this.say(this.match.teach(p, index, -1, target), 2);
+        this.teach = { slot: index, target };
+        return;
+      }
+      const msg = this.match.equip(p, index, target);
+      if (msg) this.say(msg, 1.4);
+      return;
+    }
+    const entry = p.items[index];
+    const def = entry ? ITEMS[entry.id] : undefined;
+    if (!entry || !def) return;
+    // Balls, vouchers, rods and the like are not used on one Pokémon: a drop is a click.
+    if (['ball', 'voucher', 'rod', 'charm', 'styler', 'tm'].includes(def.kind)) return this.onItemSlot(index);
+    const msg = this.match.useItem(p, index, target);
     if (msg) this.say(msg, 1.4);
   }
 
@@ -2082,11 +2133,16 @@ export class MatchScreen implements Screen {
       nextPulseIn: this.match.darkness.nextPulseIn,
       notices: this.notices.map((n) => n.text),
       selectedItem: this.selectedItem,
+      dragItem: this.drag?.moved ? ((d) => {
+        const e = (d.gear ? this.match.player.held : this.match.player.items)[d.index];
+        const def = e ? ITEMS[e.id] : undefined;
+        return def ? { id: def.id, tmType: def.tmType, from: d.index } : null;
+      })(this.drag) : null,
       gearTab: this.gearTab,
       popup: this.popup,
       armedBall: this.selectedItem >= 0 ? ITEMS[this.match.player.items[this.selectedItem]?.id ?? '']?.name ?? null : null,
       teach: this.teach ? ((slot) => {
-        const m = lead(this.match.player);
+        const m = this.match.itemTarget(this.match.player, this.teach?.target);
         const entry = this.match.player.held[slot];
         const def = entry ? ITEMS[entry.id] : undefined;
         return { moveName: def?.name.replace('TM ', '') ?? '?', moves: m ? m.moves.map((id) => move(id).name) : [], mon: m?.name ?? '?' };

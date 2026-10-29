@@ -130,8 +130,12 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
     p.x = p.px = w.npc.x + 1;
     p.y = p.py = w.npc.y;
     const wildsBefore = m.wilds.length;
+    const ev0 = m.battle.events.length;
     m.withSeat(seat, () => crew.talk(w));
     const zoroark = m.wilds.find((x) => x.dex === '0571');
+    // The reveal never says whether it is shiny (the colours show it, or not).
+    const said = m.battle.events.slice(ev0).filter((e) => e.type === 'notice').map((e) => (e as { text: string }).text);
+    check(said.includes("The girl's outline flickers... It was Zoroark all along!") && !said.some((t) => /shiny/i.test(t)), `the reveal says only that it was Zoroark (${JSON.stringify(said)})`);
     check(!!zoroark && m.wilds.length === wildsBefore + 1, 'Space reveals a wild Zoroark');
     check(!m.npcs.includes(w.npc) && crew.disguise === null, 'the stranger is gone');
     check(crew.near() === null || crew.near() !== w, 'a second Space finds nobody');

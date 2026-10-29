@@ -376,7 +376,6 @@ export class Visitors {
       if (po.shadow) {
         m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.6, ground: true, fps: 12, tint: '#3a1458', shake: 0.6, epic: true });
         m.battle.events.push({ type: 'notice', text: bout ? `${L.name} tears out of the dark portal and attacks!` : `${L.name} tears out of the dark portal!`, seconds: 3.5 });
-        this.shadowBoutNotice(true, bout);
       } else m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
     }
     if (po.out && po.out.visual.scale < 1) po.out.visual.scale = Math.min(1, po.out.visual.scale + dt * 1.5);
@@ -583,7 +582,6 @@ export class Visitors {
         m.battle.events.push({ type: 'notice', text: 'Shadow Lugia circles over the shore, waiting for you...', seconds: 3 });
         return;
       }
-      this.shadowBoutNotice(s.shadow, bout);
       m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5, epic: true });
       this.lugiaIntro = null;
     } else if (s.stage === 4) {
@@ -596,23 +594,12 @@ export class Visitors {
         return;
       }
       if (m.startLegendBout(L)) {
-        this.shadowBoutNotice(true, true);
         m.battle.events.push({ type: 'scene-fx', id: 'fx_067', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.5, epic: true });
         this.lugiaIntro = null;
       } else L.calm = 1e9;
     }
   }
 
-  /** What the player hears as Shadow Lugia's bout starts. */
-  private shadowBoutNotice(shadow: boolean | undefined, bout: boolean): void {
-    if (!shadow || !bout) return;
-    const snag = this.m.snagSlot(this.m.player) >= 0;
-    this.m.battle.events.push({
-      type: 'notice',
-      text: snag ? 'Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!' : 'Balls bounce off it, and you have no Snag Machine... survive if you can!',
-      seconds: 4,
-    });
-  }
 
   // ---------------------------------------------------------------- outcomes
 

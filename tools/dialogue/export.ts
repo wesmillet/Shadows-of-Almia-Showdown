@@ -237,10 +237,17 @@ for (const dir of ['src', 'server']) {
         // property keys and switch cases ('hit': ...) are not text; nor are object keys used as ids
         const isKey = ts.isPropertyAssignment(n.parent) && n.parent.name === n || ts.isCaseClause(n.parent) || ts.isElementAccessExpression(n.parent);
         const compare = ts.isBinaryExpression(n.parent) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken].includes(n.parent.operatorToken.kind);
-        if (!skip && !isKey && !compare && looksLikeText(bare) && !/^\s*[{[<]/.test(text)) {
+        // (JSON, markup and the like start with { [ <; a line that starts with a placeholder does not count)
+        const lead = ts.isTemplateExpression(n) ? n.head.text : text;
+        // Made only of placeholders and punctuation (coordinates, keys like a|b), or a cookie or URL: not text
+        const words = text.replace(/\{[^}]*\}/g, '').replace(/[^A-Za-z\u00C0-\u024F]/g, '');
+        const plumbing = words.length < 2 || /\|/.test(bare) || /Path=|\/ws\?|^X ?X$/.test(bare);
+        if (!skip && !isKey && !compare && !plumbing && looksLikeText(bare) && !(lead && /^\s*[{[<]/.test(lead))) {
           const line = sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
           const condition = conditionOf(n, sf);
-          add(text, { file: rel, line, where, condition, status: statusOf(rel, condition, text) }, placeholders, example);
+          // a moderation flag's detail is read on the moderators' dashboard
+          const status = /(^|\.)flag$/.test(where) ? 'admin' : statusOf(rel, condition, text);
+          add(text, { file: rel, line, where, condition, status }, placeholders, example);
         } else if (looksLikeText(bare) && (skip || compare)) {
           rejected.push({ file: rel, line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1, text });
         }
@@ -319,7 +326,7 @@ for (const e of all) {
   if (/\bPokemon\b/.test(t) && e.uses.every((u) => u.status !== 'admin')) flag(e, '"Pokemon" without the accent (elsewhere "Pokémon")');
   if (/Pokeball|Poke Ball|pokeball/i.test(t) && !/Poké Ball/.test(t)) flag(e, '"Poke Ball" spelt without the accent (elsewhere "Poké Ball")');
   if (/—/.test(t)) flag(e, 'an em dash');
-  if (/\S {2,}\S/.test(t) && !/·|✓|\bHP\b|ATK/.test(t)) flag(e, 'two spaces in a row');
+  if (/\S {2,}\S/.test(t) && !/·|✓|\bHP\b|ATK|\bLv\b|SPA/.test(t)) flag(e, 'two spaces in a row');
   if (/\bcollapse|wiped out \(back at an outpost/i.test(t) && /storm/i.test(t)) flag(e, 'describes passing out in the storm as being wiped out and coming back; passing out in the storm now ends the match (Darkrai takes the trainer)');
   if (/ranked|Ranked/.test(t) && e.uses.some((u) => u.status === 'active')) flag(e, 'mentions ranked play, which is retired');
   if (/Net Ball|Dusk Ball/.test(t) && e.uses.some((u) => !u.file.startsWith('data/items'))) flag(e, 'mentions a ball no longer sold or found');

@@ -1,6 +1,40 @@
 {
  "entries": [
   {
+   "id": "T05092E",
+   "text": "{map.name} · {map.cols}x{map.rows} · {map.credits ?? 'The Fan-tasy Tileset'} at 3x",
+   "placeholders": [
+    {
+     "name": "map.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "map.cols",
+     "example": "…"
+    },
+    {
+     "name": "map.rows",
+     "example": "…"
+    },
+    {
+     "name": "map.credits ?? 'The Fan-tasy Tileset'",
+     "example": "3"
+    }
+   ],
+   "example": "Pikachu · …x… · 3 at 3x",
+   "uses": [
+    {
+     "file": "src/ground/fanGround.ts",
+     "line": 119,
+     "where": "",
+     "condition": "",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
    "id": "T70BCF5",
    "text": "The Fan-tasy Tileset",
    "placeholders": [],
@@ -9,6 +43,36 @@
     {
      "file": "src/ground/fanGround.ts",
      "line": 119,
+     "where": "",
+     "condition": "",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "TA1A78F",
+   "text": "{map.name} · authored map {map.cols}x{map.rows} · Sunnyside World tileset (Daniel Diggle) at 3x",
+   "placeholders": [
+    {
+     "name": "map.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "map.cols",
+     "example": "…"
+    },
+    {
+     "name": "map.rows",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu · authored map …x… · Sunnyside World tileset (Daniel Diggle) at 3x",
+   "uses": [
+    {
+     "file": "src/ground/staticGround.ts",
+     "line": 128,
      "where": "",
      "condition": "",
      "status": "active"
@@ -497,6 +561,84 @@
      "line": 50,
      "where": "what:",
      "condition": "f.squad ?",
+     "status": "active"
+    }
+   ],
+   "group": "progress",
+   "who": "UI"
+  },
+  {
+   "id": "T473439",
+   "text": "{f.stats.eliminations} elimination{f.stats.eliminations === 1 ? '' : 's'}",
+   "placeholders": [
+    {
+     "name": "f.stats.eliminations",
+     "example": "…"
+    },
+    {
+     "name": "f.stats.eliminations === 1 ? '' : 's'",
+     "example": "…"
+    }
+   ],
+   "example": "… elimination…",
+   "uses": [
+    {
+     "file": "src/net/progression.ts",
+     "line": 51,
+     "where": "what:",
+     "condition": "if (f.stats.eliminations)",
+     "status": "active"
+    }
+   ],
+   "group": "progress",
+   "who": "UI"
+  },
+  {
+   "id": "T9E8C3C",
+   "text": "{f.stats.knockouts} knockout{f.stats.knockouts === 1 ? '' : 's'}",
+   "placeholders": [
+    {
+     "name": "f.stats.knockouts",
+     "example": "…"
+    },
+    {
+     "name": "f.stats.knockouts === 1 ? '' : 's'",
+     "example": "…"
+    }
+   ],
+   "example": "… knockout…",
+   "uses": [
+    {
+     "file": "src/net/progression.ts",
+     "line": 52,
+     "where": "what:",
+     "condition": "if (f.stats.knockouts)",
+     "status": "active"
+    }
+   ],
+   "group": "progress",
+   "who": "UI"
+  },
+  {
+   "id": "T099740",
+   "text": "{f.stats.catches} catch{f.stats.catches === 1 ? '' : 'es'}",
+   "placeholders": [
+    {
+     "name": "f.stats.catches",
+     "example": "…"
+    },
+    {
+     "name": "f.stats.catches === 1 ? '' : 'es'",
+     "example": "…"
+    }
+   ],
+   "example": "… catch…",
+   "uses": [
+    {
+     "file": "src/net/progression.ts",
+     "line": 53,
+     "where": "what:",
+     "condition": "if (f.stats.catches)",
      "status": "active"
     }
    ],
@@ -1490,6 +1632,28 @@
    "who": "UI"
   },
   {
+   "id": "T525B03",
+   "text": "{code.slice(5)} arrow",
+   "placeholders": [
+    {
+     "name": "code.slice(5)",
+     "example": "K7Q2D"
+    }
+   ],
+   "example": "K7Q2D arrow",
+   "uses": [
+    {
+     "file": "src/settings.ts",
+     "line": 85,
+     "where": "return",
+     "condition": "if (code.startsWith('Arrow'))",
+     "status": "active"
+    }
+   ],
+   "group": "title",
+   "who": "UI"
+  },
+  {
    "id": "T494064",
    "text": "Left Shift",
    "placeholders": [],
@@ -1733,6 +1897,40 @@
    "who": "UI"
   },
   {
+   "id": "T913DCD",
+   "text": "{m.name} cannot learn {mv.name}: {how}{mv.category === 'status' ? '' : ` and ${mv.name} is a ${m...}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "mv.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "how",
+     "example": "…"
+    },
+    {
+     "name": "mv.category === 'status' ? '' : ` and ${mv.name} is a ${m...",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu cannot learn Pikachu: …Pikachu",
+   "uses": [
+    {
+     "file": "src/sim/data.ts",
+     "line": 144,
+     "where": "return",
+     "condition": "in tmRefusal()",
+     "status": "active"
+    }
+   ],
+   "group": "shops",
+   "who": "UI"
+  },
+  {
    "id": "T61ABEB",
    "text": " and {mv.name} is a {mv.category} move",
    "placeholders": [
@@ -1968,6 +2166,40 @@
    "who": "Screen text"
   },
   {
+   "id": "T406F38",
+   "text": "{label}A wild {shiny ? 'shiny ' : ''}{w.name} (Lv {w.level}) bit!",
+   "placeholders": [
+    {
+     "name": "label",
+     "example": "Great Ball"
+    },
+    {
+     "name": "shiny ? 'shiny ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "w.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "w.level",
+     "example": "12"
+    }
+   ],
+   "example": "Great BallA wild …Pikachu (Lv 12) bit!",
+   "uses": [
+    {
+     "file": "src/sim/fishing.ts",
+     "line": 219,
+     "where": "text:",
+     "condition": "in land()",
+     "status": "active"
+    }
+   ],
+   "group": "shops",
+   "who": "Screen text"
+  },
+  {
    "id": "T94676C",
    "text": "TM {mv.name}",
    "placeholders": [
@@ -1987,6 +2219,35 @@
     }
    ],
    "group": "shops",
+   "who": "UI"
+  },
+  {
+   "id": "TE4596D",
+   "text": "{secs / 60} min",
+   "placeholders": [
+    {
+     "name": "secs / 60",
+     "example": "45"
+    }
+   ],
+   "example": "45 min",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 107,
+     "where": "return",
+     "condition": "secs % 60 ?",
+     "status": "active"
+    },
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1235,
+     "where": "text =",
+     "condition": "secs % 60 ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
    "who": "UI"
   },
   {
@@ -2250,6 +2511,58 @@
    "who": "UI"
   },
   {
+   "id": "TD9B9B2",
+   "text": "{SHOPS.challenger.name}: \"Rest up first. Come back in {Math.ceil(c.readyAt - this.time)}s.\"",
+   "placeholders": [
+    {
+     "name": "SHOPS.challenger.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "Math.ceil(c.readyAt - this.time)",
+     "example": "45"
+    }
+   ],
+   "example": "Pikachu: \"Rest up first. Come back in 45s.\"",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 540,
+     "where": "return",
+     "condition": "if (this.time < c.readyAt)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TC2D2F3",
+   "text": "{SHOPS.challenger.name}: \"Show me what you've got!\" (Lv {lvl})",
+   "placeholders": [
+    {
+     "name": "SHOPS.challenger.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "lvl",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu: \"Show me what you've got!\" (Lv …)",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 558,
+     "where": "return",
+     "condition": "in startChallenge()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T73500C",
    "text": "Outpost staff",
    "placeholders": [],
@@ -2330,6 +2643,54 @@
    "who": "UI"
   },
   {
+   "id": "T1E0684",
+   "text": "{m.name} can't Mega Evolve",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu can't Mega Evolve",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 691,
+     "where": "return",
+     "condition": "if (!form)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T4EA63C",
+   "text": "{m.name} needs to hold its {ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ITEMS[form.stone ?? '']?.name ?? 'Mega Stone'",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu needs to hold its Pikachu",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 692,
+     "where": "return",
+     "condition": "if (m.heldItem !== form.stone)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "TFA6354",
    "text": "Mega Stone",
    "placeholders": [],
@@ -2361,6 +2722,28 @@
    "who": "UI"
   },
   {
+   "id": "TBECC26",
+   "text": "{m.name} can't Mega Evolve right now",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu can't Mega Evolve right now",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 693,
+     "where": "return",
+     "condition": "if (!canMega(t, m))",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "TAE5BAD",
    "text": "No Pokémon to hold it",
    "placeholders": [],
@@ -2371,6 +2754,32 @@
      "line": 710,
      "where": "return",
      "condition": "if (!m)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TCAD465",
+   "text": "{m.name} needs its {ITEMS[previous]?.name ?? 'Mega Stone'} while Mega Evolved",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ITEMS[previous]?.name ?? 'Mega Stone'",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu needs its Pikachu while Mega Evolved",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 713,
+     "where": "return",
+     "condition": "if (previous && ITEMS[previous]?.effect === 'mega' && (m.mega || m.evolving?.mega))",
      "status": "active"
     }
    ],
@@ -2393,6 +2802,58 @@
      "line": 723,
      "where": "return",
      "condition": "if (previous && !this.giveItem(t, previous))",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T6D474A",
+   "text": "{m.name} holds the {def.name}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "def.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu holds the Pikachu",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 725,
+     "where": "return",
+     "condition": "in equip()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T960A79",
+   "text": "{m.name} needs its {def.name} while Mega Evolved",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "def.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu needs its Pikachu while Mega Evolved",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 734,
+     "where": "return",
+     "condition": "if (m.mega && def?.effect === 'mega')",
      "status": "active"
     }
    ],
@@ -2450,6 +2911,218 @@
    "who": "UI"
   },
   {
+   "id": "T2CC04C",
+   "text": "{m.name} already knows {move(def.move).name}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "move(def.move).name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu already knows Pikachu",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 748,
+     "where": "return",
+     "condition": "if (m.moves.includes(def.move))",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T64EDD4",
+   "text": "{m.name} learned {move(def.move).name}!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "move(def.move).name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu learned Pikachu!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 753,
+     "where": "return",
+     "condition": "if (m.moves.length < MOVE_SLOTS)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TDCF7B7",
+   "text": "{m.name} forgot {old ? move(old).name : '?'} and learned {move(def.move).name}!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "old ? move(old).name : '?'",
+     "example": "Pikachu"
+    },
+    {
+     "name": "move(def.move).name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu forgot Pikachu and learned Pikachu!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 760,
+     "where": "return",
+     "condition": "in teach()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T9AD7E6",
+   "text": "{m.name} wants to learn {asked[0]}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "asked[0]",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu wants to learn …",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 803,
+     "where": "text:",
+     "condition": "asked.length === 1 ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "TFE7196",
+   "text": "{m.name} wants to learn {asked.length} new moves",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "asked.length",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu wants to learn … new moves",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 803,
+     "where": "text:",
+     "condition": "asked.length === 1 ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "T42AA0A",
+   "text": "{p.mon.name} did not learn {name}",
+   "placeholders": [
+    {
+     "name": "p.mon.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu did not learn Pikachu",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 831,
+     "where": "return",
+     "condition": "if (slot < 0 || slot >= p.mon.moves.length)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TD21784",
+   "text": "{p.mon.name} will not forget its signature move",
+   "placeholders": [
+    {
+     "name": "p.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu will not forget its signature move",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 834,
+     "where": "return",
+     "condition": "if (move(p.mon.moves[slot] as string).signature)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T2A90FC",
+   "text": "{p.mon.name} forgot {old} and learned {name}!",
+   "placeholders": [
+    {
+     "name": "p.mon.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "old",
+     "example": "…"
+    },
+    {
+     "name": "name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu forgot … and learned Pikachu!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 842,
+     "where": "return",
+     "condition": "in answerLearn()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T789FAE",
    "text": "Hold F to aim, release to throw",
    "placeholders": [],
@@ -2484,6 +3157,50 @@
    "who": "UI"
   },
   {
+   "id": "T2A0F6C",
+   "text": "{m.name} is at full HP",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is at full HP",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 857,
+     "where": "return",
+     "condition": "if (m.hp >= m.maxHp)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TB1A823",
+   "text": "{m.name} recovered HP",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu recovered HP",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 861,
+     "where": "return",
+     "condition": "case 'heal'",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T225F9C",
    "text": "Nobody has fainted",
    "placeholders": [],
@@ -2494,6 +3211,28 @@
      "line": 865,
      "where": "return",
      "condition": "if (!down)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T34ABA9",
+   "text": "{down.name} was revived!",
+   "placeholders": [
+    {
+     "name": "down.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was revived!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 873,
+     "where": "return",
+     "condition": "case 'revive'",
      "status": "active"
     }
    ],
@@ -2518,6 +3257,28 @@
    "who": "UI"
   },
   {
+   "id": "T01B791",
+   "text": "{target.name} is cured",
+   "placeholders": [
+    {
+     "name": "target.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is cured",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 881,
+     "where": "return",
+     "condition": "case 'cure'",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T989E06",
    "text": "No Pokémon",
    "placeholders": [],
@@ -2528,6 +3289,32 @@
      "line": 884,
      "where": "return",
      "condition": "if (!m)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TA8DE91",
+   "text": "{m.name}'s {label} rose sharply!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "label",
+     "example": "Great Ball"
+    }
+   ],
+   "example": "Pikachu's Great Ball rose sharply!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 888,
+     "where": "return",
+     "condition": "case 'boost'",
      "status": "active"
     }
    ],
@@ -2552,6 +3339,54 @@
      "line": 903,
      "where": "return",
      "condition": "if (!m)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T354678",
+   "text": "{m.name} can't level up any more",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu can't level up any more",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 894,
+     "where": "return",
+     "condition": "if (m.level >= 100)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T006DDF",
+   "text": "{m.name} grew to Lv {m.level}!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    }
+   ],
+   "example": "Pikachu grew to Lv 12!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 900,
+     "where": "return",
+     "condition": "case 'candy'",
      "status": "active"
     }
    ],
@@ -2778,25 +3613,8 @@
    "who": "UI"
   },
   {
-   "id": "TB7EC53",
-   "text": "The ball bounced off!",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/sim/match.ts",
-     "line": 1062,
-     "where": "text:",
-     "condition": "if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2)",
-     "status": "active"
-    }
-   ],
-   "group": "battle",
-   "who": "Screen text"
-  },
-  {
-   "id": "TA34BC3",
-   "text": "Balls bounce off its dark aura. Wear it under 10% HP and use a Snag Machine",
+   "id": "T19EEE0",
+   "text": "The Poké Ball bounced off!",
    "placeholders": [],
    "example": null,
    "uses": [
@@ -3069,6 +3887,28 @@
    "who": "Screen text"
   },
   {
+   "id": "TCF71A2",
+   "text": "{t.name} passed out in the storm and was dragged into the shadows",
+   "placeholders": [
+    {
+     "name": "t.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu passed out in the storm and was dragged into the shadows",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 1606,
+     "where": "text:",
+     "condition": "t.isPlayer ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
    "id": "T2DA9CE",
    "text": "You can't ride during a battle",
    "placeholders": [],
@@ -3147,6 +3987,28 @@
    "who": "UI"
   },
   {
+   "id": "TF2F07C",
+   "text": "{mt.mon.name} sets you down",
+   "placeholders": [
+    {
+     "name": "mt.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu sets you down",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 2479,
+     "where": "return",
+     "condition": "in dismount()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T2E7FD8",
    "text": "You can't release a Pokémon during a battle",
    "placeholders": [],
@@ -3174,6 +4036,28 @@
      "line": 2522,
      "where": "return",
      "condition": "if (p.party.length <= 1)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T94C998",
+   "text": "{m.name} was released",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was released",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 2541,
+     "where": "return",
+     "condition": "m.fainted ?",
      "status": "active"
     }
    ],
@@ -3261,6 +4145,28 @@
    "who": "UI"
   },
   {
+   "id": "T8F592D",
+   "text": "{m.name} was extracted to your PC!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was extracted to your PC!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 2564,
+     "where": "return",
+     "condition": "in extractWithVoucher()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T74EE9B",
    "text": "Go, {next.name}! You're steering it now (Esc for trainer mode)",
    "placeholders": [
@@ -3283,6 +4189,50 @@
    "who": "Screen text"
   },
   {
+   "id": "TA01D17",
+   "text": "{target.name} is weak: your team holds back. Throw a ball (F)!",
+   "placeholders": [
+    {
+     "name": "target.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is weak: your team holds back. Throw a ball (F)!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 2944,
+     "where": "text:",
+     "condition": "if (this.sparedNotice !== target && engaged && Math.hypot(target.x - p.x, target.y - p.y) < 10)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "TA7759E",
+   "text": "{ev.mon.name} dissolved into the storm...",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu dissolved into the storm...",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3081,
+     "where": "text:",
+     "condition": "if (host)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
    "id": "T5ABC34",
    "text": "Darkrai is down! It left a Cherish Ball behind",
    "placeholders": [],
@@ -3293,6 +4243,28 @@
      "line": 3108,
      "where": "text:",
      "condition": "if (ev.type === 'faint' && ev.mon.boss)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "T0E95DD",
+   "text": "{SHOPS.challenger.name} wins this bout. Your Pokémon were patched up.",
+   "placeholders": [
+    {
+     "name": "SHOPS.challenger.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu wins this bout. Your Pokémon were patched up.",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3156,
+     "where": "text:",
+     "condition": "in loseChallengeAs()",
      "status": "active"
     }
    ],
@@ -3442,6 +4414,50 @@
    "who": "Screen text"
   },
   {
+   "id": "TB9E86D",
+   "text": "{b.name} wants to battle!",
+   "placeholders": [
+    {
+     "name": "b.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu wants to battle!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3455,
+     "where": "noticeFor",
+     "condition": "if (a.isPlayer)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T9C0FEB",
+   "text": "{a.name} wants to battle!",
+   "placeholders": [
+    {
+     "name": "a.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu wants to battle!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3456,
+     "where": "noticeFor",
+     "condition": "if (b.isPlayer)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
    "id": "TC4ECB8",
    "text": "You caught {L.name}!",
    "placeholders": [
@@ -3462,6 +4478,28 @@
    ],
    "group": "battle",
    "who": "Screen text"
+  },
+  {
+   "id": "TB30E23",
+   "text": "{L.name} resisted the Snag Machine!",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu resisted the Snag Machine!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3553,
+     "where": "return",
+     "condition": "if (L.hp / L.maxHp >= below)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
   },
   {
    "id": "T4A4FF3",
@@ -3508,6 +4546,116 @@
    "who": "UI"
   },
   {
+   "id": "T7FB129",
+   "text": "{L.name} dissolved into the storm...",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu dissolved into the storm...",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3594,
+     "where": "text:",
+     "condition": "in shadowVanishes()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "TE0283C",
+   "text": "{m.name}'s aura thickens: it shook off its status and moves faster!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu's aura thickens: it shook off its status and moves faster!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3621,
+     "where": "text:",
+     "condition": "m.shadow ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "TB8AB81",
+   "text": "{m.name} is getting serious!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is getting serious!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3621,
+     "where": "text:",
+     "condition": "m.shadow ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "T3EBF37",
+   "text": "{m.name} is enraged!",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is enraged!",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3626,
+     "where": "text:",
+     "condition": "if (phase === 1)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "T4DFAF1",
+   "text": "{m.name} can't battle",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu can't battle",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 3718,
+     "where": "return",
+     "condition": "m ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T73A375",
    "text": "Go, {m.name}!",
    "placeholders": [
@@ -3520,7 +4668,7 @@
    "uses": [
     {
      "file": "src/sim/match.ts",
-     "line": 3724,
+     "line": 3720,
      "where": "return",
      "condition": "in duelPick()",
      "status": "active"
@@ -3537,7 +4685,7 @@
    "uses": [
     {
      "file": "src/sim/match.ts",
-     "line": 3987,
+     "line": 3983,
      "where": "text:",
      "condition": "if (this.finalCountdown === null)",
      "status": "active"
@@ -3563,7 +4711,7 @@
    "uses": [
     {
      "file": "src/sim/match.ts",
-     "line": 4043,
+     "line": 4039,
      "where": "text:",
      "condition": "in stepFinalShowdown()",
      "status": "active"
@@ -3585,9 +4733,53 @@
    "uses": [
     {
      "file": "src/sim/match.ts",
-     "line": 4079,
+     "line": 4075,
      "where": "text:",
      "condition": "if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured))",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "T04BE1C",
+   "text": "{winner.name} sinks back into the storm. It won't surface again this match",
+   "placeholders": [
+    {
+     "name": "winner.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu sinks back into the storm. It won't surface again this match",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 4096,
+     "where": "text:",
+     "condition": "shadow ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
+   "id": "TCE74A2",
+   "text": "{winner.name} was too strong and vanished. Your Pokémon were patched up",
+   "placeholders": [
+    {
+     "name": "winner.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was too strong and vanished. Your Pokémon were patched up",
+   "uses": [
+    {
+     "file": "src/sim/match.ts",
+     "line": 4096,
+     "where": "text:",
+     "condition": "shadow ?",
      "status": "active"
     }
    ],
@@ -4139,23 +5331,6 @@
    "who": "Townsfolk, the Breeder or the wandering stranger"
   },
   {
-   "id": "TF2FD3E",
-   "text": "Snag Machine rule one: wear the dark ones down under ten percent, THEN fire. Rule two: see rule one.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/sim/townsfolk.ts",
-     "line": 81,
-     "where": "lines:",
-     "condition": "",
-     "status": "active"
-    }
-   ],
-   "group": "npc",
-   "who": "Townsfolk, the Breeder or the wandering stranger"
-  },
-  {
    "id": "T52D40C",
    "text": "I was at the first showdown. Back then the storm was just weather. Now it hunts.",
    "placeholders": [],
@@ -4163,7 +5338,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 82,
+     "line": 81,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4180,7 +5355,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 86,
+     "line": 85,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4197,7 +5372,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 87,
+     "line": 86,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4214,7 +5389,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 88,
+     "line": 87,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4231,7 +5406,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 92,
+     "line": 91,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4248,7 +5423,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 93,
+     "line": 92,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4265,7 +5440,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 94,
+     "line": 93,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4282,7 +5457,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 98,
+     "line": 97,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4299,7 +5474,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 99,
+     "line": 98,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4316,7 +5491,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 100,
+     "line": 99,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4333,7 +5508,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 104,
+     "line": 103,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4350,7 +5525,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 105,
+     "line": 104,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4367,7 +5542,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 106,
+     "line": 105,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4384,7 +5559,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 110,
+     "line": 109,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4401,7 +5576,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 111,
+     "line": 110,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4418,7 +5593,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 112,
+     "line": 111,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4435,7 +5610,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 116,
+     "line": 115,
      "where": "name:",
      "condition": "",
      "status": "active"
@@ -4452,7 +5627,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 117,
+     "line": 116,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4469,7 +5644,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 118,
+     "line": 117,
      "where": "lines:",
      "condition": "",
      "status": "active"
@@ -4486,14 +5661,14 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 193,
+     "line": 192,
      "where": "m.makeTrainer",
      "condition": "if (s)",
      "status": "active"
     },
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 195,
+     "line": 194,
      "where": "name:",
      "condition": "if (s)",
      "status": "active"
@@ -4503,19 +5678,14 @@
    "who": "Townsfolk, the Breeder or the wandering stranger"
   },
   {
-   "id": "TC953F6",
-   "text": "The girl's outline flickers... It was {shiny ? 'a shiny ' : ''}Zoroark all along!",
-   "placeholders": [
-    {
-     "name": "shiny ? 'a shiny ' : ''",
-     "example": "…"
-    }
-   ],
-   "example": "The girl's outline flickers... It was …Zoroark all along!",
+   "id": "TF500ED",
+   "text": "The girl's outline flickers... It was Zoroark all along!",
+   "placeholders": [],
+   "example": null,
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 276,
+     "line": 275,
      "where": "m.noticeFor",
      "condition": "in revealZoroark()",
      "status": "active"
@@ -4525,16 +5695,21 @@
    "who": "Townsfolk, the Breeder or the wandering stranger"
   },
   {
-   "id": "T3456AE",
-   "text": "a shiny ",
-   "placeholders": [],
-   "example": null,
+   "id": "TFB5A1F",
+   "text": "{z.name}: \"Hee hee... you saw through me!\"",
+   "placeholders": [
+    {
+     "name": "z.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu: \"Hee hee... you saw through me!\"",
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
      "line": 276,
-     "where": "m.noticeFor",
-     "condition": "shiny ?",
+     "where": "return",
+     "condition": "in revealZoroark()",
      "status": "active"
     }
    ],
@@ -4549,7 +5724,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 284,
+     "line": 283,
      "where": "return",
      "condition": "if (this.traded.has(p.id))",
      "status": "active"
@@ -4571,7 +5746,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 287,
+     "line": 286,
      "where": "return",
      "condition": "if (idx < 0)",
      "status": "active"
@@ -4588,7 +5763,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 290,
+     "line": 289,
      "where": "return",
      "condition": "if (p.duelId)",
      "status": "active"
@@ -4610,7 +5785,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 304,
+     "line": 303,
      "where": "return",
      "condition": "in talkBreeder()",
      "status": "active"
@@ -4632,7 +5807,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 345,
+     "line": 344,
      "where": "m.noticeFor",
      "condition": "if (partySize(t) >= m.partyCap)",
      "status": "active"
@@ -4654,7 +5829,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 351,
+     "line": 350,
      "where": "m.noticeFor",
      "condition": "inside.mythical ?",
      "status": "active"
@@ -4676,7 +5851,7 @@
    "uses": [
     {
      "file": "src/sim/townsfolk.ts",
-     "line": 351,
+     "line": 350,
      "where": "m.noticeFor",
      "condition": "inside.mythical ?",
      "status": "active"
@@ -4925,6 +6100,94 @@
    "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
   },
   {
+   "id": "T7325A0",
+   "text": "{L.name} tears out of the dark portal and attacks!",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu tears out of the dark portal and attacks!",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 378,
+     "where": "text:",
+     "condition": "bout ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "TAD356B",
+   "text": "{L.name} tears out of the dark portal!",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu tears out of the dark portal!",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 378,
+     "where": "text:",
+     "condition": "bout ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "T001282",
+   "text": "{L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu came through the portal and challenges you! Wear it down to its last HP and it joins you",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 379,
+     "where": "text:",
+     "condition": "bout ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "T51E49E",
+   "text": "{L.name} came through the portal! Wear it down and it will join you",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu came through the portal! Wear it down and it will join you",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 379,
+     "where": "text:",
+     "condition": "bout ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
    "id": "T40C203",
    "text": "Hoopa: \"Hey! Quit it!\"",
    "placeholders": [],
@@ -4932,7 +6195,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 424,
+     "line": 423,
      "where": "text =",
      "condition": "this.hoopaHits === 1 ?",
      "status": "active"
@@ -4949,7 +6212,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 424,
+     "line": 423,
      "where": "text =",
      "condition": "this.hoopaHits === 1 ?",
      "status": "active"
@@ -4966,7 +6229,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 445,
+     "line": 444,
      "where": "text:",
      "condition": "in unbind()",
      "status": "active"
@@ -4983,7 +6246,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 448,
+     "line": 447,
      "where": "text:",
      "condition": "bout ?",
      "status": "active"
@@ -5000,7 +6263,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 448,
+     "line": 447,
      "where": "text:",
      "condition": "bout ?",
      "status": "active"
@@ -5017,7 +6280,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 544,
+     "line": 543,
      "where": "text:",
      "condition": "shadow ?",
      "status": "active"
@@ -5034,7 +6297,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 544,
+     "line": 543,
      "where": "text:",
      "condition": "shadow ?",
      "status": "active"
@@ -5051,7 +6314,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 566,
+     "line": 565,
      "where": "text:",
      "condition": "s.shadow ?",
      "status": "active"
@@ -5068,7 +6331,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 566,
+     "line": 565,
      "where": "text:",
      "condition": "s.shadow ?",
      "status": "active"
@@ -5085,7 +6348,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 583,
+     "line": 582,
      "where": "text:",
      "condition": "if (s.shadow && !bout)",
      "status": "active"
@@ -5102,7 +6365,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 594,
+     "line": 592,
      "where": "text:",
      "condition": "if (!m.player.alive || m.finalStarted || s.t > 30 || L.fainted || L.captured)",
      "status": "active"
@@ -5112,16 +6375,21 @@
    "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
   },
   {
-   "id": "TC11496",
-   "text": "Balls will bounce off it. Wear it under 10% HP, then use your Snag Machine!",
-   "placeholders": [],
-   "example": null,
+   "id": "TC067C8",
+   "text": "{L.name} wanted to join, but your party is full. It leaves you an Extraction Voucher",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu wanted to join, but your party is full. It leaves you an Extraction Voucher",
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 612,
-     "where": "text:",
-     "condition": "snag ?",
+     "line": 626,
+     "where": "m.noticeFor",
+     "condition": "t.isPlayer ?",
      "status": "active"
     }
    ],
@@ -5129,16 +6397,69 @@
    "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
   },
   {
-   "id": "TC73CB4",
-   "text": "Balls bounce off it, and you have no Snag Machine... survive if you can!",
-   "placeholders": [],
-   "example": null,
+   "id": "T534349",
+   "text": "{L.name} flew off",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu flew off",
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 612,
-     "where": "text:",
-     "condition": "snag ?",
+     "line": 626,
+     "where": "m.noticeFor",
+     "condition": "t.isPlayer ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "TCCA403",
+   "text": "{L.name} acknowledges your strength and joins your team!",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu acknowledges your strength and joins your team!",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 631,
+     "where": "m.noticeFor",
+     "condition": "t.isPlayer ?",
+     "status": "active"
+    }
+   ],
+   "group": "npc",
+   "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "T200E83",
+   "text": "{L.name} joined {t.name}'s team!",
+   "placeholders": [
+    {
+     "name": "L.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "t.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu joined Pikachu's team!",
+   "uses": [
+    {
+     "file": "src/sim/visitors.ts",
+     "line": 631,
+     "where": "m.noticeFor",
+     "condition": "t.isPlayer ?",
      "status": "active"
     }
    ],
@@ -5153,7 +6474,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 681,
+     "line": 668,
      "where": "text:",
      "condition": "if (partySize(pl) >= m.partyCap)",
      "status": "active"
@@ -5175,7 +6496,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 686,
+     "line": 673,
      "where": "text:",
      "condition": "if (partySize(pl) >= m.partyCap)",
      "status": "active"
@@ -5192,7 +6513,7 @@
    "uses": [
     {
      "file": "src/sim/visitors.ts",
-     "line": 701,
+     "line": 688,
      "where": "text:",
      "condition": "if (won)",
      "status": "active"
@@ -5200,6 +6521,32 @@
    ],
    "group": "npc",
    "who": "A visitor (merchant, Celeste, Hoopa, the ace trainer)"
+  },
+  {
+   "id": "TD7F1A5",
+   "text": "{CharacterScreen.label(c)} unlocks with: {why}",
+   "placeholders": [
+    {
+     "name": "CharacterScreen.label(c)",
+     "example": "3"
+    },
+    {
+     "name": "why",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "3 unlocks with: (a reason)",
+   "uses": [
+    {
+     "file": "src/ui/characterScreen.ts",
+     "line": 80,
+     "where": "",
+     "condition": "if (why)",
+     "status": "active"
+    }
+   ],
+   "group": "title",
+   "who": "UI"
   },
   {
    "id": "TC8F48E",
@@ -5246,28 +6593,6 @@
      "line": 118,
      "where": "heading",
      "condition": "anyLocked ?",
-     "status": "active"
-    }
-   ],
-   "group": "title",
-   "who": "Screen text"
-  },
-  {
-   "id": "TD1488E",
-   "text": "🔒 {locked}",
-   "placeholders": [
-    {
-     "name": "locked",
-     "example": "…"
-    }
-   ],
-   "example": "🔒 …",
-   "uses": [
-    {
-     "file": "src/ui/characterScreen.ts",
-     "line": 151,
-     "where": "text",
-     "condition": "locked ?",
      "status": "active"
     }
    ],
@@ -5373,6 +6698,74 @@
    "who": "UI"
   },
   {
+   "id": "T869AC0",
+   "text": "{this.sent.map((m) => m.name).join(', ')} sent! {left} more with your voucher{left > 1 ? 's' : ''}",
+   "placeholders": [
+    {
+     "name": "this.sent.map((m) => m.name).join(', ')",
+     "example": "Pikachu"
+    },
+    {
+     "name": "left",
+     "example": "3"
+    },
+    {
+     "name": "left > 1 ? 's' : ''",
+     "example": "3"
+    }
+   ],
+   "example": "Pikachu sent! 3 more with your voucher3",
+   "uses": [
+    {
+     "file": "src/ui/endScreen.ts",
+     "line": 145,
+     "where": "head =",
+     "condition": "this.sent.length === 0 ?",
+     "status": "active"
+    }
+   ],
+   "group": "results",
+   "who": "UI"
+  },
+  {
+   "id": "T8AB94C",
+   "text": "{i + 1}  {m.shiny ? '★ ' : ''}{m.name} Lv {m.level}{done ? ' ✓ in PC' : ''}",
+   "placeholders": [
+    {
+     "name": "i + 1",
+     "example": "…"
+    },
+    {
+     "name": "m.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    },
+    {
+     "name": "done ? ' ✓ in PC' : ''",
+     "example": "3"
+    }
+   ],
+   "example": "…  …Pikachu Lv 123",
+   "uses": [
+    {
+     "file": "src/ui/endScreen.ts",
+     "line": 150,
+     "where": "label =",
+     "condition": "if (this.choosing)",
+     "status": "active"
+    }
+   ],
+   "group": "results",
+   "who": "Screen text"
+  },
+  {
    "id": "TF83EC2",
    "text": "  ✓ in PC",
    "placeholders": [],
@@ -5388,6 +6781,36 @@
    ],
    "group": "results",
    "who": "Screen text"
+  },
+  {
+   "id": "TB1D34C",
+   "text": "{m.name} Lv {m.level}{m.fainted ? ' (fainted)' : ''}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    },
+    {
+     "name": "m.fainted ? ' (fainted)' : ''",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu Lv 12…",
+   "uses": [
+    {
+     "file": "src/ui/endScreen.ts",
+     "line": 156,
+     "where": "map",
+     "condition": "in render()",
+     "status": "active"
+    }
+   ],
+   "group": "results",
+   "who": "UI"
   },
   {
    "id": "TE1615A",
@@ -5438,6 +6861,36 @@
    "who": "UI"
   },
   {
+   "id": "TD9C75A",
+   "text": "{names} {this.sent.length > 1 ? 'were' : 'was'} sent to your PC ({loadPc().length} stored)",
+   "placeholders": [
+    {
+     "name": "names",
+     "example": "…"
+    },
+    {
+     "name": "this.sent.length > 1 ? 'were' : 'was'",
+     "example": "…"
+    },
+    {
+     "name": "loadPc().length",
+     "example": "…"
+    }
+   ],
+   "example": "… … sent to your PC (… stored)",
+   "uses": [
+    {
+     "file": "src/ui/endScreen.ts",
+     "line": 163,
+     "where": "msg =",
+     "condition": "this.saveFailed ?",
+     "status": "active"
+    }
+   ],
+   "group": "results",
+   "who": "UI"
+  },
+  {
    "id": "T576766",
    "text": "Play again",
    "placeholders": [],
@@ -5455,6 +6908,32 @@
    "who": "Button"
   },
   {
+   "id": "T9AB83E",
+   "text": "{name}  Lv {level}",
+   "placeholders": [
+    {
+     "name": "name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "level",
+     "example": "12"
+    }
+   ],
+   "example": "Pikachu  Lv 12",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 92,
+     "where": "label =",
+     "condition": "in drawInfoBar()",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "Screen text"
+  },
+  {
    "id": "TBCDC5E",
    "text": "Storage Chest{chest.town ? ` · ${chest.town}` : ''}",
    "placeholders": [
@@ -5470,28 +6949,6 @@
      "line": 217,
      "where": "title =",
      "condition": "in drawChestPanel()",
-     "status": "active"
-    }
-   ],
-   "group": "hud",
-   "who": "UI"
-  },
-  {
-   "id": "T93FA75",
-   "text": " · {chest.town}",
-   "placeholders": [
-    {
-     "name": "chest.town",
-     "example": "3"
-    }
-   ],
-   "example": " · 3",
-   "uses": [
-    {
-     "file": "src/ui/hud.ts",
-     "line": 217,
-     "where": "title =",
-     "condition": "chest.town ?",
      "status": "active"
     }
    ],
@@ -5533,26 +6990,30 @@
    "who": "UI"
   },
   {
-   "id": "T4CB6C5",
-   "text": " ×{it.count}",
+   "id": "T0E6918",
+   "text": "{used}/{chest.slots.length} slots used",
    "placeholders": [
     {
-     "name": "it.count",
-     "example": "3"
+     "name": "used",
+     "example": "…"
+    },
+    {
+     "name": "chest.slots.length",
+     "example": "…"
     }
    ],
-   "example": " ×3",
+   "example": "…/… slots used",
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 472,
-     "where": "map",
-     "condition": "it.count > 1 ?",
+     "line": 256,
+     "where": "ink",
+     "condition": "in drawChestPanel()",
      "status": "active"
     }
    ],
    "group": "hud",
-   "who": "UI"
+   "who": "Screen text"
   },
   {
    "id": "TFB7481",
@@ -5704,6 +7165,28 @@
      "line": 493,
      "where": "",
      "condition": "def?.kind === 'ball' ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
+   "id": "T4696D9",
+   "text": "{def.desc ?? ''} · its number key",
+   "placeholders": [
+    {
+     "name": "def.desc ?? ''",
+     "example": "…"
+    }
+   ],
+   "example": "… · its number key",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 494,
+     "where": "",
+     "condition": "def?.kind === 'styler' ?",
      "status": "active"
     }
    ],
@@ -5893,28 +7376,6 @@
    "who": "UI"
   },
   {
-   "id": "TA45DF7",
-   "text": "₽{e.price.toLocaleString()}",
-   "placeholders": [
-    {
-     "name": "e.price.toLocaleString()",
-     "example": "1,500"
-    }
-   ],
-   "example": "₽1,500",
-   "uses": [
-    {
-     "file": "src/ui/hud.ts",
-     "line": 544,
-     "where": "ink",
-     "condition": "if (st.shop)",
-     "status": "active"
-    }
-   ],
-   "group": "hud",
-   "who": "Screen text"
-  },
-  {
    "id": "TFD6EBE",
    "text": "Snag Machine · beat {st.snag.from}",
    "placeholders": [
@@ -5966,6 +7427,54 @@
    ],
    "group": "hud",
    "who": "UI"
+  },
+  {
+   "id": "TF65476",
+   "text": "{st.armedBall}: release to throw",
+   "placeholders": [
+    {
+     "name": "st.armedBall",
+     "example": "Great Ball"
+    }
+   ],
+   "example": "Great Ball: release to throw",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 577,
+     "where": "creamStrip",
+     "condition": "st.armedBall ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "Screen text"
+  },
+  {
+   "id": "T702126",
+   "text": "{match.ground.label} · lighting: {st.lightingMode}",
+   "placeholders": [
+    {
+     "name": "match.ground.label",
+     "example": "Great Ball"
+    },
+    {
+     "name": "st.lightingMode",
+     "example": "…"
+    }
+   ],
+   "example": "Great Ball · lighting: …",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 581,
+     "where": "label",
+     "condition": "if (DEBUG_STAMP)",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "Screen text"
   },
   {
    "id": "T5860FA",
@@ -6062,6 +7571,58 @@
    "who": "UI"
   },
   {
+   "id": "T909B00",
+   "text": "{m.shiny ? '★ ' : ''}{m.name}  Lv {m.level}",
+   "placeholders": [
+    {
+     "name": "m.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    }
+   ],
+   "example": "…Pikachu  Lv 12",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 953,
+     "where": "tabText =",
+     "condition": "in drawParty()",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
+   "id": "T0CE1D8",
+   "text": "{Math.hypot(m.x - p.x, m.y - p.y).toFixed(0)} tiles · R",
+   "placeholders": [
+    {
+     "name": "Math.hypot(m.x - p.x, m.y - p.y).toFixed(0)",
+     "example": "…"
+    }
+   ],
+   "example": "… tiles · R",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 975,
+     "where": "info =",
+     "condition": "roaming ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
    "id": "T0ED6CE",
    "text": "Take {ITEMS[m.heldItem]?.name ?? 'item'}",
    "placeholders": [
@@ -6105,6 +7666,28 @@
    "text": "It moves!",
    "placeholders": [],
    "example": null,
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1089,
+     "where": "info =",
+     "condition": "left < 60 ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
+   "id": "T5312F1",
+   "text": "{left} steps to go",
+   "placeholders": [
+    {
+     "name": "left",
+     "example": "3"
+    }
+   ],
+   "example": "3 steps to go",
    "uses": [
     {
      "file": "src/ui/hud.ts",
@@ -6342,6 +7925,54 @@
    "who": "Screen text"
   },
   {
+   "id": "T274820",
+   "text": "{h.def.name} · sells for ₽{st.shop.sellPrice(h.def.id).toLocaleString()}",
+   "placeholders": [
+    {
+     "name": "h.def.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "st.shop.sellPrice(h.def.id).toLocaleString()",
+     "example": "1,500"
+    }
+   ],
+   "example": "Pikachu · sells for ₽1,500",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1307,
+     "where": "name =",
+     "condition": "st.shop ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
+   "id": "T4BDEC6",
+   "text": "{L.mon} wants to learn",
+   "placeholders": [
+    {
+     "name": "L.mon",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu wants to learn",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1335,
+     "where": "ink",
+     "condition": "in drawLearn()",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "Screen text"
+  },
+  {
    "id": "TFFA2A2",
    "text": "+{L.queued} more",
    "placeholders": [
@@ -6374,6 +8005,32 @@
      "line": 1355,
      "where": "",
      "condition": "isContact(def) ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
+   "id": "T263C05",
+   "text": "{def.power > 0 ? `Pow ${def.power}` : 'No damage'} · {def.cooldown}s",
+   "placeholders": [
+    {
+     "name": "def.power > 0 ? `Pow ${def.power}` : 'No damage'",
+     "example": "…"
+    },
+    {
+     "name": "def.cooldown",
+     "example": "3"
+    }
+   ],
+   "example": "… · 3s",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1357,
+     "where": "nums =",
+     "condition": "in drawLearn()",
      "status": "active"
     }
    ],
@@ -6685,6 +8342,32 @@
    "who": "UI"
   },
   {
+   "id": "TEA577E",
+   "text": "{Math.round(def.status.chance * 100)}% chance to {STATUS_VERB[def.status.kind] ?? def.status.kind}",
+   "placeholders": [
+    {
+     "name": "Math.round(def.status.chance * 100)",
+     "example": "…"
+    },
+    {
+     "name": "STATUS_VERB[def.status.kind] ?? def.status.kind",
+     "example": "…"
+    }
+   ],
+   "example": "…% chance to …",
+   "uses": [
+    {
+     "file": "src/ui/hud.ts",
+     "line": 1436,
+     "where": "out.push",
+     "condition": "if (def.status)",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "UI"
+  },
+  {
    "id": "TA61D49",
    "text": "its own",
    "placeholders": [],
@@ -6712,28 +8395,6 @@
      "line": 1439,
      "where": "",
      "condition": "if (def.stages)",
-     "status": "active"
-    }
-   ],
-   "group": "hud",
-   "who": "UI"
-  },
-  {
-   "id": "TFA9C18",
-   "text": " ({Math.round(def.stages.chance * 100)}%)",
-   "placeholders": [
-    {
-     "name": "Math.round(def.stages.chance * 100)",
-     "example": "…"
-    }
-   ],
-   "example": " (…%)",
-   "uses": [
-    {
-     "file": "src/ui/hud.ts",
-     "line": 1445,
-     "where": "out.push",
-     "condition": "def.stages.chance < 1 ?",
      "status": "active"
     }
    ],
@@ -6921,6 +8582,54 @@
      "line": 328,
      "where": "say",
      "condition": "if (this.match.lockTarget === w)",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T268F66",
+   "text": "{m.name} is {Math.hypot(m.x - this.match.player.x, m.y - this.match.pl...} tiles away (see minimap)",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "Math.hypot(m.x - this.match.player.x, m.y - this.match.pl...",
+     "example": "Wes"
+    }
+   ],
+   "example": "Pikachu is Wes tiles away (see minimap)",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 354,
+     "where": "say",
+     "condition": "if (m && isRoaming(m))",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T0B88DE",
+   "text": "{lead(this.match.player)?.name} takes the lead",
+   "placeholders": [
+    {
+     "name": "lead(this.match.player)?.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu takes the lead",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 355,
+     "where": "say",
+     "condition": "if (this.match.swapLead(h.index))",
      "status": "active"
     }
    ],
@@ -7217,6 +8926,28 @@
    "who": "On-screen notice"
   },
   {
+   "id": "T41FD90",
+   "text": "{t.name} is out of range",
+   "placeholders": [
+    {
+     "name": "t.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is out of range",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 667,
+     "where": "say",
+     "condition": "if (Math.hypot(t.x - p.x, t.y - p.y) > CONFIG.catch.throwRange)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
    "id": "TC98108",
    "text": "Go, {ballName}!",
    "placeholders": [
@@ -7316,43 +9047,25 @@
    "who": "On-screen notice"
   },
   {
-   "id": "T034D4C",
-   "text": " ×{e.count}",
+   "id": "TA42E02",
+   "text": "{cur.name} ready: click a wild Pokémon, then F to throw{cur.desc ? ` · ${cur.desc}` : ''}",
    "placeholders": [
     {
-     "name": "e.count",
-     "example": "3"
-    }
-   ],
-   "example": " ×3",
-   "uses": [
+     "name": "cur.name",
+     "example": "Pikachu"
+    },
     {
-     "file": "src/ui/matchScreen.ts",
-     "line": 1210,
-     "where": "say",
-     "condition": "e.count > 1 ?",
-     "status": "active"
-    }
-   ],
-   "group": "battle",
-   "who": "On-screen notice"
-  },
-  {
-   "id": "TCBDD2C",
-   "text": " · {cur.desc}",
-   "placeholders": [
-    {
-     "name": "cur.desc",
+     "name": "cur.desc ? ` · ${cur.desc}` : ''",
      "example": "…"
     }
    ],
-   "example": " · …",
+   "example": "Pikachu ready: click a wild Pokémon, then F to throw…",
    "uses": [
     {
      "file": "src/ui/matchScreen.ts",
      "line": 1242,
      "where": "say",
-     "condition": "cur.desc ?",
+     "condition": "if (cur)",
      "status": "active"
     }
    ],
@@ -7520,6 +9233,50 @@
    "who": "UI"
   },
   {
+   "id": "T8E6FB4",
+   "text": "{ev.mon.name} fainted",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu fainted",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1310,
+     "where": "add",
+     "condition": "case 'faint'",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TBE21A1",
+   "text": "{ev.mon.name} → PC",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu → PC",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1324,
+     "where": "add",
+     "condition": "saved ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
    "id": "T3651FC",
    "text": "PC unavailable",
    "placeholders": [],
@@ -7552,6 +9309,28 @@
    ],
    "group": "hud",
    "who": "On-screen notice"
+  },
+  {
+   "id": "T65668B",
+   "text": "{ev.mon.name} stops fighting",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu stops fighting",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1329,
+     "where": "add",
+     "condition": "case 'yield'",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
   },
   {
    "id": "T6B16BB",
@@ -7595,6 +9374,50 @@
    ],
    "group": "battle",
    "who": "UI"
+  },
+  {
+   "id": "TF3F72F",
+   "text": "{ev.mon.name} calmed down!",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu calmed down!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1339,
+     "where": "add",
+     "condition": "case 'calmed'",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "T5BFEC1",
+   "text": "{ev.mon.name} is calm: throw a ball now (F) for a much better catch",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is calm: throw a ball now (F) for a much better catch",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1341,
+     "where": "say",
+     "condition": "case 'calmed'",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "On-screen notice"
   },
   {
    "id": "T2567D5",
@@ -7665,6 +9488,62 @@
    "who": "UI"
   },
   {
+   "id": "T473D3B",
+   "text": "{ev.mon.name} forgot {ev.forgot} and learned {move(ev.moveId).name}!",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ev.forgot",
+     "example": "…"
+    },
+    {
+     "name": "move(ev.moveId).name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu forgot … and learned Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1366,
+     "where": "say",
+     "condition": "ev.forgot ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "TAE5BA4",
+   "text": "{ev.mon.name} learned {move(ev.moveId).name}!",
+   "placeholders": [
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "move(ev.moveId).name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu learned Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1366,
+     "where": "say",
+     "condition": "ev.forgot ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
+   "who": "On-screen notice"
+  },
+  {
    "id": "T771553",
    "text": "New move: {move(ev.moveId).name}",
    "placeholders": [
@@ -7709,6 +9588,32 @@
    "who": "On-screen notice"
   },
   {
+   "id": "T44A24F",
+   "text": "{ev.trainer.name} sent out {ev.mon.name}!",
+   "placeholders": [
+    {
+     "name": "ev.trainer.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu sent out Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1375,
+     "where": "say",
+     "condition": "mine ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
    "id": "TBF0830",
    "text": "You defeated {foe.name}!",
    "placeholders": [
@@ -7718,6 +9623,28 @@
     }
    ],
    "example": "You defeated Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1383,
+     "where": "say",
+     "condition": "ev.winner === p ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T0F3402",
+   "text": "{foe.name} won the battle",
+   "placeholders": [
+    {
+     "name": "foe.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu won the battle",
    "uses": [
     {
      "file": "src/ui/matchScreen.ts",
@@ -7853,26 +9780,130 @@
    "who": "On-screen notice"
   },
   {
-   "id": "T340BB2",
-   "text": "+₽{ev.amount}",
+   "id": "TC6B574",
+   "text": "{ev.mon.name}'s {ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'} is reacting!",
    "placeholders": [
     {
-     "name": "ev.amount",
-     "example": "…"
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ITEMS[ev.mon.heldItem ?? '']?.name ?? 'Mega Stone'",
+     "example": "Pikachu"
     }
    ],
-   "example": "+₽…",
+   "example": "Pikachu's Pikachu is reacting!",
    "uses": [
     {
      "file": "src/ui/matchScreen.ts",
-     "line": 1447,
-     "where": "add",
-     "condition": "if (ev.trainer.isPlayer)",
+     "line": 1433,
+     "where": "say",
+     "condition": "if (ev.mon.owner?.isPlayer)",
      "status": "active"
     }
    ],
    "group": "battle",
-   "who": "UI"
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T35D251",
+   "text": "{ev.mon.owner.name}'s {ev.mon.name} is Mega Evolving!",
+   "placeholders": [
+    {
+     "name": "ev.mon.owner.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu's Pikachu is Mega Evolving!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1434,
+     "where": "say",
+     "condition": "if (ev.mon.owner)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T23A94A",
+   "text": "{ev.from} Mega Evolved into {ev.mon.name}!",
+   "placeholders": [
+    {
+     "name": "ev.from",
+     "example": "Wes"
+    },
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Wes Mega Evolved into Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1439,
+     "where": "say",
+     "condition": "if (ev.mon.owner?.isPlayer)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T67B576",
+   "text": "{ev.from} evolved into {ev.mon.name}!",
+   "placeholders": [
+    {
+     "name": "ev.from",
+     "example": "Wes"
+    },
+    {
+     "name": "ev.mon.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Wes evolved into Pikachu!",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1443,
+     "where": "say",
+     "condition": "if (ev.mon.owner?.isPlayer)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T5CE068",
+   "text": "{ev.trainer.name} was wiped out by wild Pokémon",
+   "placeholders": [
+    {
+     "name": "ev.trainer.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was wiped out by wild Pokémon",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1450,
+     "where": "say",
+     "condition": "if (!ev.trainer.isPlayer)",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
   },
   {
    "id": "T258C49",
@@ -7896,6 +9927,28 @@
    "text": "Your whole party fainted…",
    "placeholders": [],
    "example": null,
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 1459,
+     "where": "say",
+     "condition": "ev.trainer.isPlayer ?",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "T20DAF6",
+   "text": "{ev.trainer.name} was eliminated!",
+   "placeholders": [
+    {
+     "name": "ev.trainer.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was eliminated!",
    "uses": [
     {
      "file": "src/ui/matchScreen.ts",
@@ -7957,6 +10010,47 @@
     }
    ],
    "group": "battle",
+   "who": "UI"
+  },
+  {
+   "id": "TAE4846",
+   "text": "{m.shiny ? '★ ' : ''}{m.name}  Lv {m.level}{m.fainted ? ' (fainted)' : ''}",
+   "placeholders": [
+    {
+     "name": "m.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    },
+    {
+     "name": "m.fainted ? ' (fainted)' : ''",
+     "example": "…"
+    }
+   ],
+   "example": "…Pikachu  Lv 12…",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 2146,
+     "where": "map",
+     "condition": "this.match.snagOffer ?",
+     "status": "active"
+    },
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 2148,
+     "where": "map",
+     "condition": "this.extractPick ?",
+     "status": "active"
+    }
+   ],
+   "group": "hud",
    "who": "UI"
   },
   {
@@ -8262,6 +10356,32 @@
    "who": "Screen text"
   },
   {
+   "id": "T21F8D4",
+   "text": "{m.name}  Lv {m.level}",
+   "placeholders": [
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    }
+   ],
+   "example": "Pikachu  Lv 12",
+   "uses": [
+    {
+     "file": "src/ui/matchScreen.ts",
+     "line": 2422,
+     "where": "text",
+     "condition": "in drawDuelHud()",
+     "status": "active"
+    }
+   ],
+   "group": "battle",
+   "who": "Screen text"
+  },
+  {
    "id": "T84ACE1",
    "text": "Hoopa (Space to talk)",
    "placeholders": [],
@@ -8394,6 +10514,62 @@
      "line": 187,
      "where": "facts =",
      "condition": "mv.power > 0 ?",
+     "status": "active"
+    }
+   ],
+   "group": "title",
+   "who": "UI"
+  },
+  {
+   "id": "T967FF3",
+   "text": "{mv.cooldown}s cooldown",
+   "placeholders": [
+    {
+     "name": "mv.cooldown",
+     "example": "3"
+    }
+   ],
+   "example": "3s cooldown",
+   "uses": [
+    {
+     "file": "src/ui/moveGallery.ts",
+     "line": 189,
+     "where": "facts =",
+     "condition": "in drawOverlay()",
+     "status": "active"
+    }
+   ],
+   "group": "title",
+   "who": "UI"
+  },
+  {
+   "id": "T8262FC",
+   "text": "{this.index + 1} / {this.list.length}{this.typeFilter ? ` (${this.typeFilter} only)` : ''}  ·  cast by {caster}",
+   "placeholders": [
+    {
+     "name": "this.index + 1",
+     "example": "0025"
+    },
+    {
+     "name": "this.list.length",
+     "example": "…"
+    },
+    {
+     "name": "this.typeFilter ? ` (${this.typeFilter} only)` : ''",
+     "example": "…"
+    },
+    {
+     "name": "caster",
+     "example": "…"
+    }
+   ],
+   "example": "0025 / ……  ·  cast by …",
+   "uses": [
+    {
+     "file": "src/ui/moveGallery.ts",
+     "line": 194,
+     "where": "where =",
+     "condition": "in drawOverlay()",
      "status": "active"
     }
    ],
@@ -8551,6 +10727,50 @@
    "who": "Screen text"
   },
   {
+   "id": "TC612F1",
+   "text": "{Math.round(m / 60)} h left",
+   "placeholders": [
+    {
+     "name": "Math.round(m / 60)",
+     "example": "…"
+    }
+   ],
+   "example": "… h left",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 269,
+     "where": "return",
+     "condition": "m >= 120 ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T3A36DD",
+   "text": "{m} min left",
+   "placeholders": [
+    {
+     "name": "m",
+     "example": "…"
+    }
+   ],
+   "example": "… min left",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 269,
+     "where": "return",
+     "condition": "m >= 120 ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "T12EAF8",
    "text": "★ {ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join(' ★ ')}",
    "placeholders": [
@@ -8589,6 +10809,40 @@
      "where": "text",
      "condition": "pr && LEVELS_ON ?",
      "status": "unused"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
+   "id": "T5BD53D",
+   "text": "{st.wins} wins · {st.eliminations ?? 0} eliminations · {st.matches} matches · {st.catches} catches",
+   "placeholders": [
+    {
+     "name": "st.wins",
+     "example": "3"
+    },
+    {
+     "name": "st.eliminations ?? 0",
+     "example": "…"
+    },
+    {
+     "name": "st.matches",
+     "example": "3"
+    },
+    {
+     "name": "st.catches",
+     "example": "…"
+    }
+   ],
+   "example": "3 wins · … eliminations · 3 matches · … catches",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 290,
+     "where": "text",
+     "condition": "st ?",
+     "status": "active"
     }
    ],
    "group": "hub",
@@ -8852,6 +11106,28 @@
    "text": "You host: share the code, set the rules, start when ready.",
    "placeholders": [],
    "example": null,
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 362,
+     "where": "el",
+     "condition": "host ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T338ED0",
+   "text": "{l.host} hosts this lobby.",
+   "placeholders": [
+    {
+     "name": "l.host",
+     "example": "Wes"
+    }
+   ],
+   "example": "Wes hosts this lobby.",
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
@@ -9305,6 +11581,32 @@
    "who": "Screen text"
   },
   {
+   "id": "T7484A6",
+   "text": "{this.players.length} / {this.size} trainers",
+   "placeholders": [
+    {
+     "name": "this.players.length",
+     "example": "Wes"
+    },
+    {
+     "name": "this.size",
+     "example": "…"
+    }
+   ],
+   "example": "Wes / … trainers",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 553,
+     "where": "text",
+     "condition": "in render()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
    "id": "T2EA225",
    "text": "Start now (admin)",
    "placeholders": [],
@@ -9354,6 +11656,28 @@
    ],
    "group": "hub",
    "who": "Button"
+  },
+  {
+   "id": "T65B2C1",
+   "text": "{r.name} was sent to your PC",
+   "placeholders": [
+    {
+     "name": "r.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu was sent to your PC",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 670,
+     "where": "",
+     "condition": "r.ok ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
   },
   {
    "id": "TE4C270",
@@ -9499,36 +11823,6 @@
    "who": "Screen text"
   },
   {
-   "id": "T45A4DF",
-   "text": "★ {a.name}{a.title ? ` · new title: ${a.title}` : ''}{a.look ? ' · new look' : ''}",
-   "placeholders": [
-    {
-     "name": "a.name",
-     "example": "Pikachu"
-    },
-    {
-     "name": "a.title ? ` · new title: ${a.title}` : ''",
-     "example": "Master Ranger"
-    },
-    {
-     "name": "a.look ? ' · new look' : ''",
-     "example": "…"
-    }
-   ],
-   "example": "★ PikachuMaster Ranger…",
-   "uses": [
-    {
-     "file": "src/ui/onlineScreens.ts",
-     "line": 696,
-     "where": "text",
-     "condition": "if (prog && this.net.me.signedIn && LEVELS_ON)",
-     "status": "unused"
-    }
-   ],
-   "group": "hub",
-   "who": "Screen text"
-  },
-  {
    "id": "T6A3EF7",
    "text": " · new title: {a.title}",
    "placeholders": [
@@ -9661,6 +11955,40 @@
    ],
    "group": "hub",
    "who": "Screen text"
+  },
+  {
+   "id": "T3A8296",
+   "text": "{m.shiny ? '★ ' : ''}{m.name} Lv {m.level}{m.taken ? ' ✓' : ''}",
+   "placeholders": [
+    {
+     "name": "m.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "m.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "m.level",
+     "example": "12"
+    },
+    {
+     "name": "m.taken ? ' ✓' : ''",
+     "example": "3"
+    }
+   ],
+   "example": "…Pikachu Lv 123",
+   "uses": [
+    {
+     "file": "src/ui/onlineScreens.ts",
+     "line": 708,
+     "where": "button",
+     "condition": "if (this.info?.picks)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Button"
   },
   {
    "id": "T8E1910",
@@ -10020,50 +12348,6 @@
    "who": "UI"
   },
   {
-   "id": "TC61D15",
-   "text": "📣 {m.text}",
-   "placeholders": [
-    {
-     "name": "m.text",
-     "example": "(a reason)"
-    }
-   ],
-   "example": "📣 (a reason)",
-   "uses": [
-    {
-     "file": "src/ui/overlay.ts",
-     "line": 175,
-     "where": "el",
-     "condition": "if (m.announce)",
-     "status": "active"
-    }
-   ],
-   "group": "hub",
-   "who": "UI"
-  },
-  {
-   "id": "TF19ABA",
-   "text": ": {m.text}",
-   "placeholders": [
-    {
-     "name": "m.text",
-     "example": "(a reason)"
-    }
-   ],
-   "example": ": (a reason)",
-   "uses": [
-    {
-     "file": "src/ui/overlay.ts",
-     "line": 181,
-     "where": "document.createTextNode",
-     "condition": "if (m.system)",
-     "status": "active"
-    }
-   ],
-   "group": "hub",
-   "who": "UI"
-  },
-  {
    "id": "TA462F6",
    "text": "View card",
    "placeholders": [],
@@ -10391,6 +12675,32 @@
      "line": 118,
      "where": "heading",
      "condition": "in render()",
+     "status": "active"
+    }
+   ],
+   "group": "pc",
+   "who": "Screen text"
+  },
+  {
+   "id": "TB0E730",
+   "text": "{this.list.length} Pokémon extracted · {this.where} · A/D or the arrows change box · Esc back",
+   "placeholders": [
+    {
+     "name": "this.list.length",
+     "example": "…"
+    },
+    {
+     "name": "this.where",
+     "example": "…"
+    }
+   ],
+   "example": "… Pokémon extracted · … · A/D or the arrows change box · Esc back",
+   "uses": [
+    {
+     "file": "src/ui/pcScreen.ts",
+     "line": 119,
+     "where": "heading",
+     "condition": "this.list.length ?",
      "status": "active"
     }
    ],
@@ -10942,6 +13252,28 @@
    "who": "UI"
   },
   {
+   "id": "T12EF38",
+   "text": "{from} invited you",
+   "placeholders": [
+    {
+     "name": "from",
+     "example": "Wes"
+    }
+   ],
+   "example": "Wes invited you",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 91,
+     "where": "el",
+     "condition": "in render()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "TFFB006",
    "text": "Party · {party.members.length}/4",
    "placeholders": [
@@ -10955,6 +13287,28 @@
     {
      "file": "src/ui/socialPanel.ts",
      "line": 100,
+     "where": "el",
+     "condition": "if (party)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "TDF7DFC",
+   "text": "{n} (invited)",
+   "placeholders": [
+    {
+     "name": "n",
+     "example": "3"
+    }
+   ],
+   "example": "3 (invited)",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 116,
      "where": "el",
      "condition": "if (party)",
      "status": "active"
@@ -10985,6 +13339,28 @@
    "text": "You lead: Find a Match takes everyone, as one squad.",
    "placeholders": [],
    "example": null,
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 121,
+     "where": "el",
+     "condition": "lead ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "TEA0430",
+   "text": "{party.leader} starts the matches.",
+   "placeholders": [
+    {
+     "name": "party.leader",
+     "example": "…"
+    }
+   ],
+   "example": "… starts the matches.",
    "uses": [
     {
      "file": "src/ui/socialPanel.ts",
@@ -11192,6 +13568,66 @@
    "who": "UI"
   },
   {
+   "id": "T818F98",
+   "text": "{x.winner ? `${x.winner} won` : 'No winner'} · {Math.floor(x.seconds / 60)}:{String(Math.floor(x.seconds % 60)).padStart(2, '0')} · {when.toLocaleDateString()} {when.toLocaleTimeString([], { hour: '2-digit', minute: '2...}",
+   "placeholders": [
+    {
+     "name": "x.winner ? `${x.winner} won` : 'No winner'",
+     "example": "Wes"
+    },
+    {
+     "name": "Math.floor(x.seconds / 60)",
+     "example": "45"
+    },
+    {
+     "name": "String(Math.floor(x.seconds % 60)).padStart(2, '0')",
+     "example": "45"
+    },
+    {
+     "name": "when.toLocaleDateString()",
+     "example": "3"
+    },
+    {
+     "name": "when.toLocaleTimeString([], { hour: '2-digit', minute: '2...",
+     "example": "3"
+    }
+   ],
+   "example": "Wes · 45:45 · 3 3",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 300,
+     "where": "el",
+     "condition": "",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T4AE312",
+   "text": "{x.winner} won",
+   "placeholders": [
+    {
+     "name": "x.winner",
+     "example": "Wes"
+    }
+   ],
+   "example": "Wes won",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 300,
+     "where": "el",
+     "condition": "x.winner ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "TBEF204",
    "text": "No winner",
    "placeholders": [],
@@ -11258,6 +13694,70 @@
      "line": 391,
      "where": "el",
      "condition": "if (p.error)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T5E63A7",
+   "text": "{pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...}{p.online ? 'Online now · ' : ''}trainer since {new Date(p.joined).toLocaleDateString()} · {p.pc} Pokémon in their PC",
+   "placeholders": [
+    {
+     "name": "pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...",
+     "example": "12"
+    },
+    {
+     "name": "p.online ? 'Online now · ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "new Date(p.joined).toLocaleDateString()",
+     "example": "…"
+    },
+    {
+     "name": "p.pc",
+     "example": "…"
+    }
+   ],
+   "example": "12…trainer since … · … Pokémon in their PC",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 398,
+     "where": "el",
+     "condition": "if (p.error)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "TD351A8",
+   "text": "{pr.into} / {pr.next} XP to level {pr.level + 1} · ",
+   "placeholders": [
+    {
+     "name": "pr.into",
+     "example": "…"
+    },
+    {
+     "name": "pr.next",
+     "example": "…"
+    },
+    {
+     "name": "pr.level + 1",
+     "example": "12"
+    }
+   ],
+   "example": "… / … XP to level 12 · ",
+   "uses": [
+    {
+     "file": "src/ui/socialPanel.ts",
+     "line": 398,
+     "where": "el",
+     "condition": "pr.next ?",
      "status": "active"
     }
    ],
@@ -11984,6 +14484,44 @@
    "who": "UI"
   },
   {
+   "id": "T6E4DAF",
+   "text": "{c.shiny ? '★ ' : ''}{c.shadow ? 'Shadow ' : ''}{c.name} Lv {c.level}{c.alpha ? ' · Alpha' : ''}",
+   "placeholders": [
+    {
+     "name": "c.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "c.shadow ? 'Shadow ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "c.level",
+     "example": "12"
+    },
+    {
+     "name": "c.alpha ? ' · Alpha' : ''",
+     "example": "…"
+    }
+   ],
+   "example": "……Pikachu Lv 12…",
+   "uses": [
+    {
+     "file": "src/ui/tradeMenu.ts",
+     "line": 63,
+     "where": "return",
+     "condition": "in cardText()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "T8AAE16",
    "text": " · Alpha",
    "placeholders": [],
@@ -12058,6 +14596,28 @@
      "line": 130,
      "where": "el",
      "condition": "",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T4A360C",
+   "text": "{cardText(wonder.waiting)} is out on Wonder Trade. It swaps with the next trainer who sends one.",
+   "placeholders": [
+    {
+     "name": "cardText(wonder.waiting)",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "(a reason) is out on Wonder Trade. It swaps with the next trainer who sends one.",
+   "uses": [
+    {
+     "file": "src/ui/tradeMenu.ts",
+     "line": 133,
+     "where": "el",
+     "condition": "if (wonder.waiting)",
      "status": "active"
     }
    ],
@@ -12145,28 +14705,6 @@
    "who": "UI"
   },
   {
-   "id": "TB90BD6",
-   "text": " ({incoming.length})",
-   "placeholders": [
-    {
-     "name": "incoming.length",
-     "example": "…"
-    }
-   ],
-   "example": " (…)",
-   "uses": [
-    {
-     "file": "src/ui/tradeMenu.ts",
-     "line": 162,
-     "where": "el",
-     "condition": "incoming.length ?",
-     "status": "active"
-    }
-   ],
-   "group": "hub",
-   "who": "UI"
-  },
-  {
    "id": "T4144FE",
    "text": "None right now.",
    "placeholders": [],
@@ -12177,6 +14715,36 @@
      "line": 163,
      "where": "el",
      "condition": "if (!incoming.length)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "TD414E1",
+   "text": "{o.from} offers {cardText(o.give)} for your {cardText(o.want)}",
+   "placeholders": [
+    {
+     "name": "o.from",
+     "example": "Wes"
+    },
+    {
+     "name": "cardText(o.give)",
+     "example": "(a reason)"
+    },
+    {
+     "name": "cardText(o.want)",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "Wes offers (a reason) for your (a reason)",
+   "uses": [
+    {
+     "file": "src/ui/tradeMenu.ts",
+     "line": 166,
+     "where": "el",
+     "condition": "",
      "status": "active"
     }
    ],
@@ -12306,6 +14874,28 @@
    "who": "UI"
   },
   {
+   "id": "T729D8A",
+   "text": "{r.name} has no Pokémon in their PC yet",
+   "placeholders": [
+    {
+     "name": "r.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu has no Pokémon in their PC yet",
+   "uses": [
+    {
+     "file": "src/ui/tradeMenu.ts",
+     "line": 216,
+     "where": "say",
+     "condition": "r.pc.length ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "On-screen notice"
+  },
+  {
    "id": "T0F0C1F",
    "text": "You give",
    "placeholders": [],
@@ -12372,6 +14962,28 @@
      "line": 238,
      "where": "say",
      "condition": "if (theirs && theirs.pc.length)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "On-screen notice"
+  },
+  {
+   "id": "TE24F2E",
+   "text": "{r.name} has no Pokémon to trade yet",
+   "placeholders": [
+    {
+     "name": "r.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu has no Pokémon to trade yet",
+   "uses": [
+    {
+     "file": "src/ui/tradeMenu.ts",
+     "line": 257,
+     "where": "say",
+     "condition": "if (!r.pc.length)",
      "status": "active"
     }
    ],
@@ -12508,6 +15120,36 @@
      "line": 30,
      "where": "nameOf =",
      "condition": "",
+     "status": "active"
+    }
+   ],
+   "group": "spectate",
+   "who": "UI"
+  },
+  {
+   "id": "T4DB9C9",
+   "text": "{mode}Watching {nameOf(mirror.roster, follow)} · {header.delay} s behind",
+   "placeholders": [
+    {
+     "name": "mode",
+     "example": "…"
+    },
+    {
+     "name": "nameOf(mirror.roster, follow)",
+     "example": "…"
+    },
+    {
+     "name": "header.delay",
+     "example": "…"
+    }
+   ],
+   "example": "…Watching … · … s behind",
+   "uses": [
+    {
+     "file": "src/ui/watchScreens.ts",
+     "line": 52,
+     "where": "bar",
+     "condition": "in draw()",
      "status": "active"
     }
    ],
@@ -12994,6 +15636,28 @@
    "who": "Error message"
   },
   {
+   "id": "TFF7C65",
+   "text": "{give.name} is out on Wonder Trade. It swaps with the next trainer who sends one",
+   "placeholders": [
+    {
+     "name": "give.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is out on Wonder Trade. It swaps with the next trainer who sends one",
+   "uses": [
+    {
+     "file": "server/accounts.ts",
+     "line": 432,
+     "where": "text:",
+     "condition": "if (!got)",
+     "status": "active"
+    }
+   ],
+   "group": "account",
+   "who": "Screen text"
+  },
+  {
    "id": "TC2522F",
    "text": "Wonder Trade! {nameOf(partnerId)} sent you {got.name}",
    "placeholders": [
@@ -13020,6 +15684,28 @@
    "who": "Screen text"
   },
   {
+   "id": "TB0740A",
+   "text": "{xpBoost}x XP event",
+   "placeholders": [
+    {
+     "name": "xpBoost",
+     "example": "120"
+    }
+   ],
+   "example": "120x XP event",
+   "uses": [
+    {
+     "file": "server/accounts.ts",
+     "line": 605,
+     "where": "what:",
+     "condition": "if (xpBoost > 1 && lines.length)",
+     "status": "active"
+    }
+   ],
+   "group": "account",
+   "who": "UI"
+  },
+  {
    "id": "T442D4E",
    "text": "No trainer by that name",
    "placeholders": [],
@@ -13030,6 +15716,28 @@
      "line": 809,
      "where": "text:",
      "condition": "if (!u || u.banned)",
+     "status": "active"
+    }
+   ],
+   "group": "account",
+   "who": "Screen text"
+  },
+  {
+   "id": "T72C7F8",
+   "text": "{u.username} is already your friend",
+   "placeholders": [
+    {
+     "name": "u.username",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is already your friend",
+   "uses": [
+    {
+     "file": "server/accounts.ts",
+     "line": 811,
+     "where": "text:",
+     "condition": "if (this.areFriends(userId, u.id))",
      "status": "active"
     }
    ],
@@ -13957,6 +16665,28 @@
    "who": "UI"
   },
   {
+   "id": "T155352",
+   "text": "{mins} min",
+   "placeholders": [
+    {
+     "name": "mins",
+     "example": "…"
+    }
+   ],
+   "example": "… min",
+   "uses": [
+    {
+     "file": "server/admin.ts",
+     "line": 145,
+     "where": "logAdmin",
+     "condition": "case 'mute'",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "UI"
+  },
+  {
    "id": "T0C3C90",
    "text": "Administrators only",
    "placeholders": [],
@@ -14275,6 +17005,32 @@
    "who": "UI"
   },
   {
+   "id": "TE328F5",
+   "text": "{minutes} min for {why}",
+   "placeholders": [
+    {
+     "name": "minutes",
+     "example": "…"
+    },
+    {
+     "name": "why",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "… min for (a reason)",
+   "uses": [
+    {
+     "file": "server/chat.ts",
+     "line": 113,
+     "where": "logMod",
+     "condition": "in strike()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "T1A00BE",
    "text": "Automatic: muted {before + 1} times this week (last for {why})",
    "placeholders": [
@@ -14327,6 +17083,80 @@
    "who": "Screen text"
   },
   {
+   "id": "T61EC23",
+   "text": "{minutes / 60} hour{minutes === 60 ? '' : 's'}",
+   "placeholders": [
+    {
+     "name": "minutes / 60",
+     "example": "…"
+    },
+    {
+     "name": "minutes === 60 ? '' : 's'",
+     "example": "…"
+    }
+   ],
+   "example": "… hour…",
+   "uses": [
+    {
+     "file": "server/chat.ts",
+     "line": 115,
+     "where": "text:",
+     "condition": "minutes >= 60 ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
+   "id": "T24F934",
+   "text": "{minutes} minutes",
+   "placeholders": [
+    {
+     "name": "minutes",
+     "example": "…"
+    }
+   ],
+   "example": "… minutes",
+   "uses": [
+    {
+     "file": "server/chat.ts",
+     "line": 115,
+     "where": "text:",
+     "condition": "minutes >= 60 ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
+   "id": "TD23392",
+   "text": "{foe.name} {Math.hypot(foe.x - aim.x, foe.y - aim.y).toFixed(1)} tiles from the aim",
+   "placeholders": [
+    {
+     "name": "foe.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "Math.hypot(foe.x - aim.x, foe.y - aim.y).toFixed(1)",
+     "example": "Wes"
+    }
+   ],
+   "example": "Pikachu Wes tiles from the aim",
+   "uses": [
+    {
+     "file": "server/commands.ts",
+     "line": 68,
+     "where": "flag",
+     "condition": "if (foe && aim && Math.hypot(foe.x - aim.x, foe.y - aim.y) > AIM_SLACK * 2.5)",
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "T6CFEA6",
    "text": "Your Pokémon is asleep",
    "placeholders": [],
@@ -14359,7 +17189,7 @@
      "line": 86,
      "where": "flag",
      "condition": "if (mon && mon.owner !== p)",
-     "status": "active"
+     "status": "admin"
     }
    ],
    "group": "hub",
@@ -14398,7 +17228,7 @@
      "line": 126,
      "where": "flag",
      "condition": "if (m.nearService()?.kind !== 'shop')",
-     "status": "active"
+     "status": "admin"
     }
    ],
    "group": "hub",
@@ -14439,7 +17269,7 @@
      "line": 134,
      "where": "flag",
      "condition": "if (s?.kind !== 'shop')",
-     "status": "active"
+     "status": "admin"
     }
    ],
    "group": "hub",
@@ -14480,7 +17310,73 @@
      "line": 165,
      "where": "flag",
      "condition": "if (!m.hasStyler(p))",
-     "status": "active"
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T11BF56",
+   "text": "{d.toFixed(1)} tiles",
+   "placeholders": [
+    {
+     "name": "d.toFixed(1)",
+     "example": "…"
+    }
+   ],
+   "example": "… tiles",
+   "uses": [
+    {
+     "file": "server/commands.ts",
+     "line": 170,
+     "where": "flag",
+     "condition": "if (d > CONFIG.styler.maxRange + 2)",
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T71090A",
+   "text": "{((m.time - last) * 1000).toFixed(0)} ms between loops",
+   "placeholders": [
+    {
+     "name": "((m.time - last) * 1000).toFixed(0)",
+     "example": "45"
+    }
+   ],
+   "example": "45 ms between loops",
+   "uses": [
+    {
+     "file": "server/commands.ts",
+     "line": 176,
+     "where": "flag",
+     "condition": "if (c === 'stylerLoop' && m.time - last < STYLER_COOLDOWN)",
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T1B028C",
+   "text": "{Math.hypot(x - p.x, y - p.y).toFixed(1)} tiles",
+   "placeholders": [
+    {
+     "name": "Math.hypot(x - p.x, y - p.y).toFixed(1)",
+     "example": "…"
+    }
+   ],
+   "example": "… tiles",
+   "uses": [
+    {
+     "file": "server/commands.ts",
+     "line": 259,
+     "where": "flag",
+     "condition": "if (Math.hypot(x - p.x, y - p.y) > CONFIG.catch.throwRange + 3)",
+     "status": "admin"
     }
    ],
    "group": "hub",
@@ -14581,6 +17477,32 @@
    "who": "UI"
   },
   {
+   "id": "T9A734F",
+   "text": "{e.name} has started! It runs until {new Date(e.endsAt).toUTCString().slice(0, 22)} UTC",
+   "placeholders": [
+    {
+     "name": "e.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "new Date(e.endsAt).toUTCString().slice(0, 22)",
+     "example": "…"
+    }
+   ],
+   "example": "Pikachu has started! It runs until … UTC",
+   "uses": [
+    {
+     "file": "server/events.ts",
+     "line": 93,
+     "where": "announce",
+     "condition": "if (now < e.endsAt)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "TC6B7AD",
    "text": "An event just ended. Thanks for playing!",
    "placeholders": [],
@@ -14629,6 +17551,100 @@
     }
    ],
    "group": "connection",
+   "who": "UI"
+  },
+  {
+   "id": "TC1A122",
+   "text": "{c.name} disconnected",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu disconnected",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 179,
+     "where": "leaveQueue",
+     "condition": "in disconnect()",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 180,
+     "where": "cancelPick",
+     "condition": "in disconnect()",
+     "status": "active"
+    }
+   ],
+   "group": "connection",
+   "who": "UI"
+  },
+  {
+   "id": "T515128",
+   "text": "{c.name} left the queue",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu left the queue",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 204,
+     "where": "leaveQueue",
+     "condition": "case 'leaveQueue'",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 472,
+     "where": "leaveQueue",
+     "condition": "case 'create'",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 490,
+     "where": "leaveQueue",
+     "condition": "case 'join'",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T5519FF",
+   "text": "{c.name} left",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu left",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 205,
+     "where": "cancelPick",
+     "condition": "case 'leaveQueue'",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 559,
+     "where": "cancelPick",
+     "condition": "in leavePrivate()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
    "who": "UI"
   },
   {
@@ -14717,6 +17733,28 @@
    "who": "Screen text"
   },
   {
+   "id": "T36A000",
+   "text": "{name} is not online",
+   "placeholders": [
+    {
+     "name": "name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is not online",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 336,
+     "where": "text:",
+     "condition": "if (!target || target.accountId === null)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
    "id": "T050D96",
    "text": "You can invite friends to your party",
    "placeholders": [],
@@ -14773,6 +17811,28 @@
    "who": "Screen text"
   },
   {
+   "id": "T171AE1",
+   "text": "{c.name} invited you to their party",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu invited you to their party",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 349,
+     "where": "text:",
+     "condition": "case 'invite'",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
    "id": "TEF9084",
    "text": "That invite is gone",
    "placeholders": [],
@@ -14790,6 +17850,28 @@
    "who": "Screen text"
   },
   {
+   "id": "TA9E311",
+   "text": "{c.name} joined a party",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu joined a party",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 363,
+     "where": "leaveQueue",
+     "condition": "case 'accept'",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "TA2DDFD",
    "text": "That party is full",
    "placeholders": [],
@@ -14800,6 +17882,57 @@
      "line": 365,
      "where": "text:",
      "condition": "if (p.members.length >= PARTY_MAX)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
+   "id": "T24920E",
+   "text": "{c.name} joined the party",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu joined the party",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 367,
+     "where": "leaveQueue",
+     "condition": "case 'accept'",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 370,
+     "where": "text:",
+     "condition": "if (m !== c)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T3815D9",
+   "text": "{c.name} declined your invite",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu declined your invite",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 380,
+     "where": "text:",
+     "condition": "if (p && p.leader.name.toLowerCase() === name.toLowerCase())",
      "status": "active"
     }
    ],
@@ -14856,6 +17989,42 @@
    ],
    "group": "hub",
    "who": "Screen text"
+  },
+  {
+   "id": "T380B59",
+   "text": "{c.name} left the party",
+   "placeholders": [
+    {
+     "name": "c.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu left the party",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 422,
+     "where": "leaveQueue",
+     "condition": "in leaveParty()",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 423,
+     "where": "cancelPick",
+     "condition": "in leaveParty()",
+     "status": "active"
+    },
+    {
+     "file": "server/hub.ts",
+     "line": 441,
+     "where": "text:",
+     "condition": "in leaveParty()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
   },
   {
    "id": "T588944",
@@ -14958,6 +18127,28 @@
      "line": 535,
      "where": "text:",
      "condition": "if (sides.size < 2 && !(lobby.rules.bots && members.length < lobby.rules.size))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Screen text"
+  },
+  {
+   "id": "T9DDB24",
+   "text": "{msg.name} is not in a match",
+   "placeholders": [
+    {
+     "name": "msg.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu is not in a match",
+   "uses": [
+    {
+     "file": "server/hub.ts",
+     "line": 726,
+     "where": "text:",
+     "condition": "if (!f?.room)",
      "status": "active"
     }
    ],
@@ -15340,6 +18531,58 @@
    "who": "UI"
   },
   {
+   "id": "TC14E53",
+   "text": "{minutes} min: {reason}",
+   "placeholders": [
+    {
+     "name": "minutes",
+     "example": "…"
+    },
+    {
+     "name": "reason",
+     "example": "3"
+    }
+   ],
+   "example": "… min: 3",
+   "uses": [
+    {
+     "file": "server/modApi.ts",
+     "line": 110,
+     "where": "logMod",
+     "condition": "minutes ?",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "UI"
+  },
+  {
+   "id": "T73FA0B",
+   "text": "{reason}{b.devices ? ` (+${r.devices} device${r.devices === 1 ? ''...}",
+   "placeholders": [
+    {
+     "name": "reason",
+     "example": "3"
+    },
+    {
+     "name": "b.devices ? ` (+${r.devices} device${r.devices === 1 ? ''...",
+     "example": "…"
+    }
+   ],
+   "example": "3…",
+   "uses": [
+    {
+     "file": "server/modApi.ts",
+     "line": 116,
+     "where": "logMod",
+     "condition": "case 'ban'",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "UI"
+  },
+  {
    "id": "T62FD01",
    "text": " (+{r.devices} device{r.devices === 1 ? '' : 's'}, {r.ips} address{r.ips === 1 ? '' : 'es'} for a week)",
    "placeholders": [
@@ -15495,6 +18738,40 @@
    ],
    "group": "admin",
    "who": "Error message"
+  },
+  {
+   "id": "T549F2A",
+   "text": "{String(b.kind)}: {String(b.name)} ({String(b.hours ?? 0)} h, x{String(b.value ?? '')})",
+   "placeholders": [
+    {
+     "name": "String(b.kind)",
+     "example": "…"
+    },
+    {
+     "name": "String(b.name)",
+     "example": "Pikachu"
+    },
+    {
+     "name": "String(b.hours ?? 0)",
+     "example": "…"
+    },
+    {
+     "name": "String(b.value ?? '')",
+     "example": "…"
+    }
+   ],
+   "example": "…: Pikachu (… h, x…)",
+   "uses": [
+    {
+     "file": "server/modApi.ts",
+     "line": 200,
+     "where": "logMod",
+     "condition": "if (req.method === 'POST' && path === '/api/mod/events')",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "UI"
   },
   {
    "id": "T6AD332",
@@ -15731,6 +19008,44 @@
    "who": "Dashboard page"
   },
   {
+   "id": "T6F3E72",
+   "text": "{p.name}: {LEVELS_ON ? `level ${p.progress.level} ` : ''}trainer{p.title ? `, ${p.title}` : ''}. {s.wins} wins in {s.matches} matches.",
+   "placeholders": [
+    {
+     "name": "p.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "LEVELS_ON ? `level ${p.progress.level} ` : ''",
+     "example": "12"
+    },
+    {
+     "name": "p.title ? `, ${p.title}` : ''",
+     "example": "Master Ranger"
+    },
+    {
+     "name": "s.wins",
+     "example": "3"
+    },
+    {
+     "name": "s.matches",
+     "example": "3"
+    }
+   ],
+   "example": "Pikachu: 12trainerMaster Ranger. 3 wins in 3 matches.",
+   "uses": [
+    {
+     "file": "server/profilePage.ts",
+     "line": 52,
+     "where": "esc",
+     "condition": "in profilePage()",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Dashboard page"
+  },
+  {
    "id": "T1A1BC6",
    "text": "level {p.progress.level} ",
    "placeholders": [
@@ -15753,21 +19068,29 @@
    "who": "Dashboard page"
   },
   {
-   "id": "TE42DBF",
-   "text": ", {p.title}",
+   "id": "T5D1E48",
+   "text": "{p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1}",
    "placeholders": [
     {
-     "name": "p.title",
-     "example": "Master Ranger"
+     "name": "p.progress.into",
+     "example": "…"
+    },
+    {
+     "name": "p.progress.next",
+     "example": "…"
+    },
+    {
+     "name": "p.progress.level + 1",
+     "example": "12"
     }
    ],
-   "example": ", Master Ranger",
+   "example": "… / … XP to level 12",
    "uses": [
     {
      "file": "server/profilePage.ts",
-     "line": 52,
-     "where": "esc",
-     "condition": "p.title ?",
+     "line": 92,
+     "where": "",
+     "condition": "p.progress.next ?",
      "status": "active"
     }
    ],
@@ -15852,6 +19175,28 @@
    "who": "UI"
   },
   {
+   "id": "TD26142",
+   "text": "{msg.f.length} frames in one message",
+   "placeholders": [
+    {
+     "name": "msg.f.length",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "(a reason) frames in one message",
+   "uses": [
+    {
+     "file": "server/room.ts",
+     "line": 384,
+     "where": "flag",
+     "condition": "if (msg.f.length > 12)",
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
    "id": "T095141",
    "text": "move keys {fr[1]},{fr[2]}",
    "placeholders": [
@@ -15871,7 +19216,29 @@
      "line": 387,
      "where": "flag",
      "condition": "if (Math.hypot(Number(fr[1]) || 0, Number(fr[2]) || 0) > 1.01)",
-     "status": "active"
+     "status": "admin"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T96C43D",
+   "text": "{Math.hypot(msg.ax - me.x, msg.ay - me.y).toFixed(0)} tiles away",
+   "placeholders": [
+    {
+     "name": "Math.hypot(msg.ax - me.x, msg.ay - me.y).toFixed(0)",
+     "example": "(a reason)"
+    }
+   ],
+   "example": "(a reason) tiles away",
+   "uses": [
+    {
+     "file": "server/room.ts",
+     "line": 400,
+     "where": "flag",
+     "condition": "if (Math.hypot(msg.ax - me.x, msg.ay - me.y) > 45)",
+     "status": "admin"
     }
    ],
    "group": "hub",
@@ -24740,13 +28107,23 @@
    "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
   },
   {
-   "id": "T4AA9A9",
-   "text": "SPA {st.spa}  SPD {st.spd}  SPE {st.spe}",
-   "why": "two spaces in a row"
-  },
-  {
    "id": "T40B8A5",
    "text": "Trainer level {pr.level}",
+   "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
+  },
+  {
+   "id": "T5E63A7",
+   "text": "{pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level...}{p.online ? 'Online now · ' : ''}trainer since {new Date(p.joined).toLocaleDateString()} · {p.pc} Pokémon in their PC",
+   "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
+  },
+  {
+   "id": "TD351A8",
+   "text": "{pr.into} / {pr.next} XP to level {pr.level + 1} · ",
+   "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
+  },
+  {
+   "id": "T5D1E48",
+   "text": "{p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1}",
    "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
   },
   {

@@ -100,12 +100,13 @@ function catchOn(st: BotState, t: Trainer): Mon | null {
 }
 
 /** Sets (or clears) the wild Pokémon a trainer is out to catch. */
-export function setCatchTarget(t: Trainer, w: Mon | null): void {
+export function setCatchTarget(t: Trainer, w: Mon | null, throwOnly = false): void {
   const st = botState(t);
   if (st.catchTarget !== w) {
     st.catchTarget = w;
     st.balls = 0;
   }
+  st.throwOnly = !!w && throwOnly;
 }
 
 /**
@@ -126,19 +127,64 @@ function tryThrow(match: Match, t: Trainer): void {
     if (st.catchTarget && (st.catchTarget.fainted || !st.catchTarget.wild || st.balls >= 6 || ballCount(t) === 0)) setCatchTarget(t, null);
     return;
   }
+  // Watches it for a moment (which way and how fast it is moving) before throwing.
+  const obs = st.seen;
+  if (!obs || obs.id !== w.id || match.time - obs.at > 1) {
+    st.seen = { id: w.id, x: w.x, y: w.y, at: match.time };
+    return;
+  }
+  if (match.time - obs.at < 0.3) return;
   if (w.captured || match.throws.some((th) => th.thrower === t && th.phase !== 'done')) return;
   const d = Math.hypot(w.x - t.x, w.y - t.y);
-  if (d > CONFIG.catch.throwRange - 0.5 || match.duelOf(t)) return;
+  if (d > CONFIG.catch.throwRange - 0.3 || match.duelOf(t)) return;
   const pick = bestBall(match, t, w);
   if (!pick) return;
   // Weak (the team is holding back), or a ball good enough to try already (a Quick Ball at the start).
+  // A ball-only try (a team too weak to wear it down) takes the odds it gets, a few balls at most.
   const weak = w.hp < w.maxHp * 0.25;
-  if (!weak && pick.chance < 0.5) return;
-  // Thrown where it stands now: a ball lands where it was aimed (a moving target can be missed).
-  if (match.throwBall(t, pick.slot, { x: w.x, y: w.y })) {
+  if (st.throwOnly) {
+    if (st.balls >= THROW_ONLY_BALLS || pick.chance < 0.08) return;
+  } else if (!weak && pick.chance < 0.5) return;
+  // Aimed where it will be when the ball comes down, as a player leads a walking target (the ball
+  // lands where it was aimed, so a target that changes course can still be missed).
+  const flight = Math.max(0.35, d / 7);
+  const span = match.time - obs.at;
+  const vx = (w.x - obs.x) / span;
+  const vy = (w.y - obs.y) / span;
+  const aim = { x: w.x + vx * flight, y: w.y + vy * flight };
+  if (Math.hypot(aim.x - t.x, aim.y - t.y) > CONFIG.catch.throwRange) return;
+  if (match.throwBall(t, pick.slot, aim)) {
+    st.seen = undefined;
     st.balls++;
     st.thrown++;
   }
+}
+
+/** Balls a trainer spends on one ball-only try. */
+export const THROW_ONLY_BALLS = 3;
+
+/**
+ * A wild to try for with a ball alone: for a small team (one or two Pokémon) that can't beat what is
+ * about. One it can see (within huntRange), that it would want, in the light, that its balls give a
+ * fair chance at full HP. The trainer creeps to just outside the wild's notice and throws.
+ */
+export function throwOnlyTarget(match: Match, t: Trainer, banned: (key: string) => boolean): Mon | null {
+  const team = t.party.filter((m) => !m.captured);
+  if (team.length > 2 || ballCount(t) === 0 || t.party.length >= match.partyCap) return null;
+  const top = team.reduce((a, m) => Math.max(a, m.level), 1);
+  const light = Number.isFinite(match.darkRadius) ? match.darkRadius - 3 : Infinity;
+  let best: { w: Mon; score: number } | null = null;
+  for (const w of match.wilds) {
+    if (w.fainted || w.captured || w.alpha || w.landBoss || w.target || banned(`m${w.id}`)) continue;
+    if (w.level > top + 3 || !wantsCatch(match, t, w)) continue;
+    const d = Math.hypot(w.x - t.x, w.y - t.y);
+    if (d > CONFIG.trainers.huntRange || Math.hypot(w.x - match.centerX, w.y - match.centerY) > light) continue;
+    const ball = bestBall(match, t, w);
+    if (!ball || ball.chance < 0.08) continue;
+    const score = ball.chance * 20 - d;
+    if (!best || score > best.score) best = { w, score };
+  }
+  return best?.w ?? null;
 }
 
 /** Bag slot of the first item matching. */
@@ -288,6 +334,7 @@ export function shopFor(match: Match, t: Trainer): Shop | null {
   let bd = 70;
   for (const s of match.shops) {
     if (!wants(t, s, 200, match.partyCap)) continue;
+    if (Math.hypot(s.npc.x - match.centerX, s.npc.y - match.centerY) > match.darkRadius - 3) continue;
     const d = Math.hypot(s.npc.x - t.x, s.npc.y - t.y);
     if (d < bd) {
       bd = d;
@@ -314,8 +361,11 @@ export function shopAt(match: Match, t: Trainer, shop: Shop): void {
 /** Bag, balls: every second or so (not in a trainer battle: duelHands does those). */
 export function botTick(match: Match, t: Trainer, dt: number): void {
   const st = botState(t);
-  // A player's Pokémon start on Attack; so do a bot's (Guard would leave its team out of its fights).
-  for (const m of t.party) if (!m.captured && !isRoaming(m) && m.behavior !== 'aggressive' && !m.duelId) m.behavior = 'aggressive';
+  // Behaviours, set the way a player sets them on the party cards: Attack normally; Passive while it
+  // backs off from a wild that would beat it, or creeps up on one to throw a ball (a team on Attack
+  // would start the very fight it is avoiding).
+  const want = st.throwOnly || (t.ai === 'flee' && st.why === 'wild') ? 'passive' : 'aggressive';
+  for (const m of t.party) if (!m.captured && !isRoaming(m) && m.behavior !== want && !m.duelId) m.behavior = want;
   tryThrow(match, t);
   st.bagT -= dt;
   if (st.bagT > 0) return;

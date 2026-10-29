@@ -83,7 +83,8 @@
     "speed": 4.8,
     "fleeHpFraction": 0.3,
     "_huntComment": "Computer trainers hunt the wild Pokemon within huntRange tiles that their team beats comfortably (src/sim/ai.ts fightMargin: the matchup in HP, moves, types and stats, not level alone; Alphas and land bosses only with a clear edge), catch the ones worth a slot, and go back to an outpost within healTripRange tiles when worn down (party HP at or under huntHpFraction, or half the team fainted). Passing a healer, they ask for a heal only when under three quarters HP or someone fainted.",
-    "huntRange": 30,
+    "_viewComment": "huntRange: how far a computer trainer notices wild Pokémon, about what a player sees on screen (it explores to find more).",
+    "huntRange": 16,
     "huntHpFraction": 0.35,
     "healTripRange": 45
   },

@@ -5,7 +5,7 @@
  */
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
-import { CONFIG, bodyRadius, contactReach, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, type MoveDef, type StatusKind } from './data';
+import { CONFIG, MOVES, bodyRadius, contactReach, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, movesAt, type MoveDef, type StatusKind } from './data';
 import { ITEMS, type BallKind } from './items';
 import { incapable, type InventorySlot, type Mon, type Trainer } from './entities';
 import type { Duel } from './match';
@@ -148,7 +148,7 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
  * The damage a move does on average (computeDamage without the dice: the 0.85-1 roll at its middle,
  * crits at their odds). For trainers sizing up a fight.
  */
-export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef): number {
+export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef, seen = false): number {
   const eff = effectiveness(m.type, defender.types);
   if (m.category === 'status' || m.power <= 0 || eff === 0) return 0;
   const a = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
@@ -156,7 +156,8 @@ export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef): number
   let dmg = (((2 * attacker.level) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
-  const held = attacker.heldItem ? ITEMS[attacker.heldItem] : undefined;
+  // Someone else's Pokémon (`seen`): what it holds can't be seen, so it isn't counted.
+  const held = attacker.heldItem && !seen ? ITEMS[attacker.heldItem] : undefined;
   if (held?.effect === 'choice-band' && m.category === 'physical') dmg *= 1.5;
   if (held?.effect === 'life-orb') dmg *= 1.3;
   if (held?.effect === 'type-boost' && held.boostType === m.type) dmg *= 1.2;
@@ -170,13 +171,16 @@ export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef): number
 /**
  * Damage a second `attacker` deals `defender` while it keeps casting: each damaging move's average
  * hit over its cooldown, capped by how often a Pokémon gets a move off at all (`actEvery` seconds).
+ * `seen`: someone else's Pokémon, judged only on what a player could see or know of it (its species,
+ * level, HP bar and stat changes): the moves its species knows at that level, no held item.
  */
-export function damageRate(attacker: Mon, defender: Mon, actEvery = 1.1): number {
+export function damageRate(attacker: Mon, defender: Mon, actEvery = 1.1, seen = false): number {
   let sum = 0;
   let top = 0;
-  for (const id of attacker.moves) {
+  for (const id of seen ? movesAt(attacker.species, attacker.level) : attacker.moves) {
+    if (!MOVES.has(id)) continue;
     const mv = move(id);
-    const dmg = expectedDamage(attacker, defender, mv);
+    const dmg = expectedDamage(attacker, defender, mv, seen);
     if (dmg <= 0) continue;
     sum += dmg / Math.max(0.5, mv.cooldown + (mv.cast ?? CONFIG.battle.castSeconds));
     top = Math.max(top, dmg);
@@ -878,7 +882,9 @@ export class BattleSystem {
       }
       // The move it just used counts for a little less, so a Pokémon mixes its moves instead of
       // firing its single best one every time it comes off cooldown.
-      const s = moveScore(attacker, target, mv) * (i === attacker.lastSlot ? 0.6 : 1);
+      // (Trainers' Pokémon, careful, just take the best move that is ready: no marking down a move
+      // for having been used last.)
+      const s = moveScore(attacker, target, mv) * (!careful && i === attacker.lastSlot ? 0.6 : 1);
       if (s > bestScore) {
         bestScore = s;
         best = i;

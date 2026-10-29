@@ -47,6 +47,13 @@ interface Track {
   out?: { at: number; how: string };
   downs: number;
   snaps: Record<string, { size: number; best: number; avg: number }>;
+  /** Seconds spent in the storm, chasing a rival without a battle, and keeping away from rivals. */
+  stormS: number;
+  chaseS: number;
+  avoidS: number;
+  duels: number;
+  hunts: number;
+  starter: string;
 }
 
 const results: unknown[] = [];
@@ -55,6 +62,11 @@ const flipKinds = new Map<string, number>();
 const fights: Array<{ margin: number; won: boolean; hpLost: number; big: boolean }> = [];
 const open = new Map<string, { t: Trainer; w: Mon; margin: number; hp0: number; big: boolean; at: number }>();
 const agg = { matches: 0, minutes: 0, out: {} as Record<string, number>, winnerParty: 0, winnerBest: 0 };
+/** Every stretch a bot spent stuck (wanting to walk somewhere, not fighting, getting nowhere) of 5 s or more. */
+const stuckEpisodes: Array<{ secs: number; where: string }> = [];
+/** The final two: their levels when two were left, and at the end. */
+const finals: string[] = [];
+let duelsAll = 0;
 
 for (let k = 0; k < matches; k++) {
   const seed = seed0 + k;
@@ -69,6 +81,7 @@ for (let k = 0; k < matches; k++) {
     tracks.set(t, {
       t, camp: { x: t.x, y: t.y, since: 0, best: 0 }, stuck: { x: t.x, y: t.y, since: 0, best: 0 }, outpostS: 0, aliveS: 0,
       keys: [], flips: 0, bans: 0, evolutions: 0, itemsUsed: 0, catches: 0, throws: 0, states: {}, downs: 0, snaps: {},
+      stormS: 0, chaseS: 0, avoidS: 0, duels: 0, hunts: 0, starter: `${t.party[0]?.name} ${t.party[0]?.level}`,
     });
   }
   const dt = 1 / 60;
@@ -104,6 +117,10 @@ for (let k = 0; k < matches; k++) {
       if (e.type === 'caught' && e.by) { const x = tracks.get(e.by); if (x) x.catches++; }
       if (e.type === 'eliminated' && tr) { const x = tracks.get(tr); if (x && !x.out) x.out = { at: m.time, how: tr.grabbed != null ? 'storm' : tr.lastKo === 'trainer' ? 'trainer' : tr.lastKo ?? 'other' }; }
       if (e.type === 'downed' && tr) { const x = tracks.get(tr); if (x) x.downs++; }
+      if (e.type === 'duel-start') {
+        duelsAll++;
+        for (const s of [e.duel.a, e.duel.b]) { const x = tracks.get(s.trainer); if (x) x.duels++; }
+      }
     }
     m.battle.events.length = 0;
     if (steps % 60 !== 0) continue;
@@ -113,24 +130,36 @@ for (let k = 0; k < matches; k++) {
       open.delete(key);
     }
     const now = m.time;
+    if (left().length === 2 && !finals.some((f) => f.startsWith(`${seed}:`))) {
+      finals.push(`${seed}: two left at ${(now / 60).toFixed(1)} min: ` + left().map((t) => `${t.name} [${t.party.filter((p) => !p.captured).map((p) => p.level).join(',')}]`).join(' vs '));
+    }
     for (const x of tracks.values()) {
       const t = x.t;
       if (!t.alive) continue;
       x.aliveS++;
       x.states[t.ai] = (x.states[t.ai] ?? 0) + 1;
-      if (t.downUntil != null) continue;
+      if (t.downUntil != null) {
+        x.stuck = { x: t.x, y: t.y, since: now, best: x.stuck.best, at: undefined };
+        continue;
+      }
       x.throws = (t.bot as { thrown?: number } | undefined)?.thrown ?? 0;
-      const fighting = !!t.duelId || t.party.some((p) => p.target && !p.fainted);
+      const fighting = !!t.duelId || t.party.some((p) => p.target && !p.fainted && Math.hypot(p.target.x - p.x, p.target.y - p.y) < 8);
+      if (m.isDark(t.x, t.y)) x.stormS++;
+      if (t.ai === 'engage' && t.aiKey !== 'last' && !t.duelId) x.chaseS++;
+      if (t.ai === 'flee' && t.bot?.why === 'rival') x.avoidS++;
+      if (t.ai === 'hunt' && t.aiKey && t.aiKey !== x.keys.at(-1)) x.hunts++;
       // camping: stays within 6 tiles of where it settled
       if (Math.hypot(t.x - x.camp.x, t.y - x.camp.y) > 6 || fighting) x.camp = { x: t.x, y: t.y, since: now, best: x.camp.best };
       x.camp.best = Math.max(x.camp.best, now - x.camp.since);
       // stuck: wants to go somewhere 2+ tiles off and isn't moving
       const far = t.aiTarget && Math.hypot(t.aiTarget.x - t.x, t.aiTarget.y - t.y) > 2 && !t.duelId && !fighting;
-      if (!far || Math.hypot(t.x - x.stuck.x, t.y - x.stuck.y) > 0.5) x.stuck = { x: t.x, y: t.y, since: now, best: x.stuck.best, at: x.stuck.at };
-      if (now - x.stuck.since > x.stuck.best) {
-        x.stuck.best = now - x.stuck.since;
-        x.stuck.at = `${t.ai}/${t.aiKey ?? '-'} at ${t.x.toFixed(1)},${t.y.toFixed(1)} -> ${t.aiTarget ? `${t.aiTarget.x.toFixed(1)},${t.aiTarget.y.toFixed(1)}` : '-'} t=${Math.round(now)}`;
+      if (!far || Math.hypot(t.x - x.stuck.x, t.y - x.stuck.y) > 1) {
+        const secs = now - x.stuck.since;
+        if (secs >= 5) stuckEpisodes.push({ secs, where: `${t.name} ${x.stuck.at ?? ''}` });
+        x.stuck = { x: t.x, y: t.y, since: now, best: x.stuck.best, at: undefined };
       }
+      if (far && !x.stuck.at) x.stuck.at = `${t.ai}/${t.aiKey ?? '-'} at ${t.x.toFixed(1)},${t.y.toFixed(1)} -> ${t.aiTarget!.x.toFixed(1)},${t.aiTarget!.y.toFixed(1)} t=${Math.round(now)}`;
+      if (now - x.stuck.since > x.stuck.best) x.stuck.best = now - x.stuck.since;
       if (m.outposts.some((o) => Math.hypot(o.x - t.x, o.y - t.y) < 4)) x.outpostS++;
       const key = t.aiKey ?? (t.ai === 'flee' ? `flee-${t.bot?.why ?? ''}` : `${t.ai}`);
       if (key !== x.keys.at(-1)) {
@@ -160,6 +189,7 @@ for (let k = 0; k < matches; k++) {
       name: x.t.name, result: how, outAt: x.out ? +(x.out.at / 60).toFixed(1) : null,
       team: team.map((p) => `${p.name} ${p.level}`).join(', '),
       catches: x.catches, throws: x.throws, items: x.t.bot?.used ?? 0, money: x.t.money, evolutions: x.evolutions, downs: x.downs,
+      stormS: x.stormS, chaseS: x.chaseS, avoidS: x.avoidS, duels: x.duels, hunts: x.hunts, starter: x.starter,
       campMax: Math.round(x.camp.best), stuckMax: Math.round(x.stuck.best), stuckAt: x.stuck.best > 20 ? x.stuck.at : undefined, outpostPct: Math.round((100 * x.outpostS) / Math.max(1, x.aliveS)),
       flips: x.flips, bans: x.bans, snaps: x.snaps,
       states: Object.fromEntries(Object.entries(x.states).map(([s, n]) => [s, Math.round((100 * n) / Math.max(1, x.aliveS))])),
@@ -175,8 +205,8 @@ for (let k = 0; k < matches; k++) {
   if (!asJson) {
     console.log(`\n=== match seed ${seed}: ${(m.time / 60).toFixed(1)} min, winner ${winner?.name ?? 'none'} ===`);
     for (const r of rows) {
-      console.log(`${r.name.padEnd(8)} ${String(r.result).padEnd(8)} out@${String(r.outAt ?? '-').padEnd(5)} catch ${r.catches}/${r.throws} items ${r.items} ₽${r.money} evo ${r.evolutions} downs ${r.downs} camp ${r.campMax}s stuck ${r.stuckMax}s outpost ${r.outpostPct}% flips ${r.flips} bans ${r.bans} | 5m ${fmt(r.snaps['5m'])} 10m ${fmt(r.snaps['10m'])} end ${fmt(r.snaps.end)} | ${r.team}`);
-      console.log(`         states ${JSON.stringify(r.states)}${r.stuckAt ? ` STUCK ${r.stuckAt}` : ''}`);
+      console.log(`${r.name.padEnd(8)} ${String(r.result).padEnd(8)} out@${String(r.outAt ?? '-').padEnd(5)} start ${r.starter} catch ${r.catches}/${r.throws} hunts ${r.hunts} items ${r.items} ₽${r.money} evo ${r.evolutions} downs ${r.downs} duels ${r.duels} chase ${r.chaseS}s avoid ${r.avoidS}s storm ${r.stormS}s camp ${r.campMax}s stuck ${r.stuckMax}s outpost ${r.outpostPct}% flips ${r.flips} | 5m ${fmt(r.snaps['5m'])} 10m ${fmt(r.snaps['10m'])} end ${fmt(r.snaps.end)} | ${r.team}`);
+      console.log(`         states ${JSON.stringify(r.states)}`);
     }
   }
 }
@@ -190,6 +220,14 @@ const calib = bins.map(([a, b]) => {
   return { margin: `${a}-${b}`, n: f.length, won: f.length ? Math.round((100 * f.filter((x) => x.won).length) / f.length) : null, hpLost: f.length ? Math.round((100 * f.reduce((q, x) => q + x.hpLost, 0)) / f.length) : null, big: f.filter((x) => x.big).length };
 });
 if (!asJson) console.log('FIGHTS by margin', JSON.stringify(calib));
+if (!asJson) {
+  stuckEpisodes.sort((a, b) => b.secs - a.secs);
+  const over = (n: number) => stuckEpisodes.filter((e) => e.secs >= n).length;
+  console.log(`STUCK episodes: ${stuckEpisodes.length} of 5 s+, ${over(10)} of 10 s+, ${over(20)} of 20 s+; longest:`);
+  for (const e of stuckEpisodes.slice(0, 6)) console.log(`  ${e.secs.toFixed(0)} s  ${e.where}`);
+  console.log(`DUELS ${duelsAll} in ${agg.matches} matches`);
+  for (const f of finals) console.log(`FINAL ${f}`);
+}
 if (!asJson) console.log('FLIPS', JSON.stringify([...flipKinds].sort((a, b) => b[1] - a[1]).slice(0, 12)));
 if (asJson) console.log(JSON.stringify({ summary, calib, results }, null, 1));
 else console.log('\nSUMMARY', JSON.stringify(summary));

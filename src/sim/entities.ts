@@ -218,7 +218,7 @@ export interface Trainer {
   /** AI: targets it gave up on (unreachable), by key, until a match time. */
   aiBans?: Record<string, number>;
   /** AI: where it was a second ago, and until when it is working itself free of a notch (Match.stepAi). */
-  wedge?: { x: number; y: number; at: number; until: number };
+  wedge?: { x: number; y: number; at: number; until: number; wp?: { x: number; y: number } };
   /** A computer trainer's hands (src/sim/bot.ts): the wild it is out to catch, balls thrown at it, timers. */
   bot?: BotState;
   /** Ranger outpost heal progress. */
@@ -257,6 +257,12 @@ export interface Trainer {
 export interface BotState {
   /** The wild Pokémon it is wearing down to catch: its team holds back once it is weak. */
   catchTarget: Mon | null;
+  /** Trying for the catch target with balls alone, from out of its reach (no fight first). */
+  throwOnly?: boolean;
+  /** Its nerve, 0 cautious to 1 bold: how readily it seeks or avoids a trainer battle. */
+  bold?: number;
+  /** Where it last noted its catch target (to lead a ball at a walking one). */
+  seen?: { id: number; x: number; y: number; at: number };
   /** Balls thrown at the current catch target. */
   balls: number;
   /** Seconds until it next looks through its bag. */

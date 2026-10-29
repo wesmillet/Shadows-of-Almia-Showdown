@@ -73,4 +73,104 @@ describe('computer trainers', async () => {
     const th = m.throws.find((x) => x.thrower === b)!;
     expect(Math.hypot(th.targetX - th.startX, th.targetY - th.startY)).toBeLessThanOrEqual(CONFIG.catch.throwRange);
   });
+
+  it('keep the levels they earned when the final two begin (no catch-up for the team behind)', () => {
+    const was = CONFIG.duel.finalShowdown;
+    (CONFIG.duel as { finalShowdown: boolean }).finalShowdown = true;
+    try {
+      // A human behind a bot, then a bot behind a human: neither gets lifted.
+      for (const humanBehind of [true, false]) {
+        const m = newMatch(8, 1);
+        const p = m.seats[0]!.trainer;
+        const b = m.trainers[0]!;
+        const [low, high] = humanBehind ? [p, b] : [b, p];
+        low.party = [m.makeMon('0025', 6, low, low.x, low.y), m.makeMon('0004', 9, low, low.x, low.y)];
+        high.party = [m.makeMon('0009', 48, high, high.x, high.y)];
+        const before = low.party.map((x) => [x.dex, x.level]);
+        for (let i = 0; i < 60 * 12 && !m.finalStarted; i++) m.step(1 / 60);
+        expect(m.finalStarted).toBe(true);
+        expect(low.party.map((x) => [x.dex, x.level])).toEqual(before);
+      }
+    } finally {
+      (CONFIG.duel as { finalShowdown: boolean }).finalShowdown = was;
+    }
+  });
+
+  it('take the storm like anyone: they walk out of it, and one that can not get out in time passes out', () => {
+    const m = newMatch(9, 1);
+    const p = m.seats[0]!.trainer;
+    const b = m.trainers[0]!;
+    const freeze = (r: number) => {
+      m.darkness.radius = r;
+      m.darkness.targetRadius = r;
+      m.darkness.nextPulseIn = 9999;
+    };
+    // A bot a few tiles out in the storm walks back into the light; its exposure counts while it does.
+    const spot = (dist: number) => {
+      for (let a = 0; a < Math.PI * 2; a += 0.05) {
+        const x = m.centerX + Math.cos(a) * dist;
+        const y = m.centerY + Math.sin(a) * dist;
+        if (m.ground.reachable(Math.floor(x), Math.floor(y)) && m.ground.walkable(Math.floor(x), Math.floor(y))) return { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.5 };
+      }
+      throw new Error('no spot');
+    };
+    // (Kept out of a trainer battle with each other, which would pause the storm for both.)
+    p.duelReadyAt = Infinity;
+    b.duelReadyAt = Infinity;
+    // (no wild Pokémon about to get in the way)
+    m.wilds = [];
+    freeze(60);
+    const s = spot(66);
+    b.x = b.px = s.x;
+    b.y = b.py = s.y;
+    m.placeParty(b);
+    m.step(1 / 60);
+    expect(m.isDark(b.x, b.y)).toBe(true);
+    for (let i = 0; i < 60 * 4; i++) m.step(1 / 60);
+    expect(b.stormT ?? 0).toBeGreaterThan(0);
+    expect(Math.hypot(b.x - m.centerX, b.y - m.centerY)).toBeLessThan(66);
+    // A bot and a human far out in the storm, with no way back in time: both pass out at the same exposure.
+    freeze(5);
+    const far = spot(120);
+    for (const t of [p, b]) {
+      t.x = t.px = far.x;
+      t.y = t.py = far.y;
+      t.stormT = 0;
+      t.downUntil = undefined;
+      for (const mon of t.party) {
+        mon.fainted = false;
+        mon.hp = mon.maxHp;
+        mon.status = null;
+        mon.drowsy = 0;
+      }
+      m.placeParty(t);
+    }
+    const tol = m.trainerStormSeconds(b);
+    expect(tol).toBe(m.trainerStormSeconds(p));
+    // Exposure builds the same for both, and both are out of the match: their Pokémon fall asleep
+    // and faint in the storm, or they pass out and Darkrai takes them (whichever comes first).
+    const outAt: Record<string, number> = {};
+    for (let i = 0; i < 60 * (tol + 4); i++) {
+      m.over = false;
+      m.step(1 / 60);
+      if (i === 60 * 5) expect(b.stormT).toBeCloseTo(p.stormT ?? 0, 5);
+      for (const t of [p, b]) if ((!t.alive || t.grabbed != null) && outAt[t.name] === undefined) outAt[t.name] = m.time;
+    }
+    expect(outAt[b.name]).toBeDefined();
+    expect(outAt[p.name]).toBeDefined();
+  });
+
+  it("leave a player's own aiming alone: a manual move fires into open space or past a wall", () => {
+    const m = newMatch(10, 0);
+    const p = m.seats[0]!.trainer;
+    const mon = p.party[0]!;
+    m.withSeat(m.seats[0]!, () => {
+      expect(m.takeControl(mon)).toBe(true);
+      // nothing anywhere near: aimed into empty ground 6 tiles off, it still goes
+      m.wilds = [];
+      m.aim = { x: mon.x + 6, y: mon.y };
+      const slot = mon.moves.findIndex((id) => id);
+      expect(m.playerCast(slot)).toBe('cast');
+    });
+  });
 });

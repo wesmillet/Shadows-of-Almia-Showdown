@@ -4,7 +4,7 @@
  */
 import type { Connection } from '../net/connection';
 import type { FriendEntry, ServerMsg } from '../net/protocol';
-import { ACHIEVEMENTS } from '../net/progression';
+import { ACHIEVEMENTS, LEVELS_ON } from '../net/progression';
 import { el, overlayRoot } from './overlay';
 
 const ACTIVITY: Record<FriendEntry['activity'], [string, string]> = {
@@ -388,27 +388,33 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
           head.append(t);
         }
         const pr = p.progress;
-        const lvl = el('div', '', `Trainer level ${pr.level}`);
-        lvl.style.marginTop = '4px';
-        const bar = el('div');
-        bar.style.cssText = 'height:8px;border:2px solid #4a3424;background:#e9dcc2;max-width:260px;margin:4px 0';
-        const fill = el('div');
-        fill.style.cssText = `height:100%;background:#f2c24a;width:${pr.next ? Math.round((pr.into / pr.next) * 100) : 100}%`;
-        bar.append(fill);
-        body.append(lvl, bar, el('div', 'almia-note', `${pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level + 1} · ` : ''}${p.online ? 'Online now · ' : ''}trainer since ${new Date(p.joined).toLocaleDateString()} · ${p.pc} Pokémon in their PC`));
+        // Trainer levels are hidden for now (LEVELS_ON): no level, bar or XP while they are.
+        if (LEVELS_ON) {
+          const lvl = el('div', '', `Trainer level ${pr.level}`);
+          lvl.style.marginTop = '4px';
+          const bar = el('div');
+          bar.style.cssText = 'height:8px;border:2px solid #4a3424;background:#e9dcc2;max-width:260px;margin:4px 0';
+          const fill = el('div');
+          fill.style.cssText = `height:100%;background:#f2c24a;width:${pr.next ? Math.round((pr.into / pr.next) * 100) : 100}%`;
+          bar.append(fill);
+          body.append(lvl, bar);
+        }
+        body.append(el('div', 'almia-note', `${LEVELS_ON && pr.next ? `${pr.into} / ${pr.next} XP to level ${pr.level + 1} · ` : ''}${p.online ? 'Online now · ' : ''}trainer since ${new Date(p.joined).toLocaleDateString()} · ${p.pc} Pokémon in their PC`));
         const st = p.stats;
         const t = el('table', 'almia-board');
-        t.innerHTML = '<tr><th>Matches</th><th>Wins</th><th>Best</th><th>Catches</th><th>Knockouts</th></tr>';
+        t.innerHTML = '<tr><th>Matches</th><th>Wins</th><th>Best</th><th>Eliminations</th><th>Catches</th><th>Knockouts</th></tr>';
         const tr = el('tr');
-        for (const v of [st.matches, st.wins, st.bestPlace ?? '-', st.catches, st.knockouts]) tr.append(el('td', '', String(v)));
+        for (const v of [st.matches, st.wins, st.bestPlace ?? '-', st.eliminations ?? 0, st.catches, st.knockouts]) tr.append(el('td', '', String(v)));
         t.append(tr);
         body.append(t);
         // Achievements: earned ones bright, the rest faint with what they take.
         const have = new Set(p.achievements.map((a) => a.id));
-        body.append(el('h3', '', `Achievements · ${have.size}/${ACHIEVEMENTS.length}`));
+        // (the trainer-level ones only while trainer levels are shown)
+        const shown = ACHIEVEMENTS.filter((a) => LEVELS_ON || !a.id.startsWith('level_'));
+        body.append(el('h3', '', `Achievements · ${shown.filter((a) => have.has(a.id)).length}/${shown.length}`));
         const grid = el('div');
         grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px';
-        for (const a of ACHIEVEMENTS) {
+        for (const a of shown) {
           const b = el('div');
           b.style.cssText = `border:2px solid #4a3424;background:#fffaf0;padding:5px 6px;font-size:12px;${have.has(a.id) ? '' : 'opacity:0.4'}`;
           b.title = `${a.desc}${a.title ? ` · title: ${a.title}` : ''}${a.look ? ' · unlocks a look' : ''}`;
@@ -423,7 +429,7 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
           for (const m of p.recent.slice(0, 8)) {
             const row = el('div', 'almia-row');
             const what = m.outcome === 'win' ? 'Won' : `#${m.place}`;
-            const extra = [m.mode === 'private' ? 'Private' : 'Public', m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
+            const extra = [m.mode === 'private' ? 'Private' : 'Public', LEVELS_ON && m.xp !== null ? `+${m.xp} XP` : ''].filter(Boolean).join(' · ');
             const nm = el('span', 'nm', `${what} · ${extra}`);
             nm.append(el('span', 'sub', new Date(m.at).toLocaleString()));
             row.append(nm);

@@ -102,6 +102,11 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
       const i = int(a[0], 0, 11);
       return i !== null && m.swapLead(i) ? '' : '';
     }
+    case 'behavior': {
+      const i = int(a[0], 0, 11);
+      if (i !== null) m.cycleBehavior(i);
+      return '';
+    }
     case 'unequip': {
       const i = int(a[0], 0, 11);
       return i === null ? '' : m.unequip(p, i);
@@ -193,15 +198,19 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
     case 'teach': {
       const slot = int(a[0], 0, bag - 1);
       const r = int(a[1], -1, 3);
-      return slot === null || r === null ? '' : m.teach(p, slot, r);
+      // the Pokémon it was dragged onto (-1 or absent: the lead)
+      const target = a[2] === undefined ? -1 : int(a[2], -1, 11);
+      return slot === null || r === null || target === null ? '' : m.teach(p, slot, r, target);
     }
     case 'equip': {
       const slot = int(a[0], 0, bag - 1);
-      return slot === null ? '' : m.equip(p, slot);
+      const target = a[1] === undefined ? -1 : int(a[1], -1, 11);
+      return slot === null || target === null ? '' : m.equip(p, slot, target);
     }
     case 'useItem': {
       const slot = int(a[0], 0, bag - 1);
-      return slot === null ? '' : m.useItem(p, slot);
+      const target = a[1] === undefined ? -1 : int(a[1], -1, 11);
+      return slot === null || target === null ? '' : m.useItem(p, slot, target);
     }
     case 'discard': {
       const t = tab(a[0]);

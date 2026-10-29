@@ -91,7 +91,7 @@
  },
  {
   "file": "src/sim/match.ts",
-  "line": 1920,
+  "line": 1944,
   "text": "{tx + dx},{ty + dy}"
  },
  {
@@ -186,7 +186,7 @@
  },
  {
   "file": "src/ui/matchScreen.ts",
-  "line": 1922,
+  "line": 1979,
   "text": "{it.ball} ball"
  },
  {

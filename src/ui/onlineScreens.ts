@@ -143,14 +143,14 @@ export class OnlineScreen implements Screen {
     const v = this.ctx.view;
     const s = v.baseScale;
     const L = this.layout();
-    const x0 = L.cx - L.w / 2;
     const y = L.cardY;
     const signedIn = this.net.me.signedIn;
     return {
-      me: { x: x0, y, w: L.w, h: L.cardH },
+      // Your stats, achievements, recent matches, title, password and recovery codes (your profile).
+      me: signedIn ? { x: L.cx - 196 * s, y: y + 98 * s, w: 220 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       signin: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx - 228 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
       register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
-      signout: signedIn ? { x: L.cx - 80 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      signout: signedIn ? { x: L.cx + 36 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
       trade: signedIn ? { x: L.cx - 172 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
       options: signedIn ? { x: L.cx + 8 * s, y: y + L.cardH + 132 * s, w: 164 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
@@ -272,14 +272,15 @@ export class OnlineScreen implements Screen {
     }
     // Your trainer card.
     const me = this.net.me;
-    const card = r.me;
+    const card = { x: L.cx - L.w / 2, y: L.cardY, w: L.w, h: L.cardH };
     panel(v, card.x, card.y, card.w, card.h, 18, 'rgba(18,14,34,0.9)');
     const cx = L.cx;
     if (me.signedIn && me.user) {
       const pr = me.progress;
       text(v, `${me.user.username}${pr && LEVELS_ON ? `  ·  Lv ${pr.level}` : ''}`, cx, card.y + 36 * s, 22, { align: 'center', color: INK.text, shadow: false });
       if (me.title) text(v, me.title, cx, card.y + 16 * s, 11, { align: 'center', color: INK.accent, shadow: false });
-      if (pr && pr.next) {
+      // The trainer-level bar only while trainer levels are shown (they are hidden for now).
+      if (pr && pr.next && LEVELS_ON) {
         const bw = 220 * s;
         h.fillStyle = 'rgba(74,52,36,0.25)';
         h.fillRect(cx - bw / 2, card.y + 46 * s, bw, 4 * s);
@@ -288,6 +289,7 @@ export class OnlineScreen implements Screen {
       }
       const st = me.stats;
       text(v, st ? `${st.wins} wins · ${st.eliminations ?? 0} eliminations · ${st.matches} matches · ${st.catches} catches` : '', cx, card.y + 74 * s, 13, { align: 'center', color: INK.dim, shadow: false });
+      button(v, 'Stats & account', r.me.x, r.me.y, r.me.w, r.me.h, over('me'), '#f4e6c8');
       button(v, 'Sign out', r.signout.x, r.signout.y, r.signout.w, r.signout.h, over('signout'), '#f4e6c8');
     } else {
       text(v, this.net.hello?.name ?? 'Guest', cx, card.y + 38 * s, 22, { align: 'center', color: INK.text, shadow: false });

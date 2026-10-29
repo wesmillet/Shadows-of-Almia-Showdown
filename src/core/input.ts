@@ -25,8 +25,9 @@ export class Input {
   constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
-      // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys.
-      if (Input.typing(e.target)) return;
+      // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys; nor
+      // while a dialog (Options, a profile) is open over the game.
+      if (Input.typing(e.target) || document.querySelector('.almia-modal-wrap')) return;
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
       // While the Options screen listens for a new key, the game sees nothing.
       if (Input.capture) {

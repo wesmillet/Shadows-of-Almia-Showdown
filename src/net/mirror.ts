@@ -626,9 +626,16 @@ export class MirrorMatch {
     m.stylerBreak = (mon: Mon) => net.cmd('stylerBreak', mon.id);
     m.snag = (i: number) => say('snag', i);
     m.extractWithVoucher = (slot: number, i: number) => say('extract', slot, i);
-    m.teach = (_t: Trainer, slot: number, replace: number) => say('teach', slot, replace);
-    m.equip = (_t: Trainer, slot: number) => say('equip', slot);
-    m.useItem = (_t: Trainer, slot: number) => say('useItem', slot);
+    m.teach = (_t: Trainer, slot: number, replace: number, target?: number | null) => say('teach', slot, replace, target ?? -1);
+    m.equip = (_t: Trainer, slot: number, target?: number | null) => say('equip', slot, target ?? -1);
+    m.useItem = (_t: Trainer, slot: number, target?: number | null) => say('useItem', slot, target ?? -1);
+    // The behaviour lives on the server (it runs the party); shown here at once, the server's word follows.
+    const cycle = proto.cycleBehavior;
+    m.cycleBehavior = (i: number) => {
+      const b = cycle.call(m, i);
+      if (b) net.cmd('behavior', i);
+      return b;
+    };
     m.throwBall = (_t: Trainer, slot: number, to: { x: number; y: number }) => (net.cmd('throw', slot, Math.round(to.x * 100) / 100, Math.round(to.y * 100) / 100), true);
     m.startChallenge = () => say('interact');
     m.healAtHealer = () => say('interact');

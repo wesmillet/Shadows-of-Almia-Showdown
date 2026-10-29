@@ -10,7 +10,8 @@
  *                                  of their Pokémon (position, HP, moves, behaviour, level, status)
  *   POST /api/dev/cast             { trainer, mon?: index, slot, at?: {x,y}, target?: name#index }
  *                                  makes a Pokémon use a move now (as the server would for its AI)
- *   POST /api/dev/give             { trainer, dex, level } adds a Pokémon to a trainer's party
+ *   POST /api/dev/give             { trainer, dex, level } adds a Pokémon to a trainer's party;
+ *                                  { trainer, item, count } puts an item in their bag
  *   POST /api/dev/drop             { trainer } cuts that player's connection (the TCP socket is
  *                                  destroyed: the browser sees the line drop, as on a network loss)
  *   POST /api/dev/clear            { trainer, r } sends the wild Pokémon within r tiles of that
@@ -97,6 +98,11 @@ export function devProbe(hub: Hub, req: IncomingMessage, res: ServerResponse, pa
     const hit = find(b.trainer);
     if (!hit) return send(404, { error: `No trainer ${String(b.trainer)}` });
     const { room, t } = hit;
+    if (path === '/api/dev/give' && typeof b.item === 'string') {
+      // an item into the bag (or Held & TMs), as if picked up
+      const ok = room.match.giveItem(t, b.item, Number(b.count ?? 1));
+      return send(200, { ok });
+    }
     if (path === '/api/dev/give') {
       const mon = room.match.makeMon(String(b.dex ?? '0025'), Number(b.level ?? 20), t, t.x + 1, t.y + 1);
       t.party.push(mon);

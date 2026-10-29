@@ -17,7 +17,8 @@ import { SHOPS, type Shop } from '../sim/town';
 import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, isContact, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { lead } from '../sim/entities';
-import { Match, type DuelSide } from '../sim/match';
+import { GRAB_SECONDS, Match, type DuelSide } from '../sim/match';
+import { AnimPlayer } from '../sprites/pokemonSprite';
 import type { Assets } from '../sprites/assets';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { Floaters } from '../vfx/floaters';
@@ -115,6 +116,8 @@ export class MatchScreen implements Screen {
   private glint: HTMLImageElement | null = null;
 
   private endTimer = -1;
+  /** Darkrai taking a trainer who passed out in the storm (drawn for GRAB_SECONDS and a little after). */
+  private grabs: Array<Grab> = [];
   protected readonly icons: ItemIcons;
   /**
    * Online (src/net/mirror.ts): the match is the server's, so Space and throwing things away go
@@ -142,6 +145,8 @@ export class MatchScreen implements Screen {
     const mapName = match.ground.mapName;
     if (mapName) void assets.loadImage(`maps/${mapName}_minimap.png`).then((img) => (this.hud.mapPicture = img));
     if (isDev()) this.say('Tester mode: Hoopa is on the island (?dev=0 turns it off)', 4);
+    // Darkrai's sprites ready for the storm's grab (drawGrabDarkrai).
+    this.match.sprites.get('0491');
     if (rareChest()) this.say('Every rare item is waiting in the storage chests in each town', 5);
     this.fx = new FxLibrary(assets);
     const ids = new Set<string>(Object.values(EXTRA_FX));
@@ -1015,6 +1020,60 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
+  /** The pool of shadow opening under a trainer Darkrai takes: it spreads, then closes over them. */
+  private drawGrabPool(v: View, g: Grab, now: number): void {
+    const t = grabTime(g, now);
+    const open = Math.min(1, t / 0.7) * (t > GRAB_SECONDS ? Math.max(0, 1 - (t - GRAB_SECONDS) / 0.6) : 1);
+    if (open <= 0) return;
+    const ctx = v.ctx;
+    const sx = v.toScreenX(g.x);
+    const sy = v.toScreenY(g.y);
+    const rx = 1.3 * v.pxPerTile * open;
+    const ry = rx * 0.42;
+    ctx.save();
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, rx);
+    grad.addColorStop(0, 'rgba(6,0,14,0.95)');
+    grad.addColorStop(0.7, 'rgba(30,6,52,0.85)');
+    grad.addColorStop(1, 'rgba(90,40,150,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Darkrai rising out of the pool right behind the trainer, looming over them, then sinking back with them. */
+  private drawGrabDarkrai(v: View, g: Grab, now: number): void {
+    const t = grabTime(g, now);
+    g.anim.dir = 0;
+    g.anim.update(Math.min(0.1, now - (g.last ?? now)));
+    g.last = now;
+    // up out of the pool over 0.8 s, hold, then down with the trainer over the last second
+    const rise = Math.min(1, t / 0.8) * (t > GRAB_SECONDS - 1 ? Math.max(0, (GRAB_SECONDS - t) / 1) : 1);
+    if (rise <= 0) return;
+    const f = g.anim.current();
+    if (!f || f.placeholder) return;
+    const ctx = v.ctx;
+    const s = v.spriteScale * 1.25;
+    const w = f.w * s;
+    const h = f.h * s;
+    const sx = Math.round(v.toScreenX(g.x) - w / 2);
+    const ground = v.toScreenY(g.y - 0.15);
+    // fully up, its feet sit just under the trainer's, so it looms right over them
+    const sy = Math.round(ground - h * 0.9 * rise + h * 0.42);
+    ctx.save();
+    // only what has come up out of the pool shows
+    ctx.beginPath();
+    ctx.rect(sx - w, ground - h * 3, w * 3, h * 3);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = Math.min(1, rise * 1.4);
+    ctx.shadowColor = 'rgba(150,80,230,0.8)';
+    ctx.shadowBlur = 14 * v.baseScale;
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, sx, sy, w, h);
+    ctx.restore();
+  }
+
   /** Darkrai's entrance portal, standing upright behind it: slit, half open, open, held, then closing. */
   private drawDarkraiPortal(v: View, now: number): void {
     const po = this.match.darkraiPortal;
@@ -1392,6 +1451,9 @@ export class MatchScreen implements Screen {
         break;
       case 'respawned':
         if (ev.trainer.isPlayer) this.say('Back in the fight! Your party is healed, but your items are gone', 3);
+        break;
+      case 'darkrai-grab':
+        this.grabs.push({ trainer: ev.trainer, x: ev.x, y: ev.y, anim: new AnimPlayer(this.match.sprites.get('0491')) });
         break;
       case 'eliminated':
         this.say(ev.trainer.isPlayer ? 'Your whole party fainted…' : `${ev.trainer.name} was eliminated!`, 2.5);
@@ -2120,6 +2182,13 @@ export class MatchScreen implements Screen {
 
   protected drawExtraWorld(v: View): Array<{ y: number; draw: () => void }> {
     const list: Array<{ y: number; draw: () => void }> = [];
+    const now = performance.now() / 1000;
+    this.grabs = this.grabs.filter((g) => grabTime(g, now) < GRAB_SECONDS + 0.6);
+    for (const g of this.grabs) {
+      // the shadow pool on the ground first, Darkrai rising just behind the trainer
+      list.push({ y: g.y - 0.6, draw: () => this.drawGrabPool(v, g, now) });
+      list.push({ y: g.y - 0.05, draw: () => this.drawGrabDarkrai(v, g, now) });
+    }
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
     for (const o of this.match.outposts) list.push({ y: o.y - 0.35, draw: () => this.drawOutpostPost(v, o) });
     this.match.chests.forEach((c, i) => list.push({ y: c.y - 0.4, draw: () => this.drawChest(v, c, this.chestLid.get(i) ?? 0) }));
@@ -2605,4 +2674,14 @@ function darkPortal(img: HTMLImageElement): CanvasImageSource {
 /** Lugia, Shadow Lugia, Darkrai and Shadow Mewtwo: the Pokémon whose moves may shake the camera. */
 function isEpic(m: Mon): boolean {
   return m.dex.startsWith('0249') || m.dex.startsWith('0491') || (m.dex.startsWith('0150') && !!m.shadow);
+}
+
+/** Darkrai taking a trainer who passed out in the storm: timed by the trainer's own grab clock (synced online). */
+type Grab = { trainer: Trainer; x: number; y: number; anim: AnimPlayer; last?: number; end?: number };
+
+/** Seconds into a grab: the trainer's clock while they are held, then on by the wall clock once they are gone. */
+function grabTime(g: Grab, now: number): number {
+  if (g.trainer.grabbed != null && g.trainer.alive) return g.trainer.grabbed;
+  g.end ??= now;
+  return GRAB_SECONDS + (now - g.end);
 }

@@ -51,7 +51,7 @@ export const DEV_CHEST: Array<[string, number]> = [
   ['capture-styler', 5], ['styler', 1], ['super-rod', 1], ['storm-mask', 1], ['extraction-voucher', 5], ['master-ball', 3],
   ['charizardite-x', 1], ['gengarite', 1], ['steelixite', 1], ['tyranitarite', 1], ['gardevoirite', 1],
   ['absolite', 1], ['glalitite', 1], ['latiosite', 1], ['lucarionite', 1], ['galladite', 1],
-  ['ultra-ball', 10], ['quick-ball', 5], ['net-ball', 5], ['dusk-ball', 5], ['rare-candy', 10], ['max-revive', 5],
+  ['ultra-ball', 10], ['quick-ball', 5], ['rare-candy', 10], ['max-revive', 5],
   ['exp-share', 1], ['lucky-egg', 1], ['leftovers', 1], ['focus-sash', 1], ['choice-band', 1], ['life-orb', 1],
   ['charcoal', 1], ['mystic-water', 1], ['magnet', 1], ['miracle-seed', 1], ['never-melt-ice', 1], ['black-belt', 1],
   ['soft-sand', 1], ['sharp-beak', 1], ['twisted-spoon', 1], ['poison-barb', 1], ['hard-stone', 1], ['spell-tag', 1],

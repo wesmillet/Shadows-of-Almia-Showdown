@@ -1569,6 +1569,13 @@ export class Match {
    */
   private stepTrainerStorm(dt: number): void {
     for (const t of this.allTrainers) {
+      // In Darkrai's grip: dragged down into the shadows, then out of the match.
+      if (t.alive && t.grabbed != null) {
+        t.grabbed += dt;
+        t.moving = false;
+        if (t.grabbed >= GRAB_SECONDS) this.eliminate(t);
+        continue;
+      }
       if (!t.alive || t.downUntil != null || t.visitor || t.hidden || t.challenger) continue;
       if (t.duelId) continue;
       if (this.isDark(t.x, t.y)) {
@@ -1591,9 +1598,12 @@ export class Match {
       m.target = null;
       m.stowed = true;
     }
-    this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'The storm overwhelms you and you collapse!' : `${t.name} collapsed in the storm`, seconds: 3 });
-    if (this.finalStarted || this.over) this.eliminate(t);
-    else this.down(t);
+    // Passing out in the storm loses the match: Darkrai rises behind the trainer, takes hold and
+    // drags them down into the shadows (the screen plays it: the 'darkrai-grab' event), then they are out.
+    this.battle.events.push({ type: 'notice', text: t.isPlayer ? 'You pass out in the storm... Darkrai takes you into the shadows' : `${t.name} passed out in the storm and was dragged into the shadows`, seconds: 3.5 });
+    this.battle.events.push({ type: 'darkrai-grab', trainer: t, x: t.x, y: t.y });
+    t.grabbed = 0;
+    t.moving = false;
   }
 
   /** The species each land's wild Pokémon were drawn from this match (for checks and tests). */
@@ -1809,9 +1819,10 @@ export class Match {
     // easing to none at the coast, so the outer lands stay gentle for fresh teams.
     // Round every starting point the land stays at its base levels, so a fresh team can train there.
     const nearStart = Math.min(...this.startSpots.map((s) => Math.hypot(s.x - spot.x, s.y - spot.y)));
-    // (No bonus within 25 tiles of a start, the full bonus from 70: a gentle ramp, so a start that
-    // happens to sit nearer the crystal is not ringed by much stronger wilds.)
-    const calm = Math.min(1, Math.max(0, (nearStart - 25) / 45));
+    // (No bonus within calmTiles[0] of a start, the full bonus from calmTiles[1]: a gentle ramp, so a
+    // start that happens to sit nearer the crystal is not ringed by much stronger wilds.)
+    const [c0 = 25, c1 = 70] = (CONFIG.wild as { calmTiles?: number[] }).calmTiles ?? [];
+    const calm = Math.min(1, Math.max(0, (nearStart - c0) / (c1 - c0)));
     // Round the crystal the bonus is spread a little, so the middle holds levels from the 30s to about 60.
     const w = CONFIG.wild;
     const spread = this.rng.range(w.centerLevelSpread[0] ?? 0.75, w.centerLevelSpread[1] ?? 1.1);
@@ -2614,7 +2625,7 @@ export class Match {
         this.stepAutoLead(dt);
       });
     }
-    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil == null) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
+    for (const t of this.trainers) if (t.alive && !t.duelId && !t.visitor && t.downUntil == null && t.grabbed == null) (t.challenger ? this.stepChallenger(t) : this.stepAi(t, dt));
     this.stepNpcs(dt);
     this.buildGrid();
     const pw = this.partyWorld();
@@ -2731,7 +2742,7 @@ export class Match {
 
   private stepPlayer(dt: number): void {
     const p = this.player;
-    if (p.downUntil != null) {
+    if (p.downUntil != null || p.grabbed != null) {
       p.moving = false;
       return;
     }
@@ -4208,6 +4219,9 @@ export class Match {
     this.battle.events.push({ type: 'eliminated', trainer: t });
   }
 }
+
+/** How long Darkrai's grab takes, from rising behind the trainer to gone into the shadows. */
+export const GRAB_SECONDS = 2.8;
 
 export function dirVec(d: Dir8): { x: number; y: number } {
   const v = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]][d] as [number, number];

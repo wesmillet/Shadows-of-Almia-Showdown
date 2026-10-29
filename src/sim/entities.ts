@@ -201,6 +201,8 @@ export interface Trainer {
   downUntil?: number | null;
   /** Seconds spent in the storm (drains outside it); at Match.trainerStormSeconds the trainer collapses. */
   stormT?: number;
+  /** Passed out in the storm: Darkrai has them (seconds since); they are out when it ends (match.ts). */
+  grabbed?: number;
   /** What knocked out the trainer's latest Pokémon: a wild one, a trainer's, or anything else. */
   lastKo?: 'wild' | 'trainer' | 'other';
   /** The trainer whose Pokémon made that knockout (credited if it ends this trainer's match). */

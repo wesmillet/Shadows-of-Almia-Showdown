@@ -3122,3 +3122,7 @@ license, sheets). The current artists per folder, resolved through
 
 Pokémon Ranger 2: Shadows of Almia overworld NPCs ripped by Lemon for The
 Spriters Resource; see `assets/rangers/README.md` and the root `CREDITS.md`.
+
+## Daily Egg (assets/ui/eggs)
+
+- The Egg and its hatching frames and shell pieces: Pokémon Emerald ((c) Nintendo / Creatures / GAME FREAK), from the pret/pokeemerald decompilation (https://github.com/pret/pokeemerald, graphics/pokemon/egg/hatch.png and shard.png). The spots are recoloured per starter tier by scripts/eggs.py.

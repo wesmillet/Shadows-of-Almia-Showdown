@@ -106,7 +106,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 90,
+     "line": 94,
      "where": "text",
      "condition": "in boot()",
      "status": "active"
@@ -128,7 +128,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 96,
+     "line": 118,
      "where": "FontFace",
      "condition": "in boot()",
      "status": "active"
@@ -154,7 +154,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 113,
+     "line": 149,
      "where": "sprites.preload",
      "condition": "in boot()",
      "status": "active"
@@ -176,14 +176,14 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 134,
+     "line": 171,
      "where": "createGround",
      "condition": "in boot()",
      "status": "active"
     },
     {
      "file": "src/main.ts",
-     "line": 513,
+     "line": 556,
      "where": "createGround",
      "condition": "if (regenerate)",
      "status": "active"
@@ -205,7 +205,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 173,
+     "line": 214,
      "where": "loadingScreen",
      "condition": "in boot()",
      "status": "active"
@@ -222,7 +222,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 273,
+     "line": 316,
      "where": "return",
      "condition": "if (req.soon || !net)",
      "status": "active"
@@ -239,14 +239,14 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 276,
+     "line": 319,
      "where": "return",
      "condition": "if (!me.signedIn)",
      "status": "active"
     },
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 317,
+     "line": 297,
      "where": "button",
      "condition": "if (me.signedIn && me.user)",
      "status": "active"
@@ -289,7 +289,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 277,
+     "line": 320,
      "where": "return",
      "condition": "req.level !== undefined ?",
      "status": "active"
@@ -306,7 +306,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 367,
+     "line": 410,
      "where": "loadingScreen",
      "condition": "in boot()",
      "status": "active"
@@ -323,7 +323,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 374,
+     "line": 417,
      "where": "showOnline",
      "condition": "if (!ready)",
      "status": "active"
@@ -340,7 +340,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 402,
+     "line": 445,
      "where": "screen.say",
      "condition": "if (st === 'down')",
      "status": "active"
@@ -357,7 +357,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 404,
+     "line": 447,
      "where": "bail",
      "condition": "if (st === 'takenOver')",
      "status": "active"
@@ -374,7 +374,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 411,
+     "line": 454,
      "where": "bail",
      "condition": "if (playingId === start.matchId && mirror.staleFor() > 4)",
      "status": "active"
@@ -396,7 +396,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 439,
+     "line": 482,
      "where": "loadingScreen",
      "condition": "in boot()",
      "status": "active"
@@ -413,7 +413,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 465,
+     "line": 508,
      "where": "loadingScreen",
      "condition": "in boot()",
      "status": "active"
@@ -430,7 +430,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 472,
+     "line": 515,
      "where": "showOnline",
      "condition": "in boot()",
      "status": "active"
@@ -447,7 +447,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 475,
+     "line": 518,
      "where": "showOnline",
      "condition": "if (!lines.length)",
      "status": "active"
@@ -464,7 +464,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 495,
+     "line": 538,
      "where": "PcScreen",
      "condition": "if (r.pc)",
      "status": "active"
@@ -481,7 +481,7 @@
    "uses": [
     {
      "file": "src/main.ts",
-     "line": 510,
+     "line": 553,
      "where": "",
      "condition": "if (regenerate)",
      "status": "active"
@@ -498,7 +498,7 @@
    "uses": [
     {
      "file": "src/net/connection.ts",
-     "line": 243,
+     "line": 245,
      "where": "error:",
      "condition": "in api()",
      "status": "active"
@@ -6666,21 +6666,209 @@
    "who": "Screen text"
   },
   {
-   "id": "T890AB4",
-   "text": "\n.almia-egg { text-align: center; }\n.almia-egg .stage { height: 150px; display: flex; align-items: center; justify-content: center; }\n.almia-egg .stage img, .almia-egg .stage canvas { width: 96px; height: 96px; image-rendering: pixelated; }\n.almia-egg .egg { width: 72px; height: 72px; image-rendering: pixelated; }\n.almia-egg .egg.wobble { animation: almia-wobble 0.32s ease-in-out infinite alternate; }\n.almia-egg .flash { animation: almia-flash 0.6s ease-out; }\n.almia-egg .tier { font-size: 15px; margin-top: 4px; }\n@keyframes almia-wobble { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }\n@keyframes almia-flash { from { filter: brightness(4); transform: scale(0.6); } to { filter: none; transform: scale(1); } }\n",
+   "id": "TDEC1D1",
+   "text": "Daily Egg",
    "placeholders": [],
    "example": null,
    "uses": [
     {
-     "file": "src/ui/eggDialog.ts",
-     "line": 26,
-     "where": "CSS =",
-     "condition": "",
+     "file": "src/ui/dailyEgg.ts",
+     "line": 163,
+     "where": "text",
+     "condition": "in draw()",
+     "status": "active"
+    },
+    {
+     "file": "src/ui/pcScreen.ts",
+     "line": 274,
+     "where": "text",
+     "condition": "e.via === 'egg' ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "T7B9B19",
+   "text": "Sign in online for an Egg",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 214,
+     "where": "text",
+     "condition": "if (!this.signedIn)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "TA3FD74",
+   "text": "every day",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 215,
+     "where": "text",
+     "condition": "if (!this.signedIn)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "TDD3A84",
+   "text": "Oh? The Egg is hatching...",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 223,
+     "where": "text",
+     "condition": "if (this.t < BURST_AT)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "T0E3D30",
+   "text": "{this.result.shiny ? '★ ' : ''}{this.result.name} hatched!",
+   "placeholders": [
+    {
+     "name": "this.result.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "this.result.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "…Pikachu hatched!",
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 225,
+     "where": "text",
+     "condition": "if (this.result)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "TEF959E",
+   "text": "{st.tierName} Egg",
+   "placeholders": [
+    {
+     "name": "st.tierName",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu Egg",
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 231,
+     "where": "strip",
+     "condition": "if (st.ready)",
      "status": "active"
     }
    ],
    "group": "other",
    "who": "UI"
+  },
+  {
+   "id": "T6D76FB",
+   "text": "Click to hatch it!",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 232,
+     "where": "text",
+     "condition": "over ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "T40B412",
+   "text": "Click to hatch",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 232,
+     "where": "text",
+     "condition": "over ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "TAF72EB",
+   "text": "{st.today.shiny ? '★ ' : ''}{st.today.name} · in your PC",
+   "placeholders": [
+    {
+     "name": "st.today.shiny ? '★ ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "st.today.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "…Pikachu · in your PC",
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 236,
+     "where": "text",
+     "condition": "if (st.today)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
+  },
+  {
+   "id": "T61F2B8",
+   "text": "Next Egg in {until(st.nextAt)}",
+   "placeholders": [
+    {
+     "name": "until(st.nextAt)",
+     "example": "…"
+    }
+   ],
+   "example": "Next Egg in …",
+   "uses": [
+    {
+     "file": "src/ui/dailyEgg.ts",
+     "line": 238,
+     "where": "text",
+     "condition": "in draw()",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "Screen text"
   },
   {
    "id": "TB4E728",
@@ -6698,8 +6886,8 @@
    "example": "… h … min",
    "uses": [
     {
-     "file": "src/ui/eggDialog.ts",
-     "line": 42,
+     "file": "src/ui/dailyEgg.ts",
+     "line": 267,
      "where": "return",
      "condition": "m >= 60 ?",
      "status": "active"
@@ -6720,253 +6908,10 @@
    "example": "… min",
    "uses": [
     {
-     "file": "src/ui/eggDialog.ts",
-     "line": 42,
+     "file": "src/ui/dailyEgg.ts",
+     "line": 267,
      "where": "return",
      "condition": "m >= 60 ?",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "TDEC1D1",
-   "text": "Daily Egg",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 61,
-     "where": "el",
-     "condition": "in eggDialog()",
-     "status": "active"
-    },
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 76,
-     "where": "el",
-     "condition": "in eggDialog()",
-     "status": "active"
-    },
-    {
-     "file": "src/ui/onlineScreens.ts",
-     "line": 325,
-     "where": "button",
-     "condition": "this.eggWaiting ?",
-     "status": "active"
-    },
-    {
-     "file": "src/ui/pcScreen.ts",
-     "line": 274,
-     "where": "text",
-     "condition": "e.via === 'egg' ?",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "TE1FD9F",
-   "text": "Could not reach the server",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 83,
-     "where": "",
-     "condition": "if (st.error || !st)",
-     "status": "active"
-    },
-    {
-     "file": "server/adminPage.ts",
-     "line": 57,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T33A63B",
-   "text": "{st.today ? `Today's Egg hatched into ${st.today.shiny ? '...}Your next Egg comes in {until(st.nextAt)}.",
-   "placeholders": [
-    {
-     "name": "st.today ? `Today's Egg hatched into ${st.today.shiny ? '...",
-     "example": "Pikachu"
-    },
-    {
-     "name": "until(st.nextAt)",
-     "example": "…"
-    }
-   ],
-   "example": "PikachuYour next Egg comes in ….",
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 90,
-     "where": "",
-     "condition": "if (!st.ready)",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "TD5E5E8",
-   "text": "Today's Egg hatched into {st.today.shiny ? 'a shiny ' : ''}{st.today.name}. ",
-   "placeholders": [
-    {
-     "name": "st.today.shiny ? 'a shiny ' : ''",
-     "example": "…"
-    },
-    {
-     "name": "st.today.name",
-     "example": "Pikachu"
-    }
-   ],
-   "example": "Today's Egg hatched into …Pikachu. ",
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 90,
-     "where": "",
-     "condition": "st.today ?",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T3456AE",
-   "text": "a shiny ",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 90,
-     "where": "",
-     "condition": "st.today.shiny ?",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T22D89A",
-   "text": "A new Egg! Whatever hatches goes to your PC. Most are common, a few are rare, and once in a while it's something special.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 96,
-     "where": "then",
-     "condition": "in eggDialog()",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T0625E3",
-   "text": "Hatch it",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 97,
-     "where": "el",
-     "condition": "",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "TDD3A84",
-   "text": "Oh? The Egg is hatching...",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 103,
-     "where": "",
-     "condition": "",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T2C8029",
-   "text": " · ★ Shiny!",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 116,
-     "where": "el",
-     "condition": "r.shiny ?",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T9E052C",
-   "text": "{r.name} hatched from the Egg! It was sent to your PC.",
-   "placeholders": [
-    {
-     "name": "r.name",
-     "example": "Pikachu"
-    }
-   ],
-   "example": "Pikachu hatched from the Egg! It was sent to your PC.",
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 118,
-     "where": "el",
-     "condition": "",
-     "status": "active"
-    }
-   ],
-   "group": "other",
-   "who": "UI"
-  },
-  {
-   "id": "T5DC4EA",
-   "text": "Your next Egg comes in {until(r.nextAt)}.",
-   "placeholders": [
-    {
-     "name": "until(r.nextAt)",
-     "example": "…"
-    }
-   ],
-   "example": "Your next Egg comes in ….",
-   "uses": [
-    {
-     "file": "src/ui/eggDialog.ts",
-     "line": 118,
-     "where": "el",
-     "condition": "",
      "status": "active"
     }
    ],
@@ -7280,6 +7225,205 @@
    ],
    "group": "results",
    "who": "Button"
+  },
+  {
+   "id": "T03A67C",
+   "text": "Mystery Gift",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 13,
+     "where": "el",
+     "condition": "in giftDialog()",
+     "status": "active"
+    },
+    {
+     "file": "src/ui/pcScreen.ts",
+     "line": 274,
+     "where": "text",
+     "condition": "e.via === 'gift' ?",
+     "status": "active"
+    },
+    {
+     "file": "src/ui/titleScreen.ts",
+     "line": 1071,
+     "where": "",
+     "condition": "this.egg ?",
+     "status": "active"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 49,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "T48A887",
+   "text": "Sign in online to redeem a Mystery Gift code.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 15,
+     "where": "el",
+     "condition": "if (!net.me.signedIn)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "T7135AC",
+   "text": "Go online",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 17,
+     "where": "el",
+     "condition": "if (!net.me.signedIn)",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "TA34A7C",
+   "text": "Got a code? Enter it here for a Pokémon or a new look.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 28,
+     "where": "el",
+     "condition": "in giftDialog()",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "TE1FD9F",
+   "text": "Could not reach the server",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 49,
+     "where": "error:",
+     "condition": "",
+     "status": "active"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 58,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "other",
+   "who": "Error message"
+  },
+  {
+   "id": "T858625",
+   "text": "You received a gift!",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 57,
+     "where": "el",
+     "condition": "in giftDialog()",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "TF02E77",
+   "text": "{g.shiny ? 'A shiny ' : ''}{g.name} (Lv {g.level}) was sent to your PC.",
+   "placeholders": [
+    {
+     "name": "g.shiny ? 'A shiny ' : ''",
+     "example": "…"
+    },
+    {
+     "name": "g.name",
+     "example": "Pikachu"
+    },
+    {
+     "name": "g.level",
+     "example": "12"
+    }
+   ],
+   "example": "…Pikachu (Lv 12) was sent to your PC.",
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 58,
+     "where": "el",
+     "condition": "g.kind === 'pokemon' ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "T839686",
+   "text": "A shiny ",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 58,
+     "where": "el",
+     "condition": "g.shiny ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
+  },
+  {
+   "id": "TFF0271",
+   "text": "A new look: {g.name}. Wear it from the Trainer screen.",
+   "placeholders": [
+    {
+     "name": "g.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "A new look: Pikachu. Wear it from the Trainer screen.",
+   "uses": [
+    {
+     "file": "src/ui/giftDialog.ts",
+     "line": 58,
+     "where": "el",
+     "condition": "g.kind === 'pokemon' ?",
+     "status": "active"
+    }
+   ],
+   "group": "other",
+   "who": "UI"
   },
   {
    "id": "T9AB83E",
@@ -7658,7 +7802,7 @@
      "file": "src/ui/pcScreen.ts",
      "line": 274,
      "where": "text",
-     "condition": "e.via === 'egg' ?",
+     "condition": "e.via === 'gift' ?",
      "status": "active"
     },
     {
@@ -8332,7 +8476,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1334,
+     "line": 1333,
      "where": "name =",
      "condition": "st.shop ?",
      "status": "active"
@@ -8354,7 +8498,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1362,
+     "line": 1361,
      "where": "ink",
      "condition": "in drawLearn()",
      "status": "active"
@@ -8376,7 +8520,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1365,
+     "line": 1364,
      "where": "ink",
      "condition": "if (L.queued > 0)",
      "status": "active"
@@ -8393,7 +8537,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1382,
+     "line": 1381,
      "where": "",
      "condition": "isContact(def) ?",
      "status": "active"
@@ -8419,7 +8563,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1384,
+     "line": 1383,
      "where": "nums =",
      "condition": "in drawLearn()",
      "status": "active"
@@ -8441,7 +8585,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1384,
+     "line": 1383,
      "where": "nums =",
      "condition": "def.power > 0 ?",
      "status": "active"
@@ -8458,7 +8602,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1384,
+     "line": 1383,
      "where": "nums =",
      "condition": "def.power > 0 ?",
      "status": "active"
@@ -8482,7 +8626,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1386,
+     "line": 1385,
      "where": "tag =",
      "condition": "state === 'locked' ?",
      "status": "active"
@@ -8499,7 +8643,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1386,
+     "line": 1385,
      "where": "tag =",
      "condition": "state === 'hover' ?",
      "status": "active"
@@ -8516,7 +8660,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1386,
+     "line": 1385,
      "where": "tag =",
      "condition": "state === 'hover' ?",
      "status": "active"
@@ -8533,7 +8677,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1394,
+     "line": 1393,
      "where": "ink",
      "condition": "in drawLearn()",
      "status": "active"
@@ -8555,7 +8699,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1413,
+     "line": 1412,
      "where": "ink",
      "condition": "in drawLearn()",
      "status": "active"
@@ -8572,7 +8716,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1447,
+     "line": 1446,
      "where": "sleep:",
      "condition": "",
      "status": "active"
@@ -8594,7 +8738,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1453,
+     "line": 1452,
      "where": "filter",
      "condition": "def.power > 0 ?",
      "status": "active"
@@ -8616,7 +8760,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1453,
+     "line": 1452,
      "where": "filter",
      "condition": "in describeMove()",
      "status": "active"
@@ -8638,7 +8782,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1453,
+     "line": 1452,
      "where": "filter",
      "condition": "def.cast ?",
      "status": "active"
@@ -8655,7 +8799,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1456,
+     "line": 1455,
      "where": "single:",
      "condition": "in describeMove()",
      "status": "active"
@@ -8672,7 +8816,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1457,
+     "line": 1456,
      "where": "line:",
      "condition": "in describeMove()",
      "status": "active"
@@ -8689,7 +8833,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1458,
+     "line": 1457,
      "where": "cone:",
      "condition": "in describeMove()",
      "status": "active"
@@ -8706,7 +8850,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1459,
+     "line": 1458,
      "where": "ring:",
      "condition": "in describeMove()",
      "status": "active"
@@ -8723,7 +8867,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1460,
+     "line": 1459,
      "where": "self:",
      "condition": "in describeMove()",
      "status": "active"
@@ -8749,7 +8893,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1463,
+     "line": 1462,
      "where": "out.push",
      "condition": "if (def.status)",
      "status": "active"
@@ -8766,7 +8910,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1466,
+     "line": 1465,
      "where": "",
      "condition": "if (def.stages)",
      "status": "active"
@@ -8783,7 +8927,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1466,
+     "line": 1465,
      "where": "",
      "condition": "if (def.stages)",
      "status": "active"
@@ -8800,7 +8944,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1474,
+     "line": 1473,
      "where": "out.push",
      "condition": "if (def.leap)",
      "status": "active"
@@ -8817,7 +8961,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1475,
+     "line": 1474,
      "where": "out.push",
      "condition": "if (isContact(def))",
      "status": "active"
@@ -8834,7 +8978,7 @@
    "uses": [
     {
      "file": "src/ui/hud.ts",
-     "line": 1476,
+     "line": 1475,
      "where": "out.push",
      "condition": "if (def.signature)",
      "status": "active"
@@ -11028,7 +11172,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 135,
+     "line": 125,
      "where": "",
      "condition": "if (n > this.tradesWaiting)",
      "status": "active"
@@ -11045,7 +11189,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 180,
+     "line": 168,
      "where": "label:",
      "condition": "in findState()",
      "status": "active"
@@ -11067,7 +11211,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 245,
+     "line": 225,
      "where": "",
      "condition": "if (ok)",
      "status": "active"
@@ -11084,7 +11228,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 258,
+     "line": 238,
      "where": "",
      "condition": "in signOut()",
      "status": "active"
@@ -11101,14 +11245,14 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 284,
+     "line": 264,
      "where": "heading",
      "condition": "if (hubLogo)",
      "status": "active"
     },
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1043,
+     "line": 1064,
      "where": "button",
      "condition": "if (this.onOnline)",
      "status": "active"
@@ -11130,7 +11274,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 289,
+     "line": 269,
      "where": "return",
      "condition": "m >= 120 ?",
      "status": "active"
@@ -11152,7 +11296,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 289,
+     "line": 269,
      "where": "return",
      "condition": "m >= 120 ?",
      "status": "active"
@@ -11174,7 +11318,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 291,
+     "line": 271,
      "where": "text",
      "condition": "if (ev.length)",
      "status": "active"
@@ -11196,7 +11340,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 300,
+     "line": 280,
      "where": "text",
      "condition": "pr && LEVELS_ON ?",
      "status": "unused"
@@ -11230,7 +11374,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 311,
+     "line": 291,
      "where": "text",
      "condition": "st ?",
      "status": "active"
@@ -11247,7 +11391,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 312,
+     "line": 292,
      "where": "button",
      "condition": "if (me.signedIn && me.user)",
      "status": "active"
@@ -11264,7 +11408,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 313,
+     "line": 293,
      "where": "button",
      "condition": "if (me.signedIn && me.user)",
      "status": "active"
@@ -11281,7 +11425,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 316,
+     "line": 296,
      "where": "wrapText",
      "condition": "if (me.signedIn && me.user)",
      "status": "active"
@@ -11298,7 +11442,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 323,
+     "line": 303,
      "where": "text",
      "condition": "in render()",
      "status": "active"
@@ -11320,26 +11464,9 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 324,
+     "line": 304,
      "where": "button",
      "condition": "this.tradesWaiting ?",
-     "status": "active"
-    }
-   ],
-   "group": "hub",
-   "who": "Button"
-  },
-  {
-   "id": "T06AA1B",
-   "text": "Daily Egg!",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "src/ui/onlineScreens.ts",
-     "line": 325,
-     "where": "button",
-     "condition": "this.eggWaiting ?",
      "status": "active"
     }
    ],
@@ -11359,7 +11486,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 328,
+     "line": 307,
      "where": "text",
      "condition": "this.net.connected ?",
      "status": "active"
@@ -11381,7 +11508,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 328,
+     "line": 307,
      "where": "text",
      "condition": "this.net.ping ?",
      "status": "active"
@@ -11398,7 +11525,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 330,
+     "line": 309,
      "where": "text",
      "condition": "if (this.net.hello?.server === 'demo')",
      "status": "active"
@@ -11415,7 +11542,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 331,
+     "line": 310,
      "where": "button",
      "condition": "in render()",
      "status": "active"
@@ -11432,7 +11559,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 332,
+     "line": 311,
      "where": "button",
      "condition": "if (me.user?.role === 'admin')",
      "status": "active"
@@ -11449,7 +11576,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 337,
+     "line": 316,
      "where": "solo:",
      "condition": "",
      "status": "active"
@@ -11466,7 +11593,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 337,
+     "line": 316,
      "where": "duos:",
      "condition": "",
      "status": "active"
@@ -11483,7 +11610,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 337,
+     "line": 316,
      "where": "squads:",
      "condition": "",
      "status": "active"
@@ -11500,7 +11627,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 337,
+     "line": 316,
      "where": "pick:",
      "condition": "",
      "status": "active"
@@ -11517,7 +11644,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 385,
+     "line": 364,
      "where": "el",
      "condition": "in draw()",
      "status": "active"
@@ -11534,7 +11661,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 385,
+     "line": 364,
      "where": "el",
      "condition": "host ?",
      "status": "active"
@@ -11556,7 +11683,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 385,
+     "line": 364,
      "where": "el",
      "condition": "host ?",
      "status": "active"
@@ -11573,7 +11700,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 389,
+     "line": 368,
      "where": "el",
      "condition": "in draw()",
      "status": "active"
@@ -11603,7 +11730,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 397,
+     "line": 376,
      "where": "el",
      "condition": "in draw()",
      "status": "active"
@@ -11620,7 +11747,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 397,
+     "line": 376,
      "where": "el",
      "condition": "l.rules.bots && l.members.length < l.rules.size ?",
      "status": "active"
@@ -11637,7 +11764,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 400,
+     "line": 379,
      "where": "el",
      "condition": "m.name === l.you ?",
      "status": "active"
@@ -11661,7 +11788,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 401,
+     "line": 380,
      "where": "el",
      "condition": "m.picked ?",
      "status": "active"
@@ -11685,7 +11812,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 401,
+     "line": 380,
      "where": "el",
      "condition": "m.picked ?",
      "status": "active"
@@ -11714,7 +11841,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 406,
+     "line": 385,
      "where": "el",
      "condition": "if (l.rules.teams === 'pick')",
      "status": "active"
@@ -11731,7 +11858,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 449,
+     "line": 428,
      "where": "check",
      "condition": "in draw()",
      "status": "active"
@@ -11755,7 +11882,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 451,
+     "line": 430,
      "where": "select",
      "condition": "in draw()",
      "status": "active"
@@ -11777,7 +11904,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 451,
+     "line": 430,
      "where": "map",
      "condition": "in draw()",
      "status": "active"
@@ -11794,7 +11921,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 452,
+     "line": 431,
      "where": "select",
      "condition": "in draw()",
      "status": "active"
@@ -11811,7 +11938,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 452,
+     "line": 431,
      "where": "select",
      "condition": "in draw()",
      "status": "active"
@@ -11828,7 +11955,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 453,
+     "line": 432,
      "where": "check",
      "condition": "in draw()",
      "status": "active"
@@ -11845,7 +11972,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 454,
+     "line": 433,
      "where": "el",
      "condition": "in draw()",
      "status": "active"
@@ -11862,7 +11989,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 460,
+     "line": 439,
      "where": "el",
      "condition": "l.state === 'picking' ?",
      "status": "active"
@@ -11879,7 +12006,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 551,
+     "line": 530,
      "where": "onLeave",
      "condition": "party(this.net) ?",
      "status": "active"
@@ -11905,7 +12032,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 565,
+     "line": 544,
      "where": "sub =",
      "condition": "waitingParty ?",
      "status": "active"
@@ -11935,7 +12062,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 567,
+     "line": 546,
      "where": "sub =",
      "condition": "this.need > 0 ?",
      "status": "active"
@@ -11952,7 +12079,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 569,
+     "line": 548,
      "where": "sub =",
      "condition": "this.startsIn === null ?",
      "status": "active"
@@ -11974,7 +12101,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 570,
+     "line": 549,
      "where": "sub =",
      "condition": "this.startsIn === null ?",
      "status": "active"
@@ -11996,7 +12123,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 571,
+     "line": 550,
      "where": "heading",
      "condition": "in render()",
      "status": "active"
@@ -12022,7 +12149,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 576,
+     "line": 555,
      "where": "text",
      "condition": "in render()",
      "status": "active"
@@ -12039,7 +12166,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 584,
+     "line": 563,
      "where": "button",
      "condition": "this.admin && this.need > 0 ?",
      "status": "active"
@@ -12056,7 +12183,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 584,
+     "line": 563,
      "where": "button",
      "condition": "this.admin && this.need > 0 ?",
      "status": "active"
@@ -12073,7 +12200,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 585,
+     "line": 564,
      "where": "button",
      "condition": "in render()",
      "status": "active"
@@ -12095,7 +12222,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 693,
+     "line": 672,
      "where": "",
      "condition": "r.ok ?",
      "status": "active"
@@ -12112,7 +12239,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 693,
+     "line": 672,
      "where": "",
      "condition": "r.ok ?",
      "status": "active"
@@ -12129,7 +12256,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 710,
+     "line": 689,
      "where": "text",
      "condition": "this.place === 1 && this.net.social.party ?",
      "status": "active"
@@ -12146,7 +12273,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 710,
+     "line": 689,
      "where": "text",
      "condition": "this.place === 1 && this.net.social.party ?",
      "status": "active"
@@ -12168,7 +12295,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 710,
+     "line": 689,
      "where": "text",
      "condition": "win ?",
      "status": "active"
@@ -12194,7 +12321,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 715,
+     "line": 694,
      "where": "text",
      "condition": "if (prog && this.net.me.signedIn && LEVELS_ON)",
      "status": "unused"
@@ -12216,7 +12343,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 715,
+     "line": 694,
      "where": "text",
      "condition": "up ?",
      "status": "active"
@@ -12238,7 +12365,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 715,
+     "line": 694,
      "where": "text",
      "condition": "up ?",
      "status": "active"
@@ -12260,7 +12387,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 719,
+     "line": 698,
      "where": "text",
      "condition": "a.title ?",
      "status": "active"
@@ -12277,7 +12404,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 719,
+     "line": 698,
      "where": "text",
      "condition": "a.look ?",
      "status": "active"
@@ -12294,7 +12421,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 725,
+     "line": 704,
      "where": "wrapText",
      "condition": "win ?",
      "status": "active"
@@ -12311,7 +12438,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 725,
+     "line": 704,
      "where": "wrapText",
      "condition": "win ?",
      "status": "active"
@@ -12333,7 +12460,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 727,
+     "line": 706,
      "where": "text",
      "condition": "if (this.info?.picks)",
      "status": "active"
@@ -12355,7 +12482,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 727,
+     "line": 706,
      "where": "text",
      "condition": "this.info.picks > 1 ?",
      "status": "active"
@@ -12372,7 +12499,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 727,
+     "line": 706,
      "where": "text",
      "condition": "this.info.picks > 1 ?",
      "status": "active"
@@ -12406,7 +12533,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 731,
+     "line": 710,
      "where": "button",
      "condition": "if (this.info?.picks)",
      "status": "active"
@@ -12423,7 +12550,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 736,
+     "line": 715,
      "where": "button",
      "condition": "this.net.privateLobby ?",
      "status": "active"
@@ -12440,7 +12567,7 @@
    "uses": [
     {
      "file": "src/ui/onlineScreens.ts",
-     "line": 739,
+     "line": 718,
      "where": "button",
      "condition": "if (this.onWatch)",
      "status": "active"
@@ -14753,7 +14880,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1034,
+     "line": 1055,
      "where": "text",
      "condition": "if (this.logo)",
      "status": "active"
@@ -14770,7 +14897,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1037,
+     "line": 1058,
      "where": "text",
      "condition": "in render()",
      "status": "active"
@@ -14787,7 +14914,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1044,
+     "line": 1065,
      "where": "button",
      "condition": "if (this.onOnline)",
      "status": "active"
@@ -14804,7 +14931,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1046,
+     "line": 1067,
      "where": "rows =",
      "condition": "in render()",
      "status": "active"
@@ -14826,7 +14953,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1047,
+     "line": 1068,
      "where": "rows =",
      "condition": "in render()",
      "status": "active"
@@ -14843,7 +14970,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1048,
+     "line": 1069,
      "where": "rows =",
      "condition": "in render()",
      "status": "active"
@@ -14865,7 +14992,7 @@
    "uses": [
     {
      "file": "src/ui/titleScreen.ts",
-     "line": 1053,
+     "line": 1076,
      "where": "stamp =",
      "condition": "in render()",
      "status": "active"
@@ -15452,7 +15579,7 @@
     },
     {
      "file": "server/adminPage.ts",
-     "line": 94,
+     "line": 140,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -15661,7 +15788,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 288,
+     "line": 292,
      "where": "error:",
      "condition": "if (!u || u.banned)",
      "status": "active"
@@ -15678,14 +15805,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 289,
+     "line": 293,
      "where": "error:",
      "condition": "if (u.id === me.id)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 854,
+     "line": 883,
      "where": "text:",
      "condition": "if (u.id === userId)",
      "status": "active"
@@ -15702,7 +15829,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 305,
+     "line": 309,
      "where": "text:",
      "condition": "r.changes ?",
      "status": "active"
@@ -15719,7 +15846,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 305,
+     "line": 309,
      "where": "error:",
      "condition": "r.changes ?",
      "status": "active"
@@ -15736,28 +15863,28 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 311,
+     "line": 315,
      "where": "error:",
      "condition": "if (req.method !== 'POST')",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 376,
+     "line": 380,
      "where": "error:",
      "condition": "in tradeApi()",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1117,
+     "line": 1154,
      "where": "error:",
      "condition": "in handle()",
      "status": "active"
     },
     {
      "file": "server/adminApi.ts",
-     "line": 163,
+     "line": 183,
      "where": "error:",
      "condition": "in handle()",
      "status": "admin"
@@ -15788,7 +15915,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 314,
+     "line": 318,
      "where": "error:",
      "condition": "if (this.limited(`trade:${me.id}`, 20, 3600_000))",
      "status": "active"
@@ -15805,7 +15932,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 317,
+     "line": 321,
      "where": "error:",
      "condition": "if (!give || give.owner !== me.id)",
      "status": "active"
@@ -15822,7 +15949,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 318,
+     "line": 322,
      "where": "error:",
      "condition": "if (!want || want.owner === me.id)",
      "status": "active"
@@ -15839,7 +15966,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 319,
+     "line": 323,
      "where": "error:",
      "condition": "if (this.isPooled(give.pcId as number) || this.isPooled(want.pcId as number))",
      "status": "active"
@@ -15856,7 +15983,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 322,
+     "line": 326,
      "where": "error:",
      "condition": "if (!target || target.banned)",
      "status": "active"
@@ -15873,7 +16000,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 324,
+     "line": 328,
      "where": "error:",
      "condition": "if (open >= 10)",
      "status": "active"
@@ -15890,7 +16017,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 326,
+     "line": 330,
      "where": "error:",
      "condition": "if (dup)",
      "status": "active"
@@ -15920,7 +16047,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 330,
+     "line": 334,
      "where": "text:",
      "condition": "if (path === '/api/trades/offer')",
      "status": "active"
@@ -15937,7 +16064,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 333,
+     "line": 337,
      "where": "error:",
      "condition": "if (!t)",
      "status": "active"
@@ -15954,14 +16081,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 335,
+     "line": 339,
      "where": "error:",
      "condition": "if (t.from_user !== me.id)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 341,
+     "line": 345,
      "where": "error:",
      "condition": "if (t.to_user !== me.id)",
      "status": "active"
@@ -15978,7 +16105,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 355,
+     "line": 359,
      "where": "error:",
      "condition": "if (!g || !w || g.user_id !== t.from_user || w.user_id !== t.to_user || this.isPooled(t.give_pc) || this.isPooled(t.want_pc))",
      "status": "active"
@@ -16000,7 +16127,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 374,
+     "line": 378,
      "where": "text:",
      "condition": "if (path === '/api/trades/respond')",
      "status": "active"
@@ -16017,7 +16144,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 400,
+     "line": 404,
      "where": "error:",
      "condition": "if (this.limited(`wonder:${me.id}`, 30, 3600_000))",
      "status": "active"
@@ -16034,7 +16161,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 402,
+     "line": 406,
      "where": "error:",
      "condition": "if (!give || give.owner !== me.id)",
      "status": "active"
@@ -16051,7 +16178,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 403,
+     "line": 407,
      "where": "error:",
      "condition": "if (this.db.prepare(\"SELECT 1 FROM wonder WHERE user_id = ? AND status = 'waiting'\").get(me.id))",
      "status": "active"
@@ -16073,7 +16200,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 439,
+     "line": 443,
      "where": "text:",
      "condition": "if (!got)",
      "status": "active"
@@ -16099,7 +16226,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 441,
+     "line": 445,
      "where": "text:",
      "condition": "in wonderSend()",
      "status": "active"
@@ -16109,21 +16236,14 @@
    "who": "Screen text"
   },
   {
-   "id": "T21012D",
-   "text": "Your Egg for today has hatched. The next one comes at midnight UTC",
+   "id": "TB59DB3",
+   "text": "Your Egg for today has hatched. A new one comes every day at midnight UTC",
    "placeholders": [],
    "example": null,
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 547,
-     "where": "error:",
-     "condition": "if (!st.ready)",
-     "status": "active"
-    },
-    {
-     "file": "server/accounts.ts",
-     "line": 563,
+     "line": 570,
      "where": "error:",
      "condition": "in hatchEgg()",
      "status": "active"
@@ -16140,7 +16260,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 552,
+     "line": 575,
      "where": "error:",
      "condition": "if (!sp)",
      "status": "active"
@@ -16162,7 +16282,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 649,
+     "line": 676,
      "where": "what:",
      "condition": "if (xpBoost > 1 && lines.length)",
      "status": "active"
@@ -16179,7 +16299,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 853,
+     "line": 882,
      "where": "text:",
      "condition": "if (!u || u.banned)",
      "status": "active"
@@ -16201,7 +16321,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 855,
+     "line": 884,
      "where": "text:",
      "condition": "if (this.areFriends(userId, u.id))",
      "status": "active"
@@ -16223,7 +16343,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 857,
+     "line": 886,
      "where": "text:",
      "condition": "if (count >= MAX_FRIENDS)",
      "status": "active"
@@ -16245,7 +16365,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 863,
+     "line": 892,
      "where": "text:",
      "condition": "if (theirs)",
      "status": "active"
@@ -16267,7 +16387,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 866,
+     "line": 895,
      "where": "text:",
      "condition": "in addFriend()",
      "status": "active"
@@ -16284,10 +16404,17 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 951,
+     "line": 980,
      "where": "error:",
      "condition": "if (req.headers['x-almia'] !== '1')",
      "status": "active"
+    },
+    {
+     "file": "server/adminApi.ts",
+     "line": 81,
+     "where": "error:",
+     "condition": "if (req.headers['x-almia'] !== '1')",
+     "status": "admin"
     },
     {
      "file": "server/modApi.ts",
@@ -16301,21 +16428,14 @@
    "who": "Error message"
   },
   {
-   "id": "T518775",
-   "text": "Sign in for a daily Egg",
+   "id": "T021A6B",
+   "text": "Sign in to redeem a Mystery Gift",
    "placeholders": [],
    "example": null,
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 964,
-     "where": "error:",
-     "condition": "if (!me)",
-     "status": "active"
-    },
-    {
-     "file": "server/accounts.ts",
-     "line": 968,
+     "line": 994,
      "where": "error:",
      "condition": "if (!me)",
      "status": "active"
@@ -16332,28 +16452,35 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 969,
+     "line": 995,
      "where": "error:",
      "condition": "if (me.banned)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 998,
+     "line": 1006,
      "where": "error:",
      "condition": "if (me.banned)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1171,
+     "line": 1035,
+     "where": "error:",
+     "condition": "if (me.banned)",
+     "status": "active"
+    },
+    {
+     "file": "server/accounts.ts",
+     "line": 1208,
      "where": "error:",
      "condition": "if (u.banned)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1258,
+     "line": 1295,
      "where": "back",
      "condition": "if (u.banned)",
      "status": "active"
@@ -16370,6 +16497,30 @@
    "who": "Error message"
   },
   {
+   "id": "T518775",
+   "text": "Sign in for a daily Egg",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/accounts.ts",
+     "line": 1001,
+     "where": "error:",
+     "condition": "if (!me)",
+     "status": "active"
+    },
+    {
+     "file": "server/accounts.ts",
+     "line": 1005,
+     "where": "error:",
+     "condition": "if (!me)",
+     "status": "active"
+    }
+   ],
+   "group": "account",
+   "who": "Error message"
+  },
+  {
    "id": "TCF2D92",
    "text": "No such player",
    "placeholders": [],
@@ -16377,7 +16528,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 993,
+     "line": 1030,
      "where": "error:",
      "condition": "if (!u || u.banned)",
      "status": "active"
@@ -16394,7 +16545,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 997,
+     "line": 1034,
      "where": "error:",
      "condition": "if (!me)",
      "status": "active"
@@ -16411,7 +16562,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1007,
+     "line": 1044,
      "where": "error:",
      "condition": "if (this.limited(`friend:${me.id}`, 30, 3600_000))",
      "status": "active"
@@ -16428,14 +16579,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1030,
+     "line": 1067,
      "where": "error:",
      "condition": "if (!row || row.picks_left <= 0)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1042,
+     "line": 1079,
      "where": "error:",
      "condition": "if (!left || left.picks_left <= 0)",
      "status": "active"
@@ -16452,7 +16603,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1034,
+     "line": 1071,
      "where": "error:",
      "condition": "if (!pick || pick.taken)",
      "status": "active"
@@ -16469,7 +16620,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1057,
+     "line": 1094,
      "where": "error:",
      "condition": "if (t && !titlesFor(this.earned(me.id)).includes(t))",
      "status": "active"
@@ -16486,7 +16637,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1062,
+     "line": 1099,
      "where": "error:",
      "condition": "if (!me.pass_hash)",
      "status": "active"
@@ -16503,7 +16654,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1069,
+     "line": 1106,
      "where": "error:",
      "condition": "if (!me.pass_hash)",
      "status": "active"
@@ -16520,7 +16671,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1070,
+     "line": 1107,
      "where": "error:",
      "condition": "if (this.limited(`pw:${me.id}`, 8, 900_000))",
      "status": "active"
@@ -16537,7 +16688,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1073,
+     "line": 1110,
      "where": "error:",
      "condition": "if (!checkPassword(cur, me.pass_hash))",
      "status": "active"
@@ -16554,7 +16705,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1081,
+     "line": 1118,
      "where": "onSignedOut",
      "condition": "if (req.method === 'POST' && path === '/api/password')",
      "status": "active"
@@ -16571,7 +16722,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1087,
+     "line": 1124,
      "where": "error:",
      "condition": "if (!look)",
      "status": "active"
@@ -16588,7 +16739,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1088,
+     "line": 1125,
      "where": "error:",
      "condition": "if (!this.canWear(me.id, look))",
      "status": "active"
@@ -16605,7 +16756,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1093,
+     "line": 1130,
      "where": "error:",
      "condition": "if (!this.allow(`rename:${me.id}`, 3, 24 * 3600_000))",
      "status": "active"
@@ -16622,14 +16773,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1101,
+     "line": 1138,
      "where": "error:",
      "condition": "if (req.method === 'POST' && path === '/api/rename')",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1148,
+     "line": 1185,
      "where": "error:",
      "condition": "in register()",
      "status": "active"
@@ -16651,7 +16802,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1104,
+     "line": 1141,
      "where": "logMod",
      "condition": "if (req.method === 'POST' && path === '/api/rename')",
      "status": "active"
@@ -16668,7 +16819,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1109,
+     "line": 1146,
      "where": "error:",
      "condition": "if (!this.allow(`report:${me.id}`, 10, 3600_000))",
      "status": "active"
@@ -16685,7 +16836,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1113,
+     "line": 1150,
      "where": "error:",
      "condition": "if (!target)",
      "status": "active"
@@ -16702,7 +16853,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1119,
+     "line": 1156,
      "where": "error:",
      "condition": "if (e instanceof BodyTooLarge)",
      "status": "active"
@@ -16719,14 +16870,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1123,
+     "line": 1160,
      "where": "error:",
      "condition": "in handle()",
      "status": "active"
     },
     {
      "file": "server/adminApi.ts",
-     "line": 166,
+     "line": 186,
      "where": "error:",
      "condition": "in handle()",
      "status": "admin"
@@ -16750,7 +16901,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1128,
+     "line": 1165,
      "where": "return",
      "condition": "if (!USERNAME.test(name))",
      "status": "active"
@@ -16767,7 +16918,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1129,
+     "line": 1166,
      "where": "return",
      "condition": "if (RESERVED.has(name.toLowerCase()) || !isClean(name))",
      "status": "active"
@@ -16784,7 +16935,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1135,
+     "line": 1172,
      "where": "error:",
      "condition": "if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))",
      "status": "active"
@@ -16801,7 +16952,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1136,
+     "line": 1173,
      "where": "error:",
      "condition": "if (this.limited(`reg:${ip}`, this.kind === 'dev' ? 100 : 5, 3600_000))",
      "status": "test-only"
@@ -16818,7 +16969,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1163,
+     "line": 1200,
      "where": "error:",
      "condition": "if (this.limited(`ip:${ip}`, 20, 900_000) || this.limited(`user:${username.toLowerCase()}`, 8, 900_000))",
      "status": "active"
@@ -16835,7 +16986,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1169,
+     "line": 1206,
      "where": "error:",
      "condition": "if (!u || !u.pass_hash || !checkPassword(password, u.pass_hash))",
      "status": "active"
@@ -16852,7 +17003,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1172,
+     "line": 1209,
      "where": "error:",
      "condition": "if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))",
      "status": "active"
@@ -16869,7 +17020,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1183,
+     "line": 1220,
      "where": "error:",
      "condition": "if (this.limited(`rec:${ip}`, 10, 3600_000) || this.limited(`recuser:${username.toLowerCase()}`, 5, 3600_000))",
      "status": "active"
@@ -16886,7 +17037,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1188,
+     "line": 1225,
      "where": "error:",
      "condition": "if (!u || !u.pass_hash || u.banned || !this.useRecoveryCode(u.id, code))",
      "status": "active"
@@ -16903,7 +17054,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1198,
+     "line": 1235,
      "where": "onSignedOut",
      "condition": "in recover()",
      "status": "active"
@@ -16920,7 +17071,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1212,
+     "line": 1249,
      "where": "end",
      "condition": "if (!this.google)",
      "status": "active"
@@ -16937,7 +17088,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1219,
+     "line": 1256,
      "where": "scope:",
      "condition": "in googleStart()",
      "status": "active"
@@ -16954,7 +17105,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1232,
+     "line": 1269,
      "where": "back",
      "condition": "if (!this.google)",
      "status": "active"
@@ -16971,7 +17122,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1234,
+     "line": 1271,
      "where": "back",
      "condition": "if (!state || state !== url.searchParams.get('state') || !verifier)",
      "status": "active"
@@ -16988,7 +17139,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1236,
+     "line": 1273,
      "where": "back",
      "condition": "if (!code)",
      "status": "active"
@@ -17005,14 +17156,14 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1242,
+     "line": 1279,
      "where": "back",
      "condition": "if (!r.ok)",
      "status": "active"
     },
     {
      "file": "server/accounts.ts",
-     "line": 1247,
+     "line": 1284,
      "where": "back",
      "condition": "if (!claims.sub || claims.aud !== this.google.id || !['https://accounts.google.com', 'accounts.google.com'].includes(claims.iss ?? '') || (claim)",
      "status": "active"
@@ -17029,7 +17180,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1273,
+     "line": 1310,
      "where": "secure =",
      "condition": "isHttps(req) ?",
      "status": "active"
@@ -17046,7 +17197,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1298,
+     "line": 1335,
      "where": "return",
      "condition": "if (password.length < 8 || password.length > 200)",
      "status": "active"
@@ -17063,7 +17214,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1299,
+     "line": 1336,
      "where": "return",
      "condition": "if (password.toLowerCase().includes(username.toLowerCase()) || /^(password|12345678|qwertyui|11111111)/i.test(password))",
      "status": "active"
@@ -17089,7 +17240,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1306,
+     "line": 1343,
      "where": "return",
      "condition": "in hashPassword()",
      "status": "active"
@@ -17106,7 +17257,7 @@
    "uses": [
     {
      "file": "server/accounts.ts",
-     "line": 1347,
+     "line": 1384,
      "where": "call",
      "condition": "",
      "status": "active"
@@ -17191,9 +17342,43 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 68,
+     "line": 70,
      "where": "error:",
      "condition": "if (!me)",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Error message"
+  },
+  {
+   "id": "T824C26",
+   "text": "GET or POST",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminApi.ts",
+     "line": 80,
+     "where": "error:",
+     "condition": "if (req.method !== 'POST')",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Error message"
+  },
+  {
+   "id": "T38F4D8",
+   "text": "No such code",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminApi.ts",
+     "line": 87,
+     "where": "error:",
+     "condition": "gifts.setActive(String(body.code ?? ''), body.active === true) ?",
      "status": "admin"
     }
    ],
@@ -17208,7 +17393,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 70,
+     "line": 90,
      "where": "error:",
      "condition": "if (req.method !== 'GET')",
      "status": "admin"
@@ -17225,7 +17410,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 97,
+     "line": 117,
      "where": "where =",
      "condition": "q ?",
      "status": "admin"
@@ -17242,7 +17427,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 109,
+     "line": 129,
      "where": "error:",
      "condition": "if (!u)",
      "status": "admin"
@@ -17273,7 +17458,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 139,
+     "line": 159,
      "where": "cond.push",
      "condition": "if (mode)",
      "status": "admin"
@@ -17290,7 +17475,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 142,
+     "line": 162,
      "where": "cond.push",
      "condition": "if (!withAborted)",
      "status": "admin"
@@ -17307,7 +17492,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 144,
+     "line": 164,
      "where": "cond.push",
      "condition": "if (player)",
      "status": "admin"
@@ -17329,7 +17514,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 145,
+     "line": 165,
      "where": "args.push",
      "condition": "if (player)",
      "status": "admin"
@@ -17351,7 +17536,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 147,
+     "line": 167,
      "where": "where =",
      "condition": "cond.length ?",
      "status": "admin"
@@ -17368,7 +17553,7 @@
    "uses": [
     {
      "file": "server/adminApi.ts",
-     "line": 159,
+     "line": 179,
      "where": "error:",
      "condition": "if (!old)",
      "status": "admin"
@@ -18015,6 +18200,307 @@
    ],
    "group": "hub",
    "who": "UI"
+  },
+  {
+   "id": "T0D6198",
+   "text": "A code is 4 to 24 letters, numbers or dashes",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 107,
+     "where": "error:",
+     "condition": "if (!CODE_RE.test(code))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T4A9267",
+   "text": "That code already exists",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 108,
+     "where": "error:",
+     "condition": "if (this.acc.db.prepare('SELECT 1 FROM gift_codes WHERE code = ?').get(code))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T9CF369",
+   "text": "Pick what the code gives: a Pokémon or a look",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 110,
+     "where": "error:",
+     "condition": "if (!kind)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T889169",
+   "text": "No such Pokémon (use its number, like 25 or 0025, or its name)",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 114,
+     "where": "error:",
+     "condition": "if (!dex)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T0A7F9F",
+   "text": "Level 1 to 100",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 116,
+     "where": "error:",
+     "condition": "if (!(level >= 1 && level <= 100))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TEA47E0",
+   "text": "{SPECIES.get(dex)?.name} has no shiny colours in the game",
+   "placeholders": [
+    {
+     "name": "SPECIES.get(dex)?.name",
+     "example": "Pikachu"
+    }
+   ],
+   "example": "Pikachu has no shiny colours in the game",
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 118,
+     "where": "error:",
+     "condition": "if (shiny && !SpriteRegistry.hasShiny(dex))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TA3606E",
+   "text": "No such look",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 122,
+     "where": "error:",
+     "condition": "if (!this.lookIds().includes(look))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T5237B4",
+   "text": "Uses: 1 or more, or empty for no limit",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 126,
+     "where": "error:",
+     "condition": "if (max !== null && !(max >= 1))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TFECF3B",
+   "text": "The expiry must be in the future",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 128,
+     "where": "error:",
+     "condition": "if (exp !== null && !(exp > Date.now()))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TD6E41B",
+   "text": "Too many wrong codes. Try again in a while",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 144,
+     "where": "error:",
+     "condition": "if (recent.length >= TRIES_PER_HOUR)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T9DC3B8",
+   "text": "That code is not valid",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 151,
+     "where": "miss",
+     "condition": "if (!row)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "UI"
+  },
+  {
+   "id": "T68616F",
+   "text": "That code is no longer active",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 152,
+     "where": "error:",
+     "condition": "if (!row.active)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T07404E",
+   "text": "That code has expired",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 153,
+     "where": "error:",
+     "condition": "if (row.expires_at !== null && row.expires_at <= now)",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TA13C45",
+   "text": "You already used this code",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 154,
+     "where": "error:",
+     "condition": "if (this.acc.db.prepare('SELECT 1 FROM gift_redemptions WHERE code = ? AND user_id = ?').get(code, userId))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TD006D8",
+   "text": "That code has been used up",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 155,
+     "where": "error:",
+     "condition": "if (row.max_uses !== null && row.uses >= row.max_uses)",
+     "status": "active"
+    },
+    {
+     "file": "server/gifts.ts",
+     "line": 179,
+     "where": "error:",
+     "condition": "String((e as Error).message) === 'used up' ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "TB522F9",
+   "text": "You already have that look",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 157,
+     "where": "error:",
+     "condition": "if (row.kind === 'look' && p.look && this.ownedLooks(userId).includes(p.look))",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
+  },
+  {
+   "id": "T830EC4",
+   "text": "That code could not be used right now",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/gifts.ts",
+     "line": 179,
+     "where": "error:",
+     "condition": "String((e as Error).message) === 'used up' ?",
+     "status": "active"
+    }
+   ],
+   "group": "hub",
+   "who": "Error message"
   },
   {
    "id": "T88FEF7",
@@ -26347,7 +26833,7 @@
     },
     {
      "file": "server/adminPage.ts",
-     "line": 66,
+     "line": 67,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -26429,14 +26915,14 @@
     },
     {
      "file": "server/adminPage.ts",
-     "line": 48,
+     "line": 49,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
     },
     {
      "file": "server/adminPage.ts",
-     "line": 113,
+     "line": 159,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27446,7 +27932,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 8,
+     "line": 9,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27463,14 +27949,14 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 48,
+     "line": 49,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
     },
     {
      "file": "server/adminPage.ts",
-     "line": 133,
+     "line": 179,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27487,7 +27973,14 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 58,
+     "line": 59,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 92,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -27504,7 +27997,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 76,
+     "line": 77,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27521,7 +28014,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 77,
+     "line": 78,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27531,178 +28024,8 @@
    "who": "Dashboard page"
   },
   {
-   "id": "TA02107",
-   "text": "Signed in as",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 91,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TBDCAA7",
-   "text": "Players connected",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 95,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T1B6C52",
-   "text": "Signed in",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 95,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T329B4F",
-   "text": "Computer trainers in matches",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 95,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TA54FB3",
-   "text": "On the online menu",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 96,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T35E6B5",
-   "text": "In a lobby, queue or party",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 96,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T57E279",
-   "text": "Playing a match",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 96,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T84477D",
-   "text": "Disconnected, seat held",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 96,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TB7763C",
-   "text": "· refreshes every 10 s while this tab is open.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 97,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T598C3E",
-   "text": "Name Kind Where Match Connected",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 99,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T16A692",
-   "text": "Nobody is connected.",
+   "id": "T0387C4",
+   "text": "Make a Mystery Gift code",
    "placeholders": [],
    "example": null,
    "uses": [
@@ -27718,31 +28041,14 @@
    "who": "Dashboard page"
   },
   {
-   "id": "TBB9F28",
-   "text": "Disconnected from a running match (seat held for a reconnect) Name Kind Match",
+   "id": "T5AAB25",
+   "text": "a Pokémon",
    "placeholders": [],
    "example": null,
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 101,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T32AA9B",
-   "text": "No match is running.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 115,
+     "line": 104,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -27752,674 +28058,14 @@
    "who": "Dashboard page"
   },
   {
-   "id": "T5FA2F1",
-   "text": "Trainer Kind Status",
+   "id": "T86CF63",
+   "text": "Gives a Pokémon a look (skin)",
    "placeholders": [],
    "example": null,
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 115,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T6F4520",
-   "text": "disconnected (seat held)",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 115,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T7AE94F",
-   "text": "Refreshes every 10 s while this tab is open. Finished matches move to Match history.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 116,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T52C897",
-   "text": "Loading matches...",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 125,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TC9117F",
-   "text": "Full match records (duration, every trainer with bots marked, places, stats) start",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 134,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TEF6037",
-   "text": ". Matches before that were recorded only for signed-in players (their place, outcome and stats):",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 134,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T2874A8",
-   "text": "such match",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 134,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TE0002E",
-   "text": "s page.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 134,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TCAB5CF",
-   "text": "Any mode",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 135,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T1AD2F1",
-   "text": "Any mode Public Private",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 135,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T8DE3DF",
-   "text": "include called-off matches",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 136,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TD4D073",
-   "text": "Ended Mode Duration Winner Trainers Humans Bots",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 137,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TE59B21",
-   "text": "called off",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 138,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TA5EA87",
-   "text": "No completed matches recorded",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 139,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T35012B",
-   "text": "for this filter",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 139,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T6CE190",
-   "text": "Loading the match...",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 148,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T1F2A3A",
-   "text": "Recorded before full match logging began: only the signed-in players\\\\",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 154,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TBB4309",
-   "text": "Place Trainer Outcome Catches KOs Eliminations Damage Survived",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 155,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TB70CE3",
-   "text": "Back to the list",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 157,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    },
-    {
-     "file": "server/adminPage.ts",
-     "line": 166,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TAED2DF",
-   "text": "of play · winner:",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 162,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T82B5DC",
-   "text": "Place Trainer Kind Outcome Catches KOs Eliminations Damage Survived",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 163,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T9925EE",
-   "text": "not recorded",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 165,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T56462F",
-   "text": "Last seen",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 177,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    },
-    {
-     "file": "server/adminPage.ts",
-     "line": 200,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TD715CC",
-   "text": "Username Role Created Last seen PC",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 177,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T4D289B",
-   "text": "No account matches \"",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 180,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TFC2341",
-   "text": "Loading the account...",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 191,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T662F38",
-   "text": "Saved account",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 198,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T1A3610",
-   "text": "Account id",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 199,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TCCA0ED",
-   "text": "online now",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 200,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T7396A2",
-   "text": "online now (",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 200,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TD2B803",
-   "text": "online menu",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 200,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T446C08",
-   "text": "playing match",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 200,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TED041C",
-   "text": "muted until",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 202,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TFDD825",
-   "text": "in good standing",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 202,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T3CD483",
-   "text": ", trainer levels are hidden in the game)",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 203,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T56781B",
-   "text": "Career stats",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 205,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TB7C2BA",
-   "text": "damage · best place",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 205,
-     "where": "admin page script",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "T5560E1",
-   "text": "None saved: Poké Dollars start fresh every match.",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 206,
-     "where": "admin page HTML",
-     "condition": "",
-     "status": "admin"
-    }
-   ],
-   "group": "admin",
-   "who": "Dashboard page"
-  },
-  {
-   "id": "TBC81E0",
-   "text": "Storage chest",
-   "placeholders": [],
-   "example": null,
-   "uses": [
-    {
-     "file": "server/adminPage.ts",
-     "line": 207,
+     "line": 104,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -28436,8 +28082,1049 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 209,
+     "line": 105,
      "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 255,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T1EBBCC",
+   "text": "Pokémon Level Shiny",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 105,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T13F7D3",
+   "text": "Uses Expires Note",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 107,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TC9B811",
+   "text": "Make code",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 108,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TFBC9A7",
+   "text": "Code Gives Used Expires Note Made",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 109,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TBE15D6",
+   "text": "No codes yet.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 111,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T48C5B7",
+   "text": ": give it to players to enter on the home page (Mystery Gift).",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 118,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T25E9B7",
+   "text": "Nobody yet.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 128,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T380A4A",
+   "text": "Account When",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 128,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TA02107",
+   "text": "Signed in as",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 137,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TBDCAA7",
+   "text": "Players connected",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 141,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T1B6C52",
+   "text": "Signed in",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 141,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T329B4F",
+   "text": "Computer trainers in matches",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 141,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TA54FB3",
+   "text": "On the online menu",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 142,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T35E6B5",
+   "text": "In a lobby, queue or party",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 142,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T57E279",
+   "text": "Playing a match",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 142,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T84477D",
+   "text": "Disconnected, seat held",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 142,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TB7763C",
+   "text": "· refreshes every 10 s while this tab is open.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 143,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T598C3E",
+   "text": "Name Kind Where Match Connected",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 145,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T16A692",
+   "text": "Nobody is connected.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 146,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TBB9F28",
+   "text": "Disconnected from a running match (seat held for a reconnect) Name Kind Match",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 147,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T32AA9B",
+   "text": "No match is running.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 161,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T5FA2F1",
+   "text": "Trainer Kind Status",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 161,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T6F4520",
+   "text": "disconnected (seat held)",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 161,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T7AE94F",
+   "text": "Refreshes every 10 s while this tab is open. Finished matches move to Match history.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 162,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T52C897",
+   "text": "Loading matches...",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 171,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TC9117F",
+   "text": "Full match records (duration, every trainer with bots marked, places, stats) start",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 180,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TEF6037",
+   "text": ". Matches before that were recorded only for signed-in players (their place, outcome and stats):",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 180,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T2874A8",
+   "text": "such match",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 180,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TE0002E",
+   "text": "s page.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 180,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TCAB5CF",
+   "text": "Any mode",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 181,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T1AD2F1",
+   "text": "Any mode Public Private",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 181,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T8DE3DF",
+   "text": "include called-off matches",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 182,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TD4D073",
+   "text": "Ended Mode Duration Winner Trainers Humans Bots",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 183,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TE59B21",
+   "text": "called off",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 184,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TA5EA87",
+   "text": "No completed matches recorded",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 185,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T35012B",
+   "text": "for this filter",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 185,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T6CE190",
+   "text": "Loading the match...",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 194,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T1F2A3A",
+   "text": "Recorded before full match logging began: only the signed-in players\\\\",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 200,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TBB4309",
+   "text": "Place Trainer Outcome Catches KOs Eliminations Damage Survived",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 201,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TB70CE3",
+   "text": "Back to the list",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 203,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 212,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TAED2DF",
+   "text": "of play · winner:",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 208,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T82B5DC",
+   "text": "Place Trainer Kind Outcome Catches KOs Eliminations Damage Survived",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 209,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T9925EE",
+   "text": "not recorded",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 211,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T56462F",
+   "text": "Last seen",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 223,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    },
+    {
+     "file": "server/adminPage.ts",
+     "line": 246,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TD715CC",
+   "text": "Username Role Created Last seen PC",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 223,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T4D289B",
+   "text": "No account matches \"",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 226,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TFC2341",
+   "text": "Loading the account...",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 237,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T662F38",
+   "text": "Saved account",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 244,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T1A3610",
+   "text": "Account id",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 245,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TCCA0ED",
+   "text": "online now",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 246,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T7396A2",
+   "text": "online now (",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 246,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TD2B803",
+   "text": "online menu",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 246,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T446C08",
+   "text": "playing match",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 246,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TED041C",
+   "text": "muted until",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 248,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TFDD825",
+   "text": "in good standing",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 248,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T3CD483",
+   "text": ", trainer levels are hidden in the game)",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 249,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T56781B",
+   "text": "Career stats",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 251,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TB7C2BA",
+   "text": "damage · best place",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 251,
+     "where": "admin page script",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "T5560E1",
+   "text": "None saved: Poké Dollars start fresh every match.",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 252,
+     "where": "admin page HTML",
+     "condition": "",
+     "status": "admin"
+    }
+   ],
+   "group": "admin",
+   "who": "Dashboard page"
+  },
+  {
+   "id": "TBC81E0",
+   "text": "Storage chest",
+   "placeholders": [],
+   "example": null,
+   "uses": [
+    {
+     "file": "server/adminPage.ts",
+     "line": 253,
+     "where": "admin page script",
      "condition": "",
      "status": "admin"
     }
@@ -28453,7 +29140,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 209,
+     "line": 255,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -28470,7 +29157,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 210,
+     "line": 256,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -28487,7 +29174,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 211,
+     "line": 257,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -28504,7 +29191,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 211,
+     "line": 257,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -28521,7 +29208,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 214,
+     "line": 260,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -28538,7 +29225,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 216,
+     "line": 262,
      "where": "admin page HTML",
      "condition": "",
      "status": "admin"
@@ -28555,7 +29242,7 @@
    "uses": [
     {
      "file": "server/adminPage.ts",
-     "line": 217,
+     "line": 263,
      "where": "admin page script",
      "condition": "",
      "status": "admin"
@@ -28587,6 +29274,11 @@
    "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
   },
   {
+   "id": "TEA47E0",
+   "text": "{SPECIES.get(dex)?.name} has no shiny colours in the game",
+   "why": "British spelling (the rest of the game mixes spellings)"
+  },
+  {
    "id": "T5D1E48",
    "text": "{p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1}",
    "why": "trainer levels and XP are hidden in the game (LEVELS_ON is off)"
@@ -28594,11 +29286,6 @@
   {
    "id": "TCC7AED, T49B53D",
    "text": "paralyzed! / Paralyzed!",
-   "why": "the same words with different capitals or punctuation"
-  },
-  {
-   "id": "TDEC1D1, T06AA1B",
-   "text": "Daily Egg / Daily Egg!",
    "why": "the same words with different capitals or punctuation"
   },
   {

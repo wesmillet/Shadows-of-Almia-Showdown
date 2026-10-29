@@ -9,6 +9,9 @@
 import { music } from '../audio/music';
 import { openOptions } from './optionsMenu';
 import { loadPc } from '../pc';
+import { DailyEgg } from './dailyEgg';
+import { giftDialog } from './giftDialog';
+import type { Connection } from '../net/connection';
 import type { Input } from '../core/input';
 import { dirFromVector, type Dir8 } from '../core/math';
 import type { DecorItem, GroundRenderer } from '../ground/types';
@@ -74,7 +77,9 @@ export class TitleScreen implements Screen {
   private t = 0;
   private readonly lighting: Lighting;
   /** How many Pokémon the PC holds (read once when the title opens). */
-  private readonly pcCount = loadPc().length;
+  private pcCount = loadPc().length;
+  /** The daily Egg card (when this build has a game server). */
+  private readonly egg: DailyEgg | null;
   private readonly fx: FxLibrary;
   private readonly vfx = new VfxLayer();
   private readonly groundVfx = new VfxLayer();
@@ -116,7 +121,9 @@ export class TitleScreen implements Screen {
     private readonly onCharacter: () => void = () => {},
     /** Online play, when this build has a game server (O). */
     private readonly onOnline: (() => void) | null = null,
+    private readonly net: Connection | null = null,
   ) {
+    this.egg = net && onOnline ? new DailyEgg(net, assets, sprites, () => this.leave(onOnline)) : null;
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
     this.fx.preload(Object.values(FX));
@@ -372,7 +379,8 @@ export class TitleScreen implements Screen {
     const w = Math.round(152 * s);
     const h = Math.round(52 * s);
     const gap = Math.round(12 * s);
-    const total = 4 * w + 3 * gap;
+    const n = this.egg ? 5 : 4;
+    const total = n * w + (n - 1) * gap;
     return { x: Math.round(v.width / 2 - total / 2 + i * (w + gap)), y: Math.round(v.height - 112 * s), w, h };
   }
 
@@ -392,6 +400,11 @@ export class TitleScreen implements Screen {
     return this.rowRect(3);
   }
 
+  /** Mystery Gift (with a game server): redeem a code. */
+  private giftRect(): { x: number; y: number; w: number; h: number } {
+    return this.egg ? this.rowRect(4) : { x: -999, y: -999, w: 0, h: 0 };
+  }
+
   /** The Options dialog is up: the title ignores the keyboard and clicks under it. */
   private optionsOpen = false;
 
@@ -408,7 +421,9 @@ export class TitleScreen implements Screen {
     const b = this.buttonRect();
     const on = this.onOnline;
     const o = this.onlineRect();
+    this.egg?.step(dt);
     for (const c of input.takeClicks()) {
+      if (this.egg?.click(this.ctx.view, c.x, c.y)) continue;
       if (on && hit(c.x, c.y, o.x, o.y, o.w, o.h)) this.leave(on);
       else if (!on && hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
       else {
@@ -423,6 +438,12 @@ export class TitleScreen implements Screen {
           else if (hit(c.x, c.y, op.x, op.y, op.w, op.h)) {
             this.optionsOpen = true;
             void openOptions().then(() => (this.optionsOpen = false));
+          } else {
+            const gr = this.giftRect();
+            if (this.net && on && hit(c.x, c.y, gr.x, gr.y, gr.w, gr.h)) {
+              this.optionsOpen = true;
+              void giftDialog(this.net, () => this.leave(on)).then(() => (this.optionsOpen = false));
+            }
           }
         }
       }
@@ -1047,8 +1068,10 @@ export class TitleScreen implements Screen {
       [`My PC (P) · ${this.pcCount}`, this.pcRect()],
       ['Trainer (C)', this.characterRect()],
       ['Options', this.optionsRect()],
+      ...(this.egg ? ([['Mystery Gift', this.giftRect()]] as Array<[string, { x: number; y: number; w: number; h: number }]>) : []),
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
+    this.egg?.draw(v, mx, my);
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     const sm = strip(v, stamp, 0, -9999, 11);

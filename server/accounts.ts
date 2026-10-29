@@ -19,11 +19,12 @@ import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { DEV_CHEST } from '../src/dev';
 import { CONFIG, SPECIES, movesAt } from '../src/sim/data';
-import { rollEgg } from '../src/sim/starters';
+import { rollEgg, STARTER_TIERS } from '../src/sim/starters';
 import { Rng } from '../src/core/rng';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
+import { Gifts } from './gifts';
 import { COLLECTION_LOG_SQL } from './collectionLog';
 import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
@@ -123,6 +124,8 @@ export interface MatchLogEntry {
 
 export class Accounts {
   readonly db: DatabaseSync;
+  /** Mystery Gift codes (server/gifts.ts). */
+  readonly gifts: Gifts;
   /** Failed sign-ins per IP and per username: [count, window start]. */
   private failures = new Map<string, [number, number]>();
   private readonly google: { id: string; secret: string } | null;
@@ -261,6 +264,7 @@ export class Accounts {
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;
     this.google = gid && gsecret ? { id: gid, secret: gsecret } : null;
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
+    this.gifts = new Gifts(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
   }
@@ -529,38 +533,56 @@ export class Accounts {
 
   // ---------------------------------------------------------------- the daily Egg
 
-  /** Whether today's Egg (UTC day) is still to hatch, and when the next one comes. */
-  eggState(userId: number, now = Date.now()): { ready: boolean; nextAt: number; today: { dex: string; name: string; shiny: boolean; tier: string } | null } {
+  /**
+   * Today's Egg (UTC day): rolled the first time the player asks (so its colour, the tier, shows
+   * before it hatches; the Pokémon stays secret until then), whether it has hatched, and when the
+   * next one comes.
+   */
+  eggState(userId: number, now = Date.now()): { ready: boolean; nextAt: number; tier: string; tierName: string; color: string; today: { dex: string; name: string; shiny: boolean } | null } {
     const day = new Date(now).toISOString().slice(0, 10);
-    const row = this.db.prepare('SELECT dex, shiny, tier FROM daily_eggs WHERE user_id = ? AND day = ?').get(userId, day) as { dex: string; shiny: number; tier: string } | undefined;
-    const nextAt = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate() + 1);
-    return { ready: !row, nextAt, today: row ? { dex: row.dex, name: SPECIES.get(row.dex)?.name ?? row.dex, shiny: !!row.shiny, tier: row.tier } : null };
+    const d = new Date(now);
+    const nextAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+    type Row = { dex: string; shiny: number; tier: string; pc_id: number | null };
+    const get = () => this.db.prepare('SELECT dex, shiny, tier, pc_id FROM daily_eggs WHERE user_id = ? AND day = ?').get(userId, day) as Row | undefined;
+    let row = get();
+    if (!row) {
+      // The roll: a tier by the starter tiers' weights, a Pokémon in it, shiny at the wild odds.
+      const rng = new Rng(randomInt(1, 2 ** 31));
+      const { tier, dex } = rollEgg(rng);
+      const shiny = SpriteRegistry.hasShiny(dex) && rng.chance(CONFIG.wild.shinyChance);
+      this.db.prepare('INSERT OR IGNORE INTO daily_eggs (user_id, day, dex, shiny, tier, at) VALUES (?, ?, ?, ?, ?, ?)').run(userId, day, dex, shiny ? 1 : 0, tier.id, now);
+      row = get() as Row;
+    }
+    const t = STARTER_TIERS.find((x) => x.id === row.tier);
+    const hatched = row.pc_id !== null;
+    return {
+      ready: !hatched, nextAt, tier: row.tier, tierName: t?.name ?? row.tier, color: t?.color ?? '#b8b8c8',
+      today: hatched ? { dex: row.dex, name: SPECIES.get(row.dex)?.name ?? row.dex, shiny: !!row.shiny } : null,
+    };
   }
 
   /**
-   * Hatches today's Egg: a Pokémon by the starter tiers' weights (rollEgg), shiny at the wild odds,
-   * level 5, straight into the PC. One per account per UTC day (the table's key makes a second
-   * hatch the same day fail even if two requests race).
+   * Hatches today's Egg into the PC (level 5). Once a day: the row is marked hatched in the same
+   * unit as the PC insert, and only if it was not already, so two requests at once give one Pokémon.
    */
   hatchEgg(userId: number, now = Date.now()): { dex: string; name: string; shiny: boolean; tier: string; tierName: string; color: string; pcId: number; nextAt: number } | { error: string; nextAt: number } {
     const st = this.eggState(userId, now);
-    if (!st.ready) return { error: 'Your Egg for today has hatched. The next one comes at midnight UTC', nextAt: st.nextAt };
+    const later = { error: 'Your Egg for today has hatched. A new one comes every day at midnight UTC', nextAt: st.nextAt };
+    if (!st.ready) return later;
     const day = new Date(now).toISOString().slice(0, 10);
-    const rng = new Rng(randomInt(1, 2 ** 31));
-    const { tier, dex } = rollEgg(rng);
-    const sp = SPECIES.get(dex);
+    const row = this.db.prepare('SELECT dex, shiny FROM daily_eggs WHERE user_id = ? AND day = ?').get(userId, day) as { dex: string; shiny: number };
+    const sp = SPECIES.get(row.dex);
     if (!sp) return { error: 'The Egg would not hatch, try again', nextAt: st.nextAt };
-    const shiny = SpriteRegistry.hasShiny(dex) && rng.chance(CONFIG.wild.shinyChance);
     try {
       const pcId = this.atomically(() => {
-        this.db.prepare('INSERT INTO daily_eggs (user_id, day, dex, shiny, tier, at) VALUES (?, ?, ?, ?, ?, ?)').run(userId, day, dex, shiny ? 1 : 0, tier.id, now);
-        const id = this.addToPc(userId, { dex, name: sp.name, level: 5, shiny, moves: movesAt(sp, 5) }, 'egg', `egg:${day}`);
-        this.db.prepare('UPDATE daily_eggs SET pc_id = ? WHERE user_id = ? AND day = ?').run(id, userId, day);
+        const id = this.addToPc(userId, { dex: row.dex, name: sp.name, level: 5, shiny: !!row.shiny, moves: movesAt(sp, 5) }, 'egg', `egg:${day}`);
+        const r = this.db.prepare('UPDATE daily_eggs SET pc_id = ? WHERE user_id = ? AND day = ? AND pc_id IS NULL').run(id, userId, day);
+        if (Number(r.changes) !== 1) throw new Error('already hatched');
         return id;
       });
-      return { dex, name: sp.name, shiny, tier: tier.id, tierName: tier.name, color: tier.color, pcId, nextAt: st.nextAt };
+      return { dex: row.dex, name: sp.name, shiny: !!row.shiny, tier: st.tier, tierName: st.tierName, color: st.color, pcId, nextAt: st.nextAt };
     } catch {
-      return { error: 'Your Egg for today has hatched. The next one comes at midnight UTC', nextAt: st.nextAt };
+      return later;
     }
   }
 
@@ -571,7 +593,7 @@ export class Accounts {
   }
 
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
-  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg', matchId: string): number {
+  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift', matchId: string): number {
     const entry = {
       uid: randomBytes(6).toString('base64url'), dex: m.dex, name: m.name, level: m.level, shiny: m.shiny || undefined, alpha: m.alpha || undefined,
       legend: m.legend || undefined, shadow: m.shadow || undefined, moves: m.moves, heldItem: m.heldItem ?? null, via, at: new Date().toISOString(), match: matchId,
@@ -582,6 +604,11 @@ export class Accounts {
       this.logCollection(userId, `add:${via}`, { pcId, ref: matchId, detail: entry });
       return pcId;
     });
+  }
+
+  /** Runs `fn` as one unit (for other server modules: Mystery Gift). */
+  unit<T>(fn: () => T): T {
+    return this.atomically(fn);
   }
 
   /** Runs `fn` as one unit (a savepoint: works inside a transaction already open, or on its own). */
@@ -703,6 +730,8 @@ export class Accounts {
   }
 
   canWear(userId: number, look: string): boolean {
+    // A look given by a Mystery Gift code is theirs to wear.
+    if (this.gifts.ownedLooks(userId).includes(look)) return true;
     return canWear(look, levelOf(this.xp(userId)).level, this.earned(userId));
   }
 
@@ -958,7 +987,15 @@ export class Accounts {
         return send(200, {
           signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: prof.look, stats: prof.stats,
           progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
+          looks: this.gifts.ownedLooks(me.id),
         });
+      }
+      if (req.method === 'POST' && path === '/api/gift/redeem') {
+        if (!me) return send(401, { error: 'Sign in to redeem a Mystery Gift' });
+        if (me.banned) return send(403, { error: 'This account is banned' });
+        const b = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+        const r = this.gifts.redeem(me.id, b.code);
+        return 'error' in r ? send(400, r) : send(200, r);
       }
       if (req.method === 'GET' && path === '/api/egg') {
         if (!me) return send(401, { error: 'Sign in for a daily Egg' });

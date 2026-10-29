@@ -9,7 +9,7 @@ import { CONFIG, SPAWNS, SPECIES } from './sim/data';
 import { SHOPS } from './sim/town';
 import { Match } from './sim/match';
 import { Assets } from './sprites/assets';
-import { SpriteRegistry } from './sprites/pokemonSprite';
+import { AnimPlayer, SpriteRegistry } from './sprites/pokemonSprite';
 import { RangerSprites } from './sprites/rangerSprite';
 import { EndScreen } from './ui/endScreen';
 import { MatchScreen } from './ui/matchScreen';
@@ -82,13 +82,35 @@ async function boot(): Promise<void> {
   const assets = new Assets();
 
   let status = 'Loading…';
+  /** How far the first load has got (0..1), and the Riolu that runs along the bar as it fills (null: no bar). */
+  let loadFrac = 0;
+  let runner: AnimPlayer | null = null;
   const drawLoading = (): void => {
     const ctx = view.hud;
+    const s = view.baseScale;
     ctx.clearRect(0, 0, view.width, view.height);
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, view.width, view.height);
     text(view, 'SHADOWS OF ALMIA SHOWDOWN', view.width / 2, view.height / 2 - 20 * view.baseScale, 42, { align: 'center', weight: '800', color: '#cdbfff', ctx });
     text(view, status, view.width / 2, view.height / 2 + 24 * view.baseScale, 16, { align: 'center', color: '#b9b4cc', ctx });
+    if (!runner) return;
+    // The loading bar, and Riolu running along its front edge.
+    const bw = Math.min(440 * s, view.width - 60 * s);
+    const bx = Math.round(view.width / 2 - bw / 2);
+    const by = Math.round(view.height / 2 + 92 * s);
+    const bh = Math.max(4, Math.round(6 * s));
+    ctx.fillStyle = 'rgba(205,191,255,0.18)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#7d5cff';
+    ctx.fillRect(bx, by, Math.round(bw * loadFrac), bh);
+    const f = runner.current();
+    if (!f.placeholder) {
+      const k = Math.max(3, Math.round(3 * s));
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(bx + bw * loadFrac - (f.w * k) / 2), Math.round(by - f.h * k * 0.78), f.w * k, f.h * k);
+      ctx.restore();
+    }
   };
   drawLoading();
   // The UI's pixel font (BoldPixels by YukiPixels, CC BY-SA 4.0); the system font stands in if it fails.
@@ -105,12 +127,27 @@ async function boot(): Promise<void> {
 
   const t0 = performance.now();
   const sprites = new SpriteRegistry(assets);
+  // Riolu first: it runs along the loading bar (animated between progress updates).
+  await sprites.preload(['0447'], undefined, true).catch(() => {});
+  runner = new AnimPlayer(sprites.get('0447'));
+  runner.dir = 2;
+  runner.play('Walk', { loop: true });
+  let lastTick = performance.now();
+  const runLoop = (now: number): void => {
+    if (!runner) return;
+    runner.update(Math.min(0.1, (now - lastTick) / 1000));
+    lastTick = now;
+    drawLoading();
+    requestAnimationFrame(runLoop);
+  };
+  requestAnimationFrame(runLoop);
   const rangersP = RangerSprites.load(assets);
   // The title scene and the starter roll load first; every other Pokémon the match can meet
   // (wild tables, bosses, rivals, the champion, and all their evolutions) loads behind the title screen.
   const first = new Set(TITLE_CAST);
   await sprites.preload(first, (done, total) => {
     status = `Loading sprites ${done}/${total}`;
+    loadFrac = 0.75 * (done / Math.max(1, total));
     drawLoading();
   }, true);
   // Everything else trickles in behind the title at low priority; anything needed sooner jumps the queue.
@@ -132,8 +169,12 @@ async function boot(): Promise<void> {
   const mapName = params.get('map') ?? CONFIG.map.name;
   const ground = await createGround(assets, CONFIG.map.cols, CONFIG.map.rows, seed, (p) => {
     status = `Painting terrain ${Math.round(p * 100)}%`;
+    loadFrac = 0.75 + 0.25 * p;
     drawLoading();
   }, mapName);
+  // Loaded: the bar and its runner go (the title takes over the screen).
+  loadFrac = 1;
+  runner = null;
 
   let screen: Screen | null = null;
   const game: GameContext = {
@@ -270,6 +311,8 @@ async function boot(): Promise<void> {
   const lookLock = (look: string): string | null => {
     const req = lookRequirement(look);
     if (!req) return null;
+    // A look a Mystery Gift code gave this account.
+    if (net?.me.signedIn && net.me.looks?.includes(look)) return null;
     if (req.soon || !net) return 'Coming soon';
     const me = net.me;
     if (canWear(look, me.signedIn ? (me.progress?.level ?? 1) : 0, me.achievements ?? [])) return null;
@@ -514,7 +557,7 @@ async function boot(): Promise<void> {
         drawLoading();
       }, mapName);
     }
-    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => void showPc(), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false), lookLock)), net ? () => showOnline() : null);
+    const title = new TitleScreen(game, currentGround, sprites, assets, showRoll, startDemo, () => void startGallery(), () => void showPc(), () => game.setScreen(new CharacterScreen(game, rangers, () => void showTitle(false), lookLock)), net ? () => showOnline() : null, net);
     debug.showdown.screen = title;
     game.setScreen(title);
   };

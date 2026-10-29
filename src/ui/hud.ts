@@ -1290,12 +1290,11 @@ export class Hud {
       if (id) {
         const def = ITEMS[id];
         if (def) {
-          // Balls (small art) scale to their size exactly; every icon stays inside the slot's face,
-          // clear of its top edge and the lip (a potion's cap used to touch the top border).
-          const face = { top: y + 6 * k + 3 * s, bottom: y + sh - 5 * k - 2 * s };
-          // Balls a quarter bigger than they used to be drawn (whole steps of their 18-pixel art at 27 * s).
-          if (def.kind === 'ball') this.icons.draw(ctx, def.id, cx, cyc + 1 * s, Math.max(1, Math.floor((27 * s) / 18)) * 18 * 1.25, def.tmType, { exact: true, ...face });
-          else this.icons.draw(ctx, def.id, cx, cyc + 1 * s, 34 * s, def.tmType, face);
+          // Every item centred in the slot's face (its art's box, not its weight: a potion's cap
+          // touched the top before). Balls (small art) are drawn an eighth bigger than their whole-pixel
+          // size, scaled exactly.
+          if (def.kind === 'ball') this.icons.draw(ctx, def.id, cx, cyc, Math.max(1, Math.floor((27 * s) / 18)) * 18 * 1.12, def.tmType, { exact: true, box: true });
+          else this.icons.draw(ctx, def.id, cx, cyc, 34 * s, def.tmType, { box: true });
           const count = entry?.count ?? 1;
           if (count > 1) this.countBadge(ctx, count, x + sw, y + sh - 4 * k);
           if (hover) {

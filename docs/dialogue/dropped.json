@@ -26,42 +26,42 @@
  },
  {
   "file": "src/main.ts",
-  "line": 99,
+  "line": 121,
   "text": "[showdown] BoldPixels font failed to load"
  },
  {
   "file": "src/main.ts",
-  "line": 152,
+  "line": 193,
   "text": "Shadows of Almia Showdown, build {__BUILD__}"
  },
  {
   "file": "src/main.ts",
-  "line": 183,
+  "line": 224,
   "text": "Match finished"
  },
  {
   "file": "src/main.ts",
-  "line": 184,
+  "line": 225,
   "text": "Match won"
  },
  {
   "file": "src/main.ts",
-  "line": 189,
+  "line": 230,
   "text": "[showdown] match started with {starters.join(', ')}"
  },
  {
   "file": "src/main.ts",
-  "line": 190,
+  "line": 231,
   "text": "Match started"
  },
  {
   "file": "src/main.ts",
-  "line": 558,
+  "line": 601,
   "text": "[showdown] verify: tileset or reference render missing"
  },
  {
   "file": "src/main.ts",
-  "line": 587,
+  "line": 630,
   "text": "[showdown] demo_room re-render: {mismatch} of {total} pixels differ, {beyondRounding} by more than rounding (max channel diff {maxDiff}) ({result.ok ? 'MATCH' : 'MISMATCH'})"
  },
  {
@@ -191,7 +191,7 @@
  },
  {
   "file": "src/ui/onlineScreens.ts",
-  "line": 136,
+  "line": 126,
   "text": "trade update"
  },
  {
@@ -216,7 +216,12 @@
  },
  {
   "file": "server/accounts.ts",
-  "line": 1120,
+  "line": 580,
+  "text": "already hatched"
+ },
+ {
+  "file": "server/accounts.ts",
+  "line": 1157,
   "text": "api error"
  },
  {
@@ -376,18 +381,33 @@
  },
  {
   "file": "server/adminApi.ts",
-  "line": 165,
+  "line": 185,
   "text": "admin api error"
  },
  {
   "file": "server/adminApi.ts",
-  "line": 188,
+  "line": 208,
   "text": "\\{c}"
  },
  {
   "file": "server/backup.ts",
   "line": 94,
   "text": "Backup failed:"
+ },
+ {
+  "file": "server/gifts.ts",
+  "line": 162,
+  "text": "used up"
+ },
+ {
+  "file": "server/gifts.ts",
+  "line": 167,
+  "text": "no species"
+ },
+ {
+  "file": "server/gifts.ts",
+  "line": 179,
+  "text": "used up"
  },
  {
   "file": "server/hub.ts",

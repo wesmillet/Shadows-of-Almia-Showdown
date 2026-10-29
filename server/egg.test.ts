@@ -12,12 +12,17 @@ describe('daily Egg', () => {
     const a = new Accounts(mkdtempSync(join(tmpdir(), 'egg-')), 'dev');
     const id = Number(a.db.prepare("INSERT INTO users (username, pass_hash, created_at) VALUES ('EggTester', 'x', ?)").run(Date.now()).lastInsertRowid);
     const t0 = Date.UTC(2026, 9, 29, 15, 0);
-    expect(a.eggState(id, t0).ready).toBe(true);
+    const before = a.eggState(id, t0);
+    expect(before.ready).toBe(true);
+    // the Egg is rolled when first asked about: its tier shows before it hatches, the Pokémon does not
+    expect(before.today).toBe(null);
+    expect(a.eggState(id, t0 + 1000).tier).toBe(before.tier);
     const r = a.hatchEgg(id, t0);
     expect('error' in r).toBe(false);
     if ('error' in r) return;
     expect(a.pcDexes(id)).toEqual([r.dex]);
     expect(STARTER_TIERS.find((t) => t.id === r.tier)?.dex).toContain(r.dex);
+    expect(r.tier).toBe(before.tier);
     // the same day: no second Egg
     const again = a.hatchEgg(id, t0 + 3600_000);
     expect('error' in again).toBe(true);

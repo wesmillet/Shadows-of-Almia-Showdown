@@ -415,19 +415,6 @@ function recolor(img: HTMLImageElement, pairs: Array<[number, number]>): HTMLCan
   return c;
 }
 
-/** A Pokémon's portrait as a picture for the page (HTML dialogs), in its shiny colours when asked. */
-export function portraitPicture(root: string, dex: string, shiny: boolean): Promise<HTMLImageElement | HTMLCanvasElement | null> {
-  return new Promise((res) => {
-    const img = new Image();
-    img.onload = () => {
-      const pal = shiny ? SHINY[dex]?.portrait : undefined;
-      res(pal ? recolor(img, pal) : img);
-    };
-    img.onerror = () => res(null);
-    img.src = `${root}portraits/${dex}/Normal.png`;
-  });
-}
-
 let blank: HTMLCanvasElement | null = null;
 /** A 1x1 transparent canvas: what a Pokémon whose sheets are still loading draws. */
 function blankCanvas(): HTMLCanvasElement {

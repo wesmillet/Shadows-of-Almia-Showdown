@@ -61,9 +61,9 @@ export class ItemIcons {
   /**
    * `opts.exact`: scale to `fit` exactly instead of by whole pixels (a small icon that whole-pixel
    * steps would leave much smaller than its neighbours). `opts.top`/`opts.bottom`: keep the drawn
-   * art between these lines (centring on its weight can push a tall icon's top out of its slot).
+   * art between these lines. `opts.box`: centre the art's box on (x, y) instead of its weight.
    */
-  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, fit: number, tmType?: string, opts: { exact?: boolean; top?: number; bottom?: number } = {}): void {
+  draw(ctx: CanvasRenderingContext2D, itemId: string, x: number, y: number, fit: number, tmType?: string, opts: { exact?: boolean; top?: number; bottom?: number; box?: boolean } = {}): void {
     // The bag icon for a ball, falling back to the ground sprite until (or unless) it loads.
     const img = (itemId.endsWith('-ball') && !tmType ? this.get(itemId, tmType, true) : null) ?? this.get(itemId, tmType);
     ctx.imageSmoothingEnabled = false;
@@ -74,8 +74,9 @@ export class ItemIcons {
       const scale = opts.exact ? fit / Math.max(b.w, b.h) : Math.max(1, Math.floor(fit / Math.max(b.w, b.h)));
       const w = Math.round(b.w * scale);
       const h = Math.round(b.h * scale);
-      const ox = Math.round((b.cx - b.x) * scale);
-      const oy = Math.round((b.cy - b.y) * scale);
+      // opts.box: centred on the art's box (the bag slots: every item sits in the same middle)
+      const ox = Math.round((opts.box ? b.w / 2 : b.cx - b.x) * scale);
+      const oy = Math.round((opts.box ? b.h / 2 : b.cy - b.y) * scale);
       let top = Math.round(y - oy);
       if (opts.bottom !== undefined && top + h > opts.bottom) top = Math.round(opts.bottom - h);
       if (opts.top !== undefined && top < opts.top) top = Math.round(opts.top);

@@ -40,6 +40,8 @@ export interface Me {
   titles?: string[];
   /** Achievement ids earned. */
   achievements?: string[];
+  /** Looks given to this account by Mystery Gift codes. */
+  looks?: string[];
 }
 
 /** What only the browser needs to send messages (the replay player feeds a mirror without a server). */

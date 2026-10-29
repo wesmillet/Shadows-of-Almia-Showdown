@@ -1,7 +1,8 @@
 /**
  * The administrator's dashboard (/admin): one page over /api/admin/* (server/adminApi.ts). Sign in
  * to the game with an admin account first; the server checks the account's role on every request.
- * Read-only: it shows who is online, accounts and their PCs, and match history.
+ * It shows who is online, accounts and their PCs, and match history (read-only), and makes Mystery
+ * Gift codes (the only thing here that changes anything; it never edits an account).
  */
 export const ADMIN_PAGE = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -45,7 +46,7 @@ a { color: var(--accent); }
 <header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a href="/mod">Moderation</a></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
-const TABS = [['online', 'Online'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts']];
+const TABS = [['online', 'Online'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['gifts', 'Mystery Gift']];
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const when = (t) => t ? new Date(t).toLocaleString() : '-';
@@ -81,6 +82,51 @@ async function show(t, arg) {
   if (t === 'live') return live();
   if (t === 'history') return arg ? match(arg) : history(0);
   if (t === 'accounts') return arg ? account(Number(arg)) : accounts('', 0);
+  if (t === 'gifts') return gifts();
+}
+
+// ---------------------------------------------------------------- Mystery Gift
+const post = async (path, body) => {
+  let r;
+  try { r = await fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Almia': '1' }, body: JSON.stringify(body) }); } catch { return { error: 'Could not reach the server' }; }
+  const j = await r.json().catch(() => ({ error: 'Bad reply (HTTP ' + r.status + ')' }));
+  if (!r.ok && !j.error) j.error = 'HTTP ' + r.status;
+  return j;
+};
+async function gifts(msg) {
+  const j = await api('/api/admin/gifts');
+  if (j.error) return fail(j.error);
+  const what = (c) => c.kind === 'pokemon' ? (c.payload.shiny ? '★ ' : '') + esc(c.payload.name || ('#' + c.payload.dex)) + ' Lv ' + esc(c.payload.level) : 'Look: ' + esc((j.looks.find((l) => l.id === c.payload.look) || { name: c.payload.look }).name);
+  $('#main').innerHTML = '<div class="panel"><h2>Make a Mystery Gift code</h2>' +
+    '<p class="dim">Players enter the code on the home page (Mystery Gift). Each account can use a code once. A Pokémon goes straight to their PC; a look unlocks for them on the Trainer screen.</p>' +
+    (msg ? '<div class="note">' + msg + '</div>' : '') +
+    '<div class="row"><label>Code <input id="gc" placeholder="leave empty: made up for you" maxlength="24" style="text-transform:uppercase"></label></div>' +
+    '<div class="row"><label>Gives <select id="gk"><option value="pokemon">a Pokémon</option><option value="look">a look (skin)</option></select></label></div>' +
+    '<div class="row" id="gpk"><label>Pokémon <input id="gd" placeholder="number or name, e.g. 25 or Pikachu" size="28"></label><label>Level <input id="gl" type="number" min="1" max="100" value="5" style="width:70px"></label><label><input type="checkbox" id="gs"> Shiny</label></div>' +
+    '<div class="row" id="glk" style="display:none"><label>Look <select id="go">' + j.looks.map((l) => '<option value="' + esc(l.id) + '">' + esc(l.name) + ' (' + esc(l.id) + ')</option>').join('') + '</select></label></div>' +
+    '<div class="row"><label>Uses <input id="gu" type="number" min="1" placeholder="no limit" style="width:100px"></label><label>Expires <input id="ge" type="date"></label><label>Note <input id="gn" placeholder="for yourself, e.g. who it is for" size="30"></label></div>' +
+    '<div class="row"><button class="act" id="gmake">Make code</button><span class="err" id="gerr"></span></div></div>' +
+    '<div class="panel"><h2>Codes</h2>' + (j.codes.length ? '<table><tr><th>Code</th><th>Gives</th><th>Used</th><th>Expires</th><th>Note</th><th>Made</th><th></th></tr>' +
+      j.codes.map((c) => '<tr><td><b>' + esc(c.code) + '</b></td><td>' + what(c) + '</td><td><a href="#" data-who="' + esc(c.code) + '">' + c.uses + (c.max_uses ? ' / ' + c.max_uses : '') + '</a></td><td>' + (c.expires_at ? when(c.expires_at) : '-') + '</td><td>' + esc(c.note || '') + '</td><td>' + when(c.created_at) + ' by ' + esc(c.created_by) + '</td><td>' +
+        '<button class="act alt" data-code="' + esc(c.code) + '" data-on="' + (c.active ? 0 : 1) + '">' + (c.active ? 'Switch off' : 'Switch on') + '</button>' + (c.active ? '' : ' <span class="bad">off</span>') + '</td></tr>').join('') + '</table><div id="gwho"></div>' : '<p class="dim">No codes yet.</p>') + '</div>';
+  const kind = $('#gk');
+  kind.onchange = () => { $('#gpk').style.display = kind.value === 'pokemon' ? '' : 'none'; $('#glk').style.display = kind.value === 'look' ? '' : 'none'; };
+  $('#gmake').onclick = async () => {
+    const exp = $('#ge').value ? new Date($('#ge').value + 'T23:59:59').getTime() : null;
+    const r = await post('/api/admin/gifts', { code: $('#gc').value, kind: kind.value, dex: $('#gd').value, level: Number($('#gl').value), shiny: $('#gs').checked, look: $('#go').value, maxUses: $('#gu').value === '' ? null : Number($('#gu').value), expiresAt: exp, note: $('#gn').value });
+    if (r.error) { $('#gerr').textContent = r.error; return; }
+    gifts('Made <b>' + esc(r.code) + '</b>: give it to players to enter on the home page (Mystery Gift).');
+  };
+  for (const b of document.querySelectorAll('button[data-code]')) b.onclick = async () => {
+    const r = await post('/api/admin/gifts/active', { code: b.dataset.code, active: b.dataset.on === '1' });
+    if (r.error) return fail(r.error);
+    gifts();
+  };
+  for (const a of document.querySelectorAll('a[data-who]')) a.onclick = async (e) => {
+    e.preventDefault();
+    const r = await api('/api/admin/gifts?code=' + encodeURIComponent(a.dataset.who));
+    $('#gwho').innerHTML = '<h3>Used ' + esc(a.dataset.who) + '</h3>' + (r.redemptions && r.redemptions.length ? '<table><tr><th>Account</th><th>When</th></tr>' + r.redemptions.map((x) => '<tr><td>' + esc(x.username) + '</td><td>' + when(x.at) + '</td></tr>').join('') + '</table>' : '<p class="dim">Nobody yet.</p>');
+  };
 }
 
 // ---------------------------------------------------------------- online

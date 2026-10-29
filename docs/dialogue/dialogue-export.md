@@ -14,13 +14,13 @@ Exported 2026-10-29 from the `online` branch for wording review. Nothing was rew
 
 Found by reading the code and data, not only by looking at screens:
 
-1. **Code** (src/ and server/, 121 TypeScript files, tests excluded): every string and template literal, through the TypeScript compiler, kept when it reads as text a person sees and dropped when it is clearly an identifier, path, CSS, SQL, an event or animation name, a comparison or a log line. 121 text-like strings were dropped as log lines, comparisons or lookups (listed in `dropped.json` beside this file, for spot checks).
+1. **Code** (src/ and server/, 123 TypeScript files, tests excluded): every string and template literal, through the TypeScript compiler, kept when it reads as text a person sees and dropped when it is clearly an identifier, path, CSS, SQL, an event or animation name, a comparison or a log line. 125 text-like strings were dropped as log lines, comparisons or lookups (listed in `dropped.json` beside this file, for spot checks).
 2. **Data**: item names, short labels and descriptions; move names; shop, stall and challenger text; character names; fishing rods; special events.
 3. **The two dashboards** (/mod and the new /admin): the text in their HTML and the text their scripts write.
 
 Not captured: Pokémon species names (data/species.json, the official names, 361 entries); the map's place names drawn into the island art; text inside images (the logo, the title art); browser-native messages (e.g. a failed connection page); and text the server builds from other text in ways the extractor can not see whole (each piece is listed, the sentence they make may not be). Strings assembled across several statements show as their separate parts.
 
-**1488 distinct lines** (1304 active).
+**1525 distinct lines** (1328 active).
 
 ## 1. Title screen, options and offline setup
 
@@ -36,7 +36,7 @@ Not captured: Pokémon species names (data/species.json, the official names, 361
 
 > SHADOWS OF ALMIA SHOWDOWN
 
-- `src/main.ts:90` · text · when `in boot()`
+- `src/main.ts:94` · text · when `in boot()`
 
 **TE3E55A** · UI · *active*
 
@@ -45,7 +45,7 @@ Not captured: Pokémon species names (data/species.json, the official names, 361
 Placeholders: `import.meta.env.BASE_URL`  
 Example: "url(…assets/fonts/BoldPixels.ttf)"
 
-- `src/main.ts:96` · FontFace · when `in boot()`
+- `src/main.ts:118` · FontFace · when `in boot()`
 
 **TB60079** · UI · *active*
 
@@ -54,7 +54,7 @@ Example: "url(…assets/fonts/BoldPixels.ttf)"
 Placeholders: `done`, `total`  
 Example: "Loading sprites …/3"
 
-- `src/main.ts:113` · sprites.preload · when `in boot()`
+- `src/main.ts:149` · sprites.preload · when `in boot()`
 
 **T0FF0C7** · UI · *active*
 
@@ -63,8 +63,8 @@ Example: "Loading sprites …/3"
 Placeholders: `Math.round(p * 100)`  
 Example: "Painting terrain …%"
 
-- `src/main.ts:134` · createGround · when `in boot()`
-- `src/main.ts:513` · createGround · when `if (regenerate)`
+- `src/main.ts:171` · createGround · when `in boot()`
+- `src/main.ts:556` · createGround · when `if (regenerate)`
 
 **T9707B4** · UI · *active*
 
@@ -73,20 +73,20 @@ Example: "Painting terrain …%"
 Placeholders: `progress`  
 Example: "Heading out…"
 
-- `src/main.ts:173` · loadingScreen · when `in boot()`
+- `src/main.ts:214` · loadingScreen · when `in boot()`
 
 **TE4115B** · UI · *active*
 
 > Coming soon
 
-- `src/main.ts:273` · return · when `if (req.soon \|\| !net)`
+- `src/main.ts:316` · return · when `if (req.soon \|\| !net)`
 
 **TADA2E9** · UI · *active*
 
 > Sign in
 
-- `src/main.ts:276` · return · when `if (!me.signedIn)`
-- `src/ui/onlineScreens.ts:317` · button · when `if (me.signedIn && me.user)`
+- `src/main.ts:319` · return · when `if (!me.signedIn)`
+- `src/ui/onlineScreens.ts:297` · button · when `if (me.signedIn && me.user)`
 - `src/ui/overlay.ts:268` · el · when `mode === 'signin' ?`
 - `src/ui/overlay.ts:286` · el · when `mode === 'signin' ?`
 - `src/ui/overlay.ts:297` · el · when `mode === 'signin' ?`
@@ -98,37 +98,37 @@ Example: "Heading out…"
 Placeholders: `req.level`  
 Example: "Level 12"
 
-- `src/main.ts:277` · return · when `req.level !== undefined ?`
+- `src/main.ts:320` · return · when `req.level !== undefined ?`
 
 **T514ECE** · UI · *active*
 
 > Heading out
 
-- `src/main.ts:367` · loadingScreen · when `in boot()`
+- `src/main.ts:410` · loadingScreen · when `in boot()`
 
 **T8F7B16** · UI · *active*
 
 > Could not join the match, sorry. Try again
 
-- `src/main.ts:374` · showOnline · when `if (!ready)`
+- `src/main.ts:417` · showOnline · when `if (!ready)`
 
 **T5D942F** · On-screen notice · *active*
 
 > Connection lost... reconnecting
 
-- `src/main.ts:402` · screen.say · when `if (st === 'down')`
+- `src/main.ts:445` · screen.say · when `if (st === 'down')`
 
 **TAD3087** · UI · *active*
 
 > This account started playing in another tab
 
-- `src/main.ts:404` · bail · when `if (st === 'takenOver')`
+- `src/main.ts:447` · bail · when `if (st === 'takenOver')`
 
 **T87B233** · UI · *active*
 
 > Your match ended while you were away
 
-- `src/main.ts:411` · bail · when `if (playingId === start.matchId && mirror.staleFor() > 4)`
+- `src/main.ts:454` · bail · when `if (playingId === start.matchId && mirror.staleFor() > 4)`
 
 **T8AA3B9** · UI · *active*
 
@@ -137,19 +137,19 @@ Example: "Level 12"
 Placeholders: `h.delay`  
 Example: "Joining the match (… s behind)"
 
-- `src/main.ts:439` · loadingScreen · when `in boot()`
+- `src/main.ts:482` · loadingScreen · when `in boot()`
 
 **T35190A** · UI · *active*
 
 > kept on the server
 
-- `src/main.ts:495` · PcScreen · when `if (r.pc)`
+- `src/main.ts:538` · PcScreen · when `if (r.pc)`
 
 **T35912D** · UI · *active*
 
 > Painting a new island…
 
-- `src/main.ts:510` · when `if (regenerate)`
+- `src/main.ts:553` · when `if (regenerate)`
 
 **TB4F57C** · Screen text · *active*
 
@@ -473,25 +473,25 @@ Example: "← → browse  ·  Space replay  ·  P …  ·  T type filter  ·  Es
 
 > SHADOWS OF ALMIA
 
-- `src/ui/titleScreen.ts:1034` · text · when `if (this.logo)`
+- `src/ui/titleScreen.ts:1055` · text · when `if (this.logo)`
 
 **T32715F** · Screen text · *active*
 
 > A Pokémon battle royale on the Ranger Union training grounds
 
-- `src/ui/titleScreen.ts:1037` · text · when `in render()`
+- `src/ui/titleScreen.ts:1058` · text · when `in render()`
 
 **T3F7ABA** · Button · *active*
 
 > Roll Starter
 
-- `src/ui/titleScreen.ts:1044` · button · when `if (this.onOnline)`
+- `src/ui/titleScreen.ts:1065` · button · when `if (this.onOnline)`
 
 **T1AC8B1** · UI · *active*
 
 > Move Gallery (M)
 
-- `src/ui/titleScreen.ts:1046` · rows = · when `in render()`
+- `src/ui/titleScreen.ts:1067` · rows = · when `in render()`
 
 **T408CAE** · UI · *active*
 
@@ -500,13 +500,13 @@ Example: "← → browse  ·  Space replay  ·  P …  ·  T type filter  ·  Es
 Placeholders: `this.pcCount`  
 Example: "My PC (P) · 3"
 
-- `src/ui/titleScreen.ts:1047` · rows = · when `in render()`
+- `src/ui/titleScreen.ts:1068` · rows = · when `in render()`
 
 **TBEE33A** · UI · *active*
 
 > Trainer (C)
 
-- `src/ui/titleScreen.ts:1048` · rows = · when `in render()`
+- `src/ui/titleScreen.ts:1069` · rows = · when `in render()`
 
 **TE15084** · UI · *active*
 
@@ -515,7 +515,7 @@ Example: "My PC (P) · 3"
 Placeholders: `__BUILD__`  
 Example: "Version 4cad177"
 
-- `src/ui/titleScreen.ts:1053` · stamp = · when `in render()`
+- `src/ui/titleScreen.ts:1076` · stamp = · when `in render()`
 
 ## 2. Starter selection
 
@@ -632,7 +632,7 @@ Example: "Evolves: 3"
 
 ## 3. Online hub, lobbies, parties, private matches, friends and trades
 
-266 lines.
+282 lines.
 
 **TE583A6** · UI · *active*
 
@@ -863,6 +863,112 @@ Example: "Pikachu has started! It runs until … UTC"
 > An event just ended. Thanks for playing!
 
 - `server/events.ts:99` · announce · when `if (!active.some((e) => e.id === id))`
+
+**T0D6198** · Error message · *active*
+
+> A code is 4 to 24 letters, numbers or dashes
+
+- `server/gifts.ts:107` · error: · when `if (!CODE_RE.test(code))`
+
+**T4A9267** · Error message · *active*
+
+> That code already exists
+
+- `server/gifts.ts:108` · error: · when `if (this.acc.db.prepare('SELECT 1 FROM gift_codes WHERE code = ?').get(code))`
+
+**T9CF369** · Error message · *active*
+
+> Pick what the code gives: a Pokémon or a look
+
+- `server/gifts.ts:110` · error: · when `if (!kind)`
+
+**T889169** · Error message · *active*
+
+> No such Pokémon (use its number, like 25 or 0025, or its name)
+
+- `server/gifts.ts:114` · error: · when `if (!dex)`
+
+**T0A7F9F** · Error message · *active*
+
+> Level 1 to 100
+
+- `server/gifts.ts:116` · error: · when `if (!(level >= 1 && level <= 100))`
+
+**TEA47E0** · Error message · *active*
+
+> {SPECIES.get(dex)?.name} has no shiny colours in the game
+
+Placeholders: `SPECIES.get(dex)?.name`  
+Example: "Pikachu has no shiny colours in the game"
+
+- `server/gifts.ts:118` · error: · when `if (shiny && !SpriteRegistry.hasShiny(dex))`
+
+**TA3606E** · Error message · *active*
+
+> No such look
+
+- `server/gifts.ts:122` · error: · when `if (!this.lookIds().includes(look))`
+
+**T5237B4** · Error message · *active*
+
+> Uses: 1 or more, or empty for no limit
+
+- `server/gifts.ts:126` · error: · when `if (max !== null && !(max >= 1))`
+
+**TFECF3B** · Error message · *active*
+
+> The expiry must be in the future
+
+- `server/gifts.ts:128` · error: · when `if (exp !== null && !(exp > Date.now()))`
+
+**TD6E41B** · Error message · *active*
+
+> Too many wrong codes. Try again in a while
+
+- `server/gifts.ts:144` · error: · when `if (recent.length >= TRIES_PER_HOUR)`
+
+**T9DC3B8** · UI · *active*
+
+> That code is not valid
+
+- `server/gifts.ts:151` · miss · when `if (!row)`
+
+**T68616F** · Error message · *active*
+
+> That code is no longer active
+
+- `server/gifts.ts:152` · error: · when `if (!row.active)`
+
+**T07404E** · Error message · *active*
+
+> That code has expired
+
+- `server/gifts.ts:153` · error: · when `if (row.expires_at !== null && row.expires_at <= now)`
+
+**TA13C45** · Error message · *active*
+
+> You already used this code
+
+- `server/gifts.ts:154` · error: · when `if (this.acc.db.prepare('SELECT 1 FROM gift_redemptions WHERE code = ? AND user_id = ?').get(code, userId))`
+
+**TD006D8** · Error message · *active*
+
+> That code has been used up
+
+- `server/gifts.ts:155` · error: · when `if (row.max_uses !== null && row.uses >= row.max_uses)`
+- `server/gifts.ts:179` · error: · when `String((e as Error).message) === 'used up' ?`
+
+**TB522F9** · Error message · *active*
+
+> You already have that look
+
+- `server/gifts.ts:157` · error: · when `if (row.kind === 'look' && p.look && this.ownedLooks(userId).includes(p.look))`
+
+**T830EC4** · Error message · *active*
+
+> That code could not be used right now
+
+- `server/gifts.ts:179` · error: · when `String((e as Error).message) === 'used up' ?`
 
 **T88FEF7** · UI · *active*
 
@@ -1379,26 +1485,26 @@ Example: "almia_Pikachu …"
 Placeholders: `n`, `n === 1 ? '' : 's'`  
 Example: "You have 3 trade update3 waiting"
 
-- `src/ui/onlineScreens.ts:135` · when `if (n > this.tradesWaiting)`
+- `src/ui/onlineScreens.ts:125` · when `if (n > this.tradesWaiting)`
 
 **T7CFA14** · Screen text · *active*
 
 > Find a Match (Space)
 
-- `src/ui/onlineScreens.ts:180` · label: · when `in findState()`
+- `src/ui/onlineScreens.ts:168` · label: · when `in findState()`
 
 **T1B8337** · UI · *active*
 
 > Signed out
 
-- `src/ui/onlineScreens.ts:258` · when `in signOut()`
+- `src/ui/onlineScreens.ts:238` · when `in signOut()`
 
 **T69C8DF** · Screen text · *active*
 
 > Play Online
 
-- `src/ui/onlineScreens.ts:284` · heading · when `if (hubLogo)`
-- `src/ui/titleScreen.ts:1043` · button · when `if (this.onOnline)`
+- `src/ui/onlineScreens.ts:264` · heading · when `if (hubLogo)`
+- `src/ui/titleScreen.ts:1064` · button · when `if (this.onOnline)`
 
 **TC612F1** · UI · *active*
 
@@ -1407,7 +1513,7 @@ Example: "You have 3 trade update3 waiting"
 Placeholders: `Math.round(m / 60)`  
 Example: "… h left"
 
-- `src/ui/onlineScreens.ts:289` · return · when `m >= 120 ?`
+- `src/ui/onlineScreens.ts:269` · return · when `m >= 120 ?`
 
 **T3A36DD** · UI · *active*
 
@@ -1416,7 +1522,7 @@ Example: "… h left"
 Placeholders: `m`  
 Example: "… min left"
 
-- `src/ui/onlineScreens.ts:289` · return · when `m >= 120 ?`
+- `src/ui/onlineScreens.ts:269` · return · when `m >= 120 ?`
 
 **T12EAF8** · Screen text · *active*
 
@@ -1425,7 +1531,7 @@ Example: "… min left"
 Placeholders: `ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join(' ★ ')`  
 Example: "★ Pikachu"
 
-- `src/ui/onlineScreens.ts:291` · text · when `if (ev.length)`
+- `src/ui/onlineScreens.ts:271` · text · when `if (ev.length)`
 
 **TF7FA84** · Screen text · *unused (switched off)*
 
@@ -1434,7 +1540,7 @@ Example: "★ Pikachu"
 Placeholders: `pr.level`  
 Example: "  ·  Lv 12"
 
-- `src/ui/onlineScreens.ts:300` · text · when `pr && LEVELS_ON ?`
+- `src/ui/onlineScreens.ts:280` · text · when `pr && LEVELS_ON ?`
 
 **T5BD53D** · Screen text · *active*
 
@@ -1443,19 +1549,19 @@ Example: "  ·  Lv 12"
 Placeholders: `st.wins`, `st.eliminations ?? 0`, `st.matches`, `st.catches`  
 Example: "3 wins · … eliminations · 3 matches · … catches"
 
-- `src/ui/onlineScreens.ts:311` · text · when `st ?`
+- `src/ui/onlineScreens.ts:291` · text · when `st ?`
 
 **TDC1649** · Button · *active*
 
 > Sign out
 
-- `src/ui/onlineScreens.ts:313` · button · when `if (me.signedIn && me.user)`
+- `src/ui/onlineScreens.ts:293` · button · when `if (me.signedIn && me.user)`
 
 **T32B066** · Screen text · *active*
 
 > Ten trainers, one island, one winner.
 
-- `src/ui/onlineScreens.ts:323` · text · when `in render()`
+- `src/ui/onlineScreens.ts:303` · text · when `in render()`
 
 **T5D17EE** · Button · *active*
 
@@ -1464,13 +1570,7 @@ Example: "3 wins · … eliminations · 3 matches · … catches"
 Placeholders: `this.tradesWaiting`  
 Example: "Trade (…)"
 
-- `src/ui/onlineScreens.ts:324` · button · when `this.tradesWaiting ?`
-
-**T06AA1B** · Button · *active*
-
-> Daily Egg!
-
-- `src/ui/onlineScreens.ts:325` · button · when `this.eggWaiting ?`
+- `src/ui/onlineScreens.ts:304` · button · when `this.tradesWaiting ?`
 
 **T1F3A54** · Screen text · *active*
 
@@ -1479,7 +1579,7 @@ Example: "Trade (…)"
 Placeholders: `this.net.ping ? ` · ${this.net.ping} ms` : ''`  
 Example: "Connected42"
 
-- `src/ui/onlineScreens.ts:328` · text · when `this.net.connected ?`
+- `src/ui/onlineScreens.ts:307` · text · when `this.net.connected ?`
 
 **T808C28** · Screen text · *active*
 
@@ -1488,61 +1588,61 @@ Example: "Connected42"
 Placeholders: `this.net.ping`  
 Example: " · 42 ms"
 
-- `src/ui/onlineScreens.ts:328` · text · when `this.net.ping ?`
+- `src/ui/onlineScreens.ts:307` · text · when `this.net.ping ?`
 
 **TB832CB** · Screen text · *active*
 
 > DEMO SERVER: progress here is separate
 
-- `src/ui/onlineScreens.ts:330` · text · when `if (this.net.hello?.server === 'demo')`
+- `src/ui/onlineScreens.ts:309` · text · when `if (this.net.hello?.server === 'demo')`
 
 **T7CFD2C** · Button · *active*
 
 > Back (Esc)
 
-- `src/ui/onlineScreens.ts:331` · button · when `in render()`
+- `src/ui/onlineScreens.ts:310` · button · when `in render()`
 
 **T25031B** · Button · *active*
 
 > Admin dashboard
 
-- `src/ui/onlineScreens.ts:332` · button · when `if (me.user?.role === 'admin')`
+- `src/ui/onlineScreens.ts:311` · button · when `if (me.user?.role === 'admin')`
 
 **TE9ACB8** · UI · *active*
 
 > Everyone for themselves
 
-- `src/ui/onlineScreens.ts:337` · solo:
+- `src/ui/onlineScreens.ts:316` · solo:
 
 **TC94CE3** · UI · *active*
 
 > Teams of two
 
-- `src/ui/onlineScreens.ts:337` · duos:
+- `src/ui/onlineScreens.ts:316` · duos:
 
 **T0E71BC** · UI · *active*
 
 > Teams of four
 
-- `src/ui/onlineScreens.ts:337` · squads:
+- `src/ui/onlineScreens.ts:316` · squads:
 
 **T5B5CE5** · UI · *active*
 
 > Players pick a team
 
-- `src/ui/onlineScreens.ts:337` · pick:
+- `src/ui/onlineScreens.ts:316` · pick:
 
 **T36E800** · UI · *active*
 
 > Private lobby
 
-- `src/ui/onlineScreens.ts:385` · el · when `in draw()`
+- `src/ui/onlineScreens.ts:364` · el · when `in draw()`
 
 **TCE0010** · UI · *active*
 
 > You host: share the code, set the rules, start when ready.
 
-- `src/ui/onlineScreens.ts:385` · el · when `host ?`
+- `src/ui/onlineScreens.ts:364` · el · when `host ?`
 
 **T338ED0** · UI · *active*
 
@@ -1551,13 +1651,13 @@ Example: " · 42 ms"
 Placeholders: `l.host`  
 Example: "Wes hosts this lobby."
 
-- `src/ui/onlineScreens.ts:385` · el · when `host ?`
+- `src/ui/onlineScreens.ts:364` · el · when `host ?`
 
 **T6C1069** · UI · *active*
 
 > Copy code
 
-- `src/ui/onlineScreens.ts:389` · el · when `in draw()`
+- `src/ui/onlineScreens.ts:368` · el · when `in draw()`
 
 **T413A2B** · UI · *active*
 
@@ -1566,33 +1666,33 @@ Example: "Wes hosts this lobby."
 Placeholders: `l.members.length`, `l.rules.size`, `l.rules.bots && l.members.length < l.rules.size ? ' (comp...`  
 Example: "Trainers · …/…Wes"
 
-- `src/ui/onlineScreens.ts:397` · el · when `in draw()`
+- `src/ui/onlineScreens.ts:376` · el · when `in draw()`
 
 **T84C2E1** · UI · *active*
 
 >  (computer trainers fill the rest)
 
-- `src/ui/onlineScreens.ts:397` · el · when `l.rules.bots && l.members.length < l.rules.size ?`
+- `src/ui/onlineScreens.ts:376` · el · when `l.rules.bots && l.members.length < l.rules.size ?`
 
 **T05F2DC** · UI · *active*
 
 >  (you)
 
-- `src/ui/onlineScreens.ts:400` · el · when `m.name === l.you ?`
+- `src/ui/onlineScreens.ts:379` · el · when `m.name === l.you ?`
 - `src/ui/socialPanel.ts:104` · el · when `m.name === party.you ?`
 
 **T81BB28** · UI · *active*
 
 > Starter picked
 
-- `src/ui/onlineScreens.ts:401` · el · when `m.picked ?`
+- `src/ui/onlineScreens.ts:380` · el · when `m.picked ?`
 - `src/ui/socialPanel.ts:105` · el · when `m.picked ?`
 
 **T747B3D** · UI · *active*
 
 > Picking a starter...
 
-- `src/ui/onlineScreens.ts:401` · el · when `m.picked ?`
+- `src/ui/onlineScreens.ts:380` · el · when `m.picked ?`
 - `src/ui/socialPanel.ts:105` · el · when `m.picked ?`
 
 **TDD33BA** · UI · *active*
@@ -1602,20 +1702,20 @@ Example: "Trainers · …/…Wes"
 Placeholders: `t`  
 Example: "Team …"
 
-- `src/ui/onlineScreens.ts:406` · el · when `if (l.rules.teams === 'pick')`
+- `src/ui/onlineScreens.ts:385` · el · when `if (l.rules.teams === 'pick')`
 
 **TA8BA54** · UI · *active*
 
 > Computer trainers
 
-- `src/ui/onlineScreens.ts:449` · check · when `in draw()`
+- `src/ui/onlineScreens.ts:428` · check · when `in draw()`
 - `src/ui/socialPanel.ts:299` · el
 
 **TBA50F0** · UI · *active*
 
 > Starter level
 
-- `src/ui/onlineScreens.ts:451` · select · when `in draw()`
+- `src/ui/onlineScreens.ts:430` · select · when `in draw()`
 
 **T3B8ADD** · UI · *active*
 
@@ -1624,37 +1724,37 @@ Example: "Team …"
 Placeholders: `n`  
 Example: "Level 3"
 
-- `src/ui/onlineScreens.ts:451` · map · when `in draw()`
+- `src/ui/onlineScreens.ts:430` · map · when `in draw()`
 
 **T4DB6DC** · UI · *active*
 
 > Slow (half speed)
 
-- `src/ui/onlineScreens.ts:452` · select · when `in draw()`
+- `src/ui/onlineScreens.ts:431` · select · when `in draw()`
 
 **T697ACF** · UI · *active*
 
 > Very fast (double)
 
-- `src/ui/onlineScreens.ts:452` · select · when `in draw()`
+- `src/ui/onlineScreens.ts:431` · select · when `in draw()`
 
 **T937C1A** · UI · *active*
 
 > Rare-item chest
 
-- `src/ui/onlineScreens.ts:453` · check · when `in draw()`
+- `src/ui/onlineScreens.ts:432` · check · when `in draw()`
 
 **T5C209E** · UI · *active*
 
 > Start the match
 
-- `src/ui/onlineScreens.ts:460` · el · when `l.state === 'picking' ?`
+- `src/ui/onlineScreens.ts:439` · el · when `l.state === 'picking' ?`
 
 **T167AC9** · UI · *active*
 
 > You left the queue (your party too)
 
-- `src/ui/onlineScreens.ts:551` · onLeave · when `party(this.net) ?`
+- `src/ui/onlineScreens.ts:530` · onLeave · when `party(this.net) ?`
 
 **T92303D** · UI · *active*
 
@@ -1663,7 +1763,7 @@ Example: "Level 3"
 Placeholders: `picked`, `party.members.length`  
 Example: "Your party is picking starters (…/…)"
 
-- `src/ui/onlineScreens.ts:565` · sub = · when `waitingParty ?`
+- `src/ui/onlineScreens.ts:544` · sub = · when `waitingParty ?`
 
 **T982C6E** · UI · *active*
 
@@ -1672,13 +1772,13 @@ Example: "Your party is picking starters (…/…)"
 Placeholders: `this.need`, `this.need === 1 ? '' : 's'`, `this.min`  
 Example: "Waiting for 3 more player3 (3 needed before bots fill in)"
 
-- `src/ui/onlineScreens.ts:567` · sub = · when `this.need > 0 ?`
+- `src/ui/onlineScreens.ts:546` · sub = · when `this.need > 0 ?`
 
 **T729C86** · UI · *active*
 
 > Joining the queue
 
-- `src/ui/onlineScreens.ts:569` · sub = · when `this.startsIn === null ?`
+- `src/ui/onlineScreens.ts:548` · sub = · when `this.startsIn === null ?`
 
 **T815393** · UI · *active*
 
@@ -1687,7 +1787,7 @@ Example: "Waiting for 3 more player3 (3 needed before bots fill in)"
 Placeholders: `Math.ceil(this.startsIn)`  
 Example: "Starting in 3s"
 
-- `src/ui/onlineScreens.ts:570` · sub = · when `this.startsIn === null ?`
+- `src/ui/onlineScreens.ts:549` · sub = · when `this.startsIn === null ?`
 
 **TE8041B** · Screen text · *active*
 
@@ -1696,7 +1796,7 @@ Example: "Starting in 3s"
 Placeholders: `dots`  
 Example: "Finding trainers…"
 
-- `src/ui/onlineScreens.ts:571` · heading · when `in render()`
+- `src/ui/onlineScreens.ts:550` · heading · when `in render()`
 
 **T7484A6** · Screen text · *active*
 
@@ -1705,25 +1805,25 @@ Example: "Finding trainers…"
 Placeholders: `this.players.length`, `this.size`  
 Example: "Wes / … trainers"
 
-- `src/ui/onlineScreens.ts:576` · text · when `in render()`
+- `src/ui/onlineScreens.ts:555` · text · when `in render()`
 
 **T2EA225** · Button · *active*
 
 > Start now (admin)
 
-- `src/ui/onlineScreens.ts:584` · button · when `this.admin && this.need > 0 ?`
+- `src/ui/onlineScreens.ts:563` · button · when `this.admin && this.need > 0 ?`
 
 **T6A6361** · Button · *active*
 
 > Start now with bots
 
-- `src/ui/onlineScreens.ts:584` · button · when `this.admin && this.need > 0 ?`
+- `src/ui/onlineScreens.ts:563` · button · when `this.admin && this.need > 0 ?`
 
 **T7E9DAA** · Button · *active*
 
 > Leave queue
 
-- `src/ui/onlineScreens.ts:585` · button · when `in render()`
+- `src/ui/onlineScreens.ts:564` · button · when `in render()`
 
 **T65B2C1** · UI · *active*
 
@@ -1732,19 +1832,19 @@ Example: "Wes / … trainers"
 Placeholders: `r.name`  
 Example: "Pikachu was sent to your PC"
 
-- `src/ui/onlineScreens.ts:693` · when `r.ok ?`
+- `src/ui/onlineScreens.ts:672` · when `r.ok ?`
 
 **T36C3EA** · Screen text · *active*
 
 > Your squad is the last standing!
 
-- `src/ui/onlineScreens.ts:710` · text · when `this.place === 1 && this.net.social.party ?`
+- `src/ui/onlineScreens.ts:689` · text · when `this.place === 1 && this.net.social.party ?`
 
 **TBCCDA0** · Screen text · *active*
 
 > Last trainer standing!
 
-- `src/ui/onlineScreens.ts:710` · text · when `this.place === 1 && this.net.social.party ?`
+- `src/ui/onlineScreens.ts:689` · text · when `this.place === 1 && this.net.social.party ?`
 
 **TBF2DC7** · Screen text · *unused (switched off)*
 
@@ -1753,7 +1853,7 @@ Example: "Pikachu was sent to your PC"
 Placeholders: `total`, `up ? ` · Level ${prog.after.level}!` : ` · Level ${prog.a...`  
 Example: "+3 XP12"
 
-- `src/ui/onlineScreens.ts:715` · text · when `if (prog && this.net.me.signedIn && LEVELS_ON)`
+- `src/ui/onlineScreens.ts:694` · text · when `if (prog && this.net.me.signedIn && LEVELS_ON)`
 
 **T538164** · Screen text · *active*
 
@@ -1762,7 +1862,7 @@ Example: "+3 XP12"
 Placeholders: `prog.after.level`  
 Example: "  ·  Level 12!"
 
-- `src/ui/onlineScreens.ts:715` · text · when `up ?`
+- `src/ui/onlineScreens.ts:694` · text · when `up ?`
 
 **T574F1F** · Screen text · *active*
 
@@ -1771,7 +1871,7 @@ Example: "  ·  Level 12!"
 Placeholders: `prog.after.level`  
 Example: "  ·  Level 12"
 
-- `src/ui/onlineScreens.ts:715` · text · when `up ?`
+- `src/ui/onlineScreens.ts:694` · text · when `up ?`
 
 **T6A3EF7** · Screen text · *active*
 
@@ -1780,13 +1880,13 @@ Example: "  ·  Level 12"
 Placeholders: `a.title`  
 Example: " · new title: Master Ranger"
 
-- `src/ui/onlineScreens.ts:719` · text · when `a.title ?`
+- `src/ui/onlineScreens.ts:698` · text · when `a.title ?`
 
 **T26FC2F** · Screen text · *active*
 
 >  · new look
 
-- `src/ui/onlineScreens.ts:719` · text · when `a.look ?`
+- `src/ui/onlineScreens.ts:698` · text · when `a.look ?`
 
 **TC47312** · Screen text · *active*
 
@@ -1795,13 +1895,13 @@ Example: " · new title: Master Ranger"
 Placeholders: `this.info.picks`  
 Example: "up to 3 Pokémon"
 
-- `src/ui/onlineScreens.ts:727` · text · when `this.info.picks > 1 ?`
+- `src/ui/onlineScreens.ts:706` · text · when `this.info.picks > 1 ?`
 
 **T7F8CD6** · Screen text · *active*
 
 > one Pokémon
 
-- `src/ui/onlineScreens.ts:727` · text · when `this.info.picks > 1 ?`
+- `src/ui/onlineScreens.ts:706` · text · when `this.info.picks > 1 ?`
 
 **T3A8296** · Button · *active*
 
@@ -1810,7 +1910,7 @@ Example: "up to 3 Pokémon"
 Placeholders: `m.shiny ? '★ ' : ''`, `m.name`, `m.level`, `m.taken ? ' ✓' : ''`  
 Example: "…Pikachu Lv 123"
 
-- `src/ui/onlineScreens.ts:731` · button · when `if (this.info?.picks)`
+- `src/ui/onlineScreens.ts:710` · button · when `if (this.info?.picks)`
 
 **TBA2A08** · UI · *active*
 
@@ -2509,7 +2609,7 @@ Example: "Lv 12 · "
 > Online now
 
 - `src/ui/tradeMenu.ts:318` · el · when `p.online ?`
-- `server/adminPage.ts:94` · admin page HTML
+- `server/adminPage.ts:140` · admin page HTML
 
 **TA0BA31** · UI · *active*
 
@@ -2540,41 +2640,41 @@ Example: "Trainer since …"
 
 ## 4. Accounts: sign-in, registration, recovery, profiles
 
-80 lines.
+81 lines.
 
 **T3C46AA** · Error message · *active*
 
 > No player with that name
 
-- `server/accounts.ts:288` · error: · when `if (!u \|\| u.banned)`
+- `server/accounts.ts:292` · error: · when `if (!u \|\| u.banned)`
 
 **T967A76** · Error message · *active*
 
 > That's you!
 
-- `server/accounts.ts:289` · error: · when `if (u.id === me.id)`
-- `server/accounts.ts:854` · text: · when `if (u.id === userId)`
+- `server/accounts.ts:293` · error: · when `if (u.id === me.id)`
+- `server/accounts.ts:883` · text: · when `if (u.id === userId)`
 
 **T878406** · Screen text · *active*
 
 > Taken back. It is in your PC as before
 
-- `server/accounts.ts:305` · text: · when `r.changes ?`
+- `server/accounts.ts:309` · text: · when `r.changes ?`
 
 **T692C32** · Error message · *active*
 
 > Nothing is out on Wonder Trade
 
-- `server/accounts.ts:305` · error: · when `r.changes ?`
+- `server/accounts.ts:309` · error: · when `r.changes ?`
 
 **T475C84** · Error message · *active, admin only*
 
 > Not found
 
-- `server/accounts.ts:311` · error: · when `if (req.method !== 'POST')`
-- `server/accounts.ts:376` · error: · when `in tradeApi()`
-- `server/accounts.ts:1117` · error: · when `in handle()`
-- `server/adminApi.ts:163` · error: · when `in handle()`
+- `server/accounts.ts:315` · error: · when `if (req.method !== 'POST')`
+- `server/accounts.ts:380` · error: · when `in tradeApi()`
+- `server/accounts.ts:1154` · error: · when `in handle()`
+- `server/adminApi.ts:183` · error: · when `in handle()`
 - `server/main.ts:288` · error: · when `in ops()`
 - `server/modApi.ts:212` · error: · when `in handle()`
 
@@ -2582,43 +2682,43 @@ Example: "Trainer since …"
 
 > Too many trade offers. Try again later
 
-- `server/accounts.ts:314` · error: · when `if (this.limited(`trade:${me.id}`, 20, 3600_000))`
+- `server/accounts.ts:318` · error: · when `if (this.limited(`trade:${me.id}`, 20, 3600_000))`
 
 **T6A54F2** · Error message · *active*
 
 > Pick one of your own Pokémon to give
 
-- `server/accounts.ts:317` · error: · when `if (!give \|\| give.owner !== me.id)`
+- `server/accounts.ts:321` · error: · when `if (!give \|\| give.owner !== me.id)`
 
 **TE300DF** · Error message · *active*
 
 > Pick one of the other trainer's Pokémon
 
-- `server/accounts.ts:318` · error: · when `if (!want \|\| want.owner === me.id)`
+- `server/accounts.ts:322` · error: · when `if (!want \|\| want.owner === me.id)`
 
 **TDD140B** · Error message · *active*
 
 > That Pokémon is out on Wonder Trade
 
-- `server/accounts.ts:319` · error: · when `if (this.isPooled(give.pcId as number) \|\| this.isPooled(want.pcId as number))`
+- `server/accounts.ts:323` · error: · when `if (this.isPooled(give.pcId as number) \|\| this.isPooled(want.pcId as number))`
 
 **T3EF730** · Error message · *active*
 
 > That trainer can not trade
 
-- `server/accounts.ts:322` · error: · when `if (!target \|\| target.banned)`
+- `server/accounts.ts:326` · error: · when `if (!target \|\| target.banned)`
 
 **T5C90CA** · Error message · *active*
 
 > You have 10 offers waiting already. Cancel one first
 
-- `server/accounts.ts:324` · error: · when `if (open >= 10)`
+- `server/accounts.ts:328` · error: · when `if (open >= 10)`
 
 **T3DA8E7** · Error message · *active*
 
 > You already offered that trade
 
-- `server/accounts.ts:326` · error: · when `if (dup)`
+- `server/accounts.ts:330` · error: · when `if (dup)`
 
 **TE4732C** · Screen text · *active*
 
@@ -2627,26 +2727,26 @@ Example: "Trainer since …"
 Placeholders: `nameOf(other)`, `give.name`, `want.name`  
 Example: "Offer sent to …: your Pikachu for their Pikachu"
 
-- `server/accounts.ts:330` · text: · when `if (path === '/api/trades/offer')`
+- `server/accounts.ts:334` · text: · when `if (path === '/api/trades/offer')`
 
 **T466DDB** · Error message · *active*
 
 > That offer is gone
 
-- `server/accounts.ts:333` · error: · when `if (!t)`
+- `server/accounts.ts:337` · error: · when `if (!t)`
 
 **TD02298** · Error message · *active*
 
 > Not your offer
 
-- `server/accounts.ts:335` · error: · when `if (t.from_user !== me.id)`
-- `server/accounts.ts:341` · error: · when `if (t.to_user !== me.id)`
+- `server/accounts.ts:339` · error: · when `if (t.from_user !== me.id)`
+- `server/accounts.ts:345` · error: · when `if (t.to_user !== me.id)`
 
 **TD80E5F** · Error message · *active*
 
 > One of those Pokémon is not there any more, so the offer was closed
 
-- `server/accounts.ts:355` · error: · when `if (!g \|\| !w \|\| g.user_id !== t.from_user \|\| w.user_id !== t.to_user \|\| this.isPooled(t.give_pc) \|\| this.isPooled(t.want_pc))`
+- `server/accounts.ts:359` · error: · when `if (!g \|\| !w \|\| g.user_id !== t.from_user \|\| w.user_id !== t.to_user \|\| this.isPooled(t.give_pc) \|\| this.isPooled(t.want_pc))`
 
 **T0A48F7** · Screen text · *active*
 
@@ -2655,25 +2755,25 @@ Example: "Offer sent to …: your Pikachu for their Pikachu"
 Placeholders: `gName`  
 Example: "Trade complete! Pikachu is in your PC"
 
-- `server/accounts.ts:374` · text: · when `if (path === '/api/trades/respond')`
+- `server/accounts.ts:378` · text: · when `if (path === '/api/trades/respond')`
 
 **TB0071A** · Error message · *active*
 
 > Too many Wonder Trades. Try again later
 
-- `server/accounts.ts:400` · error: · when `if (this.limited(`wonder:${me.id}`, 30, 3600_000))`
+- `server/accounts.ts:404` · error: · when `if (this.limited(`wonder:${me.id}`, 30, 3600_000))`
 
 **TE5FEF6** · Error message · *active*
 
 > Pick one of your own Pokémon
 
-- `server/accounts.ts:402` · error: · when `if (!give \|\| give.owner !== me.id)`
+- `server/accounts.ts:406` · error: · when `if (!give \|\| give.owner !== me.id)`
 
 **T7129A4** · Error message · *active*
 
 > You already have one out on Wonder Trade
 
-- `server/accounts.ts:403` · error: · when `if (this.db.prepare("SELECT 1 FROM wonder WHERE user_id = ? AND status = 'waiting'").get(me.id))`
+- `server/accounts.ts:407` · error: · when `if (this.db.prepare("SELECT 1 FROM wonder WHERE user_id = ? AND status = 'waiting'").get(me.id))`
 
 **TFF7C65** · Screen text · *active*
 
@@ -2682,7 +2782,7 @@ Example: "Trade complete! Pikachu is in your PC"
 Placeholders: `give.name`  
 Example: "Pikachu is out on Wonder Trade. It swaps with the next trainer who sends one"
 
-- `server/accounts.ts:439` · text: · when `if (!got)`
+- `server/accounts.ts:443` · text: · when `if (!got)`
 
 **TC2522F** · Screen text · *active*
 
@@ -2691,20 +2791,19 @@ Example: "Pikachu is out on Wonder Trade. It swaps with the next trainer who sen
 Placeholders: `nameOf(partnerId)`, `got.name`  
 Example: "Wonder Trade! … sent you Pikachu"
 
-- `server/accounts.ts:441` · text: · when `in wonderSend()`
+- `server/accounts.ts:445` · text: · when `in wonderSend()`
 
-**T21012D** · Error message · *active*
+**TB59DB3** · Error message · *active*
 
-> Your Egg for today has hatched. The next one comes at midnight UTC
+> Your Egg for today has hatched. A new one comes every day at midnight UTC
 
-- `server/accounts.ts:547` · error: · when `if (!st.ready)`
-- `server/accounts.ts:563` · error: · when `in hatchEgg()`
+- `server/accounts.ts:570` · error: · when `in hatchEgg()`
 
 **T49D66A** · Error message · *active*
 
 > The Egg would not hatch, try again
 
-- `server/accounts.ts:552` · error: · when `if (!sp)`
+- `server/accounts.ts:575` · error: · when `if (!sp)`
 
 **TB0740A** · UI · *active*
 
@@ -2713,13 +2812,13 @@ Example: "Wonder Trade! … sent you Pikachu"
 Placeholders: `xpBoost`  
 Example: "120x XP event"
 
-- `server/accounts.ts:649` · what: · when `if (xpBoost > 1 && lines.length)`
+- `server/accounts.ts:676` · what: · when `if (xpBoost > 1 && lines.length)`
 
 **T442D4E** · Screen text · *active*
 
 > No trainer by that name
 
-- `server/accounts.ts:853` · text: · when `if (!u \|\| u.banned)`
+- `server/accounts.ts:882` · text: · when `if (!u \|\| u.banned)`
 
 **T72C7F8** · Screen text · *active*
 
@@ -2728,7 +2827,7 @@ Example: "120x XP event"
 Placeholders: `u.username`  
 Example: "Pikachu is already your friend"
 
-- `server/accounts.ts:855` · text: · when `if (this.areFriends(userId, u.id))`
+- `server/accounts.ts:884` · text: · when `if (this.areFriends(userId, u.id))`
 
 **TC88DAF** · Screen text · *active*
 
@@ -2737,7 +2836,7 @@ Example: "Pikachu is already your friend"
 Placeholders: `MAX_FRIENDS`  
 Example: "You can have up to … friends and requests"
 
-- `server/accounts.ts:857` · text: · when `if (count >= MAX_FRIENDS)`
+- `server/accounts.ts:886` · text: · when `if (count >= MAX_FRIENDS)`
 
 **TCC0D01** · Screen text · *active*
 
@@ -2746,7 +2845,7 @@ Example: "You can have up to … friends and requests"
 Placeholders: `u.username`  
 Example: "You and Pikachu are now friends"
 
-- `server/accounts.ts:863` · text: · when `if (theirs)`
+- `server/accounts.ts:892` · text: · when `if (theirs)`
 
 **T16E25C** · Screen text · *active*
 
@@ -2755,123 +2854,131 @@ Example: "You and Pikachu are now friends"
 Placeholders: `u.username`  
 Example: "Friend request sent to Pikachu"
 
-- `server/accounts.ts:866` · text: · when `in addFriend()`
+- `server/accounts.ts:895` · text: · when `in addFriend()`
 
 **T0B4341** · Error message · *active, admin only*
 
 > Missing header
 
-- `server/accounts.ts:951` · error: · when `if (req.headers['x-almia'] !== '1')`
+- `server/accounts.ts:980` · error: · when `if (req.headers['x-almia'] !== '1')`
+- `server/adminApi.ts:81` · error: · when `if (req.headers['x-almia'] !== '1')`
 - `server/modApi.ts:43` · error: · when `if (req.method === 'POST' && req.headers['x-almia'] !== '1')`
 
-**T518775** · Error message · *active*
+**T021A6B** · Error message · *active*
 
-> Sign in for a daily Egg
+> Sign in to redeem a Mystery Gift
 
-- `server/accounts.ts:964` · error: · when `if (!me)`
-- `server/accounts.ts:968` · error: · when `if (!me)`
+- `server/accounts.ts:994` · error: · when `if (!me)`
 
 **TF23272** · Error message · *active, admin only*
 
 > This account is banned
 
-- `server/accounts.ts:969` · error: · when `if (me.banned)`
-- `server/accounts.ts:998` · error: · when `if (me.banned)`
-- `server/accounts.ts:1171` · error: · when `if (u.banned)`
-- `server/accounts.ts:1258` · back · when `if (u.banned)`
+- `server/accounts.ts:995` · error: · when `if (me.banned)`
+- `server/accounts.ts:1006` · error: · when `if (me.banned)`
+- `server/accounts.ts:1035` · error: · when `if (me.banned)`
+- `server/accounts.ts:1208` · error: · when `if (u.banned)`
+- `server/accounts.ts:1295` · back · when `if (u.banned)`
 - `server/modApi.ts:115` · kick · when `case 'ban'`
+
+**T518775** · Error message · *active*
+
+> Sign in for a daily Egg
+
+- `server/accounts.ts:1001` · error: · when `if (!me)`
+- `server/accounts.ts:1005` · error: · when `if (!me)`
 
 **TCF2D92** · Error message · *active*
 
 > No such player
 
-- `server/accounts.ts:993` · error: · when `if (!u \|\| u.banned)`
+- `server/accounts.ts:1030` · error: · when `if (!u \|\| u.banned)`
 
 **T77A74F** · Error message · *active*
 
 > Sign in first
 
-- `server/accounts.ts:997` · error: · when `if (!me)`
+- `server/accounts.ts:1034` · error: · when `if (!me)`
 
 **T797BFA** · Error message · *active*
 
 > Too many friend requests. Try again later
 
-- `server/accounts.ts:1007` · error: · when `if (this.limited(`friend:${me.id}`, 30, 3600_000))`
+- `server/accounts.ts:1044` · error: · when `if (this.limited(`friend:${me.id}`, 30, 3600_000))`
 
 **TAC7F5E** · Error message · *active*
 
 > Nothing to extract from that match
 
-- `server/accounts.ts:1030` · error: · when `if (!row \|\| row.picks_left <= 0)`
-- `server/accounts.ts:1042` · error: · when `if (!left \|\| left.picks_left <= 0)`
+- `server/accounts.ts:1067` · error: · when `if (!row \|\| row.picks_left <= 0)`
+- `server/accounts.ts:1079` · error: · when `if (!left \|\| left.picks_left <= 0)`
 
 **TD702FA** · Error message · *active*
 
 > Pick one of your Pokémon from that match
 
-- `server/accounts.ts:1034` · error: · when `if (!pick \|\| pick.taken)`
+- `server/accounts.ts:1071` · error: · when `if (!pick \|\| pick.taken)`
 
 **T745CEB** · Error message · *active*
 
 > Earn that title first
 
-- `server/accounts.ts:1057` · error: · when `if (t && !titlesFor(this.earned(me.id)).includes(t))`
+- `server/accounts.ts:1094` · error: · when `if (t && !titlesFor(this.earned(me.id)).includes(t))`
 
 **T11B08C** · Error message · *active*
 
 > Your account signs in with Google: Google handles its recovery
 
-- `server/accounts.ts:1062` · error: · when `if (!me.pass_hash)`
+- `server/accounts.ts:1099` · error: · when `if (!me.pass_hash)`
 
 **TC22BDE** · Error message · *active*
 
 > Your account signs in with Google
 
-- `server/accounts.ts:1069` · error: · when `if (!me.pass_hash)`
+- `server/accounts.ts:1106` · error: · when `if (!me.pass_hash)`
 
 **TC6B85C** · Error message · *active*
 
 > Too many tries. Wait 15 minutes
 
-- `server/accounts.ts:1070` · error: · when `if (this.limited(`pw:${me.id}`, 8, 900_000))`
+- `server/accounts.ts:1107` · error: · when `if (this.limited(`pw:${me.id}`, 8, 900_000))`
 
 **TF76FB0** · Error message · *active*
 
 > Your current password is not right
 
-- `server/accounts.ts:1073` · error: · when `if (!checkPassword(cur, me.pass_hash))`
+- `server/accounts.ts:1110` · error: · when `if (!checkPassword(cur, me.pass_hash))`
 
 **T4360C1** · UI · *active*
 
 > Your password was changed, so please sign in again
 
-- `server/accounts.ts:1081` · onSignedOut · when `if (req.method === 'POST' && path === '/api/password')`
+- `server/accounts.ts:1118` · onSignedOut · when `if (req.method === 'POST' && path === '/api/password')`
 
 **T62C00A** · Error message · *active*
 
 > Pick a look
 
-- `server/accounts.ts:1087` · error: · when `if (!look)`
+- `server/accounts.ts:1124` · error: · when `if (!look)`
 
 **TB771D6** · Error message · *active*
 
 > That look is not unlocked yet
 
-- `server/accounts.ts:1088` · error: · when `if (!this.canWear(me.id, look))`
+- `server/accounts.ts:1125` · error: · when `if (!this.canWear(me.id, look))`
 
 **T73760C** · Error message · *active*
 
 > You can change your name three times a day
 
-- `server/accounts.ts:1093` · error: · when `if (!this.allow(`rename:${me.id}`, 3, 24 * 3600_000))`
+- `server/accounts.ts:1130` · error: · when `if (!this.allow(`rename:${me.id}`, 3, 24 * 3600_000))`
 
 **TE2B7C3** · Error message · *active*
 
 > That name is taken
 
-- `server/accounts.ts:1101` · error: · when `if (req.method === 'POST' && path === '/api/rename')`
-- `server/accounts.ts:1148` · error: · when `in register()`
+- `server/accounts.ts:1138` · error: · when `if (req.method === 'POST' && path === '/api/rename')`
+- `server/accounts.ts:1185` · error: · when `in register()`
 
 **T4D206E** · UI · *active*
 
@@ -2880,148 +2987,148 @@ Example: "Friend request sent to Pikachu"
 Placeholders: `me.username`  
 Example: "was Pikachu"
 
-- `server/accounts.ts:1104` · logMod · when `if (req.method === 'POST' && path === '/api/rename')`
+- `server/accounts.ts:1141` · logMod · when `if (req.method === 'POST' && path === '/api/rename')`
 
 **T36DE3C** · Error message · *active*
 
 > That is a lot of reports. Try again later
 
-- `server/accounts.ts:1109` · error: · when `if (!this.allow(`report:${me.id}`, 10, 3600_000))`
+- `server/accounts.ts:1146` · error: · when `if (!this.allow(`report:${me.id}`, 10, 3600_000))`
 
 **T067BA0** · Error message · *active*
 
 > Who are you reporting?
 
-- `server/accounts.ts:1113` · error: · when `if (!target)`
+- `server/accounts.ts:1150` · error: · when `if (!target)`
 
 **TB6C655** · Error message · *active*
 
 > Too much data
 
-- `server/accounts.ts:1119` · error: · when `if (e instanceof BodyTooLarge)`
+- `server/accounts.ts:1156` · error: · when `if (e instanceof BodyTooLarge)`
 
 **T8D886C** · Error message · *active, admin only*
 
 > Something went wrong
 
-- `server/accounts.ts:1123` · error: · when `in handle()`
-- `server/adminApi.ts:166` · error: · when `in handle()`
+- `server/accounts.ts:1160` · error: · when `in handle()`
+- `server/adminApi.ts:186` · error: · when `in handle()`
 - `server/modApi.ts:215` · error: · when `in handle()`
 
 **T222328** · UI · *active*
 
 > Names are 3-16 letters, numbers or _
 
-- `server/accounts.ts:1128` · return · when `if (!USERNAME.test(name))`
+- `server/accounts.ts:1165` · return · when `if (!USERNAME.test(name))`
 
 **T11D071** · UI · *active*
 
 > Pick a different name
 
-- `server/accounts.ts:1129` · return · when `if (RESERVED.has(name.toLowerCase()) \|\| !isClean(name))`
+- `server/accounts.ts:1166` · return · when `if (RESERVED.has(name.toLowerCase()) \|\| !isClean(name))`
 
 **T25A7F1** · Error message · *active*
 
 > New accounts can not be made from here
 
-- `server/accounts.ts:1135` · error: · when `if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))`
+- `server/accounts.ts:1172` · error: · when `if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))`
 
 **TA71838** · Error message · *testing only*
 
 > Too many new accounts from here. Try again later
 
-- `server/accounts.ts:1136` · error: · when `if (this.limited(`reg:${ip}`, this.kind === 'dev' ? 100 : 5, 3600_000))`
+- `server/accounts.ts:1173` · error: · when `if (this.limited(`reg:${ip}`, this.kind === 'dev' ? 100 : 5, 3600_000))`
 
 **TC26151** · Error message · *active*
 
 > Too many tries. Wait 15 minutes and try again
 
-- `server/accounts.ts:1163` · error: · when `if (this.limited(`ip:${ip}`, 20, 900_000) \|\| this.limited(`user:${username.toLowerCase()}`, 8, 900_000))`
+- `server/accounts.ts:1200` · error: · when `if (this.limited(`ip:${ip}`, 20, 900_000) \|\| this.limited(`user:${username.toLowerCase()}`, 8, 900_000))`
 
 **TDD0CE1** · Error message · *active*
 
 > Wrong name or password
 
-- `server/accounts.ts:1169` · error: · when `if (!u \|\| !u.pass_hash \|\| !checkPassword(password, u.pass_hash))`
+- `server/accounts.ts:1206` · error: · when `if (!u \|\| !u.pass_hash \|\| !checkPassword(password, u.pass_hash))`
 
 **TED0E0C** · Error message · *active*
 
 > Signing in from here is blocked
 
-- `server/accounts.ts:1172` · error: · when `if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))`
+- `server/accounts.ts:1209` · error: · when `if (this.banFor(cleanDevice(String(req.headers['x-device'] ?? '')), ip))`
 
 **TB1465C** · Error message · *active*
 
 > Too many tries. Try again in an hour
 
-- `server/accounts.ts:1183` · error: · when `if (this.limited(`rec:${ip}`, 10, 3600_000) \|\| this.limited(`recuser:${username.toLowerCase()}`, 5, 3600_000))`
+- `server/accounts.ts:1220` · error: · when `if (this.limited(`rec:${ip}`, 10, 3600_000) \|\| this.limited(`recuser:${username.toLowerCase()}`, 5, 3600_000))`
 
 **TB95A97** · Error message · *active*
 
 > That name and code do not match
 
-- `server/accounts.ts:1188` · error: · when `if (!u \|\| !u.pass_hash \|\| u.banned \|\| !this.useRecoveryCode(u.id, code))`
+- `server/accounts.ts:1225` · error: · when `if (!u \|\| !u.pass_hash \|\| u.banned \|\| !this.useRecoveryCode(u.id, code))`
 
 **TAD2D37** · UI · *active*
 
 > This account was recovered with a recovery code, so this connection was closed
 
-- `server/accounts.ts:1198` · onSignedOut · when `in recover()`
+- `server/accounts.ts:1235` · onSignedOut · when `in recover()`
 
 **TF17ED3** · UI · *active*
 
 > Google sign-in is not set up on this server
 
-- `server/accounts.ts:1212` · end · when `if (!this.google)`
+- `server/accounts.ts:1249` · end · when `if (!this.google)`
 
 **TFAA988** · UI · *active*
 
 > openid profile
 
-- `server/accounts.ts:1219` · scope: · when `in googleStart()`
+- `server/accounts.ts:1256` · scope: · when `in googleStart()`
 
 **T6B4D81** · UI · *active*
 
 > Google sign-in is not set up
 
-- `server/accounts.ts:1232` · back · when `if (!this.google)`
+- `server/accounts.ts:1269` · back · when `if (!this.google)`
 
 **T1C3DF4** · UI · *active*
 
 > Sign-in expired, try again
 
-- `server/accounts.ts:1234` · back · when `if (!state \|\| state !== url.searchParams.get('state') \|\| !verifier)`
+- `server/accounts.ts:1271` · back · when `if (!state \|\| state !== url.searchParams.get('state') \|\| !verifier)`
 
 **T1B2AA3** · UI · *active*
 
 > Sign-in was cancelled
 
-- `server/accounts.ts:1236` · back · when `if (!code)`
+- `server/accounts.ts:1273` · back · when `if (!code)`
 
 **T44C242** · UI · *active*
 
 > Google sign-in failed
 
-- `server/accounts.ts:1242` · back · when `if (!r.ok)`
-- `server/accounts.ts:1247` · back · when `if (!claims.sub \|\| claims.aud !== this.google.id \|\| !['https://accounts.google.com', 'accounts.google.com'].includes(claims.iss ?? '') \|\| (claim)`
+- `server/accounts.ts:1279` · back · when `if (!r.ok)`
+- `server/accounts.ts:1284` · back · when `if (!claims.sub \|\| claims.aud !== this.google.id \|\| !['https://accounts.google.com', 'accounts.google.com'].includes(claims.iss ?? '') \|\| (claim)`
 
 **T73C048** · UI · *active*
 
 > ; Secure
 
-- `server/accounts.ts:1273` · secure = · when `isHttps(req) ?`
+- `server/accounts.ts:1310` · secure = · when `isHttps(req) ?`
 
 **T250861** · UI · *active*
 
 > Passwords need at least 8 characters
 
-- `server/accounts.ts:1298` · return · when `if (password.length < 8 \|\| password.length > 200)`
+- `server/accounts.ts:1335` · return · when `if (password.length < 8 \|\| password.length > 200)`
 
 **T4EEFF6** · UI · *active*
 
 > Pick a harder password
 
-- `server/accounts.ts:1299` · return · when `if (password.toLowerCase().includes(username.toLowerCase()) \|\| /^(password\|12345678\|qwertyui\|11111111)/i.test(password))`
+- `server/accounts.ts:1336` · return · when `if (password.toLowerCase().includes(username.toLowerCase()) \|\| /^(password\|12345678\|qwertyui\|11111111)/i.test(password))`
 
 **TAF62D9** · UI · *active*
 
@@ -3030,13 +3137,13 @@ Example: "was Pikachu"
 Placeholders: `salt.toString('base64')`, `hash.toString('base64')`  
 Example: "scrypt$16384$8$1$…$…"
 
-- `server/accounts.ts:1306` · return · when `in hashPassword()`
+- `server/accounts.ts:1343` · return · when `in hashPassword()`
 
 **T1CF8F7** · UI · *active*
 
 > body too large
 
-- `server/accounts.ts:1347` · call
+- `server/accounts.ts:1384` · call
 
 **T0170B0** · UI · *active*
 
@@ -3045,7 +3152,7 @@ Example: "scrypt$16384$8$1$…$…"
 Placeholders: `this.net.me.user?.username`  
 Example: "Welcome, Pikachu!"
 
-- `src/ui/onlineScreens.ts:245` · when `if (ok)`
+- `src/ui/onlineScreens.ts:225` · when `if (ok)`
 
 **TC19E2D** · UI · *active*
 
@@ -3218,7 +3325,7 @@ Example: "Teach Pikachu to Pikachu?"
 
 - `src/ui/hud.ts:528` · fitWidth · when `if (st.extract)`
 - `src/ui/hud.ts:533` · ink · when `if (st.extract)`
-- `src/ui/pcScreen.ts:274` · text · when `e.via === 'egg' ?`
+- `src/ui/pcScreen.ts:274` · text · when `e.via === 'gift' ?`
 - `data/items/items.json` · item extraction-voucher: name
 
 **T3042E9** · UI · *active*
@@ -3458,7 +3565,7 @@ Example: "Storm Mask: your team lasts 3 in the storm"
 Placeholders: `h.def.name`, `st.shop.sellPrice(h.def.id).toLocaleString()`  
 Example: "Pikachu · sells for ₽1,500"
 
-- `src/ui/hud.ts:1334` · name = · when `st.shop ?`
+- `src/ui/hud.ts:1333` · name = · when `st.shop ?`
 
 **T4BDEC6** · Screen text · *active*
 
@@ -3467,7 +3574,7 @@ Example: "Pikachu · sells for ₽1,500"
 Placeholders: `L.mon`  
 Example: "Pikachu wants to learn"
 
-- `src/ui/hud.ts:1362` · ink · when `in drawLearn()`
+- `src/ui/hud.ts:1361` · ink · when `in drawLearn()`
 
 **TFFA2A2** · Screen text · *active*
 
@@ -3476,13 +3583,13 @@ Example: "Pikachu wants to learn"
 Placeholders: `L.queued`  
 Example: "+… more"
 
-- `src/ui/hud.ts:1365` · ink · when `if (L.queued > 0)`
+- `src/ui/hud.ts:1364` · ink · when `if (L.queued > 0)`
 
 **TBCD616** · UI · *active*
 
 > Physical, lunge
 
-- `src/ui/hud.ts:1382` · when `isContact(def) ?`
+- `src/ui/hud.ts:1381` · when `isContact(def) ?`
 
 **T263C05** · UI · *active*
 
@@ -3491,7 +3598,7 @@ Example: "+… more"
 Placeholders: `def.power > 0 ? `Pow ${def.power}` : 'No damage'`, `def.cooldown`  
 Example: "… · 3s"
 
-- `src/ui/hud.ts:1384` · nums = · when `in drawLearn()`
+- `src/ui/hud.ts:1383` · nums = · when `in drawLearn()`
 
 **TB56F37** · UI · *active*
 
@@ -3500,38 +3607,38 @@ Example: "… · 3s"
 Placeholders: `def.power`  
 Example: "Pow …"
 
-- `src/ui/hud.ts:1384` · nums = · when `def.power > 0 ?`
+- `src/ui/hud.ts:1383` · nums = · when `def.power > 0 ?`
 
 **T3AE10F** · UI · *active*
 
 > No damage
 
-- `src/ui/hud.ts:1384` · nums = · when `def.power > 0 ?`
+- `src/ui/hud.ts:1383` · nums = · when `def.power > 0 ?`
 - `src/ui/moveGallery.ts:187` · facts = · when `mv.power > 0 ?`
 
 **T5B81EA** · UI · *active*
 
 > Signature: kept
 
-- `src/ui/hud.ts:1386` · tag = · when `state === 'locked' ?`
+- `src/ui/hud.ts:1385` · tag = · when `state === 'locked' ?`
 
 **T0EAAB1** · UI · *active*
 
 > Forget this
 
-- `src/ui/hud.ts:1386` · tag = · when `state === 'hover' ?`
+- `src/ui/hud.ts:1385` · tag = · when `state === 'hover' ?`
 
 **T2E6285** · UI · *active*
 
 > Click to forget
 
-- `src/ui/hud.ts:1386` · tag = · when `state === 'hover' ?`
+- `src/ui/hud.ts:1385` · tag = · when `state === 'hover' ?`
 
 **T073C02** · Screen text · *active*
 
 > Forget one of these for it:
 
-- `src/ui/hud.ts:1394` · ink · when `in drawLearn()`
+- `src/ui/hud.ts:1393` · ink · when `in drawLearn()`
 
 **TFB1EA8** · Screen text · *active*
 
@@ -3540,13 +3647,13 @@ Example: "Pow …"
 Placeholders: `fresh.name`  
 Example: "Don't learn Pikachu"
 
-- `src/ui/hud.ts:1413` · ink · when `in drawLearn()`
+- `src/ui/hud.ts:1412` · ink · when `in drawLearn()`
 
 **T40E6FA** · UI · *active*
 
 > put the target to sleep
 
-- `src/ui/hud.ts:1447` · sleep:
+- `src/ui/hud.ts:1446` · sleep:
 
 **TB9764C** · UI · *active*
 
@@ -3555,7 +3662,7 @@ Example: "Don't learn Pikachu"
 Placeholders: `def.power`  
 Example: "Power …"
 
-- `src/ui/hud.ts:1453` · filter · when `def.power > 0 ?`
+- `src/ui/hud.ts:1452` · filter · when `def.power > 0 ?`
 
 **T69DA28** · UI · *active*
 
@@ -3564,7 +3671,7 @@ Example: "Power …"
 Placeholders: `def.cooldown`  
 Example: "Cooldown 3s"
 
-- `src/ui/hud.ts:1453` · filter · when `in describeMove()`
+- `src/ui/hud.ts:1452` · filter · when `in describeMove()`
 
 **T27C0D3** · UI · *active*
 
@@ -3573,37 +3680,37 @@ Example: "Cooldown 3s"
 Placeholders: `def.cast`  
 Example: "Charge …s"
 
-- `src/ui/hud.ts:1453` · filter · when `def.cast ?`
+- `src/ui/hud.ts:1452` · filter · when `def.cast ?`
 
 **T0591E1** · UI · *active*
 
 > Hits one target where you aim
 
-- `src/ui/hud.ts:1456` · single: · when `in describeMove()`
+- `src/ui/hud.ts:1455` · single: · when `in describeMove()`
 
 **T0FA209** · UI · *active*
 
 > Hits everything along a line
 
-- `src/ui/hud.ts:1457` · line: · when `in describeMove()`
+- `src/ui/hud.ts:1456` · line: · when `in describeMove()`
 
 **T91F587** · UI · *active*
 
 > Hits everything in a cone in front
 
-- `src/ui/hud.ts:1458` · cone: · when `in describeMove()`
+- `src/ui/hud.ts:1457` · cone: · when `in describeMove()`
 
 **T8882F4** · UI · *active*
 
 > Hits everything in a ring around the user
 
-- `src/ui/hud.ts:1459` · ring: · when `in describeMove()`
+- `src/ui/hud.ts:1458` · ring: · when `in describeMove()`
 
 **TF324BE** · UI · *active*
 
 > Affects the user
 
-- `src/ui/hud.ts:1460` · self: · when `in describeMove()`
+- `src/ui/hud.ts:1459` · self: · when `in describeMove()`
 
 **TEA577E** · UI · *active*
 
@@ -3612,37 +3719,37 @@ Example: "Charge …s"
 Placeholders: `Math.round(def.status.chance * 100)`, `STATUS_VERB[def.status.kind] ?? def.status.kind`  
 Example: "…% chance to …"
 
-- `src/ui/hud.ts:1463` · out.push · when `if (def.status)`
+- `src/ui/hud.ts:1462` · out.push · when `if (def.status)`
 
 **TA61D49** · UI · *active*
 
 > its own
 
-- `src/ui/hud.ts:1466` · when `if (def.stages)`
+- `src/ui/hud.ts:1465` · when `if (def.stages)`
 
 **T200E43** · UI · *active*
 
 > the target's
 
-- `src/ui/hud.ts:1466` · when `if (def.stages)`
+- `src/ui/hud.ts:1465` · when `if (def.stages)`
 
 **T52FB60** · UI · *active*
 
 > The user leaps and slams down on the target
 
-- `src/ui/hud.ts:1474` · out.push · when `if (def.leap)`
+- `src/ui/hud.ts:1473` · out.push · when `if (def.leap)`
 
 **TBDA488** · UI · *active*
 
 > The user lunges in and strikes, shoving the target back
 
-- `src/ui/hud.ts:1475` · out.push · when `if (isContact(def))`
+- `src/ui/hud.ts:1474` · out.push · when `if (isContact(def))`
 
 **T197C08** · UI · *active*
 
 > Signature move
 
-- `src/ui/hud.ts:1476` · out.push · when `if (def.signature)`
+- `src/ui/hud.ts:1475` · out.push · when `if (def.signature)`
 
 **TD76EE9** · On-screen notice · *testing only*
 
@@ -8378,25 +8485,25 @@ Example: "… … sent to your PC (… stored)"
 
 > Stats & account
 
-- `src/ui/onlineScreens.ts:312` · button · when `if (me.signedIn && me.user)`
+- `src/ui/onlineScreens.ts:292` · button · when `if (me.signedIn && me.user)`
 
 **T3BC470** · Screen text · *active*
 
 > Playing as a guest: sign in to keep the Pokémon you win.
 
-- `src/ui/onlineScreens.ts:316` · wrapText · when `if (me.signedIn && me.user)`
+- `src/ui/onlineScreens.ts:296` · wrapText · when `if (me.signedIn && me.user)`
 
 **TA7F434** · UI · *active*
 
 > Private matches are for fun: wins, stats and Pokémon from them are not kept.
 
-- `src/ui/onlineScreens.ts:454` · el · when `in draw()`
+- `src/ui/onlineScreens.ts:433` · el · when `in draw()`
 
 **TE4C270** · UI · *active*
 
 > Could not extract
 
-- `src/ui/onlineScreens.ts:693` · when `r.ok ?`
+- `src/ui/onlineScreens.ts:672` · when `r.ok ?`
 
 **TE08B86** · Screen text · *active*
 
@@ -8405,19 +8512,19 @@ Example: "… … sent to your PC (… stored)"
 Placeholders: `this.place`  
 Example: "You placed #2"
 
-- `src/ui/onlineScreens.ts:710` · text · when `win ?`
+- `src/ui/onlineScreens.ts:689` · text · when `win ?`
 
 **T490039** · Screen text · *active*
 
 > You won as a guest, so nothing could be kept. Sign in next time to keep a Pokémon from every win.
 
-- `src/ui/onlineScreens.ts:725` · wrapText · when `win ?`
+- `src/ui/onlineScreens.ts:704` · wrapText · when `win ?`
 
 **TD16E0C** · Screen text · *active*
 
 > Sign in to keep your stats and the Pokémon you win.
 
-- `src/ui/onlineScreens.ts:725` · wrapText · when `win ?`
+- `src/ui/onlineScreens.ts:704` · wrapText · when `win ?`
 
 **T26551A** · Screen text · *active*
 
@@ -8426,19 +8533,19 @@ Example: "You placed #2"
 Placeholders: `this.info.picks > 1 ? `up to ${this.info.picks} Pokémon` ...`  
 Example: "Keep Pikachu: it goes to your PC on the server"
 
-- `src/ui/onlineScreens.ts:727` · text · when `if (this.info?.picks)`
+- `src/ui/onlineScreens.ts:706` · text · when `if (this.info?.picks)`
 
 **T8E1910** · Button · *active*
 
 > Back to the lobby
 
-- `src/ui/onlineScreens.ts:736` · button · when `this.net.privateLobby ?`
+- `src/ui/onlineScreens.ts:715` · button · when `this.net.privateLobby ?`
 
 **TC52BFB** · Button · *active*
 
 > Watch the rest
 
-- `src/ui/onlineScreens.ts:739` · button · when `if (this.onWatch)`
+- `src/ui/onlineScreens.ts:718` · button · when `if (this.onWatch)`
 
 ## 10b. Achievements, titles and XP
 
@@ -8835,19 +8942,19 @@ Example: "Lv 12"
 
 > Loading the replay
 
-- `src/main.ts:465` · loadingScreen · when `in boot()`
+- `src/main.ts:508` · loadingScreen · when `in boot()`
 
 **T91085F** · UI · *active*
 
 > That replay could not be loaded
 
-- `src/main.ts:472` · showOnline · when `in boot()`
+- `src/main.ts:515` · showOnline · when `in boot()`
 
 **T49E7DD** · UI · *active*
 
 > That replay is empty
 
-- `src/main.ts:475` · showOnline · when `if (!lines.length)`
+- `src/main.ts:518` · showOnline · when `if (!lines.length)`
 
 **T0748F1** · UI · *active*
 
@@ -9033,11 +9140,11 @@ Example: "The match is over: Wes won"
 
 > Can't reach the game server
 
-- `src/net/connection.ts:243` · error: · when `in api()`
+- `src/net/connection.ts:245` · error: · when `in api()`
 
 ## 13. Moderators and the admin dashboard
 
-158 lines.
+171 lines.
 
 **T38CC9F** · UI · *admin only*
 
@@ -9068,25 +9175,37 @@ Example: "… min"
 
 > Administrators only
 
-- `server/adminApi.ts:68` · error: · when `if (!me)`
+- `server/adminApi.ts:70` · error: · when `if (!me)`
+
+**T824C26** · Error message · *admin only*
+
+> GET or POST
+
+- `server/adminApi.ts:80` · error: · when `if (req.method !== 'POST')`
+
+**T38F4D8** · Error message · *admin only*
+
+> No such code
+
+- `server/adminApi.ts:87` · error: · when `gifts.setActive(String(body.code ?? ''), body.active === true) ?`
 
 **T9ECFCD** · Error message · *admin only*
 
 > The admin dashboard is read-only
 
-- `server/adminApi.ts:70` · error: · when `if (req.method !== 'GET')`
+- `server/adminApi.ts:90` · error: · when `if (req.method !== 'GET')`
 
 **TEC0323** · UI · *admin only*
 
 > WHERE u.username LIKE ? ESCAPE '\'
 
-- `server/adminApi.ts:97` · where = · when `q ?`
+- `server/adminApi.ts:117` · where = · when `q ?`
 
 **T0E32DE** · Error message · *admin only*
 
 > No such account
 
-- `server/adminApi.ts:109` · error: · when `if (!u)`
+- `server/adminApi.ts:129` · error: · when `if (!u)`
 - `server/modApi.ts:80` · error: · when `if (!u)`
 - `server/modApi.ts:103` · error: · when `if (!u)`
 
@@ -9094,19 +9213,19 @@ Example: "… min"
 
 > mode = ?
 
-- `server/adminApi.ts:139` · cond.push · when `if (mode)`
+- `server/adminApi.ts:159` · cond.push · when `if (mode)`
 
 **T15CE64** · UI · *admin only*
 
 > aborted IS NULL
 
-- `server/adminApi.ts:142` · cond.push · when `if (!withAborted)`
+- `server/adminApi.ts:162` · cond.push · when `if (!withAborted)`
 
 **TECE93A** · UI · *admin only*
 
 > trainers LIKE ? ESCAPE '\'
 
-- `server/adminApi.ts:144` · cond.push · when `if (player)`
+- `server/adminApi.ts:164` · cond.push · when `if (player)`
 
 **TBEDA01** · UI · *admin only*
 
@@ -9115,7 +9234,7 @@ Example: "… min"
 Placeholders: `likeEscape(JSON.stringify(player).slice(0, -1))`  
 Example: "%"name":Wes%"
 
-- `server/adminApi.ts:145` · args.push · when `if (player)`
+- `server/adminApi.ts:165` · args.push · when `if (player)`
 
 **T1371C4** · UI · *admin only*
 
@@ -9124,406 +9243,474 @@ Example: "%"name":Wes%"
 Placeholders: `cond.join(' AND ')`  
 Example: "WHERE 3"
 
-- `server/adminApi.ts:147` · where = · when `cond.length ?`
+- `server/adminApi.ts:167` · where = · when `cond.length ?`
 
 **T13BE9B** · Error message · *admin only*
 
 > No such match
 
-- `server/adminApi.ts:159` · error: · when `if (!old)`
+- `server/adminApi.ts:179` · error: · when `if (!old)`
 
 **TFD1D7C** · Dashboard page · *admin only*
 
 > Admin · Shadows of Almia Showdown
 
-- `server/adminPage.ts:8` · admin page HTML
+- `server/adminPage.ts:9` · admin page HTML
 
 **TB65B77** · Dashboard page · *admin only*
 
 > Match history
 
-- `server/adminPage.ts:48` · admin page script
-- `server/adminPage.ts:133` · admin page HTML
+- `server/adminPage.ts:49` · admin page script
+- `server/adminPage.ts:179` · admin page HTML
 
 **T2C20F3** · Dashboard page · *admin only*
 
 > Bad reply (HTTP
 
-- `server/adminPage.ts:58` · admin page script
+- `server/adminPage.ts:59` · admin page script
+- `server/adminPage.ts:92` · admin page script
 
 **TAC40B6** · Dashboard page · *admin only*
 
 > Can not show this
 
-- `server/adminPage.ts:76` · admin page HTML
+- `server/adminPage.ts:77` · admin page HTML
 
 **TA00351** · Dashboard page · *admin only*
 
 > Sign in to the game in this browser with an administrator account, then reload this page.
 
-- `server/adminPage.ts:77` · admin page HTML
+- `server/adminPage.ts:78` · admin page HTML
 
-**TA02107** · Dashboard page · *admin only*
+**T0387C4** · Dashboard page · *admin only*
 
-> Signed in as
-
-- `server/adminPage.ts:91` · admin page script
-
-**TBDCAA7** · Dashboard page · *admin only*
-
-> Players connected
-
-- `server/adminPage.ts:95` · admin page script
-
-**T1B6C52** · Dashboard page · *admin only*
-
-> Signed in
-
-- `server/adminPage.ts:95` · admin page script
-
-**T329B4F** · Dashboard page · *admin only*
-
-> Computer trainers in matches
-
-- `server/adminPage.ts:95` · admin page script
-
-**TA54FB3** · Dashboard page · *admin only*
-
-> On the online menu
-
-- `server/adminPage.ts:96` · admin page script
-
-**T35E6B5** · Dashboard page · *admin only*
-
-> In a lobby, queue or party
-
-- `server/adminPage.ts:96` · admin page script
-
-**T57E279** · Dashboard page · *admin only*
-
-> Playing a match
-
-- `server/adminPage.ts:96` · admin page script
-
-**T84477D** · Dashboard page · *admin only*
-
-> Disconnected, seat held
-
-- `server/adminPage.ts:96` · admin page script
-
-**TB7763C** · Dashboard page · *admin only*
-
-> · refreshes every 10 s while this tab is open.
-
-- `server/adminPage.ts:97` · admin page script
-
-**T598C3E** · Dashboard page · *admin only*
-
-> Name Kind Where Match Connected
-
-- `server/adminPage.ts:99` · admin page script
-
-**T16A692** · Dashboard page · *admin only*
-
-> Nobody is connected.
+> Make a Mystery Gift code
 
 - `server/adminPage.ts:100` · admin page HTML
 
-**TBB9F28** · Dashboard page · *admin only*
+**T5AAB25** · Dashboard page · *admin only*
 
-> Disconnected from a running match (seat held for a reconnect) Name Kind Match
+> a Pokémon
 
-- `server/adminPage.ts:101` · admin page script
+- `server/adminPage.ts:104` · admin page HTML
 
-**T32AA9B** · Dashboard page · *admin only*
+**T86CF63** · Dashboard page · *admin only*
 
-> No match is running.
+> Gives a Pokémon a look (skin)
 
-- `server/adminPage.ts:115` · admin page HTML
-
-**T5FA2F1** · Dashboard page · *admin only*
-
-> Trainer Kind Status
-
-- `server/adminPage.ts:115` · admin page script
-
-**T6F4520** · Dashboard page · *admin only*
-
-> disconnected (seat held)
-
-- `server/adminPage.ts:115` · admin page script
-
-**T7AE94F** · Dashboard page · *admin only*
-
-> Refreshes every 10 s while this tab is open. Finished matches move to Match history.
-
-- `server/adminPage.ts:116` · admin page HTML
-
-**T52C897** · Dashboard page · *admin only*
-
-> Loading matches...
-
-- `server/adminPage.ts:125` · admin page HTML
-
-**TC9117F** · Dashboard page · *admin only*
-
-> Full match records (duration, every trainer with bots marked, places, stats) start
-
-- `server/adminPage.ts:134` · admin page script
-
-**TEF6037** · Dashboard page · *admin only*
-
-> . Matches before that were recorded only for signed-in players (their place, outcome and stats):
-
-- `server/adminPage.ts:134` · admin page script
-
-**T2874A8** · Dashboard page · *admin only*
-
-> such match
-
-- `server/adminPage.ts:134` · admin page script
-
-**TE0002E** · Dashboard page · *admin only*
-
-> s page.
-
-- `server/adminPage.ts:134` · admin page script
-
-**TCAB5CF** · Dashboard page · *admin only*
-
-> Any mode
-
-- `server/adminPage.ts:135` · admin page HTML
-
-**T1AD2F1** · Dashboard page · *admin only*
-
-> Any mode Public Private
-
-- `server/adminPage.ts:135` · admin page script
-
-**T8DE3DF** · Dashboard page · *admin only*
-
-> include called-off matches
-
-- `server/adminPage.ts:136` · admin page HTML
-
-**TD4D073** · Dashboard page · *admin only*
-
-> Ended Mode Duration Winner Trainers Humans Bots
-
-- `server/adminPage.ts:137` · admin page script
-
-**TE59B21** · Dashboard page · *admin only*
-
-> called off
-
-- `server/adminPage.ts:138` · admin page HTML
-
-**TA5EA87** · Dashboard page · *admin only*
-
-> No completed matches recorded
-
-- `server/adminPage.ts:139` · admin page script
-
-**T35012B** · Dashboard page · *admin only*
-
-> for this filter
-
-- `server/adminPage.ts:139` · admin page script
-
-**T6CE190** · Dashboard page · *admin only*
-
-> Loading the match...
-
-- `server/adminPage.ts:148` · admin page HTML
-
-**T1F2A3A** · Dashboard page · *admin only*
-
-> Recorded before full match logging began: only the signed-in players\\
-
-- `server/adminPage.ts:154` · admin page script
-
-**TBB4309** · Dashboard page · *admin only*
-
-> Place Trainer Outcome Catches KOs Eliminations Damage Survived
-
-- `server/adminPage.ts:155` · admin page script
-
-**TB70CE3** · Dashboard page · *admin only*
-
-> Back to the list
-
-- `server/adminPage.ts:157` · admin page HTML
-- `server/adminPage.ts:166` · admin page HTML
-
-**TAED2DF** · Dashboard page · *admin only*
-
-> of play · winner:
-
-- `server/adminPage.ts:162` · admin page script
-
-**T82B5DC** · Dashboard page · *admin only*
-
-> Place Trainer Kind Outcome Catches KOs Eliminations Damage Survived
-
-- `server/adminPage.ts:163` · admin page script
-
-**T9925EE** · Dashboard page · *admin only*
-
-> not recorded
-
-- `server/adminPage.ts:165` · admin page HTML
-
-**T56462F** · Dashboard page · *admin only*
-
-> Last seen
-
-- `server/adminPage.ts:177` · admin page HTML
-- `server/adminPage.ts:200` · admin page script
-
-**TD715CC** · Dashboard page · *admin only*
-
-> Username Role Created Last seen PC
-
-- `server/adminPage.ts:177` · admin page script
-
-**T4D289B** · Dashboard page · *admin only*
-
-> No account matches "
-
-- `server/adminPage.ts:180` · admin page script
-
-**TFC2341** · Dashboard page · *admin only*
-
-> Loading the account...
-
-- `server/adminPage.ts:191` · admin page HTML
-
-**T662F38** · Dashboard page · *admin only*
-
-> Saved account
-
-- `server/adminPage.ts:198` · admin page HTML
-
-**T1A3610** · Dashboard page · *admin only*
-
-> Account id
-
-- `server/adminPage.ts:199` · admin page script
-
-**TCCA0ED** · Dashboard page · *admin only*
-
-> online now
-
-- `server/adminPage.ts:200` · admin page HTML
-
-**T7396A2** · Dashboard page · *admin only*
-
-> online now (
-
-- `server/adminPage.ts:200` · admin page script
-
-**TD2B803** · Dashboard page · *admin only*
-
-> online menu
-
-- `server/adminPage.ts:200` · admin page script
-
-**T446C08** · Dashboard page · *admin only*
-
-> playing match
-
-- `server/adminPage.ts:200` · admin page script
-
-**TED041C** · Dashboard page · *admin only*
-
-> muted until
-
-- `server/adminPage.ts:202` · admin page script
-
-**TFDD825** · Dashboard page · *admin only*
-
-> in good standing
-
-- `server/adminPage.ts:202` · admin page script
-
-**T3CD483** · Dashboard page · *admin only*
-
-> , trainer levels are hidden in the game)
-
-- `server/adminPage.ts:203` · admin page script
-
-**T56781B** · Dashboard page · *admin only*
-
-> Career stats
-
-- `server/adminPage.ts:205` · admin page script
-
-**TB7C2BA** · Dashboard page · *admin only*
-
-> damage · best place
-
-- `server/adminPage.ts:205` · admin page script
-
-**T5560E1** · Dashboard page · *admin only*
-
-> None saved: Poké Dollars start fresh every match.
-
-- `server/adminPage.ts:206` · admin page HTML
-
-**TBC81E0** · Dashboard page · *admin only*
-
-> Storage chest
-
-- `server/adminPage.ts:207` · admin page script
+- `server/adminPage.ts:104` · admin page script
 
 **TB830AD** · Dashboard page · *admin only*
 
 > Pokémon
 
-- `server/adminPage.ts:209` · admin page HTML
+- `server/adminPage.ts:105` · admin page HTML
+- `server/adminPage.ts:255` · admin page HTML
+
+**T1EBBCC** · Dashboard page · *admin only*
+
+> Pokémon Level Shiny
+
+- `server/adminPage.ts:105` · admin page script
+
+**T13F7D3** · Dashboard page · *admin only*
+
+> Uses Expires Note
+
+- `server/adminPage.ts:107` · admin page script
+
+**TC9B811** · Dashboard page · *admin only*
+
+> Make code
+
+- `server/adminPage.ts:108` · admin page HTML
+
+**TFBC9A7** · Dashboard page · *admin only*
+
+> Code Gives Used Expires Note Made
+
+- `server/adminPage.ts:109` · admin page script
+
+**TBE15D6** · Dashboard page · *admin only*
+
+> No codes yet.
+
+- `server/adminPage.ts:111` · admin page HTML
+
+**T48C5B7** · Dashboard page · *admin only*
+
+> : give it to players to enter on the home page (Mystery Gift).
+
+- `server/adminPage.ts:118` · admin page script
+
+**T25E9B7** · Dashboard page · *admin only*
+
+> Nobody yet.
+
+- `server/adminPage.ts:128` · admin page HTML
+
+**T380A4A** · Dashboard page · *admin only*
+
+> Account When
+
+- `server/adminPage.ts:128` · admin page script
+
+**TA02107** · Dashboard page · *admin only*
+
+> Signed in as
+
+- `server/adminPage.ts:137` · admin page script
+
+**TBDCAA7** · Dashboard page · *admin only*
+
+> Players connected
+
+- `server/adminPage.ts:141` · admin page script
+
+**T1B6C52** · Dashboard page · *admin only*
+
+> Signed in
+
+- `server/adminPage.ts:141` · admin page script
+
+**T329B4F** · Dashboard page · *admin only*
+
+> Computer trainers in matches
+
+- `server/adminPage.ts:141` · admin page script
+
+**TA54FB3** · Dashboard page · *admin only*
+
+> On the online menu
+
+- `server/adminPage.ts:142` · admin page script
+
+**T35E6B5** · Dashboard page · *admin only*
+
+> In a lobby, queue or party
+
+- `server/adminPage.ts:142` · admin page script
+
+**T57E279** · Dashboard page · *admin only*
+
+> Playing a match
+
+- `server/adminPage.ts:142` · admin page script
+
+**T84477D** · Dashboard page · *admin only*
+
+> Disconnected, seat held
+
+- `server/adminPage.ts:142` · admin page script
+
+**TB7763C** · Dashboard page · *admin only*
+
+> · refreshes every 10 s while this tab is open.
+
+- `server/adminPage.ts:143` · admin page script
+
+**T598C3E** · Dashboard page · *admin only*
+
+> Name Kind Where Match Connected
+
+- `server/adminPage.ts:145` · admin page script
+
+**T16A692** · Dashboard page · *admin only*
+
+> Nobody is connected.
+
+- `server/adminPage.ts:146` · admin page HTML
+
+**TBB9F28** · Dashboard page · *admin only*
+
+> Disconnected from a running match (seat held for a reconnect) Name Kind Match
+
+- `server/adminPage.ts:147` · admin page script
+
+**T32AA9B** · Dashboard page · *admin only*
+
+> No match is running.
+
+- `server/adminPage.ts:161` · admin page HTML
+
+**T5FA2F1** · Dashboard page · *admin only*
+
+> Trainer Kind Status
+
+- `server/adminPage.ts:161` · admin page script
+
+**T6F4520** · Dashboard page · *admin only*
+
+> disconnected (seat held)
+
+- `server/adminPage.ts:161` · admin page script
+
+**T7AE94F** · Dashboard page · *admin only*
+
+> Refreshes every 10 s while this tab is open. Finished matches move to Match history.
+
+- `server/adminPage.ts:162` · admin page HTML
+
+**T52C897** · Dashboard page · *admin only*
+
+> Loading matches...
+
+- `server/adminPage.ts:171` · admin page HTML
+
+**TC9117F** · Dashboard page · *admin only*
+
+> Full match records (duration, every trainer with bots marked, places, stats) start
+
+- `server/adminPage.ts:180` · admin page script
+
+**TEF6037** · Dashboard page · *admin only*
+
+> . Matches before that were recorded only for signed-in players (their place, outcome and stats):
+
+- `server/adminPage.ts:180` · admin page script
+
+**T2874A8** · Dashboard page · *admin only*
+
+> such match
+
+- `server/adminPage.ts:180` · admin page script
+
+**TE0002E** · Dashboard page · *admin only*
+
+> s page.
+
+- `server/adminPage.ts:180` · admin page script
+
+**TCAB5CF** · Dashboard page · *admin only*
+
+> Any mode
+
+- `server/adminPage.ts:181` · admin page HTML
+
+**T1AD2F1** · Dashboard page · *admin only*
+
+> Any mode Public Private
+
+- `server/adminPage.ts:181` · admin page script
+
+**T8DE3DF** · Dashboard page · *admin only*
+
+> include called-off matches
+
+- `server/adminPage.ts:182` · admin page HTML
+
+**TD4D073** · Dashboard page · *admin only*
+
+> Ended Mode Duration Winner Trainers Humans Bots
+
+- `server/adminPage.ts:183` · admin page script
+
+**TE59B21** · Dashboard page · *admin only*
+
+> called off
+
+- `server/adminPage.ts:184` · admin page HTML
+
+**TA5EA87** · Dashboard page · *admin only*
+
+> No completed matches recorded
+
+- `server/adminPage.ts:185` · admin page script
+
+**T35012B** · Dashboard page · *admin only*
+
+> for this filter
+
+- `server/adminPage.ts:185` · admin page script
+
+**T6CE190** · Dashboard page · *admin only*
+
+> Loading the match...
+
+- `server/adminPage.ts:194` · admin page HTML
+
+**T1F2A3A** · Dashboard page · *admin only*
+
+> Recorded before full match logging began: only the signed-in players\\
+
+- `server/adminPage.ts:200` · admin page script
+
+**TBB4309** · Dashboard page · *admin only*
+
+> Place Trainer Outcome Catches KOs Eliminations Damage Survived
+
+- `server/adminPage.ts:201` · admin page script
+
+**TB70CE3** · Dashboard page · *admin only*
+
+> Back to the list
+
+- `server/adminPage.ts:203` · admin page HTML
+- `server/adminPage.ts:212` · admin page HTML
+
+**TAED2DF** · Dashboard page · *admin only*
+
+> of play · winner:
+
+- `server/adminPage.ts:208` · admin page script
+
+**T82B5DC** · Dashboard page · *admin only*
+
+> Place Trainer Kind Outcome Catches KOs Eliminations Damage Survived
+
+- `server/adminPage.ts:209` · admin page script
+
+**T9925EE** · Dashboard page · *admin only*
+
+> not recorded
+
+- `server/adminPage.ts:211` · admin page HTML
+
+**T56462F** · Dashboard page · *admin only*
+
+> Last seen
+
+- `server/adminPage.ts:223` · admin page HTML
+- `server/adminPage.ts:246` · admin page script
+
+**TD715CC** · Dashboard page · *admin only*
+
+> Username Role Created Last seen PC
+
+- `server/adminPage.ts:223` · admin page script
+
+**T4D289B** · Dashboard page · *admin only*
+
+> No account matches "
+
+- `server/adminPage.ts:226` · admin page script
+
+**TFC2341** · Dashboard page · *admin only*
+
+> Loading the account...
+
+- `server/adminPage.ts:237` · admin page HTML
+
+**T662F38** · Dashboard page · *admin only*
+
+> Saved account
+
+- `server/adminPage.ts:244` · admin page HTML
+
+**T1A3610** · Dashboard page · *admin only*
+
+> Account id
+
+- `server/adminPage.ts:245` · admin page script
+
+**TCCA0ED** · Dashboard page · *admin only*
+
+> online now
+
+- `server/adminPage.ts:246` · admin page HTML
+
+**T7396A2** · Dashboard page · *admin only*
+
+> online now (
+
+- `server/adminPage.ts:246` · admin page script
+
+**TD2B803** · Dashboard page · *admin only*
+
+> online menu
+
+- `server/adminPage.ts:246` · admin page script
+
+**T446C08** · Dashboard page · *admin only*
+
+> playing match
+
+- `server/adminPage.ts:246` · admin page script
+
+**TED041C** · Dashboard page · *admin only*
+
+> muted until
+
+- `server/adminPage.ts:248` · admin page script
+
+**TFDD825** · Dashboard page · *admin only*
+
+> in good standing
+
+- `server/adminPage.ts:248` · admin page script
+
+**T3CD483** · Dashboard page · *admin only*
+
+> , trainer levels are hidden in the game)
+
+- `server/adminPage.ts:249` · admin page script
+
+**T56781B** · Dashboard page · *admin only*
+
+> Career stats
+
+- `server/adminPage.ts:251` · admin page script
+
+**TB7C2BA** · Dashboard page · *admin only*
+
+> damage · best place
+
+- `server/adminPage.ts:251` · admin page script
+
+**T5560E1** · Dashboard page · *admin only*
+
+> None saved: Poké Dollars start fresh every match.
+
+- `server/adminPage.ts:252` · admin page HTML
+
+**TBC81E0** · Dashboard page · *admin only*
+
+> Storage chest
+
+- `server/adminPage.ts:253` · admin page script
 
 **TAADF37** · Dashboard page · *admin only*
 
 > saved Pokémon) Saved account data: what this account keeps between matches. A match\\
 
-- `server/adminPage.ts:209` · admin page script
+- `server/adminPage.ts:255` · admin page script
 
 **T3EC512** · Dashboard page · *admin only*
 
 > The PC is empty.
 
-- `server/adminPage.ts:210` · admin page HTML
+- `server/adminPage.ts:256` · admin page HTML
 
 **TB8EF4E** · Dashboard page · *admin only*
 
 > Back to accounts
 
-- `server/adminPage.ts:211` · admin page HTML
+- `server/adminPage.ts:257` · admin page HTML
 
 **T5256C4** · Dashboard page · *admin only*
 
 > Matches Back to accounts
 
-- `server/adminPage.ts:211` · admin page script
+- `server/adminPage.ts:257` · admin page script
 
 **TF43444** · Dashboard page · *admin only*
 
 > Ended Mode Place Outcome
 
-- `server/adminPage.ts:214` · admin page script
+- `server/adminPage.ts:260` · admin page script
 
 **T795DCF** · Dashboard page · *admin only*
 
 > No recorded matches.
 
-- `server/adminPage.ts:216` · admin page HTML
+- `server/adminPage.ts:262` · admin page HTML
 
 **T18CE54** · Dashboard page · *admin only*
 
 > #am tr.click
 
-- `server/adminPage.ts:217` · admin page script
+- `server/adminPage.ts:263` · admin page script
 
 **T230B78** · Error message · *admin only*
 
@@ -9650,7 +9837,7 @@ Example: "…: Pikachu (… h, x…)"
 > #tabs button
 
 - `server/modPage.ts:64` · moderators page script
-- `server/adminPage.ts:66` · admin page script
+- `server/adminPage.ts:67` · admin page script
 
 **T2314CD** · Dashboard page · *admin only*
 
@@ -9676,8 +9863,8 @@ Example: "…: Pikachu (… h, x…)"
 
 - `server/modPage.ts:78` · moderators page script
 - `server/modPage.ts:143` · moderators page HTML
-- `server/adminPage.ts:48` · admin page script
-- `server/adminPage.ts:113` · admin page HTML
+- `server/adminPage.ts:49` · admin page script
+- `server/adminPage.ts:159` · admin page HTML
 
 **T3B1BB4** · Dashboard page · *admin only*
 
@@ -10030,7 +10217,7 @@ Example: "…: Pikachu (… h, x…)"
 
 ## 14. Other
 
-17 lines.
+24 lines.
 
 **T05092E** · UI · *active*
 
@@ -10056,11 +10243,78 @@ Example: "Pikachu · authored map …x… · Sunnyside World tileset (Daniel Dig
 
 - `src/ground/staticGround.ts:128`
 
-**T890AB4** · UI · *active*
+**TDEC1D1** · Screen text · *active*
 
-> ⏎ .almia-egg { text-align: center; }⏎ .almia-egg .stage { height: 150px; display: flex; align-items: center; justify-content: center; }⏎ .almia-egg .stage img, .almia-egg .stage canvas { width: 96px; height: 96px; image-rendering: pixelated; }⏎ .almia-egg .egg { width: 72px; height: 72px; image-rendering: pixelated; }⏎ .almia-egg .egg.wobble { animation: almia-wobble 0.32s ease-in-out infinite alternate; }⏎ .almia-egg .flash { animation: almia-flash 0.6s ease-out; }⏎ .almia-egg .tier { font-size: 15px; margin-top: 4px; }⏎ @keyframes almia-wobble { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }⏎ @keyframes almia-flash { from { filter: brightness(4); transform: scale(0.6); } to { filter: none; transform: scale(1); } }⏎ 
+> Daily Egg
 
-- `src/ui/eggDialog.ts:26` · CSS =
+- `src/ui/dailyEgg.ts:163` · text · when `in draw()`
+- `src/ui/pcScreen.ts:274` · text · when `e.via === 'egg' ?`
+
+**T7B9B19** · Screen text · *active*
+
+> Sign in online for an Egg
+
+- `src/ui/dailyEgg.ts:214` · text · when `if (!this.signedIn)`
+
+**TA3FD74** · Screen text · *active*
+
+> every day
+
+- `src/ui/dailyEgg.ts:215` · text · when `if (!this.signedIn)`
+
+**TDD3A84** · Screen text · *active*
+
+> Oh? The Egg is hatching...
+
+- `src/ui/dailyEgg.ts:223` · text · when `if (this.t < BURST_AT)`
+
+**T0E3D30** · Screen text · *active*
+
+> {this.result.shiny ? '★ ' : ''}{this.result.name} hatched!
+
+Placeholders: `this.result.shiny ? '★ ' : ''`, `this.result.name`  
+Example: "…Pikachu hatched!"
+
+- `src/ui/dailyEgg.ts:225` · text · when `if (this.result)`
+
+**TEF959E** · UI · *active*
+
+> {st.tierName} Egg
+
+Placeholders: `st.tierName`  
+Example: "Pikachu Egg"
+
+- `src/ui/dailyEgg.ts:231` · strip · when `if (st.ready)`
+
+**T6D76FB** · Screen text · *active*
+
+> Click to hatch it!
+
+- `src/ui/dailyEgg.ts:232` · text · when `over ?`
+
+**T40B412** · Screen text · *active*
+
+> Click to hatch
+
+- `src/ui/dailyEgg.ts:232` · text · when `over ?`
+
+**TAF72EB** · Screen text · *active*
+
+> {st.today.shiny ? '★ ' : ''}{st.today.name} · in your PC
+
+Placeholders: `st.today.shiny ? '★ ' : ''`, `st.today.name`  
+Example: "…Pikachu · in your PC"
+
+- `src/ui/dailyEgg.ts:236` · text · when `if (st.today)`
+
+**T61F2B8** · Screen text · *active*
+
+> Next Egg in {until(st.nextAt)}
+
+Placeholders: `until(st.nextAt)`  
+Example: "Next Egg in …"
+
+- `src/ui/dailyEgg.ts:238` · text · when `in draw()`
 
 **TB4E728** · UI · *active*
 
@@ -10069,7 +10323,7 @@ Example: "Pikachu · authored map …x… · Sunnyside World tileset (Daniel Dig
 Placeholders: `Math.floor(m / 60)`, `m % 60`  
 Example: "… h … min"
 
-- `src/ui/eggDialog.ts:42` · return · when `m >= 60 ?`
+- `src/ui/dailyEgg.ts:267` · return · when `m >= 60 ?`
 
 **TA47D8E** · UI · *active*
 
@@ -10078,89 +10332,71 @@ Example: "… h … min"
 Placeholders: `m`  
 Example: "… min"
 
-- `src/ui/eggDialog.ts:42` · return · when `m >= 60 ?`
+- `src/ui/dailyEgg.ts:267` · return · when `m >= 60 ?`
 
-**TDEC1D1** · UI · *active*
+**T03A67C** · UI · *active, admin only*
 
-> Daily Egg
+> Mystery Gift
 
-- `src/ui/eggDialog.ts:61` · el · when `in eggDialog()`
-- `src/ui/eggDialog.ts:76` · el · when `in eggDialog()`
-- `src/ui/onlineScreens.ts:325` · button · when `this.eggWaiting ?`
-- `src/ui/pcScreen.ts:274` · text · when `e.via === 'egg' ?`
+- `src/ui/giftDialog.ts:13` · el · when `in giftDialog()`
+- `src/ui/pcScreen.ts:274` · text · when `e.via === 'gift' ?`
+- `src/ui/titleScreen.ts:1071` · when `this.egg ?`
+- `server/adminPage.ts:49` · admin page script
 
-**TE1FD9F** · UI · *active, admin only*
+**T48A887** · UI · *active*
+
+> Sign in online to redeem a Mystery Gift code.
+
+- `src/ui/giftDialog.ts:15` · el · when `if (!net.me.signedIn)`
+
+**T7135AC** · UI · *active*
+
+> Go online
+
+- `src/ui/giftDialog.ts:17` · el · when `if (!net.me.signedIn)`
+
+**TA34A7C** · UI · *active*
+
+> Got a code? Enter it here for a Pokémon or a new look.
+
+- `src/ui/giftDialog.ts:28` · el · when `in giftDialog()`
+
+**TE1FD9F** · Error message · *active, admin only*
 
 > Could not reach the server
 
-- `src/ui/eggDialog.ts:83` · when `if (st.error \|\| !st)`
-- `server/adminPage.ts:57` · admin page script
+- `src/ui/giftDialog.ts:49` · error:
+- `server/adminPage.ts:58` · admin page script
 
-**T33A63B** · UI · *active*
+**T858625** · UI · *active*
 
-> {st.today ? `Today's Egg hatched into ${st.today.shiny ? '...}Your next Egg comes in {until(st.nextAt)}.
+> You received a gift!
 
-Placeholders: `st.today ? `Today's Egg hatched into ${st.today.shiny ? '...`, `until(st.nextAt)`  
-Example: "PikachuYour next Egg comes in …."
+- `src/ui/giftDialog.ts:57` · el · when `in giftDialog()`
 
-- `src/ui/eggDialog.ts:90` · when `if (!st.ready)`
+**TF02E77** · UI · *active*
 
-**TD5E5E8** · UI · *active*
+> {g.shiny ? 'A shiny ' : ''}{g.name} (Lv {g.level}) was sent to your PC.
 
-> Today's Egg hatched into {st.today.shiny ? 'a shiny ' : ''}{st.today.name}. 
+Placeholders: `g.shiny ? 'A shiny ' : ''`, `g.name`, `g.level`  
+Example: "…Pikachu (Lv 12) was sent to your PC."
 
-Placeholders: `st.today.shiny ? 'a shiny ' : ''`, `st.today.name`  
-Example: "Today's Egg hatched into …Pikachu. "
+- `src/ui/giftDialog.ts:58` · el · when `g.kind === 'pokemon' ?`
 
-- `src/ui/eggDialog.ts:90` · when `st.today ?`
+**T839686** · UI · *active*
 
-**T3456AE** · UI · *active*
+> A shiny 
 
-> a shiny 
+- `src/ui/giftDialog.ts:58` · el · when `g.shiny ?`
 
-- `src/ui/eggDialog.ts:90` · when `st.today.shiny ?`
+**TFF0271** · UI · *active*
 
-**T22D89A** · UI · *active*
+> A new look: {g.name}. Wear it from the Trainer screen.
 
-> A new Egg! Whatever hatches goes to your PC. Most are common, a few are rare, and once in a while it's something special.
+Placeholders: `g.name`  
+Example: "A new look: Pikachu. Wear it from the Trainer screen."
 
-- `src/ui/eggDialog.ts:96` · then · when `in eggDialog()`
-
-**T0625E3** · UI · *active*
-
-> Hatch it
-
-- `src/ui/eggDialog.ts:97` · el
-
-**TDD3A84** · UI · *active*
-
-> Oh? The Egg is hatching...
-
-- `src/ui/eggDialog.ts:103`
-
-**T2C8029** · UI · *active*
-
->  · ★ Shiny!
-
-- `src/ui/eggDialog.ts:116` · el · when `r.shiny ?`
-
-**T9E052C** · UI · *active*
-
-> {r.name} hatched from the Egg! It was sent to your PC.
-
-Placeholders: `r.name`  
-Example: "Pikachu hatched from the Egg! It was sent to your PC."
-
-- `src/ui/eggDialog.ts:118` · el
-
-**T5DC4EA** · UI · *active*
-
-> Your next Egg comes in {until(r.nextAt)}.
-
-Placeholders: `until(r.nextAt)`  
-Example: "Your next Egg comes in …."
-
-- `src/ui/eggDialog.ts:118` · el
+- `src/ui/giftDialog.ts:58` · el · when `g.kind === 'pokemon' ?`
 
 ## Review: contradictions, stale references and confusing wording
 
@@ -10172,9 +10408,9 @@ Collected automatically by the checks listed beside each, plus the notes below. 
 | TCFA600 | Reach trainer level 25 | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | T86E23B | Reach trainer level 50 | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | T07499C | The first Ranger is free; more Rangers unlock with your trainer level online, and more trainers are coming soon | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
+| TEA47E0 | {SPECIES.get(dex)?.name} has no shiny colours in the game | British spelling (the rest of the game mixes spellings) |
 | T5D1E48 | {p.progress.into} / {p.progress.next} XP to level {p.progress.level + 1} | trainer levels and XP are hidden in the game (LEVELS_ON is off) |
 | TCC7AED, T49B53D | paralyzed! / Paralyzed! | the same words with different capitals or punctuation |
-| TDEC1D1, T06AA1B | Daily Egg / Daily Egg! | the same words with different capitals or punctuation |
 | T538164, T574F1F |   ·  Level {prog.after.level}! /   ·  Level {prog.after.level} | the same words with different capitals or punctuation |
 | T3D88A3, TC93011, TCCA0ED, T7396A2 | Online now ·  / Online now / online now / online now ( | the same words with different capitals or punctuation |
 | T6CDAC8, T6818ED | Sign in to trade / Sign in to trade. | the same words with different capitals or punctuation |

@@ -271,7 +271,7 @@ export class PcScreen implements Screen {
     text(v, `Lv ${e.level}`, r.x + r.w / 2, y + 26 * s, 15, { align: 'center', color: INK.accent, shadow: false });
     const tags = [(e as PcEntry & { wonder?: boolean }).wonder ? 'On Wonder Trade' : '', e.shadow ? 'Shadow' : '', e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
     if (tags) text(v, tags, r.x + r.w / 2, y + 48 * s, 12, { align: 'center', color: e.shadow ? INK.storm : INK.gold, shadow: false });
-    text(v, e.via === 'win' ? 'Victory prize' : e.via === 'egg' ? 'Daily Egg' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? INK.gold : e.via === 'egg' ? INK.accent : INK.blue, shadow: false });
+    text(v, e.via === 'win' ? 'Victory prize' : e.via === 'egg' ? 'Daily Egg' : e.via === 'gift' ? 'Mystery Gift' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? INK.gold : e.via === 'egg' ? INK.accent : INK.blue, shadow: false });
     if (e.moves?.length) text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + r.w / 2, y + 94 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });
   }
 

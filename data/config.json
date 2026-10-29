@@ -56,7 +56,7 @@
     "centerLevelRadius": 140,
     "centerLevelCurve": 0.75,
     "_calmComment": "Round every trainer's starting point the wilds keep their land's base levels: no centre bonus within calmTiles[0] tiles of a start, the full bonus from calmTiles[1].",
-    "calmTiles": [12, 38],
+    "calmTiles": [20, 55],
     "spawnClearance": 12,
     "_eliteComment": "eliteChance of wild spawns are elites: eliteLevels more levels (evolved if that passes an evolution), marked with a gold star.",
     "eliteChance": 0.12,
@@ -65,7 +65,7 @@
       9
     ],
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
-    "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 0.01 (1 in 100) gives about two shinies among a match's 230 or so wild Pokemon and fishing bites, so most matches have one or two somewhere, and a trainer who meets 40-60 wilds sees one about every other match. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
+    "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 0.01 (1 in 100) gives about three shinies among a match's 310 or so wild Pokemon and fishing bites, so most matches have one or two somewhere, and a trainer who meets 40-60 wilds sees one about every other match. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
     "shinyChance": 0.01,
     "alphaShinyMultiplier": 4,
     "alphaChance": 0.07,

@@ -2,7 +2,7 @@
   "_comment": "Wild spawn tables per land. count = wild Pokémon in that land at match start (there are no wild respawns: these are all the wilds a match has, plus fishing); levels = [min, max] for its common Pokémon, an entry's own levels override that. weight sets how often an entry is picked, relative to the others it competes with: about 8-10 common, 4-6 uncommon, 2-3 scarce, 1.2-1.5 rare. Starters and pseudo-legendaries are placed by rare, not by these tables. Lands with \"use\": \"nearest\" (meadows, beaches, the castle grounds) take each spot's table from the nearest of the four lands. Levels also rise toward the Shadow Crystal: + centerLevelBonus x (1 - distance / centerLevelRadius)^curve (config.json wild). An entry with a habitat only spawns in that habitat (see habitats): each land fills habitatSlots of its count there, rolling only among its own habitat entries; every other spot rolls among the entries with no habitat. Stronger encounters (strong) are separate from these tables.",
   "biomes": {
     "forest": {
-      "count": 46,
+      "count": 64,
       "levels": [
         2,
         5
@@ -59,7 +59,7 @@
       ]
     },
     "autumn": {
-      "count": 42,
+      "count": 59,
       "levels": [
         3,
         6
@@ -108,7 +108,7 @@
       ]
     },
     "snow": {
-      "count": 46,
+      "count": 64,
       "levels": [
         3,
         6
@@ -176,7 +176,7 @@
       }
     },
     "desert": {
-      "count": 40,
+      "count": 56,
       "levels": [
         4,
         7
@@ -278,11 +278,11 @@
       }
     },
     "meadow": {
-      "count": 26,
+      "count": 36,
       "use": "nearest"
     },
     "shore": {
-      "count": 18,
+      "count": 25,
       "use": "nearest"
     },
     "water": {

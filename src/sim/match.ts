@@ -26,7 +26,7 @@ import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
-import { gainXp, isRoaming, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
+import { gainXp, isRoaming, joinBehavior, shareKnockoutXp, stepParty, xpForKnockout, xpToNext, type PartyWorld } from './party';
 import { pickStrong, rarePlacements, weightedPicks, type RareConfig, type SpawnRow, type StrongConfig, type StrongPool } from './spawning';
 
 const AI_NAMES: Array<[string, string]> = [
@@ -759,7 +759,7 @@ export class Match {
         down.hp = Math.max(1, Math.floor(down.maxHp * (def.fraction ?? 0.5)));
         down.x = t.x;
         down.y = t.y;
-        down.behavior = 'guard';
+        down.behavior = joinBehavior(t);
         down.anim.play('Idle', { restart: true });
         this.takeItem(t, slot);
         return `${down.name} was revived!`;
@@ -878,7 +878,7 @@ export class Match {
     m.hp = Math.max(1, Math.floor(m.maxHp * 0.5));
     m.status = null;
     m.target = null;
-    m.behavior = 'guard';
+    m.behavior = joinBehavior(p);
     m.x = m.px = p.x + 0.8;
     m.y = m.py = p.y + 0.4;
     m.anim.play('Idle', { restart: true });
@@ -996,7 +996,7 @@ export class Match {
           w.owner = th.thrower;
           w.wild = false;
           w.aura = false;
-          w.behavior = 'guard';
+          w.behavior = joinBehavior(th.thrower);
           w.target = null;
           if (ITEMS[th.ballId]?.special === 'heal') {
             w.hp = w.maxHp;
@@ -1540,7 +1540,7 @@ export class Match {
       fainted: false, status: null, statusTimer: 0, flash: 0, homeX: x, homeY: y, targetX: x, targetY: y,
       idleTimer: this.rng.range(0.5, 3), moving: false, inDark: false, drowsy: 0, outsideDark: 0, aura: false,
       heldItem: null, busy: 0, casting: null, target: null, captured: false,
-      behavior: owner ? (owner.party.length === 0 ? 'aggressive' : 'guard') : 'guard', xp: 0, wander: null, wanderPause: 0,
+      behavior: owner ? (owner.party.length === 0 ? 'aggressive' : joinBehavior(owner)) : 'guard', xp: 0, wander: null, wanderPause: 0,
       roamTarget: null, recall: false, sinceHit: 999, visual: { scale: 1, alpha: 1, flash: 0 }, evolving: null,
       shiny: shiny && SpriteRegistry.hasShiny(dex),
     };
@@ -3221,7 +3221,7 @@ export class Match {
     L.status = null;
     L.legendPhase = 0;
     L.stages = { atk: 0, def: 0, spe: 0 };
-    L.behavior = 'guard';
+    L.behavior = joinBehavior(L.owner);
     L.anim.play('Idle', { restart: true });
     by.party.push(L);
     by.stats.catches++;
@@ -3269,7 +3269,7 @@ export class Match {
     L.status = null;
     L.legendPhase = 0;
     L.stages = { atk: 0, def: 0, spe: 0 };
-    L.behavior = 'guard';
+    L.behavior = joinBehavior(L.owner);
     L.anim.play('Idle', { restart: true });
     p.party.push(L);
     p.stats.catches++;

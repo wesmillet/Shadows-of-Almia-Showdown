@@ -8,6 +8,7 @@
  * itself a second in; in an open-world fight the wild Pokémon come at you.
  */
 import type { Match } from './match';
+import { move } from './data';
 import type { Mon, Trainer } from './entities';
 
 /** [dex, level, moves?] */
@@ -152,4 +153,19 @@ export function applyScenario(m: Match, sc: Scenario): ScenarioRun {
     if (run.result) run.endedAt = m.time;
   };
   return run;
+}
+
+/** PROTOTYPE: Thunder and Stone Edge back to their timing on the fixes branch (?nowarn=1), to compare. */
+export function unwarnMoves(): void {
+  for (const id of ['thunder', 'stone-edge']) {
+    const d = move(id) as { warn?: number; fx?: Array<{ anchor: string; delay?: number }> };
+    const w = d.warn ?? 0;
+    if (!w) continue;
+    d.warn = undefined;
+    for (const part of d.fx ?? []) if (part.anchor === 'target' && part.delay !== undefined) {
+      const back = +(part.delay - w).toFixed(3);
+      if (back > 0) part.delay = back;
+      else delete part.delay;
+    }
+  }
 }

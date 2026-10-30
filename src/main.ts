@@ -1,4 +1,4 @@
-import { applyScenario, scenarioById, type ScenarioRun } from './sim/scenarios';
+import { applyScenario, scenarioById, unwarnMoves, type ScenarioRun } from './sim/scenarios';
 import { LAB, setLevelModel } from './sim/levelModel';
 import { track } from './stats';
 import { GameLoop } from './core/loop';
@@ -570,13 +570,15 @@ async function boot(): Promise<void> {
   };
 
   // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).
+  // PROTOTYPE (scaling-lab): ?scaling=p plays any match under Model P (scenario mode or not).
+  setLevelModel(params.get('scaling') === 'p' ? 'p' : 'current');
+  if (params.get('sleep') === 'old') LAB.sleepBreaks = false;
+  if (params.get('teammates') === 'quick') LAB.teammates = 'quick';
+  if (params.get('nowarn')) unwarnMoves();
   const party = params.get('party');
   const scenario = scenarioById(params.get('scenario'));
   if (scenario) {
     // PROTOTYPE playtest (scaling-lab): a set scenario under the chosen level scaling.
-    setLevelModel(params.get('scaling') === 'p' ? 'p' : 'current');
-    if (params.get('sleep') === 'old') LAB.sleepBreaks = false;
-    if (params.get('teammates') === 'quick') LAB.teammates = 'quick';
     void startMatch([scenario.you[0]![0]], { rivals: 3, setup: (m) => scenarioOverlay(applyScenario(m, scenario), m) });
   } else if (params.get('moves')) {
     void startGallery();

@@ -68,7 +68,9 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
     const egg = p.eggs?.[0];
     for (let i = 0; i < 600; i++) m.step(1 / 60);
     check((egg?.steps ?? 0) < 0.5, `standing still does not hatch it (${egg?.steps.toFixed(2)} steps)`);
-    // Walking about: progress at walking speed, then it hatches into a party slot.
+    // Walking about: progress at walking speed, then it hatches into a party slot. Nobody steers
+    // this player in a trainer battle (it would wait there for a pick), so none can start.
+    p.duelReadyAt = Infinity;
     seat!.moveX = 1;
     seat!.moveY = 0;
     let t = 0;

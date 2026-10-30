@@ -297,6 +297,9 @@ export const BEAM_REACH = 0.1;
  * `delay` among its parts played on the target (a ring that rolls out from its user, an eruption that
  * rises first). The damage waits for it, so the HP drops in the frame the impact appears.
  */
+/** A sleep timer at or past this is the darkness's own sleep (match.ts sets 1e9): only the light ends it. */
+export const STORM_SLEEP = 1e8;
+
 /** One pulse of a channelled beam (BattleSystem.resolve). */
 interface Pulse {
   scale: number;
@@ -764,6 +767,11 @@ export class BattleSystem {
         }
       }
       target.flash = HIT_FLASH;
+      // A move that actually deals damage wakes a sleeping Pokémon (a beam's pulse too, if it deals
+      // at least 1). Not: burn and poison, recoil, Bad Dreams (those go straight to applyDamage), a
+      // hit that deals nothing. The storm's hold is kept: nothing wakes a Pokémon asleep in the
+      // darkness, and one the darkness put to sleep wakes only in the light (match.ts).
+      if (target.status === 'sleep' && !target.fainted && !target.inDark && target.statusTimer < STORM_SLEEP) this.cureStatus(target);
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
       if (!target.fainted && (isContact(m) || m.leap)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;

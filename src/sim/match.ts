@@ -2888,10 +2888,14 @@ export class Match {
       const i = this.wilds.indexOf(gone);
       if (i >= 0) this.wilds.splice(i, 1);
     }
-    this.handleKnockouts();
+    // Each event is acted on once: a caller that steps again without emptying the event list
+    // (the screens and the server empty it every step) must not pay a knockout twice.
+    const fresh = this.battle.events.filter((e) => !this.handledEvents.has(e));
+    for (const e of fresh) this.handledEvents.add(e);
+    this.handleKnockouts(fresh);
     this.stepEvolutions(dt);
     // A steered Pokémon hit Hoopa this step: it unbinds and fights (visitors.ts).
-    this.visitors.hoopaStruck(this.battle.events);
+    this.visitors.hoopaStruck(fresh);
     this.checkElimination();
     // The last two are no longer pulled to the crystal's arena: they find each other on the map.
     if (CONFIG.duel.finalShowdown) this.stepFinalShowdown(dt);
@@ -3263,8 +3267,12 @@ export class Match {
   }
 
   /** XP for knockouts and item drops from wild Pokémon (read off this step's faint events). */
-  private handleKnockouts(): void {
-    for (const ev of [...this.battle.events]) {
+  /** Battle events already acted on (handleKnockouts, Hoopa): never twice, however long they stay listed. */
+  private readonly handledEvents = new WeakSet<object>();
+
+  /** Knockouts, yields and boss defeats among this step's new events: money, XP, drops, legends. */
+  private handleKnockouts(events: readonly BattleEvent[]): void {
+    for (const ev of events) {
       if (ev.type === 'yield') {
         const host = ev.mon.owner?.legendBout ? ev.mon.owner : null;
         if (ev.mon.shadow) {

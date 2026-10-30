@@ -3174,7 +3174,9 @@ export class Match {
     const slot = this.battle.chooseMove(m, target, !!m.owner);
     if (slot < 0) return;
     m.dir = dirFromVector(target.x - m.x, target.y - m.y, m.dir);
-    if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = LAB.teammates === 'quick' ? this.rng.range(0.15, 0.3) : this.rng.range(0.8, 1.6);
+    // (Prototype 'quick': the same beat as the player's lead on auto-battle, which looks again every
+    // 0.45 s, so a teammate on its own is exactly as quick as your lead, and a bot's team no quicker.)
+    if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = LAB.teammates === 'quick' ? 0.45 : this.rng.range(0.8, 1.6);
   }
 
   /** Whether a trainer carries a Capture Styler (a rare find: in the bag or the gear). */

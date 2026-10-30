@@ -1,4 +1,5 @@
 /** Typed access to the JSON content under /data. Nothing numeric about species or moves lives in code. */
+import { effLevel } from './levelModel';
 import speciesJson from '../../data/species.json';
 import typesJson from '../../data/types.json';
 import spawnsJson from '../../data/spawns.json';
@@ -367,7 +368,9 @@ export function moveSpeed(m: { species: SpeciesDef; stages?: { spe: number }; st
 }
 
 /** Actual stats at a level from base stats (flat IV/EV-free formula). */
-export function statsAtLevel(base: StatBlock, level: number): StatBlock {
+export function statsAtLevel(base: StatBlock, realLevel: number): StatBlock {
+  // (Prototype: the level scaling being tested, levelModel.ts. "current" is the real level.)
+  const level = effLevel(realLevel);
   const other = (b: number) => Math.floor((2 * b * level) / 100) + 5;
   return {
     hp: Math.floor((2 * base.hp * level) / 100) + level + 10,

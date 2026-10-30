@@ -3,6 +3,7 @@
  * status and knockouts. Pure simulation; it reports what happened through
  * `events`, which the renderer turns into VFX, numbers and hit-stop.
  */
+import { effLevel } from './levelModel';
 import { hasAction, strikeTime } from './strikeTimes';
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
@@ -135,7 +136,7 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   if (m.category === 'status' || m.power <= 0 || eff === 0) return { damage: 0, effectiveness: eff, crit: false };
   const a = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
   const d = (m.category === 'physical' ? defender.stats.def : defender.stats.spd) * STAGE_MULT(defender.stages.def);
-  let dmg = (((2 * attacker.level) / 5 + 2) * m.power * (a / d)) / 50 + 2;
+  let dmg = (((2 * effLevel(attacker.level)) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
   // Held items.
@@ -166,7 +167,7 @@ export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef, seen = 
   if (m.category === 'status' || m.power <= 0 || eff === 0) return 0;
   const a = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
   const d = Math.max(1, (m.category === 'physical' ? defender.stats.def : defender.stats.spd) * STAGE_MULT(defender.stages.def));
-  let dmg = (((2 * attacker.level) / 5 + 2) * m.power * (a / d)) / 50 + 2;
+  let dmg = (((2 * effLevel(attacker.level)) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
   // Someone else's Pokémon (`seen`): what it holds can't be seen, so it isn't counted.

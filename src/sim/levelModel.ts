@@ -1,0 +1,30 @@
+/**
+ * PROTOTYPE (scaling-lab branch, not for merging as is): which level scaling stats and damage use.
+ *
+ *   current: effective level = L
+ *   p:       effective level = 25 x (L / 25) to the power 0.75 (equal to L at level 25)
+ *
+ * Only a Pokémon's stats (statsAtLevel) and the damage formula's level term use it. Shown levels,
+ * XP, evolution, move learning and every other rule keep the real level. Set once before a match
+ * starts (URL ?scaling=p in the browser, LEVEL_MODEL=p for node tools); switching mid-match would
+ * leave Pokémon made under the other model.
+ */
+export type LevelModel = 'current' | 'p';
+
+let model: LevelModel = (() => {
+  const env = typeof process !== 'undefined' ? process.env?.LEVEL_MODEL : undefined;
+  return env === 'p' ? 'p' : 'current';
+})();
+
+export function setLevelModel(m: LevelModel): void {
+  model = m;
+}
+
+export function levelModel(): LevelModel {
+  return model;
+}
+
+/** The level stats and damage are computed from. */
+export function effLevel(level: number): number {
+  return model === 'p' ? 25 * Math.pow(level / 25, 0.75) : level;
+}

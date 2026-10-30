@@ -927,11 +927,9 @@ export class BattleSystem {
         if (d > moveReach(mv) + pad) return;
         if (blocked && !isContact(mv) && !mv.leap) return;
       }
-      // The move it just used counts for a little less, so a Pokémon mixes its moves instead of
-      // firing its single best one every time it comes off cooldown.
-      // (Trainers' Pokémon, careful, just take the best move that is ready: no marking down a move
-      // for having been used last.)
-      const s = moveScore(attacker, target, mv) * (!careful && i === attacker.lastSlot ? 0.6 : 1);
+      // The best move that is ready, every time: no marking down a move for having been used last
+      // (wild Pokémon, challengers and bosses included). Variety comes from cooldowns alone.
+      const s = moveScore(attacker, target, mv);
       if (s > bestScore) {
         bestScore = s;
         best = i;

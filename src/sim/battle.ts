@@ -3,6 +3,7 @@
  * status and knockouts. Pure simulation; it reports what happened through
  * `events`, which the renderer turns into VFX, numbers and hit-stop.
  */
+import { hasAction, strikeTime } from './strikeTimes';
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import { CONFIG, MOVES, bodyRadius, contactReach, drawScale, effectiveness, hitPad, isContact, move, moveSpeed, movesAt, type MoveDef, type StatusKind } from './data';
@@ -457,13 +458,15 @@ export class BattleSystem {
       const back = Math.min(d, 0.45 + bodyRadius(attacker.species) * 1.1);
       const k = d > 0.01 ? (d - back) / d : 0;
       attacker.leap = { t: 0, dur: attacker.casting.t, h: 1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
-      attacker.anim.play(attacker.anim.sprites.def('Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
+      attacker.anim.play(hasAction(attacker.dex, 'Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
     } else {
       attacker.anim.play(m.anim, { restart: true, loop: false });
       // The move goes off on the attack animation's strike frame (SpriteCollab's HitFrame), so the
-      // swing, the shot and the impact line up; moves with their own wind-up keep it.
+      // swing, the shot and the impact line up; moves with their own wind-up keep it. The strike
+      // frame comes from the build-time table (strikeTimes.ts), following the same fallback chain
+      // the sprite plays, so it never depends on which sheets have loaded.
       if (m.cast === undefined) {
-        const strike = strikeSeconds(attacker.anim.sprites.def(attacker.anim.action));
+        const strike = strikeTime(attacker.dex, m.anim).seconds;
         if (strike !== null) attacker.casting.t = Math.max(0.12, Math.min(0.6, strike));
       }
       // A contact move: rush in and strike on arrival.

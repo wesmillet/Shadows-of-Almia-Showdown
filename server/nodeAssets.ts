@@ -1,7 +1,8 @@
 /**
  * Assets for the game server: text and JSON come from the repository's assets/ folder on disk;
  * images are never loaded (the server simulates, it does not draw), so loadImage resolves null and
- * the sprite code keeps only each species' AnimData (frame timings the battle system reads).
+ * the sprite code keeps only each species' AnimData. (Move timing comes from data/strike-times.json,
+ * built from the same AnimData files, so it never depends on what has loaded.)
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,7 +1,8 @@
 /**
  * What every match on the server shares, loaded once at start: the map (walkability, biomes, spawn
- * points; no pictures) and each species' animation timings (moves land on the attack animation's
- * hit frame, so the server needs those, but never an image).
+ * points; no pictures) and each species' AnimData (no images). Moves strike on the attack
+ * animation's hit frame, read from data/strike-times.json (src/sim/strikeTimes.ts), the same
+ * table the browser uses.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -2,6 +2,7 @@
  * A Pokémon's SpriteCollab folder in memory, and the animation player that
  * steps through an action with the XML's per-frame timing.
  */
+import { ANIM_FALLBACKS } from '../sim/strikeTimes';
 import type { Dir8 } from '../core/math';
 import { Assets, imagePixels, warnOnce } from './assets';
 import shinyJson from '../../data/shiny.json';
@@ -113,22 +114,7 @@ export const CORE_ACTIONS = ['Idle', 'Walk', 'Attack', 'Hurt', 'Sleep', 'Charge'
 /** Actions that play once and hold their last frame (an attack, a hit, a faint); everything else loops. */
 const ONE_SHOT = new Set(['Attack', 'Shoot', 'Charge', 'Strike', 'Swing', 'Double', 'Rotate', 'Hop', 'Hurt', 'Faint']);
 
-const FALLBACKS: Record<string, string[]> = {
-  Sleep: ['Idle'],
-  Charge: ['Shoot', 'Attack', 'Idle'],
-  Shoot: ['Attack', 'Idle'],
-  Attack: ['Shoot', 'Idle'],
-  // The swings, strikes and spins most sprites have; any that lack one lunge with Attack.
-  Strike: ['Attack', 'Idle'],
-  Swing: ['Attack', 'Idle'],
-  Double: ['Attack', 'Idle'],
-  Rotate: ['Attack', 'Idle'],
-  Hop: ['Attack', 'Idle'],
-  Hurt: ['Idle'],
-  Faint: ['Hurt', 'Idle'],
-  // A set drawn without a Walk (Iron Treads) rolls along on its Rotate sheet, looped.
-  Walk: ['Rotate', 'Idle'],
-};
+const FALLBACKS = ANIM_FALLBACKS;
 
 interface Sheet {
   anim: HTMLImageElement | HTMLCanvasElement | null;

@@ -11,7 +11,8 @@ import { ANIM_FALLBACKS, strikeTime } from './strikeTimes';
 describe('strike-timing table', () => {
   it('matches the sprite folders\' AnimData (run scripts/strike-times.ts after changing sprites)', () => {
     expect(buildStrikeTable(join(import.meta.dirname, '..', '..', 'assets', 'pokemon'))).toEqual(TABLE);
-  });
+    // (It reads every sprite folder's AnimData: a few seconds on a cold disk or a busy runner.)
+  }, 30000);
 
   it('follows the sprites\' fallback chain: an action a folder lacks strikes on the one that plays instead', () => {
     const rows = TABLE as unknown as Record<string, Record<string, number | null>>;

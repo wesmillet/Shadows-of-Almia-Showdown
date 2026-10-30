@@ -3700,8 +3700,7 @@ export class Match {
           return this.endDuel(d, this.canBattle(o.trainer) || o.trainer.legendBout ? o.trainer : null);
         }
         // A player picks who comes next; a rival takes a moment. Either way, once the time is
-        // up the first one able in party order comes out (an idle or disconnected player
-        // never holds the battle open).
+        // up the first one able in party order comes out (a battle never waits on a pick).
         if (t.isPlayer) s.awaitingPick = true;
         s.nextAt = this.time + (t.isPlayer ? c.playerPickSeconds : c.aiPickSeconds);
       }

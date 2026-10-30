@@ -52,10 +52,17 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Create the app (first time only)
         run: |
-          if flyctl status --app "$APP" >/dev/null 2>&1; then
+          # Fly's own answers go to deploy.log too, so a failure here is posted in the issue (the
+          # token is only in the environment; flyctl does not print it).
+          if flyctl status --app "$APP" > status.log 2>&1; then
             echo "App $APP already exists"
           else
-            flyctl apps create "$APP" || { echo "::error::Could not create $APP. The name may be taken: run again with another app name."; exit 1; }
+            { echo "== flyctl status --app $APP"; cat status.log; } | tee -a deploy.log
+            set +e
+            flyctl apps create "$APP" 2>&1 | tee -a deploy.log
+            ok=${PIPESTATUS[0]}
+            set -e
+            if [ "$ok" != "0" ]; then echo "::error::Could not check or create $APP on Fly; Fly's messages are in the issue this run posts."; exit 1; fi
           fi
       - name: Create the save disk (first time only)
         run: |

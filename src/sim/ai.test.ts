@@ -105,3 +105,18 @@ describe('trainer AI', () => {
     expect(b.chooseMove(a, near, true)).toBe(0);
   });
 });
+
+describe('what a computer trainer can see (round 3 fix)', () => {
+  it('a strong wild past the edge of its view does not put it off a target it can see', () => {
+    // A target 14 tiles off (in view); a much stronger wild 6 tiles beyond it (20 tiles off: out of view).
+    const t = trainer(0, 0, [mon('0006', 30)]);
+    const prey = mon('0129', 25, 14, 0);
+    const brute = mon('0445', 70, 20, 0);
+    const pick = huntTarget(t, [prey, brute], 16);
+    expect(pick?.mon).toBe(prey);
+    // Once the brute is in view (12 tiles off, 2 from the prey), the trainer does leave that prey alone.
+    brute.x = 12;
+    brute.y = 1;
+    expect(huntTarget(t, [prey, brute], 16)?.mon ?? null).not.toBe(prey);
+  });
+});

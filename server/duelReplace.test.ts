@@ -129,4 +129,57 @@ describe('trainer battle replacements', async () => {
     expect(sent.filter((x) => x.owner === p)).toEqual(order);
     expect(p.party.every((x) => x.fainted)).toBe(true);
   });
+
+  it("an idle player's Pokemon fights on its own after idleSeconds; one who steers keeps control", () => {
+    const { m, p, step, side, d } = setup(17, [['0004', 40]], [['0025', 12]]);
+    expect(step(5, () => !!side(p).mon && d.state === 'fight')).toBe(true);
+    const mine = side(p).mon!;
+    const casts = () => (m.battle.events as Array<{ type: string; attacker?: Mon }>).filter((e) => e.type === 'cast' && e.attacker === mine).length;
+    // Steering every step: never idle, the Pokemon does nothing on its own.
+    const seat = m.seats[0]!;
+    let own = 0;
+    for (let i = 0; i < 60 * (CONFIG.duel.idleSeconds + 4); i++) {
+      seat.moveX = i % 120 < 60 ? 1 : -1;
+      seat.moveY = 0;
+      m.darkness.radius = m.darkness.targetRadius = 999;
+      m.step(1 / 60);
+      own += casts();
+      m.battle.events.length = 0;
+    }
+    expect(own).toBe(0);
+    expect(side(p).idle).toBeFalsy();
+    expect(mine.fainted).toBe(false);
+    // Hands off: after idleSeconds it fights.
+    seat.moveX = 0;
+    let after = 0;
+    for (let i = 0; i < 60 * (CONFIG.duel.idleSeconds + 6) && !mine.fainted; i++) {
+      m.darkness.radius = m.darkness.targetRadius = 999;
+      m.step(1 / 60);
+      after += casts();
+      m.battle.events.length = 0;
+    }
+    expect(after).toBeGreaterThan(0);
+  });
+
+  it('two idle players: the battle still runs to its end', () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(18), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }, { name: 'Q', starters: ['0007'] }], rivals: 1 });
+    const [P, Q] = [m.seats[0]!.trainer, m.seats[1]!.trainer];
+    m.wilds = [];
+    m.items = [];
+    Q.x = Q.px = P.x + 3;
+    Q.y = Q.py = P.y;
+    P.party = [m.makeMon('0004', 20, P, P.x, P.y), m.makeMon('0001', 20, P, P.x, P.y)];
+    Q.party = [m.makeMon('0007', 20, Q, Q.x, Q.y), m.makeMon('0025', 20, Q, Q.x, Q.y)];
+    for (const t of [P, Q]) m.placeParty(t);
+    const d = m.startDuel(P, Q);
+    let over = false;
+    for (let i = 0; i < 60 * 300 && !over; i++) {
+      m.darkness.radius = m.darkness.targetRadius = 999;
+      m.darkness.nextPulseIn = 1e9;
+      m.step(1 / 60);
+      m.battle.events.length = 0;
+      over = d.state === 'over' || m.over;
+    }
+    expect(over).toBe(true);
+  });
 });

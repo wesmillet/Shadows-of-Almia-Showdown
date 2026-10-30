@@ -75,6 +75,8 @@ export interface DuelSide {
   nextAt: number;
   /** The player has to choose the next Pokémon. */
   awaitingPick: boolean;
+  /** A player's side whose Pokémon is fighting on its own (they are idle or disconnected). */
+  idle?: boolean;
   /** Which way the opponent is (unit vector). */
   fx: number;
   fy: number;
@@ -2158,6 +2160,7 @@ export class Match {
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     } else if (duel) {
+      p.duelInputAt = this.time;
       // A battle: moves go where the player aims (the reticle on the cursor), as in Pokémon mode.
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
@@ -3366,6 +3369,7 @@ export class Match {
     for (const t of [a, b]) {
       if (t.mount) this.dismount(t, true);
       t.duelId = id;
+      t.duelInputAt = this.time;
       t.aiTarget = null;
       t.healing = 0;
       for (const m of t.party) {
@@ -3723,7 +3727,16 @@ export class Match {
       // Inside a ball (a legendary being caught): it does nothing until the ball opens or clicks.
       if (!m || m.fainted || m.captured) continue;
       const foe = (s === d.a ? d.b : d.a).mon;
-      if (s.trainer.isPlayer) this.stepDuelPlayerMon(m, dt);
+      if (s.trainer.isPlayer) {
+        // A player who has not steered or used a move for idleSeconds leaves their Pokemon to fight
+        // on its own (as a rival's does) until they do.
+        const t = s.trainer;
+        this.stepDuelPlayerMon(m, dt);
+        const idle = this.time - (t.duelInputAt ?? this.time) > c.idleSeconds;
+        if (idle && !s.idle) this.battle.events.push({ type: 'notice', text: `${m.name} fights on its own until you take over`, seconds: 2.5 });
+        s.idle = idle;
+        if (idle) this.stepDuelAiMon(m, foe, dt);
+      }
       else if (s.trainer.legendBout) this.stepLegendMon(m, foe, dt);
       else {
         this.stepDuelAiMon(m, foe, dt);
@@ -3761,6 +3774,7 @@ export class Match {
       }
       return;
     }
+    this.player.duelInputAt = this.time;
     const speed = CONFIG.duel.monSpeed * moveSpeed(m);
     const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
     m.dir = dirFromVector(mx, my, m.dir);

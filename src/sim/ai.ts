@@ -148,7 +148,16 @@ function untouchable(m: Mon): boolean {
   return !!(m.legend || m.npc || m.shadow || m.leap || (m.boss && !m.landBoss));
 }
 
-/** The closest wild Pokémon within `range` (of the trainer, or of x, y) that would beat the team. */
+/** Can the trainer see this spot? About a screen's worth around it (huntRange), as a player would. */
+export function inView(t: Trainer, x: number, y: number): boolean {
+  return Math.hypot(x - t.x, y - t.y) <= CONFIG.trainers.huntRange;
+}
+
+/**
+ * The closest wild Pokémon within `range` (of the trainer, or of x, y) that would beat the team.
+ * Only wilds the trainer can see count, even around a spot further off (a player can't know what
+ * waits past the edge of the screen).
+ */
 export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, x = t.x, y = t.y, fieldLimit = 2, skip: Mon | null = null): Mon | null {
   if (!wilds) return null;
   let best: Mon | null = null;
@@ -156,6 +165,7 @@ export function dangerNear(t: Trainer, wilds: Mon[] | undefined, range: number, 
   const lv = teamLevel(t);
   for (const m of wilds) {
     if (m.fainted || m.captured || incapable(m)) continue;
+    if (!inView(t, m.x, m.y)) continue;
     const d = Math.hypot(m.x - x, m.y - y);
     if (d >= bd) continue;
     // Far below the team: no threat whatever its matchup (and spares the sums).
@@ -193,7 +203,8 @@ export function huntTarget(
     // Others close by join in once the fight starts (a wild fights whatever hits its neighbours'
     // attackers): each one there that could matter cuts the margin.
     let pack = 0;
-    for (const o of wilds) if (o !== m && !o.fainted && !o.captured && o.level >= lv - 4 && Math.hypot(o.x - m.x, o.y - m.y) < 5) pack++;
+    // (Only the ones the trainer can see.)
+    for (const o of wilds) if (o !== m && !o.fainted && !o.captured && o.level >= lv - 4 && Math.hypot(o.x - m.x, o.y - m.y) < 5 && inView(t, o.x, o.y)) pack++;
     const margin = fightMargin(t, m, fieldLimit) / (1 + pack);
     // Next to something that would beat the team: it would only have to back off again.
     if (margin >= minMargin && dangerNear(t, wilds, 8, m.x, m.y, fieldLimit)) continue;

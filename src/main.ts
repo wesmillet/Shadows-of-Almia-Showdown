@@ -576,6 +576,7 @@ async function boot(): Promise<void> {
     // PROTOTYPE playtest (scaling-lab): a set scenario under the chosen level scaling.
     setLevelModel(params.get('scaling') === 'p' ? 'p' : 'current');
     if (params.get('sleep') === 'old') LAB.sleepBreaks = false;
+    if (params.get('teammates') === 'quick') LAB.teammates = 'quick';
     void startMatch([scenario.you[0]![0]], { rivals: 3, setup: (m) => scenarioOverlay(applyScenario(m, scenario), m) });
   } else if (params.get('moves')) {
     void startGallery();

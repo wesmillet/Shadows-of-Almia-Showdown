@@ -3,6 +3,7 @@
  * wild Pokémon by biome, AI trainers, items, the Ranger outpost, the
  * darkness and the battle system. Pure: no canvas access.
  */
+import { LAB } from './levelModel';
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Input } from '../core/input';
 import { Rng } from '../core/rng';
@@ -12,7 +13,7 @@ import { decide, partyHpFraction, type AiWorld } from './ai';
 import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, isContact, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead, partySize } from './entities';
@@ -21,7 +22,7 @@ import { canStand, moveAround, tryMove } from './movement';
 import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
-import { areaContains, makeArea, moveReach } from './battle';
+import { areaContains, makeArea, moveReach, moveScore } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
@@ -3173,7 +3174,7 @@ export class Match {
     const slot = this.battle.chooseMove(m, target, !!m.owner);
     if (slot < 0) return;
     m.dir = dirFromVector(target.x - m.x, target.y - m.y, m.dir);
-    if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = this.rng.range(0.8, 1.6);
+    if (this.battle.castAt(m, slot, this.mons(), range)) m.busy = LAB.teammates === 'quick' ? this.rng.range(0.15, 0.3) : this.rng.range(0.8, 1.6);
   }
 
   /** Whether a trainer carries a Capture Styler (a rare find: in the bag or the gear). */
@@ -4096,9 +4097,17 @@ export class Match {
    * the move is ready and the foe in reach, and dashes out of a telegraph it is standing in.
    */
   private stepDuelAiMon(m: Mon, foe: Mon | null, dt: number): void {
+    // PROTOTYPE test tool (tools/review): a player model for a trainer's Pokémon. It sees what a
+    // player sees: a foe winding up a move aimed at it, a shot or a marked strike on its way. For
+    // each one it decides once whether to react and after a human reaction time, sometimes the
+    // wrong way; dashing cancels its own move. `kite`: against a foe with only contact moves it
+    // keeps out of lunge range and attacks from there (spacing rather than reacting).
+    const human = (m.owner as { labHuman?: { react: number; sd: number; attempt: number; wrong: number; kite?: boolean } } | null)?.labHuman;
+    if (human && foe && !incapable(m) && this.labReact(m, foe, human)) return;
     if (m.casting || incapable(m)) return;
+    if (human?.kite && foe && !foe.fainted && this.labKite(m, foe, dt)) return;
     // Standing in the player's telegraph: sometimes dash out of it sideways.
-    if (foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
+    if (!human && foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
       if (this.rng.chance(CONFIG.dodge.aiChance)) {
         const side = this.rng.chance(0.5) ? 1 : -1;
         this.startDodge(m, -(foe.y - m.y) * side, (foe.x - m.x) * side);
@@ -4129,6 +4138,60 @@ export class Match {
       m.busy = this.rng.range(0.45, 1.0);
       this.battle.castAt(m, slot, this.mons(), 6);
     }
+  }
+
+  /** PROTOTYPE test tool: the player model's reactions (see stepDuelAiMon). True when it dashed. */
+  private labReact(m: Mon, foe: Mon, human: { react: number; sd: number; attempt: number; wrong: number }): boolean {
+    const lm = m as Mon & { labSeen?: Map<string, number> };
+    const seen = (lm.labSeen ??= new Map());
+    const react = (key: string, from: Mon): boolean => {
+      if (!seen.has(key)) {
+        const go = this.rng.chance(human.attempt);
+        const delay = Math.max(0.15, human.react + (this.rng.next() + this.rng.next() + this.rng.next() - 1.5) * human.sd * 2);
+        seen.set(key, go ? this.time + delay : Infinity);
+      }
+      const at = seen.get(key) ?? Infinity;
+      if (this.time < at || m.dodge || (m.dodgeCd ?? 0) > 0) return false;
+      seen.set(key, Infinity);
+      const side = this.rng.chance(0.5) ? 1 : -1;
+      const wrong = this.rng.chance(human.wrong);
+      this.startDodge(m, wrong ? m.x - from.x : -(from.y - m.y) * side, wrong ? m.y - from.y : (from.x - m.x) * side);
+      return true;
+    };
+    for (const o of this.casters) {
+      if (!o.casting || o === m || !this.battle.isEnemy(o, m)) continue;
+      const def = move(o.casting.moveId);
+      if (!areaContains(makeArea(def, o, o.casting.targetX, o.casting.targetY), m.x, m.y, hitPad(m.species))) continue;
+      if (react(`${o.id}:${o.castSeq}`, o)) return true;
+    }
+    for (const f of this.battle.inFlight as Array<{ t: number; target: Mon; attacker: Mon; labKey?: string }>) {
+      if (f.target !== m || f.t <= 0) continue;
+      if (react((f.labKey ??= `f${this.time}:${f.attacker.id}`), f.attacker)) return true;
+    }
+    if (seen.size > 64) seen.clear();
+    return false;
+  }
+
+  /** PROTOTYPE test tool: spacing against a contact-only foe (see stepDuelAiMon). True when it handled the step. */
+  private labKite(m: Mon, foe: Mon, dt: number): boolean {
+    const melee = foe.moves.every((id) => isContact(move(id)) || !!move(id).leap || move(id).category === 'status');
+    const ranged = m.moves.map((id, i) => ({ mv: move(id), i })).filter(({ mv }) => !isContact(mv) && !mv.leap && mv.category !== 'status');
+    if (!melee || !ranged.length) return false;
+    const safe = CONFIG.battle.lunge.maxTiles + bodyRadius(m.species) + bodyRadius(foe.species) + 0.9;
+    const d = Math.hypot(foe.x - m.x, foe.y - m.y);
+    m.target = foe;
+    const reach = Math.min(...ranged.map(({ mv }) => moveReach(mv)));
+    if (d < safe || d > reach) {
+      const k = d < safe ? -1 : 1;
+      const moved = moveAround(this.ground, m, ((foe.x - m.x) / (d || 1)) * k * CONFIG.duel.monSpeed * moveSpeed(m) * dt, ((foe.y - m.y) / (d || 1)) * k * CONFIG.duel.monSpeed * moveSpeed(m) * dt, 0.22, dt);
+      this.setMonWalking(m, moved > 1e-4);
+    } else this.setMonWalking(m, false);
+    m.dir = dirFromVector(foe.x - m.x, foe.y - m.y, m.dir);
+    if (m.busy <= 0 && d <= reach) {
+      const ready = ranged.filter(({ i }) => (m.cooldowns[i] ?? 0) <= 0).sort((a, b) => moveScore(m, foe, b.mv) - moveScore(m, foe, a.mv))[0];
+      if (ready && this.battle.castAt(m, ready.i, this.mons(), 6)) m.busy = this.rng.range(0.2, 0.4);
+    }
+    return true;
   }
 
   /** The move a battling AI Pokémon is working towards: the best one ready, else the one ready soonest. */

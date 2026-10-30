@@ -33,4 +33,11 @@ export function effLevel(level: number): number {
 export const LAB = {
   /** Sleep ends on the first damaging hit (the combat-fixes behaviour); false: the old sleep. */
   sleepBreaks: typeof process !== 'undefined' && process.env?.LAB_SLEEP === 'old' ? false : true,
+  /**
+   * Owned teammates (party members fighting on their own): after each move they wait 0.8 to 1.6 s
+   * before considering the next even when one is ready ('pause', today). 'quick': a 0.15 to 0.3 s
+   * beat instead, so cooldowns set the pace. Wild Pokémon, challengers, bosses and trainer battles
+   * keep their own timing either way.
+   */
+  teammates: (typeof process !== 'undefined' && process.env?.LAB_TEAMMATES === 'quick' ? 'quick' : 'pause') as 'pause' | 'quick',
 };

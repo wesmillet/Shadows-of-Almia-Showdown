@@ -1404,7 +1404,7 @@ export class MatchScreen implements Screen {
         const p = this.match.player;
         if (ev.duel.a.trainer !== p && ev.duel.b.trainer !== p) break;
         const foe = ev.duel.a.trainer === p ? ev.duel.b.trainer : ev.duel.a.trainer;
-        this.say(ev.winner === p ? `You defeated ${foe.name}!` : `${foe.name} won the battle`, 2.6);
+        this.say(!ev.winner ? `You and ${foe.name} ran out together: no winner` : ev.winner === p ? `You defeated ${foe.name}!` : `${foe.name} won the battle`, 2.6);
         break;
       }
       case 'ball-hit':
@@ -2437,7 +2437,9 @@ export class MatchScreen implements Screen {
     const px = v.width / 2 - pw / 2;
     const py = v.height * 0.32;
     panel(v, px, py, pw, ph);
-    text(v, 'Choose your next Pokémon', v.width / 2, py + 30 * s, 16, { align: 'center', color: INK.text, shadow: false });
+    // After playerPickSeconds the first one able in party order comes out by itself.
+    const left = Math.max(0, Math.ceil(me.nextAt - this.match.time));
+    text(v, `Choose your next Pokémon (${left})`, v.width / 2, py + 30 * s, 16, { align: 'center', color: INK.text, shadow: false });
     const k2 = Math.max(2, Math.round(2 * s));
     party.forEach((m, i) => {
       const ok = !m.fainted && !m.captured;

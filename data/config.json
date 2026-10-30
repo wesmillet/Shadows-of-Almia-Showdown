@@ -11,6 +11,11 @@
     "partyCap": 6,
     "level": 5
   },
+  "levelScaling": {
+    "_comment": "How levels count in combat (Model P). Stats and the damage formula's level term use pivot x (level / pivot)^exponent instead of the level itself; at the pivot the two agree, below it a level counts a little more, above it a little less (level 50 fights like 42, level 100 like 71). Shown levels, XP, evolution and move learning keep the real level.",
+    "pivot": 25,
+    "exponent": 0.75
+  },
   "party": {
     "leashLead": 2.6,
     "leash": 4.2,

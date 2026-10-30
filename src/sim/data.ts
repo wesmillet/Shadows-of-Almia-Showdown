@@ -366,11 +366,22 @@ export function moveSpeed(m: { species: SpeciesDef; stages?: { spe: number }; st
   return (c.slowMult + (c.fastMult - c.slowMult) * f) * stage * para;
 }
 
-/** Actual stats at a level from base stats (flat IV/EV-free formula). */
-export function statsAtLevel(base: StatBlock, level: number): StatBlock {
+/**
+ * The level a Pokémon fights at (Model P): pivot x (level / pivot)^exponent, from
+ * CONFIG.levelScaling. Stats and the damage formula's level term use this; everything else
+ * (the level shown, XP, evolution, move learning) uses the real level.
+ */
+export function combatLevel(level: number): number {
+  const c = CONFIG.levelScaling;
+  return c.pivot * Math.pow(Math.max(0, level) / c.pivot, c.exponent);
+}
+
+/** Actual stats at a level from base stats (flat IV/EV-free formula, at the combat level). */
+export function statsAtLevel(base: StatBlock, realLevel: number): StatBlock {
+  const level = combatLevel(realLevel);
   const other = (b: number) => Math.floor((2 * b * level) / 100) + 5;
   return {
-    hp: Math.floor((2 * base.hp * level) / 100) + level + 10,
+    hp: Math.floor((2 * base.hp * level) / 100) + Math.floor(level) + 10,
     atk: other(base.atk),
     def: other(base.def),
     spa: other(base.spa),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fxManifest from '../../assets/fx/guardian_signs/manifest.json';
-import { effectiveness, MOVES, SPECIES, statsAtLevel, TYPE_CHART } from './data';
+import { combatLevel, effectiveness, MOVES, SPECIES, statsAtLevel, TYPE_CHART } from './data';
 import spawns from '../../data/spawns.json';
 
 const FX_MANIFEST = (fxManifest as { effects: Record<string, { frames: number; frame_w: number; frame_h: number }> }).effects;
@@ -57,10 +57,17 @@ describe('species data', () => {
     for (const dex of spawns.starterPool) expect(SPECIES.has(dex)).toBe(true);
   });
 
-  it('computes level stats', () => {
+  it('computes level stats at the combat level (Model P)', () => {
+    // Level 15 fights like 17.0: 25 x (15 / 25)^0.75.
     const s = statsAtLevel({ hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90 }, 15);
-    expect(s.hp).toBe(35);
-    expect(s.atk).toBe(21);
+    expect(s.hp).toBe(38);
+    expect(s.atk).toBe(23);
+    // At the pivot the real and combat levels agree; above it a level counts for less.
+    expect(combatLevel(25)).toBeCloseTo(25, 9);
+    expect(combatLevel(50)).toBeCloseTo(42.04, 2);
+    expect(combatLevel(100)).toBeCloseTo(70.71, 2);
+    expect(combatLevel(5)).toBeCloseTo(7.48, 2);
+    expect(statsAtLevel({ hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90 }, 25)).toEqual({ hp: 52, atk: 32, def: 25, spa: 30, spd: 30, spe: 50 });
   });
 
   it('every move lists Guardian Signs effects that exist, with valid anchors and modes', () => {

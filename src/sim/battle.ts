@@ -3,7 +3,7 @@
  * status and knockouts. Pure simulation; it reports what happened through
  * `events`, which the renderer turns into VFX, numbers and hit-stop.
  */
-import { effLevel } from './levelModel';
+import { effLevel, LAB } from './levelModel';
 import { hasAction, strikeTime } from './strikeTimes';
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
@@ -772,7 +772,7 @@ export class BattleSystem {
       // at least 1). Not: burn and poison, recoil, Bad Dreams (those go straight to applyDamage), a
       // hit that deals nothing. The storm's hold is kept: nothing wakes a Pokémon asleep in the
       // darkness, and one the darkness put to sleep wakes only in the light (match.ts).
-      if (target.status === 'sleep' && !target.fainted && !target.inDark && target.statusTimer < STORM_SLEEP) this.cureStatus(target);
+      if (LAB.sleepBreaks && target.status === 'sleep' && !target.fainted && !target.inDark && target.statusTimer < STORM_SLEEP) this.cureStatus(target);
       if (!target.fainted) target.anim.play('Hurt', { restart: true, loop: false });
       if (!target.fainted && (isContact(m) || m.leap)) this.shove(attacker, target, m);
       if (attacker.owner) attacker.owner.stats.damage += r.damage;

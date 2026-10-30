@@ -1,3 +1,5 @@
+import { applyScenario, scenarioById, type ScenarioRun } from './sim/scenarios';
+import { LAB, setLevelModel } from './sim/levelModel';
 import { track } from './stats';
 import { GameLoop } from './core/loop';
 import { Input } from './core/input';
@@ -8,6 +10,7 @@ import { View } from './render/view';
 import { CONFIG, SPAWNS, SPECIES } from './sim/data';
 import { SHOPS } from './sim/town';
 import { Match } from './sim/match';
+import type { Mon } from './sim/entities';
 import { Assets } from './sprites/assets';
 import { AnimPlayer, SpriteRegistry } from './sprites/pokemonSprite';
 import { RangerSprites } from './sprites/rangerSprite';
@@ -211,10 +214,12 @@ async function boot(): Promise<void> {
     },
   });
 
-  const startMatch = async (starters: string[], opts: { level?: number; partyCap?: number } = {}): Promise<void> => {
+  const startMatch = async (starters: string[], opts: { level?: number; partyCap?: number; rivals?: number; setup?: (m: Match) => void } = {}): Promise<void> => {
     let progress = '';
     game.setScreen(loadingScreen(() => `Heading out${progress}`));
     const match = new Match({ ground: currentGround, rng: matchRng(), sprites }, starters, opts);
+    // (Prototype scenario mode: the team, the opponents and the place, set before anything loads.)
+    opts.setup?.(match);
     // Only what is on the island at the start has to be here before play: every party and every wild.
     const present = new Set<string>();
     for (const t of match.trainers) for (const m of t.party) present.add(m.dex);
@@ -566,7 +571,13 @@ async function boot(): Promise<void> {
 
   // ?demo=1 starts the demo team; ?party=0025,0387 skips the title and roll with that party (debugging).
   const party = params.get('party');
-  if (params.get('moves')) {
+  const scenario = scenarioById(params.get('scenario'));
+  if (scenario) {
+    // PROTOTYPE playtest (scaling-lab): a set scenario under the chosen level scaling.
+    setLevelModel(params.get('scaling') === 'p' ? 'p' : 'current');
+    if (params.get('sleep') === 'old') LAB.sleepBreaks = false;
+    void startMatch([scenario.you[0]![0]], { rivals: 3, setup: (m) => scenarioOverlay(applyScenario(m, scenario), m) });
+  } else if (params.get('moves')) {
     void startGallery();
   } else if (params.get('demo')) {
     startDemo();
@@ -645,3 +656,48 @@ boot().catch((e) => {
   console.error(e);
   document.body.innerHTML = `<pre style="color:#fff;padding:2em">Shadows of Almia Showdown failed to start:\n${String(e?.stack ?? e)}</pre>`;
 });
+
+/**
+ * PROTOTYPE (scaling-lab): the playtest banner over a scenario: what it is, which scaling, the
+ * clock and the result, and buttons to replay it, try the other scaling, or pick another.
+ */
+function scenarioOverlay(run: ScenarioRun, m: Match): void {
+  const params = new URLSearchParams(location.search);
+  const scaling = params.get('scaling') === 'p' ? 'p' : 'current';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:12px;top:64px;max-width:min(560px,calc(100vw - 24px));padding:10px 14px;border-radius:8px;background:rgba(10,8,20,.82);color:#fff;font:500 14px/1.4 system-ui,sans-serif;z-index:9999';
+  const text = document.createElement('div');
+  text.style.whiteSpace = 'pre-line';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap';
+  const button = (label: string, go: () => void): void => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'font:600 13px system-ui,sans-serif;padding:5px 10px;border-radius:6px;border:1px solid #7a6bd6;background:#2a2150;color:#fff;cursor:pointer';
+    // (keep the game's own keys and clicks out of it)
+    b.addEventListener('mousedown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      go();
+    });
+    bar.appendChild(b);
+  };
+  button('Replay', () => location.reload());
+  button(scaling === 'p' ? 'Try current scaling' : 'Try Model P', () => {
+    params.set('scaling', scaling === 'p' ? 'current' : 'p');
+    location.search = params.toString();
+  });
+  button('All scenarios', () => (location.href = `${import.meta.env.BASE_URL}scenarios.html`));
+  wrap.append(text, bar);
+  document.body.appendChild(wrap);
+  const label = scaling === 'p' ? 'Model P' : 'Current scaling';
+  const draw = (): void => {
+    const sc = run.scenario;
+    const fight = run.startedAt === null ? 0 : (run.endedAt ?? m.time) - run.startedAt;
+    const hp = (list: Mon[]) => list.map((x) => `${x.name} ${x.level} ${x.fainted ? 'down' : `${Math.round((100 * x.hp) / x.maxHp)}%`}`).join(', ');
+    const res = run.result ? `\n${run.result === 'won' ? 'You won' : 'You lost'} in ${fight.toFixed(1)} s. Moves used: you ${run.casts.you}, them ${run.casts.foe}.` : run.startedAt === null ? '' : `\n${fight.toFixed(1)} s`;
+    text.textContent = `${label}${params.get('sleep') === 'old' ? ' (old sleep)' : ''}: ${sc.title}\nYou: ${hp(run.you)}\nThem: ${hp(run.foe)}${res}`;
+    requestAnimationFrame(draw);
+  };
+  draw();
+}

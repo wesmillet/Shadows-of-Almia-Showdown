@@ -28,3 +28,9 @@ export function levelModel(): LevelModel {
 export function effLevel(level: number): number {
   return model === 'p' ? 25 * Math.pow(level / 25, 0.75) : level;
 }
+
+/** Prototype toggles for side-by-side playtests (scenario mode: &sleep=old). */
+export const LAB = {
+  /** Sleep ends on the first damaging hit (the combat-fixes behaviour); false: the old sleep. */
+  sleepBreaks: typeof process !== 'undefined' && process.env?.LAB_SLEEP === 'old' ? false : true,
+};

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scaling Playtest</title>
+<style>
+  :root { --bg: #0f0d18; --card: #1b1730; --line: #2f2a4d; --text: #f2f0fa; --muted: #b3acd2; --accent: #8f7cff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  p.lead { color: var(--muted); margin: 0 0 18px; }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; color: var(--muted); }
+  .controls input { width: 90px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .card h3 { font-size: 16px; margin: 0 0 2px; }
+  .card p { margin: 0 0 10px; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  a.btn { display: inline-block; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
+  a.btn.p { background: #2a2150; }
+  .tag { font-size: 12px; color: var(--muted); margin-left: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Scaling playtest</h1>
+  <p class="lead">Prototype build (scaling-lab branch). Each scenario sets both teams exactly and holds the storm off; the same seed gives the opponents the same dice, so you can replay one and try it under the other scaling. Trainer battles start a second in: steer with the mouse and keys as usual, Space to dodge. In the open-world ones the wild Pokémon come at you. The banner shows the time, the result and how many moves each side got off.</p>
+  <div class="controls"><label>Seed <input id="seed" value="7" /></label><span>Same seed: same opponents' dice.</span></div>
+  <div id="list"></div>
+</main>
+<script type="module">
+  import { SCENARIOS } from '/src/sim/scenarios.ts';
+  const list = document.getElementById('list');
+  const seed = document.getElementById('seed');
+  const base = import.meta.env?.BASE_URL ?? '/';
+  const render = () => {
+    list.innerHTML = '';
+    for (const kind of ['trainer', 'wild']) {
+      const h = document.createElement('h2');
+      h.textContent = kind === 'trainer' ? 'Trainer battles (one at a time)' : 'Open world (two of yours at once, plus reserves)';
+      list.appendChild(h);
+      for (const s of SCENARIOS.filter((x) => x.kind === kind)) {
+        const c = document.createElement('div');
+        c.className = 'card';
+        const href = (scaling) => `${base}?scenario=${s.id}&scaling=${scaling}&seed=${encodeURIComponent(seed.value || '7')}`;
+        c.innerHTML = `<h3>${s.title}<span class="tag">${s.stage}</span></h3><p>${s.about}</p><div class="row"><a class="btn" href="${href('current')}">Current scaling</a><a class="btn p" href="${href('p')}">Model P</a></div>`;
+        list.appendChild(c);
+      }
+    }
+  };
+  seed.addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>

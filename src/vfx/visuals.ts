@@ -463,3 +463,51 @@ export class VfxLayer {
     for (const v of this.list) v.drawLight(view);
   }
 }
+
+/**
+ * PROTOTYPE: the warning for a marked, delayed strike (a move's `warn`): a ring on the ground at the
+ * spot the blow will land, closing in until the moment it lands, then gone.
+ */
+export class GroundMark implements MoveVisual {
+  private t = 0;
+  y: number;
+
+  constructor(private readonly x: number, private readonly wy: number, private readonly radius: number, private readonly color: string, private readonly life: number) {
+    this.y = wy - 0.5;
+  }
+
+  update(dt: number): boolean {
+    this.t += dt;
+    return this.t < this.life;
+  }
+
+  drawLight(): void {}
+
+  draw(view: View): void {
+    const ctx = view.ctx;
+    const p = Math.min(1, this.t / this.life);
+    const sx = view.toScreenX(this.x);
+    const sy = view.toScreenY(this.wy);
+    const r = this.radius * view.pxPerTile;
+    const flash = 0.55 + 0.45 * Math.sin(this.t * 30);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(1, 0.62);
+    // The danger zone, filling in as the strike comes.
+    ctx.fillStyle = rgba(this.color, 0.16 + 0.22 * p);
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, view.pxPerTile * 0.07);
+    ctx.strokeStyle = rgba('#ffffff', 0.5 + 0.4 * flash);
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // A ring closing on the middle: when it reaches it, the blow lands.
+    ctx.strokeStyle = rgba(this.color, 0.95);
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(1, r * (1.6 - 1.6 * p)), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}

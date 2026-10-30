@@ -26,7 +26,7 @@ import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { BEHAVIOR_LABEL, isRoaming } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
-import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
+import { Beam, drawPointLight, GroundMark, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import { extractToPc } from '../pc';
 import type { PixelUi } from './pixelUi';
@@ -1756,6 +1756,11 @@ export class MatchScreen implements Screen {
       const ux = d > 1e-3 ? dx / d : area.fx;
       const uy = d > 1e-3 ? dy / d : area.fy;
       area = { ...area, tx: attacker.x + ux * front, ty: attacker.y + uy * front };
+    }
+    // (Prototype: a marked, delayed strike shows where it will land until it lands: m.warn.)
+    if (m.warn) {
+      const spots = hits.length ? hits.map((h) => ({ x: h.x, y: h.y })) : [{ x: area.tx, y: area.ty }];
+      for (const s of spots) this.groundVfx.add(new GroundMark(s.x, s.y, 0.75 * R(), typeColor(m.type), m.warn));
     }
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
       this.spawnFx(attacker, m.fx, area, hits, m, pulse);

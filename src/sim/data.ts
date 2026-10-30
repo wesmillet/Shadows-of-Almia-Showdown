@@ -232,6 +232,12 @@ export interface MoveDef {
   signature?: boolean;
   /** Screen shake on impact, 0..1 (heavy moves only). */
   shake?: number;
+  /**
+   * PROTOTYPE: a marked, delayed strike. The spot it will hit is marked on the ground for this many
+   * seconds before the blow lands there (its impact parts are delayed to match, so the damage waits
+   * too); a Pokémon that has moved clear of the mark by then is missed.
+   */
+  warn?: number;
   /** Override for isContact: false for a physical move that strikes from range (Stone Edge's spikes). */
   contact?: boolean;
   /** A dashing contact move (Quick Attack, Aqua Jet, Mach Punch): its lunge runs this much faster and further. */

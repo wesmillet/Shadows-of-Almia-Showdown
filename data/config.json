@@ -210,7 +210,7 @@
   "duel": {
     "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",
     "finalShowdown": false,
-    "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed and picks every move (auto-battle is off in battles). A rival picks its next Pokémon after aiPickSeconds. A player has playerPickSeconds to choose theirs; after that the first one able in party order comes out by itself, so an idle or disconnected player can not hold a battle open. If both sides run out at once, the battle ends with no winner. zoom is the camera zoom while the player battles.",
+    "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed and picks every move (auto-battle is off in battles). A rival picks its next Pokémon after aiPickSeconds. A player has playerPickSeconds to choose theirs; after that the first one able in party order comes out by itself, so an idle or disconnected player can not hold a battle open. A player who neither steers nor uses a move for idleSeconds has their Pokémon fight on its own, as a rival's does, until they take over again (a disconnected player's lead already fights for them), so two idle players can not hold a battle open either. If both sides run out at once, the battle ends with no winner. zoom is the camera zoom while the player battles.",
     "startRange": 6,
     "standGap": 9,
     "sendOut": 1.6,
@@ -219,6 +219,7 @@
     "introSeconds": 1.3,
     "aiPickSeconds": 1.2,
     "playerPickSeconds": 4,
+    "idleSeconds": 8,
     "endSeconds": 1.4,
     "cooldownSeconds": 12,
     "zoom": 1.15

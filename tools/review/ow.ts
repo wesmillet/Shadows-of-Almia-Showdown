@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { loadWorld } from '../../server/world';
 import { Match } from '../../src/sim/match';
 import { Rng } from '../../src/core/rng';
-import { incapable } from '../../src/sim/battle';
+import { incapable } from '../../src/sim/entities';
 import { levelModel, LAB } from '../../src/sim/levelModel';
 import type { Mon } from '../../src/sim/entities';
 

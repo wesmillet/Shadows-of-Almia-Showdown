@@ -1289,19 +1289,31 @@ export class Match {
       t.aiProgress = undefined;
       return;
     }
+    // Progress is kept per errand, not per spell of walking to it: a trainer that flips between two
+    // errands every second (an item just behind a cliff and the shop past it: each step toward one
+    // makes the other look better) used to restart the clock with every flip and walk back and
+    // forth for minutes. Only the time it actually spends on an errand counts toward giving up on
+    // it, and an errand left alone for 20 s starts afresh.
     const d = Math.hypot(t.aiTarget.x - t.x, t.aiTarget.y - t.y);
-    const p = t.aiProgress;
+    const book = (t.aiErrands ??= {});
+    let p = book[t.aiKey];
+    if (p && this.time - p.seen > 20) p = undefined;
     if (!p || d < p.best - 1) {
-      t.aiProgress = { best: d, since: this.time };
+      book[t.aiKey] = { best: d, stuck: 0, seen: this.time };
       return;
     }
+    p.stuck += Math.min(0.1, this.time - p.seen);
+    p.seen = this.time;
     const near = t.ai === 'hunt' ? 4 : t.ai === 'heal' ? CONFIG.outpost.radius : t.ai === 'shop' ? 0.6 : 1;
-    if (d > near && this.time - p.since > 6) {
+    if (d > near && p.stuck > 6) {
       (t.aiBans ??= {})[t.aiKey] = this.time + 40;
+      delete book[t.aiKey];
       t.aiKey = null;
       t.aiProgress = undefined;
       t.aiTimer = 0;
     }
+    // Forget errands long left behind.
+    for (const k of Object.keys(book)) if (this.time - book[k]!.seen > 60) delete book[k];
   }
 
   /**

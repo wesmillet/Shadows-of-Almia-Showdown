@@ -210,6 +210,8 @@ export interface Trainer {
   /** AI: what it is walking to ('m12' a wild, 'i4' an item, 'o2' an outpost) and its progress, for giving up when stuck. */
   aiKey?: string | null;
   aiProgress?: { best: number; since: number };
+  /** AI: progress toward each errand (key): best distance, seconds spent on it without a tile of progress, last worked on. */
+  aiErrands?: Record<string, { best: number; stuck: number; seen: number }>;
   /** AI: targets it gave up on (unreachable), by key, until a match time. */
   aiBans?: Record<string, number>;
   /** AI: where it was a second ago, and until when it is working itself free of a notch (Match.stepAi). */

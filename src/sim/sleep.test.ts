@@ -132,4 +132,27 @@ describe('sleep breaks on damage (round 3, for review)', () => {
     expect(log.filter((e) => e.type === 'wake')).toHaveLength(1);
     expect(log.filter((e) => e.type === 'hit' && e.damage > 0)).toHaveLength(2);
   });
+
+  it('entering the storm asleep: it stays asleep inside (timer or hits), and after leaving the timer and hits wake it again', () => {
+    const b = new BattleSystem(new Rng(7));
+    const t = mon('0143', 30, 2, them);
+    b.applyStatus(t, 'sleep');
+    b.events.length = 0;
+    t.statusTimer = 0.5;
+    t.inDark = true;
+    // Inside: the timer runs out, and a hit lands, but it sleeps on.
+    for (let i = 0; i < 120; i++) b.stepMon(t, 1 / 60, () => [t]);
+    expect(t.status).toBe('sleep');
+    hitWith(b, '0025', 'thunder-shock', t);
+    expect(t.status).toBe('sleep');
+    // Out of the darkness: its (spent) timer ends the sleep on the next step.
+    t.inDark = false;
+    b.stepMon(t, 1 / 60, () => [t]);
+    expect(t.status).toBe(null);
+    // And asleep again outside, a hit wakes it.
+    b.applyStatus(t, 'sleep');
+    t.statusTimer = 99;
+    hitWith(b, '0025', 'thunder-shock', t);
+    expect(t.status).toBe(null);
+  });
 });

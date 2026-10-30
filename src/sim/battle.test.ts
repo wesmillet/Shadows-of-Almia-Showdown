@@ -4,6 +4,7 @@ import { dirFromVector } from '../core/math';
 import { BattleSystem, areaContains, computeDamage, makeArea, moveScore, R } from './battle';
 import { isContact, move, moveSpeed, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
+import { strikeTime } from './strikeTimes';
 
 function mon(dex: string, x = 0, y = 0): Mon {
   const sp = species(dex);
@@ -128,7 +129,9 @@ describe('contact moves and speed', () => {
     // The cast resolves as the lunge arrives, on the move's planned strike time if that is later
     // (it winds up where it stands first: lunge.wait).
     expect(a.casting!.t).toBeCloseTo((a.lunge!.wait ?? 0) + a.lunge!.dur + 0.04, 5);
-    expect((a.lunge!.wait ?? 0) + a.lunge!.dur).toBeGreaterThanOrEqual(0.3 - 1e-9);
+    // The planned strike is Pikachu's attack animation's strike frame (data/strike-times.json), sprites loaded or not.
+    const planned = Math.max(0.12, Math.min(0.6, strikeTime('0025', move('tackle').anim).seconds ?? 0.3));
+    expect((a.lunge!.wait ?? 0) + a.lunge!.dur).toBeGreaterThanOrEqual(planned - 1e-9);
     // A ranged move does not lunge.
     const b = mon('0025', 0, 0);
     b.moves = ['thunder-shock'];

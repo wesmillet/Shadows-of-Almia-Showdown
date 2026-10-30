@@ -174,3 +174,34 @@ describe('computer trainers', async () => {
     });
   });
 });
+
+describe('computer trainers giving up on errands (round 3 fix)', async () => {
+  const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
+
+  it('give up on an errand they make no progress on, even when flipping between two errands every second', () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(3), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 1 });
+    const t = m.trainers[0]!;
+    const watch = (m as unknown as { watchAiProgress(t: unknown): void }).watchAiProgress.bind(m);
+    const item = { x: t.x + 3, y: t.y - 3 };
+    const shop = { x: t.x + 30, y: t.y + 30 };
+    const x0 = t.x;
+    // An item just out of reach and a shop far off: one second toward each in turn, never closer to either.
+    let banned: string[] = [];
+    for (let i = 0; i < 60 * 40 && !banned.length; i++) {
+      const second = Math.floor(i / 60);
+      const toItem = second % 2 === 0;
+      t.ai = toItem ? 'seekItem' : 'shop';
+      // (stepAi starts a new spell of walking whenever the errand changes)
+      if (t.aiKey !== (toItem ? 'i9' : 'shop')) t.aiProgress = undefined;
+      t.aiKey = toItem ? 'i9' : 'shop';
+      t.aiTarget = toItem ? item : shop;
+      t.x = x0 + Math.sin(i / 20) * 0.4;
+      (m as unknown as { time: number }).time += 1 / 60;
+      watch(t);
+      banned = Object.keys(t.aiBans ?? {});
+    }
+    expect(banned.length).toBeGreaterThan(0);
+    // About 6 s spent on the errand that went nowhere, so within 20 s of flipping.
+    expect((m as unknown as { time: number }).time).toBeLessThan(20);
+  });
+});

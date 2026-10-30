@@ -3987,11 +3987,22 @@ export class Match {
       if (s.mon && s.mon.fainted && !this.battle.fainting.some((f) => f.mon === s.mon)) {
         s.mon.duelId = undefined;
         s.mon = null;
-        if (!this.canBattle(t)) return this.endDuel(d, (s === d.a ? d.b : d.a).trainer);
+        if (!this.canBattle(t)) {
+          const o = s === d.a ? d.b : d.a;
+          // Both teams out at the same moment (a trade of last knockouts): nobody wins.
+          return this.endDuel(d, this.canBattle(o.trainer) || o.trainer.legendBout ? o.trainer : null);
+        }
+        // A player picks who comes next; a rival takes a moment. Either way, once the time is
+        // up the first one able in party order comes out (an idle or disconnected player
+        // never holds the battle open).
         if (t.isPlayer) s.awaitingPick = true;
-        else s.nextAt = this.time + c.aiPickSeconds;
+        s.nextAt = this.time + (t.isPlayer ? c.playerPickSeconds : c.aiPickSeconds);
       }
-      if (!s.mon && !s.awaitingPick && this.time >= s.nextAt) this.sendOut(d, s);
+      if (!s.mon && this.time >= s.nextAt && !this.sendOut(d, s) && !this.canBattle(t)) {
+        // Nobody left to send (the last able one was released or taken meanwhile).
+        const o = s === d.a ? d.b : d.a;
+        return this.endDuel(d, this.canBattle(o.trainer) || o.trainer.legendBout ? o.trainer : null);
+      }
       const m = s.mon;
       if (m && m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
       if (m && m.visual.flash > 0) m.visual.flash = Math.max(0, m.visual.flash - dt * 2.5);
@@ -4256,7 +4267,8 @@ export class Match {
     this.battle.events.push({ type: 'notice', text: `Final showdown: ${a.name} vs ${b.name}! Both teams are restored`, seconds: 4 });
   }
 
-  private endDuel(d: Duel, winner: Trainer): void {
+  /** Ends a trainer battle. `winner` null: both sides ran out at once, nobody won. */
+  private endDuel(d: Duel, winner: Trainer | null): void {
     if (d.state === 'over') return;
     d.state = 'over';
     d.t = 0;
@@ -4284,6 +4296,7 @@ export class Match {
       s.awaitingPick = false;
     }
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
+    if (!winner) return;
     // Beat a trainer while carrying a Snag Machine: pick one of their Pokémon to take.
     const loser = d.a.trainer === winner ? d.b.trainer : d.a.trainer;
     if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured)) {

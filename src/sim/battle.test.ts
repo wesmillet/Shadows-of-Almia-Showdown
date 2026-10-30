@@ -50,6 +50,19 @@ describe('damage', () => {
     expect(ground.effectiveness).toBe(0);
   });
 
+  it('picks the best ready move again and again: no penalty for repeating it (wild or trainer)', () => {
+    const b = new BattleSystem(new Rng(1));
+    const pika = mon('0025');
+    pika.moves = ['thunder-shock', 'quick-attack'];
+    const karp = mon('0129');
+    for (const careful of [false, true]) {
+      const first = b.chooseMove(pika, karp, careful);
+      expect(first).toBe(0);
+      pika.lastSlot = first;
+      expect(b.chooseMove(pika, karp, careful)).toBe(0);
+    }
+  });
+
   it('scores super-effective moves higher for the AI', () => {
     const pika = mon('0025');
     const karp = mon('0129');

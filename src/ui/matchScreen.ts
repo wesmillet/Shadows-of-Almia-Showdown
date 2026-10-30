@@ -1283,7 +1283,25 @@ export class MatchScreen implements Screen {
     if (arrived && ev.type === 'hit') return this.showHit(ev);
     switch (ev.type) {
       case 'resolve':
-        this.spawnMoveVfx(ev.attacker, ev.move, ev.area, ev.hits);
+        this.spawnMoveVfx(ev.attacker, ev.move, ev.area, ev.hits, !!ev.pulse);
+        break;
+      case 'channel-start': {
+        // The beam shows from the moment it starts pouring out; its first pulse lands when it has
+        // reached its target (battle.ts, channel start), and each later pulse refreshes this beam.
+        const ch = ev.mon.channel;
+        const beamParts = (ev.move.fx ?? []).filter((p) => p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream'));
+        if (ch && beamParts.length && this.fx.ready(beamParts.map((p) => p.id))) {
+          const area = makeArea(ev.move, ev.mon, ev.mon.x + ch.dirX * 3, ev.mon.y + ch.dirY * 3);
+          this.spawnFx(ev.mon, beamParts, area, [], ev.move, true);
+        }
+        break;
+      }
+      case 'channel-end':
+        // No damage comes after the beam's last pulse, so the beam goes with it.
+        for (const [key, beam] of this.channelBeams) if (key.startsWith(`${ev.mon.id}:`)) {
+          beam.release(0.12);
+          this.channelBeams.delete(key);
+        }
         break;
       case 'hit':
         // The sim lands the hit when the effect arrives (battle.ts impactDelay), so show it now.
@@ -1486,7 +1504,7 @@ export class MatchScreen implements Screen {
   private showHit(ev: Extract<BattleEvent, { type: 'hit' }>): void {
     const color = typeColor(ev.move.type);
     if (ev.effectiveness === 0) this.floaters.add(ev.target.x, ev.target.y, 'No effect', '#cfd8dc', 16);
-    else if (ev.damage > 0 && ev.attacker.channel) {
+    else if (ev.damage > 0 && (ev.pulse || ev.attacker.channel)) {
       // A channelled beam's pulses: small numbers, no hit-stop (it would stutter the whole beam).
       this.floaters.add(ev.target.x + (Math.random() - 0.5) * 0.4, ev.target.y, `${ev.damage}`, color, ev.effectiveness > 1 ? 18 : 15);
     } else if (ev.damage > 0) {
@@ -1542,7 +1560,7 @@ export class MatchScreen implements Screen {
    * sky drop that carries the target parts to each Pokémon hit, or target parts played at once.
    * Target parts land on the middle of the body and scale gently with its size.
    */
-  private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[], m?: MoveDef): void {
+  private spawnFx(attacker: Mon, parts: FxPart[], area: Area, hits: Mon[], m?: MoveDef, pulse = false): void {
     const from = { x: attacker.x, y: attacker.y };
     const fromLift = this.bodyLift(attacker);
     // Beams and shots from a big body are a little thicker, from a small one a little thinner.
@@ -1576,9 +1594,10 @@ export class MatchScreen implements Screen {
     };
     // A channelled beam pulses every quarter second: its impacts play on every other pulse, so their
     // flashes and lights don't pile up into a white-out while the beam keeps pouring.
+    // (`pulse`: this is one; its beam may already have ended with it, so `channel` can be gone.)
     const ch = attacker.channel;
-    const pulse = ch ? Math.round((CONFIG.battle.channel.seconds - ch.left) / CONFIG.battle.channel.tick) : 0;
-    const skipImpacts = !!ch && pulse % 2 === 1;
+    const fired = ch?.fired ?? 0;
+    const skipImpacts = pulse && !!ch && fired > 0 && fired % 2 === 0;
     let carrier: FxPart | null = null;
     const impacts: FxPart[] = [];
     const beamReach = parts.some((p) => p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream')) ? BEAM_REACH : 0;
@@ -1602,14 +1621,14 @@ export class MatchScreen implements Screen {
           // A channelled beam keeps one beam per part, swung to each pulse's line (stacking a new one
           // every pulse piled their glows into a white-out).
           const key = `${attacker.id}:${part.id}`;
-          const live = ch ? this.channelBeams.get(key) : undefined;
+          const live = pulse ? this.channelBeams.get(key) : undefined;
           const out = this.launch(attacker, part.origin);
           // The far end lands on the middle of the body it hits (a miss stays level).
           const toLift = hits[0] ? this.bodyLift(hits[0]) : undefined;
           if (live && live.alive) live.refresh(out.from, focus, CONFIG.battle.channel.tick * 2.5, part.lift ?? out.lift, part.lift ?? toLift);
           else {
             const beam = new FxBeam(sheet, { from: out.from, to: focus, mode: part.mode, lift: part.lift ?? out.lift, toLift: part.lift ?? toLift, scale: (part.scale ?? 2) * userK, fps: part.fps ?? 15, seconds: part.seconds, tint: part.tint, facing: part.facing === 'none' ? undefined : part.facing });
-            if (ch) {
+            if (pulse) {
               if (this.channelBeams.size > 64) for (const [k2, b2] of this.channelBeams) if (!b2.alive) this.channelBeams.delete(k2);
               this.channelBeams.set(key, beam);
             }
@@ -1619,8 +1638,10 @@ export class MatchScreen implements Screen {
         continue;
       }
       if (carrier) impacts.push(part);
-      // A beam's impacts wait for it to reach out (battle.travelDelay), as its damage does.
-      else if (!skipImpacts) for (const t of targets) playAt(beamReach ? { ...part, delay: (part.delay ?? 0) + beamReach } : part, t, true);
+      // A beam's pulse lands the moment it pulses (battle.ts stepChannel), so its impact shows now
+      // (parts that follow the first keep their offsets). A one-off beam's impacts wait for it to
+      // reach out (battle.travelDelay), as its damage does.
+      else if (!skipImpacts) for (const t of targets) playAt(pulse ? { ...part, delay: Math.max(0, (part.delay ?? 0) - (m ? strikeDelay(m) : 0)) } : beamReach ? { ...part, delay: (part.delay ?? 0) + beamReach } : part, t, true);
     }
     if (!carrier) return;
     const sheet = this.fx.sheet(carrier.id);
@@ -1671,7 +1692,7 @@ export class MatchScreen implements Screen {
     }
   }
 
-  private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[]): void {
+  private spawnMoveVfx(attacker: Mon, m: MoveDef, area: Area, hits: Mon[], pulse = false): void {
     // A contact move or a slam that touched nobody strikes the air just in front of its user, not
     // the spot it was aimed at (that drew a hit on a target the lunge never reached).
     if (!hits.length && (isContact(m) || m.leap) && m.shape === 'single') {
@@ -1684,7 +1705,7 @@ export class MatchScreen implements Screen {
       area = { ...area, tx: attacker.x + ux * front, ty: attacker.y + uy * front };
     }
     if (m.fx?.length && this.fx.ready(m.fx.map((p) => p.id))) {
-      this.spawnFx(attacker, m.fx, area, hits, m);
+      this.spawnFx(attacker, m.fx, area, hits, m, pulse);
       // Moves never shake the camera, except the three great legends' own (Aeroblast, Dark Void...).
       if (m.shake && isEpic(attacker) && (attacker.owner === this.match.player || hits.some((h) => h.owner === this.match.player) || Math.hypot(attacker.x - this.match.player.x, attacker.y - this.match.player.y) < 10)) {
         this.shake = Math.max(this.shake, m.shake);

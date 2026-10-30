@@ -24,8 +24,8 @@ export interface Area {
 
 export type BattleEvent =
   | { type: 'cast'; attacker: Mon; move: MoveDef; area: Area }
-  | { type: 'resolve'; attacker: Mon; move: MoveDef; area: Area; hits: Mon[] }
-  | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean }
+  | { type: 'resolve'; attacker: Mon; move: MoveDef; area: Area; hits: Mon[]; /** One pulse of a channelled beam. */ pulse?: boolean }
+  | { type: 'hit'; attacker: Mon; target: Mon; move: MoveDef; damage: number; effectiveness: number; crit: boolean; /** One pulse of a channelled beam. */ pulse?: boolean }
   | { type: 'status'; target: Mon; status: StatusKind }
   | { type: 'stages'; target: Mon; stat: 'atk' | 'def' | 'spe'; delta: number }
   | { type: 'tick'; target: Mon; damage: number; source: 'burn' | 'dreams' | 'poison' | 'recoil' }
@@ -119,9 +119,17 @@ export interface DamageResult {
   damage: number;
   effectiveness: number;
   crit: boolean;
+  /** With a `scale` (a beam's pulse): the damage before rounding down. */
+  raw?: number;
 }
 
-export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef): DamageResult {
+/**
+ * `scale`: the share of one full hit this hit carries (a channelled beam's pulse); it scales the
+ * whole formula, the flat +2 included, so a beam's pulses add up to its multiple of one hit.
+ * With `scale`, `raw` holds the unrounded damage and `damage` is not floored to a minimum of 1:
+ * the beam carries the fraction to its next pulse on the same target (BattleSystem.landPulse).
+ */
+export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef, scale?: number): DamageResult {
   const eff = effectiveness(m.type, defender.types);
   if (m.category === 'status' || m.power <= 0 || eff === 0) return { damage: 0, effectiveness: eff, crit: false };
   const a = (m.category === 'physical' ? attacker.stats.atk : attacker.stats.spa) * STAGE_MULT(attacker.stages.atk);
@@ -141,6 +149,10 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   if (attacker.shadow && attacker.owner?.legendBout) dmg *= CONFIG.shadowLugia.damageScale;
   dmg *= (CONFIG.battle as typeof CONFIG.battle & { damageScale?: number }).damageScale ?? 1;
   dmg *= rng.range(0.85, 1);
+  if (scale !== undefined) {
+    dmg *= scale;
+    return { damage: Math.floor(dmg), effectiveness: eff, crit, raw: dmg };
+  }
   return { damage: Math.max(1, Math.floor(dmg)), effectiveness: eff, crit };
 }
 
@@ -284,6 +296,12 @@ export const BEAM_REACH = 0.1;
  * `delay` among its parts played on the target (a ring that rolls out from its user, an eruption that
  * rises first). The damage waits for it, so the HP drops in the frame the impact appears.
  */
+/** One pulse of a channelled beam (BattleSystem.resolve). */
+interface Pulse {
+  scale: number;
+  carry: Map<Mon, number>;
+}
+
 export function strikeDelay(m: MoveDef): number {
   const parts = (m.fx ?? []).filter((p) => p.anchor === 'target' && p.mode !== 'status');
   if (!parts.length) return 0;
@@ -292,6 +310,8 @@ export function strikeDelay(m: MoveDef): number {
 
 export class BattleSystem {
   events: BattleEvent[] = [];
+  /** Each beam's leftover fractions of a point, per target (see landHit); gone with the beam. */
+  private readonly beamCarry = new WeakMap<object, Map<Mon, number>>();
   /** Hits on their way to their targets (see impactDelay). */
   inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
@@ -550,8 +570,14 @@ export class BattleSystem {
           const dy = mon.casting.targetY - mon.y;
           const d = Math.hypot(dx, dy) || 1;
           // Shadow Lugia's beam pours out longer and sweeps slower, toward its foe (Match.steerChannels).
-          const left = mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamSeconds : c.seconds;
-          mon.channel = { manual: !!mon.manualCast, moveId: m.id, left, next: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
+          const span = mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamSeconds : c.seconds;
+          // The first pulse lands when the beam has reached out and its impact shows (the same
+          // wait a single hit has, impactDelay); then one every `tick`, each landing the moment it
+          // pulses, on whatever is in the beam right then. The beam (and its user's rooting) ends
+          // with its last pulse, so no damage arrives after the beam is gone.
+          const reach = BEAM_REACH + strikeDelay(m);
+          const pulses = Math.round(span / c.tick) + 1;
+          mon.channel = { manual: !!mon.manualCast, moveId: m.id, left: reach + (pulses - 1) * c.tick, next: reach, pulses, fired: 0, dirX: dx / d, dirY: dy / d, aimX: mon.casting.targetX, aimY: mon.casting.targetY };
           this.events.push({ type: 'channel-start', mon, move: m });
           this.stepChannel(mon, 0, candidates);
           return;
@@ -566,7 +592,12 @@ export class BattleSystem {
     }
   }
 
-  private resolve(attacker: Mon, m: MoveDef, area: Area, candidates: Iterable<Mon>): void {
+  /**
+   * `pulse`: one pulse of a channelled beam. It lands at once on what is in the beam now (the beam
+   * is already there), carrying `scale` of a full hit, and keeps each target's leftover fraction
+   * of a point in `carry` (one map per beam, so fractions never pass between casts or targets).
+   */
+  private resolve(attacker: Mon, m: MoveDef, area: Area, candidates: Iterable<Mon>, pulse?: Pulse): void {
     const hits: Mon[] = [];
     if (m.shape === 'self') hits.push(attacker);
     else {
@@ -593,9 +624,13 @@ export class BattleSystem {
         hits.length = 1;
       }
     }
-    this.events.push({ type: 'resolve', attacker, move: m, area, hits });
+    this.events.push({ type: 'resolve', attacker, move: m, area, hits, ...(pulse ? { pulse: true } : {}) });
     for (const target of hits) {
       if (target === attacker) continue;
+      if (pulse) {
+        this.landHit(attacker, target, m, pulse);
+        continue;
+      }
       const wait = impactDelay(attacker, target, m);
       if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y });
       else this.landHit(attacker, target, m);
@@ -642,23 +677,26 @@ export class BattleSystem {
     if (mon.casting) mon.casting.t = Math.max(mon.casting.t, 0.05);
     ch.left -= dt;
     ch.next -= dt;
-    if (ch.next <= 0) {
+    if (ch.next <= 0 && (ch.fired ?? 0) < (ch.pulses ?? 1)) {
       ch.next += c.tick;
+      ch.fired = (ch.fired ?? 0) + 1;
       const base = move(ch.moveId);
-      // The power is shared over a standard beam's pulses (a longer beam simply deals more).
-      const pulses = Math.max(1, Math.round(c.seconds / c.tick) + 1);
-      // Each pulse carries its share of the power; status rolls a little each time; no stat changes.
+      // A standard beam's pulses add up to powerMult times one hit (a longer beam simply deals more).
+      const standard = Math.max(1, Math.round(c.seconds / c.tick) + 1);
+      // Status rolls a little each pulse; no stat changes.
       const pulse: MoveDef = {
         ...base,
-        power: Math.max(1, Math.round((base.power * c.powerMult) / pulses)),
-        status: base.status ? { ...base.status, chance: Math.min(1, (base.status.chance * 1.5) / pulses) } : base.status,
+        status: base.status ? { ...base.status, chance: Math.min(1, (base.status.chance * 1.5) / standard) } : base.status,
         stages: undefined,
       };
+      let carry = this.beamCarry.get(ch);
+      if (!carry) this.beamCarry.set(ch, (carry = new Map()));
       const tx = mon.x + ch.dirX * 3;
       const ty = mon.y + ch.dirY * 3;
-      this.resolve(mon, pulse, makeArea(base, mon, tx, ty), candidates());
+      this.resolve(mon, pulse, makeArea(base, mon, tx, ty), candidates(), { scale: c.powerMult / standard, carry });
     }
-    if (ch.left <= 0) this.endChannel(mon);
+    // It ends with its last pulse (`left` counts down to that same moment).
+    if ((ch.fired ?? 0) >= (ch.pulses ?? 1) || ch.left <= -c.tick) this.endChannel(mon);
   }
 
   /** Cuts off whatever a Pokémon is doing: its cast, and a channelled beam (with its end event). */
@@ -698,8 +736,14 @@ export class BattleSystem {
   }
 
   /** One Pokémon struck by a move: damage, the hit event, status and stat changes. */
-  private landHit(attacker: Mon, target: Mon, m: MoveDef): void {
-    const r = computeDamage(this.rng, attacker, target, m);
+  private landHit(attacker: Mon, target: Mon, m: MoveDef, pulse?: Pulse): void {
+    const r = computeDamage(this.rng, attacker, target, m, pulse?.scale);
+    if (pulse && r.raw !== undefined) {
+      // A beam's pulse deals the whole points of what it has built up on this target and keeps the rest.
+      const sum = (pulse.carry.get(target) ?? 0) + r.raw;
+      r.damage = Math.floor(sum);
+      pulse.carry.set(target, sum - r.damage);
+    }
     // A Pokémon set to Catch holds back like False Swipe: a wild Pokémon is left with at least 1 HP.
     if (attacker.behavior === 'catch' && target.wild && !target.owner) r.damage = Math.min(r.damage, Math.max(0, target.hp - 1));
     if (r.damage > 0) {
@@ -736,7 +780,7 @@ export class BattleSystem {
         this.events.push({ type: 'tick', target: attacker, damage: recoil, source: 'recoil' });
       }
     }
-    this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit });
+    this.events.push({ type: 'hit', attacker, target, move: m, damage: r.damage, effectiveness: r.effectiveness, crit: r.crit, ...(pulse ? { pulse: true } : {}) });
     // A Fire hit thaws a frozen Pokémon.
     if (target.status === 'freeze' && m.type === 'fire' && r.damage > 0) {
       target.status = null;

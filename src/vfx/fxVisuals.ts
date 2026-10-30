@@ -332,11 +332,23 @@ export class FxBeam implements MoveVisual {
     if (lift !== undefined) this.lift = lift;
     if (toLift !== undefined) this.toLift = toLift;
     this.aim();
+    if (this.released) return;
     // Hold it at full strength: the fade starts at 70% of its life.
     this.life = Math.max(this.life, this.t + seconds);
   }
 
+  /** When the beam was cut off (release), and how long it then takes to fade. */
+  private released: { at: number; fade: number } | null = null;
+
+  /** The beam has stopped (its channel ended or was cut): fade out over `fade` seconds from now. */
+  release(fade: number): void {
+    if (this.released) return;
+    this.released = { at: this.t, fade };
+    this.life = Math.min(this.life, this.t + fade);
+  }
+
   private alpha(): number {
+    if (this.released) return Math.max(0, 1 - (this.t - this.released.at) / this.released.fade);
     const k = this.t / this.life;
     return k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
   }

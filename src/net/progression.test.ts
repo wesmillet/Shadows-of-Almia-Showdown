@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACHIEVEMENTS, canWear, LEVELS_ON, levelOf, matchXp, titlesFor, xpToNext, type AchievementContext, type MatchFacts } from './progression';
+import { ACHIEVEMENTS, canWear, isFreeLook, LEVELS_ON, SHOWN_LOOKS, levelOf, matchXp, titlesFor, xpToNext, type AchievementContext, type MatchFacts } from './progression';
 
 const facts = (over: Partial<MatchFacts> = {}): MatchFacts => ({
   mode: 'casual', place: 4, field: 8, outcome: 'loss', squad: false,
@@ -48,12 +48,15 @@ describe('achievements, titles and looks', () => {
     expect(titlesFor(['first_win', 'first_match', 'squad_win'])).toEqual(['Champion', 'Squad Leader']);
   });
 
-  it('keeps Ranger looks for levels and the named ones for achievements', () => {
-    expect(canWear('civ_03', 50, [])).toBe(false);
+  it('offers only the male and female Ranger, free from the start; every other look is hidden', () => {
+    expect(SHOWN_LOOKS).toEqual(['union_00', 'union_03']);
     expect(canWear('union_00', 1, [])).toBe(true);
-    // trainer levels are off for now (LEVELS_ON): level-locked looks are free
-    expect(canWear('union_05', 9, [])).toBe(!LEVELS_ON);
-    expect(canWear('union_05', 10, [])).toBe(true);
+    expect(canWear('union_03', 1, [])).toBe(true);
+    expect(isFreeLook('union_03')).toBe(true);
+    // hidden, whatever the level or achievements
+    expect(canWear('civ_03', 50, ACHIEVEMENTS.map((a) => a.id))).toBe(false);
+    expect(canWear('union_05', 100, ACHIEVEMENTS.map((a) => a.id))).toBe(false);
+    expect(LEVELS_ON).toBe(false);
   });
 
   it('has unique ids and real looks', () => {

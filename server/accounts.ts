@@ -26,7 +26,7 @@ import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
 import { COLLECTION_LOG_SQL } from './collectionLog';
-import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
+import { ACHIEVEMENTS, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -475,7 +475,7 @@ export class Accounts {
     if (ban) return { key: `x${randomBytes(6).toString('base64url')}`, name: 'Banned', accountId: null, banned: ban };
     if (user && !user.banned) {
       const prof = this.profile(user.id);
-      const look = typeof prof.look === 'string' && this.canWear(user.id, prof.look) ? prof.look : undefined;
+      const look = this.wornLook(user.id, prof.look) ?? undefined;
       return { key: `u${user.id}`, name: user.username, accountId: user.id, look, title: this.title(user.id) ?? undefined };
     }
     const url = new URL(req.url ?? '/', 'http://x');
@@ -753,7 +753,19 @@ export class Accounts {
     return t && titlesFor(this.earned(userId)).includes(t) ? t : null;
   }
 
+  /**
+   * The look a player shows as: their saved one when they can wear it, else the default Ranger
+   * (a saved look that is hidden now stays saved, untouched, for when it comes back). Null when
+   * they never picked one.
+   */
+  wornLook(userId: number, look: unknown): string | null {
+    if (typeof look !== 'string') return null;
+    return this.canWear(userId, look) ? look : DEFAULT_LOOK;
+  }
+
   canWear(userId: number, look: string): boolean {
+    // Hidden looks (src/net/progression.ts SHOWN_LOOKS) can not be worn, however they were earned.
+    if (!isShownLook(look)) return false;
     // A look given by a Mystery Gift code is theirs to wear.
     if (this.gifts.ownedLooks(userId).includes(look)) return true;
     return canWear(look, levelOf(this.xp(userId)).level, this.earned(userId));
@@ -786,7 +798,7 @@ export class Accounts {
     const ach = this.db.prepare('SELECT id, at FROM achievements WHERE user_id = ? ORDER BY at').all(u.id) as Array<{ id: string; at: number }>;
     const xp = this.xp(u.id);
     return {
-      name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
+      name: u.username, joined: u.created_at, look: this.wornLook(u.id, prof.look), stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
       progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ach,
     };
   }
@@ -1009,7 +1021,7 @@ export class Accounts {
         const prof = this.profile(me.id);
         const earned = this.earned(me.id);
         return send(200, {
-          signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: prof.look, stats: prof.stats,
+          signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
           progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
           looks: this.gifts.ownedLooks(me.id),
         });
@@ -1146,7 +1158,7 @@ export class Accounts {
         const b = await readJson(req);
         const look = typeof b.look === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(b.look) ? b.look : null;
         if (!look) return send(400, { error: 'Pick a look' });
-        if (!this.canWear(me.id, look)) return send(403, { error: 'That look is not unlocked yet' });
+        if (!this.canWear(me.id, look)) return send(403, { error: isShownLook(look) ? 'That look is not unlocked yet' : 'That look is not available' });
         this.db.prepare('UPDATE profiles SET look = ? WHERE user_id = ?').run(JSON.stringify(look), me.id);
         return send(200, { ok: true });
       }

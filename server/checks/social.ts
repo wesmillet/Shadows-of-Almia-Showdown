@@ -201,10 +201,11 @@ check(gained > 0 && prog.xp[0]?.what === 'Played a match', `a finished match ear
 check(prog.achievements.some((a) => a.id === 'first_match'), 'and the first achievement');
 const meA = (await api(A.cookie, '/api/me')).json as { progress: { xp: number; level: number }; achievements: string[] };
 check(meA.progress.xp === gained && meA.achievements.includes('first_match'), `kept on the account (level ${meA.progress.level})`);
-// (Trainer levels are off for now, LEVELS_ON: then every Ranger look is free.)
-check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === (LEVELS_ON ? 403 : 200), LEVELS_ON ? 'a Ranger look is locked at level 1' : 'Ranger looks are free while trainer levels are off');
-check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are locked');
-check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the first Ranger is free');
+// (Only the male and female Ranger are on offer for now, SHOWN_LOOKS: every other look is refused.)
+check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === 403, 'other Ranger looks are hidden');
+check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are hidden');
+check((await api(A.cookie, '/api/look', { look: 'union_03' })).json.ok, 'the female Ranger is free');
+check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the male Ranger is free');
 check((await api(A.cookie, '/api/title', { title: 'Master Ranger' })).status === 400, 'titles must be earned');
 const bMe = (await api(B.cookie, '/api/me')).json as { progress: { xp: number } };
 const gMe = (await api('', '/api/me')).json as { signedIn: boolean };

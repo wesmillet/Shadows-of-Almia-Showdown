@@ -27,7 +27,7 @@ import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
-import { canWear, isFreeLook, lookRequirement } from './net/progression';
+import { canWear, DEFAULT_LOOK, isFreeLook, isShownLook, lookRequirement } from './net/progression';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
@@ -156,9 +156,9 @@ async function boot(): Promise<void> {
   void sprites.preload([...matchCast()].filter((d) => !first.has(d)));
   const rangers = await rangersP;
   // The trainer look picked on the title screen (Trainer, C), kept in this browser.
-  // A look that is locked now (the townsfolk, or a Ranger level look with no server to check) is not worn.
+  // A look that is locked or hidden now (anything outside SHOWN_LOOKS) is not worn.
   const look = loadLook();
-  if (look && (isFreeLook(look) || (serverBase() && !lookRequirement(look)?.soon))) await rangers.setRole('player', look);
+  if (look && isShownLook(look) && (isFreeLook(look) || (serverBase() && !lookRequirement(look)?.soon))) await rangers.setRole('player', look);
   const ui = new PixelUi(assets);
   await ui.load();
   setUiSkin(ui);
@@ -280,11 +280,15 @@ async function boot(): Promise<void> {
         showOnline();
         void profileDialog(net, pf.slice(0, 32), (id) => void startReplay(id));
       }
-      // A look worn before looks were earned (or on another account): back to a free one.
+      // A look worn before looks were earned (or on another account), or one hidden now: back to
+      // the default Ranger in this browser. The account's saved look is left as it is.
       const worn = loadLook();
       if (worn && lookLock(worn)) {
-        saveLook('union_00');
-        void rangers.setRole('player', 'union_00');
+        const hook = lookHooks.saved;
+        lookHooks.saved = null;
+        saveLook(DEFAULT_LOOK);
+        lookHooks.saved = hook;
+        void rangers.setRole('player', DEFAULT_LOOK);
       }
     });
   }
@@ -311,6 +315,7 @@ async function boot(): Promise<void> {
 
   /** With a game server, looks are earned (src/net/progression.ts); why one is locked, or null. */
   const lookLock = (look: string): string | null => {
+    if (!isShownLook(look)) return 'Not available';
     const req = lookRequirement(look);
     if (!req) return null;
     // A look a Mystery Gift code gave this account.

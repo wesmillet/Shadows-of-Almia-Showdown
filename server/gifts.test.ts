@@ -28,7 +28,7 @@ describe('Mystery Gift', () => {
     expect(g.redemptions('pika-party').map((r) => r.username).sort()).toEqual(['A1', 'A2']);
   });
 
-  it('a look code unlocks the look for that account', () => {
+  it('a look code unlocks the look for that account (worn once that look is shown again)', () => {
     const { a, g, user } = setup();
     const look = g.lookIds().find((l) => l.startsWith('civ_')) as string;
     const r = g.create('Wes', { kind: 'look', look });
@@ -38,7 +38,10 @@ describe('Mystery Gift', () => {
     const u = user('B1');
     expect(a.canWear(u, look)).toBe(false);
     expect(g.redeem(u, code)).toMatchObject({ kind: 'look', look });
-    expect(a.canWear(u, look)).toBe(true);
+    expect(g.ownedLooks(u)).toEqual([look]);
+    // Every look but the two Rangers is hidden for now (SHOWN_LOOKS): kept, but not worn.
+    expect(a.canWear(u, look)).toBe(false);
+    expect(a.wornLook(u, look)).toBe('union_00');
     expect(a.canWear(user('B2'), look)).toBe(false);
   });
 

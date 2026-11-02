@@ -46,7 +46,7 @@ export function openHowToPlay(): Promise<void> {
     ['Healing', 'Stand at an outpost to heal your team. If a wild Pokémon knocks out your whole team, you lose your bag and come back at an outpost a little later.'],
     ['Trainer battles', `Come close to another trainer and you battle one on one: steer your Pokémon with ${move}, aim and use moves with the mouse, dodge with ${k('Space')}. When one of yours is knocked out, pick the next (click or 1-6) within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.`],
     ['The storm', 'Every few minutes the darkness closes in toward the crystal in the middle. Pokémon fall asleep in it, and a trainer who stays in it too long is out. Keep to the light.'],
-    ['After the match', 'Signed in, you keep Pokémon from your team in your PC.'],
+    ['After the match', 'Win while signed in, and a Pokémon from your team goes to your PC for keeps.'],
   ];
   return new Promise((resolve) => {
     const root = overlayRoot();

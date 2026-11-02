@@ -4,7 +4,7 @@
  */
 import type { Connection } from '../net/connection';
 import type { FriendEntry, ServerMsg } from '../net/protocol';
-import { ACHIEVEMENTS, LEVELS_ON } from '../net/progression';
+import { ACHIEVEMENTS, ACHIEVEMENTS_ON, LEVELS_ON } from '../net/progression';
 import { el, overlayRoot } from './overlay';
 
 const ACTIVITY: Record<FriendEntry['activity'], [string, string]> = {
@@ -407,11 +407,11 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
         for (const v of [st.matches, st.wins, st.bestPlace ?? '-', st.eliminations ?? 0, st.catches, st.knockouts]) tr.append(el('td', '', String(v)));
         t.append(tr);
         body.append(t);
-        // Achievements: earned ones bright, the rest faint with what they take.
+        // Achievements (hidden for now, ACHIEVEMENTS_ON): earned ones bright, the rest faint with what they take.
         const have = new Set(p.achievements.map((a) => a.id));
         // (the trainer-level ones only while trainer levels are shown)
-        const shown = ACHIEVEMENTS.filter((a) => LEVELS_ON || !a.id.startsWith('level_'));
-        body.append(el('h3', '', `Achievements · ${shown.filter((a) => have.has(a.id)).length}/${shown.length}`));
+        const shown = ACHIEVEMENTS_ON ? ACHIEVEMENTS.filter((a) => LEVELS_ON || !a.id.startsWith('level_')) : [];
+        if (shown.length) body.append(el('h3', '', `Achievements · ${shown.filter((a) => have.has(a.id)).length}/${shown.length}`));
         const grid = el('div');
         grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px';
         for (const a of shown) {
@@ -423,7 +423,7 @@ export function profileDialog(net: Connection, name: string, onReplay?: (matchId
           b.append(n, el('div', 'almia-note', a.desc));
           grid.append(b);
         }
-        body.append(grid);
+        if (shown.length) body.append(grid);
         if (p.recent?.length) {
           body.append(el('h3', '', 'Recent matches'));
           for (const m of p.recent.slice(0, 8)) {
@@ -462,6 +462,9 @@ function accountTools(net: Connection, p: Profile, close: () => void): HTMLEleme
   const wrap = el('div');
   wrap.append(el('h3', '', 'Your account'));
   const titles = net.me.titles ?? [];
+  // Titles come from achievements: while those are hidden (ACHIEVEMENTS_ON), the title row shows
+  // only to players who already have a title to wear.
+  const showTitles = ACHIEVEMENTS_ON || titles.length > 0;
   const row = el('div', 'almia-row');
   row.append(el('span', 'nm', 'Title you wear'));
   const sel = el('select');
@@ -479,7 +482,7 @@ function accountTools(net: Connection, p: Profile, close: () => void): HTMLEleme
     void net.refreshMe();
   };
   row.append(sel);
-  wrap.append(row);
+  if (showTitles) wrap.append(row);
   if (net.me.user?.password) {
     const actions = el('div', 'almia-tabs');
     const pw = el('button', 'almia-small alt', 'Change password');

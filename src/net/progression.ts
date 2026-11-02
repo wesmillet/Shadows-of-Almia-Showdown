@@ -60,6 +60,14 @@ export function matchXp(f: MatchFacts): Array<{ what: string; xp: number }> {
 
 // ---------------------------------------------------------------- achievements
 
+/**
+ * Achievements are hidden from players for now: no list on profiles (in the game or at /u/<name>),
+ * no "achievement earned" lines after a match, none in the match result sent to the browser. The
+ * server still records them as before (and the titles they give still unlock), so turning this
+ * back on shows everything players earned in the meantime.
+ */
+export const ACHIEVEMENTS_ON = false;
+
 /** What an achievement can look at: this match, and the player's totals after it. */
 export interface AchievementContext {
   match: MatchFacts | null;

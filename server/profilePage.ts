@@ -5,7 +5,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ACHIEVEMENTS, LEVELS_ON } from '../src/net/progression';
+import { ACHIEVEMENTS, ACHIEVEMENTS_ON, LEVELS_ON } from '../src/net/progression';
 import type { PublicProfile } from './accounts';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
@@ -96,8 +96,8 @@ ${LEVELS_ON ? `<div>Trainer level ${p.progress.level}</div>
 <div><b>${s.matches}</b>matches</div><div><b>${s.wins}</b>wins</div><div><b>${s.bestPlace ?? '-'}</b>best place</div>
 <div><b>${s.catches}</b>catches</div><div><b>${s.eliminations ?? 0}</b>eliminations</div><div><b>${s.knockouts}</b>knockouts</div><div><b>${s.damage.toLocaleString('en')}</b>damage</div>
 </div></div>
-<div class="panel"><h2>Achievements · ${p.achievements.length}/${ACHIEVEMENTS.length}</h2><div class="badges">${badges}</div></div>
-<div class="panel"><h2>Recent matches</h2><table>${recent}</table></div>
+${ACHIEVEMENTS_ON ? `<div class="panel"><h2>Achievements · ${p.achievements.length}/${ACHIEVEMENTS.length}</h2><div class="badges">${badges}</div></div>
+` : ''}<div class="panel"><h2>Recent matches</h2><table>${recent}</table></div>
 <div class="panel"><a class="play" href="/">Play Shadows of Almia Showdown</a> <span class="dim">· a free fan game</span></div>
 </div></body></html>`;
 }

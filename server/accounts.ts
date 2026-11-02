@@ -26,7 +26,7 @@ import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
 import { COLLECTION_LOG_SQL } from './collectionLog';
-import { ACHIEVEMENTS, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
+import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -702,7 +702,9 @@ export class Accounts {
       const xpBefore = this.xp(userId);
       this.db.prepare('UPDATE profiles SET xp = xp + ? WHERE user_id = ?').run(gained, userId);
       this.db.prepare('UPDATE match_players SET xp = ? WHERE match_id = ? AND user_id = ?').run(gained, matchId, userId);
-      progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: this.checkAchievements(userId, facts) });
+      // Achievements are still recorded while hidden (ACHIEVEMENTS_ON), just not announced.
+      const earnedNow = this.checkAchievements(userId, facts);
+      progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: ACHIEVEMENTS_ON ? earnedNow : [] });
     }
     return progress;
   }
@@ -799,7 +801,7 @@ export class Accounts {
     const xp = this.xp(u.id);
     return {
       name: u.username, joined: u.created_at, look: this.wornLook(u.id, prof.look), stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
-      progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ach,
+      progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ACHIEVEMENTS_ON ? ach : [],
     };
   }
 
@@ -1022,7 +1024,7 @@ export class Accounts {
         const earned = this.earned(me.id);
         return send(200, {
           signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
-          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
+          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: ACHIEVEMENTS_ON ? earned : [],
           looks: this.gifts.ownedLooks(me.id),
         });
       }
@@ -1122,7 +1124,8 @@ export class Accounts {
           this.db.exec('ROLLBACK');
           throw e;
         }
-        return send(200, { ok: true, name: pick.name, achievements: this.checkAchievements(me.id, null) });
+        const earnedNow = this.checkAchievements(me.id, null);
+        return send(200, { ok: true, name: pick.name, achievements: ACHIEVEMENTS_ON ? earnedNow : [] });
       }
       if (req.method === 'POST' && path === '/api/title') {
         const b = await readJson(req);

@@ -10,7 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
-import { LEVELS_ON } from '../net/progression';
+import { ACHIEVEMENTS_ON, LEVELS_ON } from '../net/progression';
 import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
 import { backdrop, button, heading, hit, INK, panel, text, wrapText, type GameContext, type Screen } from './screens';
@@ -146,7 +146,7 @@ export class OnlineScreen implements Screen {
     const y = L.cardY;
     const signedIn = this.net.me.signedIn;
     return {
-      // Your stats, achievements, recent matches, title, password and recovery codes (your profile).
+      // Your stats, recent matches, title, password and recovery codes (your profile).
       me: signedIn ? { x: L.cx - 196 * s, y: y + 98 * s, w: 220 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       signin: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx - 228 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
       register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
@@ -694,7 +694,7 @@ export class OnlineEndScreen implements Screen {
       text(v, `+${total} XP${up ? `  ·  Level ${prog.after.level}!` : `  ·  Level ${prog.after.level}`}`, v.width / 2, py + 134 * s, 15, { align: 'center', color: up ? INK.accent : INK.text, shadow: false });
       const lines = prog.xp.map((x) => `${x.what} +${x.xp}`).join('  ·  ');
       wrapText(v, lines, v.width / 2, py + 152 * s, 11, pw - 60 * s, 14 * s, 2, { align: 'center', color: INK.dim, shadow: false });
-      prog.achievements.slice(0, 2).forEach((a, i) => {
+      if (ACHIEVEMENTS_ON) prog.achievements.slice(0, 2).forEach((a, i) => {
         text(v, `★ ${a.name}${a.title ? ` · new title: ${a.title}` : ''}${a.look ? ' · new look' : ''}`, v.width / 2, py + 186 * s + i * 18 * s, 13, { align: 'center', color: '#c2611a', shadow: false, maxWidth: pw - 40 * s });
       });
     }

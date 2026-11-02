@@ -1,0 +1,74 @@
+# A focused live check with real browsers (tools/live-session/session.cjs on the online branch).
+#   prepare: makes or signs in a test account (LaunchCheck1) and hatches its daily Egg into its PC.
+#            Run it before a deploy.
+#   play:    after the deploy (a server restart), signs the test account in and checks its PC came
+#            through, then it and four guests play a whole match with computer trainers filling the
+#            rest: a dropped connection, results, watching the rest, keeping a Pokemon, signing out
+#            and in, queueing again.
+# The test account's password is made here once and kept only in this workflow's cache (it is never
+# printed). The result is posted as an issue.
+name: Live session check
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Server address
+        default: https://almia-showdown.fly.dev
+        required: true
+      mode:
+        description: prepare (before a deploy) or play (after it)
+        type: choice
+        options: [prepare, play]
+        default: play
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: live-session
+  cancel-in-progress: false
+
+jobs:
+  session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: online
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm i --no-save playwright@1.56.0 && npx playwright install --with-deps chromium
+      - name: The test account (made once, kept in this workflow's cache)
+        uses: actions/cache/restore@v4
+        with:
+          path: live-session-state
+          key: live-session-state-v1-${{ github.run_id }}
+          restore-keys: live-session-state-v1-
+      - name: Make its password the first time
+        run: |
+          mkdir -p live-session-state
+          if [ ! -s live-session-state/.cred ]; then openssl rand -hex 16 > live-session-state/.cred; fi
+          chmod 600 live-session-state/.cred
+      - name: Session
+        run: |
+          set +e
+          LIVE_USER=LaunchCheck1 LIVE_PASS="$(cat live-session-state/.cred)" node tools/live-session/session.cjs "${{ github.event.inputs.url }}" "${{ github.event.inputs.mode }}" live-session-state 2>&1 | tee session.log
+          echo "exit ${PIPESTATUS[0]}" | tee -a session.log
+      - name: Keep the test account for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: live-session-state
+          key: live-session-state-v1-${{ github.run_id }}
+      - name: Post the result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          { echo "Server: ${{ github.event.inputs.url }} · mode: ${{ github.event.inputs.mode }}"; echo; echo '```'; cat session.log 2>/dev/null; echo '```'; } > body.md
+          gh issue create --repo "${{ github.repository }}" --title "Live session ${{ github.event.inputs.mode }} (run ${{ github.run_id }})" --body-file body.md

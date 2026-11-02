@@ -11,7 +11,8 @@ const CSS = `
 .almia-how { width: min(560px, calc(100vw - 24px)) !important; max-height: calc(100vh - 24px); overflow-y: auto; }
 .almia-how h3 { margin: 12px 0 4px; font-size: 15px; font-weight: normal; color: #c2611a; }
 .almia-how p { margin: 0 0 4px; font-size: 14px; line-height: 1.45; }
-.almia-how .row { display: flex; justify-content: flex-end; margin-top: 12px; position: sticky; bottom: -1px; padding: 6px 0 2px; background: inherit; }
+.almia-how { padding-bottom: 0 !important; }
+.almia-how .row { display: flex; justify-content: flex-end; margin-top: 12px; position: sticky; bottom: 0; padding: 8px 0 16px; background: inherit; }
 `;
 const SEEN = 'almia.howToPlay.seen';
 let styled = false;

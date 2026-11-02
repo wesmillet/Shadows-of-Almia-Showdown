@@ -277,6 +277,8 @@ export class TouchUi {
   private root: HTMLDivElement;
   private rotate: HTMLDivElement;
   private actions: TouchAction[] = [];
+  /** What Menu opens when no prompt is up (unset: it reads as Esc). */
+  onMenu: (() => void) | null = null;
   /** The drag in progress from a move or ball button (the match draws where it goes). */
   aim: TouchAim | null = null;
   private frame: TouchFrame | null = null;
@@ -377,7 +379,9 @@ export class TouchUi {
     Object.assign(this.autoEl.style, { right: '146px', top: topRow });
     tapButton(this.menuEl, () => {
       this.closeAll();
-      this.input.virtualTap('Escape');
+      // A prompt open: Close is Esc. Otherwise the game's own menu (Esc, or the hook it set).
+      if (this.frame?.prompt || !this.onMenu) this.input.virtualTap('Escape');
+      else this.onMenu();
     });
     tapButton(this.bagEl, () => (this.bagPanel ? this.closeBag() : this.openBag()));
     tapButton(this.autoEl, () => this.actions.push({ t: 'auto' }));

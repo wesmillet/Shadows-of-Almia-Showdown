@@ -292,6 +292,7 @@ export function touchWording(s: string): string {
     .replace(/,? then (?:press )?[A-Z] to throw/g, ', then tap Ball')
     .replace(/hover a party card and click its X to release one/g, 'release one from its portrait')
     .replace(/ or press [0-9](?:-[0-9])?/g, '')
+    .replace(/^[1-9] {2}/, '')
     .replace(/\bclick/g, 'tap')
     .replace(/\bClick/g, 'Tap')
     .trim();

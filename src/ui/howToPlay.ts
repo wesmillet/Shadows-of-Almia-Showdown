@@ -42,10 +42,12 @@ export function openHowToPlay(): Promise<void> {
   const move = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].map(k).join('');
   const touchSections: Array<[string, string]> = [
     ['The goal', 'Ten trainers on one island. Be the last trainer standing.'],
-    ['Moving and fighting', 'Put your left thumb on the field and slide it to walk. Your Pokémon follow you and fight wild Pokémon nearby on their own (Auto). Hold Move 1 or Move 2 to use a move yourself: it goes at your target, or wherever your finger touches the field. Tap one of your Pokémon to steer it, Trainer to stop.'],
-    ['Catching', 'Wear a wild Pokémon down, tap it (or Target) and press Ball. You can carry six. Tap a bag slot to use what is in it.'],
+    ['Moving', 'Put your left thumb anywhere on the left of the field and slide it to walk. Your Pokémon follow you and fight wild Pokémon nearby on their own while Auto is on.'],
+    ['Fighting', 'The two big buttons on the right are your moves. Tap one to use it on your target (or the way you face), or drag from it to aim and let go to use it there. You can keep walking while you aim. Dodge dashes out of the way in battles and while you steer a Pokémon.'],
+    ['Catching', 'Tap a wild Pokémon to target it, wear it down, then tap Ball (or drag from Ball to aim and let go to throw). Hold Ball to choose which kind. You can carry six.'],
+    ['Your team', 'The portraits on the left are your party. Tap one to send it out, recall it, control it yourself or change how it fights. Bag holds your items: tap one to use it.'],
     ['Healing', 'Stand at an outpost to heal your team. If a wild Pokémon knocks out your whole team, you lose your bag and come back at an outpost a little later.'],
-    ['Trainer battles', 'Come close to another trainer and you battle one on one: slide to steer your Pokémon, hold the move buttons, and press Act to dodge. When one of yours is knocked out, tap the next one\'s card within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.'],
+    ['Trainer battles', 'Come close to another trainer and you battle one on one: steer with your left thumb, attack and dodge with your right. When one of yours is knocked out, tap the next one within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.'],
     ['The storm', 'Every few minutes the darkness closes in toward the crystal in the middle. Pokémon fall asleep in it, and a trainer who stays in it too long is out. Keep to the light.'],
     ['After the match', 'Win while signed in, and a Pokémon from your team goes to your PC for keeps.'],
   ];

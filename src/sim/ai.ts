@@ -101,7 +101,8 @@ export function fightMargin(t: Trainer, w: Mon, fieldLimit = 2): number {
   // The wild picks on whoever is nearest: on average the ones out first.
   let toLose = 0;
   for (const m of team) {
-    const r = damageRate(w, m, 1.45, true);
+    // What a wild actually lands is less than its moves could do (CONFIG.trainers.wildDamageShare).
+    const r = damageRate(w, m, 1.45, true) * ((CONFIG.trainers as { wildDamageShare?: number }).wildDamageShare ?? 1);
     toLose += r > 0 ? m.hp / r : 999;
   }
   return toLose / Math.max(0.01, toBeat);

@@ -60,6 +60,8 @@
     "_calmComment": "Round every trainer's starting point the wilds keep their land's base levels: no centre bonus within calmTiles[0] tiles of a start, the full bonus from calmTiles[1].",
     "calmTiles": [20, 55],
     "spawnClearance": 12,
+    "_startNearComment": "Every trainer's start has at least startNear.min wild Pokémon between spawnClearance and startNear.radius tiles away at the start of a match (a screen is about 16): a start with fewer gets the difference from its own land's table, at the land's base levels. Rare rotation picks (weight 1.5 or less) and starters/pseudo-legendaries are never used, so their odds are unchanged.",
+    "startNear": { "radius": 18, "min": 2 },
     "_eliteComment": "eliteChance of wild spawns are elites: eliteLevels more levels (evolved if that passes an evolution), marked with a gold star.",
     "eliteChance": 0.12,
     "eliteLevels": [

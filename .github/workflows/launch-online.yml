@@ -17,10 +17,10 @@ on:
         default: iad
         required: true
       size:
-        description: "Machine: friends (shared, 1 GB, about $7/mo) or launch (dedicated core, 2 GB, about $33/mo)"
+        description: "Machine: launch (dedicated core, 2 GB, about $33/mo: what the live server runs) or friends (shared, 1 GB, about $7/mo; picking it downsizes the server)"
         type: choice
-        options: [friends, launch]
-        default: friends
+        options: [launch, friends]
+        default: launch
 
 permissions:
   contents: read
@@ -90,7 +90,7 @@ jobs:
             sed -i "s/^primary_region = .*/primary_region = \"$region\"/" fly.toml
             echo "== attempt $attempt in $region" | tee -a deploy.log
             set +e
-            flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=${GITHUB_SHA::7} 2>&1 | tee -a deploy.log
+            flyctl deploy --config fly.toml --app "$APP" --remote-only --ha=false $VM --build-arg BUILD_ID=$(git rev-parse --short=7 HEAD) 2>&1 | tee -a deploy.log
             ok=${PIPESTATUS[0]}
             set -e
             if [ "$ok" = "0" ]; then exit 0; fi

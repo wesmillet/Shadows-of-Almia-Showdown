@@ -2020,6 +2020,36 @@ export class Match {
       p.rare = true;
     }
     for (const p of plan) this.spawnWild(p.row, p.t, p.spot);
+    // No empty start: a start with too few wilds within a screen or so (a quiet stretch of beach,
+    // say) gets a few from its own land's ordinary table, in the ring outside the spawn clearance.
+    const near = (CONFIG.wild as { startNear?: { radius: number; min: number } }).startNear;
+    if (near) {
+      for (const s of this.startSpots) {
+        const have = this.wilds.filter((w) => Math.hypot(w.x - s.x, w.y - s.y) <= near.radius).length;
+        if (have >= near.min) continue;
+        const ring: Array<{ x: number; y: number; land: Biome }> = [];
+        for (const [b, list] of Object.entries(byBiome) as Array<[Biome, Array<{ x: number; y: number }>]>) {
+          if (b === 'water') continue;
+          for (const p of list) {
+            const d = Math.hypot(p.x - s.x, p.y - s.y);
+            if (d < clear || d > near.radius || used.has(key(p))) continue;
+            const land = landAt(p, b);
+            if (land) ring.push({ ...p, land });
+          }
+        }
+        let added = 0;
+        for (const p of this.rng.shuffle(ring)) {
+          if (have + added >= near.min) break;
+          if (this.wilds.some((w) => Math.hypot(w.x - p.x, w.y - p.y) < 3)) continue;
+          const t = tables[p.land];
+          const rows = (t?.table ?? []).filter((r) => !r.habitat && r.weight > 1.5);
+          if (!t || !rows.length) continue;
+          used.add(key(p));
+          this.spawnWild(this.rng.weighted(rows, (r) => r.weight), t, p);
+          added++;
+        }
+      }
+    }
     this.spawnStrong(byBiome);
   }
 

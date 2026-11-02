@@ -60,7 +60,7 @@ export class Backups {
     this.running = true;
     const t0 = performance.now();
     const now = new Date();
-    const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+    const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
     const raw = join(this.dir, `.almia-${stamp}.db`);
     try {
       await backup(this.db, raw, { rate: 200 });
@@ -107,7 +107,7 @@ export class Backups {
 
   /** Local copies: the newest 8, plus the newest of each of the last 7 days. */
   private prune(): void {
-    const files = readdirSync(this.dir).filter((f) => /^almia-\d{8}-\d{4}\.db\.gz$/.test(f)).sort().reverse();
+    const files = readdirSync(this.dir).filter((f) => /^almia-\d{8}-\d{4}(\d{2})?\.db\.gz$/.test(f)).sort().reverse();
     const keep = new Set(files.slice(0, 8));
     const days = new Set<string>();
     for (const f of files) {

@@ -187,11 +187,13 @@ npx tsx server/checks/lagcomp.ts     # lag-compensated casts
   is made on every shutdown. Fly also snapshots the volume daily. To restore:
   ```
   fly ssh console --app almia-showdown -C "node dist-server/admin.js backups"   # what is on the volume
-  fly machine stop --app almia-showdown
-  fly machine start --app almia-showdown  # then, quickly, before anyone plays:
-  fly ssh console --app almia-showdown -C "node dist-server/admin.js restore s3:hourly/07.db.gz"
-  fly machine restart --app almia-showdown
+  # Drain first (/mod, Server tab: Drain) and wait for /health to show rooms 0. Then:
+  fly ssh console --app almia-showdown -C "node dist-server/admin.js restore s3:hourly/07.db.gz --drained"
+  fly machine restart --app almia-showdown   # straight away: the running server still writes to the old file
   ```
+  `restore` refuses while the server answers unless given `--drained`. Copy the backup you want
+  first if it is the newest one: the shutdown backup on restart is a new file, but restoring and
+  restarting in the same second could overwrite it.
   (`restore <file>` takes a file in /data/backups too; the replaced database is kept beside it.)
 - **Deploys without cutting matches short**: the live deploy (Actions) first stops new matches
   (players in the hub are told an update is coming), waits up to 20 minutes for the ones running,

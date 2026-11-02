@@ -14,7 +14,7 @@
  *   player-role <name>      back to an ordinary player
  *   backup                  a backup now (DATA_DIR/backups, and S3 when set up)
  *   backups                 the backups on the volume
- *   restore <file|s3:key>   puts a backup back (STOP THE SERVER FIRST: fly machine stop); the database
+ *   restore <file|s3:key> [--drained]   puts a backup back (STOP THE SERVER FIRST: fly machine stop); the database
  *                           it replaces is kept as almia.db.before-restore-<time>. s3:latest.db.gz,
  *                           s3:hourly/07.db.gz, s3:daily/2026-11-02.db.gz (under SERVER_KIND/)
  */
@@ -33,6 +33,16 @@ if (cmd === 'restore') {
   // Before the database is opened: it is about to be replaced.
   if (!a) {
     console.error('restore <file | s3:key>');
+    process.exit(1);
+  }
+  // A running server keeps writing to the database being replaced (into the kept copy), so whatever
+  // happens between the restore and the restart is lost. Refuse unless told the server is drained.
+  const port = process.env.PORT ?? '8080';
+  const running = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1500) }).then(() => true, () => false);
+  if (running && b !== '--drained') {
+    console.error(`The game server is running on port ${port}. Drain it first (/mod, Server tab), then run`);
+    console.error(`  restore ${a} --drained`);
+    console.error('and restart the machine straight after (fly machine restart): anything saved in between is lost.');
     process.exit(1);
   }
   let zipped: Buffer;

@@ -5,12 +5,13 @@
  */
 import { boundKey, keyName } from '../settings';
 import { el, overlayRoot } from './overlay';
+import { Input } from '../core/input';
 
 const CSS = `
 .almia-how { width: min(560px, calc(100vw - 24px)) !important; max-height: calc(100vh - 24px); overflow-y: auto; }
 .almia-how h3 { margin: 12px 0 4px; font-size: 15px; font-weight: normal; color: #c2611a; }
 .almia-how p { margin: 0 0 4px; font-size: 14px; line-height: 1.45; }
-.almia-how .row { display: flex; justify-content: flex-end; margin-top: 12px; }
+.almia-how .row { display: flex; justify-content: flex-end; margin-top: 12px; position: sticky; bottom: -1px; padding: 6px 0 2px; background: inherit; }
 `;
 const SEEN = 'almia.howToPlay.seen';
 let styled = false;
@@ -39,7 +40,16 @@ export function openHowToPlay(): Promise<void> {
   }
   const k = (code: string) => keyName(boundKey(code));
   const move = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].map(k).join('');
-  const sections: Array<[string, string]> = [
+  const touchSections: Array<[string, string]> = [
+    ['The goal', 'Ten trainers on one island. Be the last trainer standing.'],
+    ['Moving and fighting', 'Put your left thumb on the field and slide it to walk. Your Pokémon follow you and fight wild Pokémon nearby on their own (Auto). Hold Move 1 or Move 2 to use a move yourself: it goes at your target, or wherever your finger touches the field. Tap one of your Pokémon to steer it, Trainer to stop.'],
+    ['Catching', 'Wear a wild Pokémon down, tap it (or Target) and press Ball. You can carry six. Tap a bag slot to use what is in it.'],
+    ['Healing', 'Stand at an outpost to heal your team. If a wild Pokémon knocks out your whole team, you lose your bag and come back at an outpost a little later.'],
+    ['Trainer battles', 'Come close to another trainer and you battle one on one: slide to steer your Pokémon, hold the move buttons, and press Act to dodge. When one of yours is knocked out, tap the next one\'s card within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.'],
+    ['The storm', 'Every few minutes the darkness closes in toward the crystal in the middle. Pokémon fall asleep in it, and a trainer who stays in it too long is out. Keep to the light.'],
+    ['After the match', 'Win while signed in, and a Pokémon from your team goes to your PC for keeps.'],
+  ];
+  const keySections: Array<[string, string]> = [
     ['The goal', 'Ten trainers on one island. Be the last trainer standing.'],
     ['Moving and fighting', `Walk with ${move} or the arrow keys. Your Pokémon follow you and fight wild Pokémon nearby on their own (auto-battle, ${k('KeyR')}). To use a move yourself, aim with the mouse: left click for the first move, right click for the second (or ${k('KeyQ')} and ${k('KeyE')}). Click one of your Pokémon to steer it, Esc to stop.`],
     ['Catching', `Wear a wild Pokémon down, target it (${k('Tab')} or click it) and throw a ball (${k('KeyF')}). You can carry six. Items and balls are in your bag (1-6).`],
@@ -48,6 +58,7 @@ export function openHowToPlay(): Promise<void> {
     ['The storm', 'Every few minutes the darkness closes in toward the crystal in the middle. Pokémon fall asleep in it, and a trainer who stays in it too long is out. Keep to the light.'],
     ['After the match', 'Win while signed in, and a Pokémon from your team goes to your PC for keeps.'],
   ];
+  const sections = Input.touch ? touchSections : keySections;
   return new Promise((resolve) => {
     const root = overlayRoot();
     // The game treats .almia-modal-wrap as "a dialog is open" and stops reading clicks.
@@ -57,7 +68,7 @@ export function openHowToPlay(): Promise<void> {
     root.appendChild(wrap);
     box.appendChild(el('h2', '', 'How to play'));
     for (const [h, p] of sections) box.append(el('h3', '', h), el('p', '', p));
-    box.appendChild(el('p', '', 'Controls can be changed in Options.'));
+    if (!Input.touch) box.appendChild(el('p', '', 'Controls can be changed in Options.'));
     const row = el('div', 'row');
     const ok = el('button', 'almia-btn', 'Let’s go');
     row.appendChild(ok);

@@ -625,6 +625,11 @@ export class MirrorMatch {
     m.stylerLoop = (mon: Mon) => net.cmd('stylerLoop', mon.id);
     m.stylerBreak = (mon: Mon) => net.cmd('stylerBreak', mon.id);
     m.snag = (i: number) => say('snag', i);
+    // Kept locally at once (the server's next view agrees), so the prompt closes straight away.
+    m.declineSnag = () => {
+      seat().snagOffer = null;
+      net.cmd('snagNo');
+    };
     m.extractWithVoucher = (slot: number, i: number) => say('extract', slot, i);
     m.teach = (_t: Trainer, slot: number, replace: number, target?: number | null) => say('teach', slot, replace, target ?? -1);
     m.equip = (_t: Trainer, slot: number, target?: number | null) => say('equip', slot, target ?? -1);

@@ -186,6 +186,9 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
       else m.stylerBreak(mon);
       return '';
     }
+    case 'snagNo':
+      m.declineSnag();
+      return '';
     case 'snag': {
       const i = int(a[0], 0, 11);
       return i === null ? '' : m.snag(i);

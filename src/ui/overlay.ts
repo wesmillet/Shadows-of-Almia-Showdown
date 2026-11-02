@@ -2,6 +2,7 @@
  * HTML on top of the game canvas, for the few things a canvas is bad at: typing (chat, sign-in)
  * and scrolling text. Styled after the pixel skin: cream panels, dark ink, BoldPixels lettering.
  */
+import { Input } from '../core/input';
 import type { Connection } from '../net/connection';
 import type { ServerMsg } from '../net/protocol';
 
@@ -128,7 +129,7 @@ export class ChatPanel {
     this.onName = opts.onName;
     this.el = el('div', `almia-panel almia-chat${opts.compact ? ' compact' : ''}${opts.side ? ' side' : ''}${opts.collapsed ? ' collapsed' : ''}`);
     const head = el('div', 'almia-chat-head');
-    head.append(el('span', '', 'Global chat'), el('span', '', 'Enter to talk'));
+    head.append(el('span', '', 'Global chat'), el('span', '', Input.touch ? 'Tap to open' : 'Enter to talk'));
     head.onclick = () => this.el.classList.toggle('collapsed');
     this.log = el('div', 'almia-chat-log');
     const row = el('div', 'almia-chat-row');

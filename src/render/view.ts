@@ -70,8 +70,14 @@ export class View {
 
   /** HUD text scale: 1 at 1280x720, following the shorter way round so the HUD always fits. */
   get baseScale(): number {
-    return Math.min(this.height / 720, this.width / 1280);
+    return Math.min(this.height / 720, this.width / 1280) * View.uiBoost;
   }
+
+  /**
+   * Larger HUD and buttons on a small touch screen (a phone on its side), so fingers can hit them.
+   * Set by the game each frame; 1 with a mouse.
+   */
+  static uiBoost = 1;
 
   /** Everything in the world draws at one integer scale: 16 px tiles at 3x = 48 px, sprites at 3x. */
   static readonly PIXEL_SCALE = 3;

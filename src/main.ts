@@ -1,6 +1,7 @@
 import { track } from './stats';
 import { GameLoop } from './core/loop';
 import { Input } from './core/input';
+import { touchFrameEnd } from './ui/touchControls';
 import { hashSeed, Rng } from './core/rng';
 import { createGround } from './ground';
 import { Sunnyside } from './ground/sunnyside';
@@ -579,11 +580,16 @@ async function boot(): Promise<void> {
 
   const loop = new GameLoop({
     step(dt) {
+      // The match marks the field as the touch stick while it runs; no other screen has one.
+      Input.stickZone = null;
       screen?.step(dt, input);
       input.endStep();
     },
     render(alpha, frameDt) {
+      // Menus keep their size; the match grows its HUD on a phone (MatchScreen.render).
+      View.uiBoost = 1;
       screen?.render(alpha, frameDt);
+      touchFrameEnd(input);
     },
   });
   loop.start();

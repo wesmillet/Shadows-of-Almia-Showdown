@@ -3,6 +3,7 @@
  * minimap with the darkness (top right), party strip with portraits and HP
  * (bottom), move wheel (bottom right) and the item bar (bottom centre).
  */
+import { Input } from '../core/input';
 import { canMega } from '../sim/mega';
 import { DIR_VECTORS, clamp } from '../core/math';
 import type { View } from '../render/view';
@@ -26,7 +27,7 @@ function lightenHex(hex: string): string {
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number } | { kind: 'row'; index: number };
 
 interface Rect {
   x: number;
@@ -290,7 +291,14 @@ export class Hud {
     ctx.fillText(t, x + w / 2, y + h - 3 * s);
   }
 
+  /** Lines of a numbered prompt (shop, TM, voucher) a finger or click can pick. */
+  private rowRects: Rect[] = [];
+
   hitTest(x: number, y: number): HudHit | null {
+    for (let i = 0; i < this.rowRects.length; i++) {
+      const r = this.rowRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'row', index: i };
+    }
     for (const d of this.learnRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'learn', index: d.index };
     for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
     for (const d of this.releaseRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'release', index: d.index };
@@ -510,6 +518,7 @@ export class Hud {
         : 'Press its number key to use it';
       this.ink(ctx, hint, tx, y + 44 * s, 10, FLAT_INK.dim, 'left', w - (tx - x) - 16 * s);
     }
+    this.rowRects = [];
     if (st.teach) {
       const head = st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`;
       const w = this.fitWidth(ctx, [[head, 14], ['Press 1 or 2 to replace a move, Esc to keep them', 10], ...st.teach.moves.map((m): [string, number] => [`    ${m}`, 12])], 260 * s);
@@ -520,6 +529,7 @@ export class Hud {
       this.ink(ctx, head, x + w / 2, y + 32 * s, 14, FLAT_INK.text, 'center', w - 36 * s);
       this.ink(ctx, 'Press 1 or 2 to replace a move, Esc to keep them', x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
       st.teach.moves.forEach((mv, i) => {
+        this.rowRects.push({ x: x + 20 * s, y: y + 63 * s + i * 20 * s, w: w - 40 * s, h: 20 * s });
         this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
         this.ink(ctx, mv, x + 48 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.text, 'left', w - 80 * s);
       });
@@ -533,6 +543,7 @@ export class Hud {
       this.ink(ctx, 'Extraction Voucher', x + w / 2, y + 32 * s, 15, FLAT_INK.accent, 'center', w - 36 * s);
       this.ink(ctx, 'Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
       st.extract.names.forEach((n, i) => {
+        this.rowRects.push({ x: x + 20 * s, y: y + 63 * s + i * 20 * s, w: w - 40 * s, h: 20 * s });
         this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
         this.ink(ctx, n, x + 48 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.text, 'left', w - 80 * s);
       });
@@ -550,6 +561,7 @@ export class Hud {
       st.shop.entries.forEach((e, i) => {
         const yy = y + 94 * s + i * 21 * s;
         const col = e.affordable ? FLAT_INK.text : '#b8a890';
+        this.rowRects.push({ x: x + 20 * s, y: yy - 15 * s, w: w - 40 * s, h: 21 * s });
         if (i % 2 === 0) {
           ctx.fillStyle = 'rgba(138,106,74,0.1)';
           ctx.fillRect(x + 20 * s, yy - 15 * s, w - 40 * s, 21 * s);
@@ -1147,12 +1159,14 @@ export class Hud {
       ctx.restore();
       cy -= 4 * s;
     };
-    if (!match.controlled) chip('Options · Esc', FLAT_INK.dim);
-    chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
+    // On a touch screen the on-screen buttons say these themselves.
+    const keys = !Input.touch;
+    if (!match.controlled && keys) chip('Options · Esc', FLAT_INK.dim);
+    if (keys) chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
     // Dodging is for steering a Pokémon (Pokémon mode or a battle), not walking the trainer.
     const dcd = m.dodgeCd ?? 0;
     if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
-    if (!match.playerDuel) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
+    if (!match.playerDuel && (keys || match.controlled)) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
     if (canMega(match.player, m)) chip('Mega Evolve · M', FLAT_INK.storm, 'rgba(190,120,255,0.95)');
     // A legendary in its bout can be caught: say so, with the balls left.
     if (match.legendBoutFoe()) {

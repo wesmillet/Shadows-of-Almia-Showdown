@@ -5,10 +5,11 @@
  */
 import type { Connection } from '../net/connection';
 import { isDev, rareChest } from '../dev';
-import type { Input } from '../core/input';
+import { Input } from '../core/input';
+import { showTouchControls } from './touchControls';
 import { DIR_VECTORS, clamp, dirFromVector } from '../core/math';
 import { Lighting } from '../render/lighting';
-import type { View } from '../render/view';
+import { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { music, type TrackId } from '../audio/music';
 import { openOptions } from './optionsMenu';
@@ -315,7 +316,15 @@ export class MatchScreen implements Screen {
     const duelSide = this.playerDuelSide();
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
     const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
-    if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
+    // On a touch screen the open field on the left is the movement stick.
+    Input.stickZone = (x, y) => x < v.width * 0.42 && !this.hud.hitTest(x, y);
+    if (Input.touch) {
+      // A finger on the field aims there; otherwise moves go at the foe in battle, the targeted
+      // wild Pokémon, or straight ahead.
+      const ax = input.moveAxis();
+      if (ax.x || ax.y) this.touchDir = { x: ax.x, y: ax.y };
+      this.match.aim = input.mouseDown && !overHud ? v.toWorld(input.mouseX, input.mouseY) : this.touchAim();
+    } else if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
     // The ball locks onto the nearest wild; clicking another wild (or Tab) switches the lock.
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
@@ -447,6 +456,11 @@ export class MatchScreen implements Screen {
     // Q and E: moves 1 and 2 again, next to WASD.
     if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
     if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
+    // The on-screen move buttons: held, they keep using the move as it comes off cooldown.
+    for (const [code, slot] of [['TouchA', 0], ['TouchB', 1]] as const) {
+      if (input.pressed(code)) this.castFeedback(this.match.playerCast(slot));
+      else if (input.down(code)) this.match.playerCast(slot);
+    }
     // M: Mega Evolve the Pokémon you are steering (or your lead) when it holds its Mega Stone.
     if (input.pressed('KeyM')) {
       const msg = this.match.megaEvolve(this.match.player);
@@ -476,6 +490,10 @@ export class MatchScreen implements Screen {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind === 'item') this.say(this.match.sell(this.match.player, tab, h.index), 1.6);
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
+      else if (h?.kind === 'row') {
+        const msg = this.match.buy(shop, h.index);
+        if (msg) this.say(msg, 1.6);
+      }
     }
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
     // 1-9, and 0 for a tenth line (the merchant's Storm Mask days).
@@ -626,6 +644,23 @@ export class MatchScreen implements Screen {
 
   /** Set by the click that switched modes, until the button comes up. */
   private holdBlocked = false;
+
+  /** The way the touch stick last pointed (moves go that way when nothing is targeted). */
+  private touchDir = { x: 0, y: 1 };
+
+  /** Where a move from an on-screen button goes: the foe in battle, the target, else ahead. */
+  private touchAim(): { x: number; y: number } {
+    const side = this.playerDuelSide();
+    const d = this.match.playerDuel;
+    if (side && d) {
+      const foe = d.a === side ? d.b : d.a;
+      if (foe.mon && !foe.mon.fainted) return { x: foe.mon.x, y: foe.mon.y };
+    }
+    const t = this.match.lockTarget;
+    const from = this.match.controlled ?? lead(this.match.player) ?? this.match.player;
+    if (t && !t.fainted && !t.captured && Math.hypot(t.x - from.x, t.y - from.y) < 12) return { x: t.x, y: t.y };
+    return { x: from.x + this.touchDir.x * 3, y: from.y + this.touchDir.y * 3 };
+  }
 
   /** The player's own Pokémon out on the field under (or nearest) a screen point. */
   private ownMonNear(sx: number, sy: number): Mon | null {
@@ -1161,7 +1196,7 @@ export class MatchScreen implements Screen {
   /** The Snag Machine prompt after a won battle: 1-6 (or a click on a line) takes that Pokémon, Escape keeps the machine. */
   private handleSnagInput(input: Input): void {
     if (input.pressed('Escape')) {
-      this.match.snagOffer = null;
+      this.match.declineSnag();
       this.say('You kept your Snag Machine', 1.4);
       return;
     }
@@ -1198,7 +1233,7 @@ export class MatchScreen implements Screen {
     for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) pick = i;
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
-      if (h?.kind === 'portrait') pick = h.index;
+      if (h?.kind === 'portrait' || h?.kind === 'row') pick = h.index;
     }
     if (pick < 0 || pick >= this.match.player.party.length) return;
     this.extractPick = null;
@@ -1213,8 +1248,13 @@ export class MatchScreen implements Screen {
       return;
     }
     const slot = this.teach.slot;
+    let tapped = -1;
+    for (const c of input.takeClicks()) {
+      const h = this.hud.hitTest(c.x, c.y);
+      if (h?.kind === 'row') tapped = h.index;
+    }
     for (let i = 0; i < MOVE_SLOTS; i++) {
-      if (input.pressed(`Digit${i + 1}`)) {
+      if (input.pressed(`Digit${i + 1}`) || tapped === i) {
         const msg = this.match.teach(this.match.player, slot, i, this.teach.target);
         this.say(msg || 'Could not teach that move', 2.2);
         this.teach = null;
@@ -2345,6 +2385,8 @@ export class MatchScreen implements Screen {
   }
 
   render(alpha: number, frameDt: number): void {
+    // A phone on its side is short: the HUD grows so a finger can hit it.
+    View.uiBoost = Input.touch && !this.spectator ? Math.min(1.35, Math.max(1, 430 / window.innerHeight)) : 1;
     const v = this.ctx.view;
     const p = this.match.player;
     // A hit-stop that began in this frame's step did not stop that step, so effects take their step too.
@@ -2433,8 +2475,46 @@ export class MatchScreen implements Screen {
     this.drawDowned(v);
     this.drawOverlay(v);
     this.spectator?.draw(v);
+    this.drawTouch(v);
     v.camX -= ox;
     v.camY -= oy;
+  }
+
+  /** On a touch screen: the on-screen buttons, and the stick under the left thumb. */
+  private drawTouch(v: View): void {
+    if (this.spectator || this.match.outcome || this.match.player.downUntil != null) return;
+    const p = this.match.player;
+    showTouchControls(this.ctx.input, {
+      prompt: !!(this.teach || this.extractPick || this.match.snagOffer || this.shopOpen || this.chestOpen !== null),
+      battle: !!this.playerDuelSide(),
+      styler: this.match.hasStyler(p),
+      auto: this.match.auto,
+      steering: !!this.match.controlled,
+    });
+    const st = this.ctx.input.stick;
+    if (!Input.touch || !st) return;
+    const k = this.ctx.input.dpr();
+    const r = 40 * k;
+    const dx = st.x - st.x0;
+    const dy = st.y - st.y0;
+    const d = Math.hypot(dx, dy);
+    const f = d > r ? r / d : 1;
+    const h = v.hud;
+    h.save();
+    h.globalAlpha = 0.5;
+    h.strokeStyle = '#fff';
+    h.lineWidth = 2 * k;
+    h.fillStyle = 'rgba(30,20,12,0.35)';
+    h.beginPath();
+    h.arc(st.x0, st.y0, r * 1.15, 0, Math.PI * 2);
+    h.fill();
+    h.stroke();
+    h.globalAlpha = 0.8;
+    h.fillStyle = '#f4e6c8';
+    h.beginPath();
+    h.arc(st.x0 + dx * f, st.y0 + dy * f, r * 0.45, 0, Math.PI * 2);
+    h.fill();
+    h.restore();
   }
 
   /** Wiped out by wild Pokémon: a dark screen with the respawn countdown. */

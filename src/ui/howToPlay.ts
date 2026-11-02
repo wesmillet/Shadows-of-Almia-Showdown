@@ -1,0 +1,83 @@
+/**
+ * How to play: the goal and the controls on one card. It opens by itself at the start of a
+ * browser's first match, and from Options at any time. Keys follow the player's own bindings.
+ * Nothing secret is mentioned (no hidden encounters or capture rules).
+ */
+import { boundKey, keyName } from '../settings';
+import { el, overlayRoot } from './overlay';
+
+const CSS = `
+.almia-how { width: min(560px, calc(100vw - 24px)) !important; max-height: calc(100vh - 24px); overflow-y: auto; }
+.almia-how h3 { margin: 12px 0 4px; font-size: 15px; font-weight: normal; color: #c2611a; }
+.almia-how p { margin: 0 0 4px; font-size: 14px; line-height: 1.45; }
+.almia-how .row { display: flex; justify-content: flex-end; margin-top: 12px; }
+`;
+const SEEN = 'almia.howToPlay.seen';
+let styled = false;
+
+/** True until this browser has been shown the card once. */
+export function howToPlayUnseen(): boolean {
+  try {
+    return localStorage.getItem(SEEN) !== '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Opens the card; resolves when it closes. Marks it seen. */
+export function openHowToPlay(): Promise<void> {
+  try {
+    localStorage.setItem(SEEN, '1');
+  } catch {
+    /* private window: shown again next time, harmless */
+  }
+  if (!styled) {
+    const st = document.createElement('style');
+    st.textContent = CSS;
+    document.head.appendChild(st);
+    styled = true;
+  }
+  const k = (code: string) => keyName(boundKey(code));
+  const move = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].map(k).join('');
+  const sections: Array<[string, string]> = [
+    ['The goal', 'Ten trainers on one island. Be the last trainer standing.'],
+    ['Moving and fighting', `Walk with ${move} or the arrow keys. Your Pokémon follow you and fight wild Pokémon nearby on their own (auto-battle, ${k('KeyR')}). To use a move yourself, aim with the mouse: left click for the first move, right click for the second (or ${k('KeyQ')} and ${k('KeyE')}). Click one of your Pokémon to steer it, Esc to stop.`],
+    ['Catching', `Wear a wild Pokémon down, target it (${k('Tab')} or click it) and throw a ball (${k('KeyF')}). You can carry six. Items and balls are in your bag (1-6).`],
+    ['Healing', 'Stand at an outpost to heal your team. If a wild Pokémon knocks out your whole team, you lose your bag and come back at an outpost a little later.'],
+    ['Trainer battles', `Come close to another trainer and you battle one on one: steer your Pokémon with ${move}, aim and use moves with the mouse, dodge with ${k('Space')}. When one of yours is knocked out, pick the next (click or 1-6) within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.`],
+    ['The storm', 'Every few minutes the darkness closes in toward the crystal in the middle. Pokémon fall asleep in it, and a trainer who stays in it too long is out. Keep to the light.'],
+    ['After the match', 'Signed in, you keep Pokémon from your team in your PC.'],
+  ];
+  return new Promise((resolve) => {
+    const root = overlayRoot();
+    // The game treats .almia-modal-wrap as "a dialog is open" and stops reading clicks.
+    const wrap = el('div', 'almia-modal-wrap');
+    const box = el('div', 'almia-panel almia-modal almia-how');
+    wrap.appendChild(box);
+    root.appendChild(wrap);
+    box.appendChild(el('h2', '', 'How to play'));
+    for (const [h, p] of sections) box.append(el('h3', '', h), el('p', '', p));
+    box.appendChild(el('p', '', 'Controls can be changed in Options.'));
+    const row = el('div', 'row');
+    const ok = el('button', 'almia-btn', 'Let’s go');
+    row.appendChild(ok);
+    box.appendChild(row);
+    const close = (): void => {
+      window.removeEventListener('keydown', onKey, true);
+      wrap.remove();
+      resolve();
+    };
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.code === 'Escape' || e.code === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    ok.addEventListener('click', close);
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.target === wrap) close();
+    });
+  });
+}

@@ -162,7 +162,7 @@ async function until(fn, ms, step = 500) {
   note('every player reached a result', finished.size === all.length, [...finished.values()].map((f) => f.outcome));
   // The results screen: the test account keeps a Pokémon; a knocked-out guest watches the rest.
   await sleep(4000);
-  const ends = await Promise.all(all.map((c) => c.p.evaluate(() => { const s = window.showdown.screen; return { has: !!s && typeof s.doneRect === 'function', watch: !!(s && s.onWatch), picks: s?.info?.picks ?? null }; }).catch(() => null)));
+  const ends = await Promise.all(all.map((c) => c.p.evaluate(() => { const s = window.showdown.screen; return { has: !!s && typeof s.doneRect === 'function', screen: s?.constructor?.name ?? null, watch: !!(s && s.onWatch), picks: s?.info?.picks ?? null }; }).catch(() => null)));
   note('each player sees the results screen', ends.every((e) => e && e.has), ends);
   await A.p.screenshot({ path: `${OUT}/2_results_A.png` });
   const aPick = await A.p.evaluate(async () => {

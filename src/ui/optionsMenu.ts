@@ -7,6 +7,7 @@ import { music } from '../audio/music';
 import { KEY_ACTIONS, boundKey, keyName, saveSettings, settings } from '../settings';
 import { el, overlayRoot } from './overlay';
 import { openHowToPlay } from './howToPlay';
+import { openCredits } from './credits';
 
 /** Layout only: the look is the game's own cream panel, modal and buttons (overlay.ts). */
 const CSS = `
@@ -61,7 +62,11 @@ export function openOptions(): Promise<void> {
       box.appendChild(el('h2', '', 'Options'));
       const how = el('button', 'almia-btn alt', 'How to play');
       how.addEventListener('click', () => void openHowToPlay());
-      box.appendChild(how);
+      const credits = el('button', 'almia-btn alt', 'Credits');
+      credits.addEventListener('click', () => void openCredits());
+      const top = el('div', 'row');
+      top.append(how, credits);
+      box.appendChild(top);
       box.appendChild(el('div', 'hint', 'Saved in this browser as you change them.'));
 
       // Sound.

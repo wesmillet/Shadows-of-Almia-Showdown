@@ -85,6 +85,8 @@
     "bossWanderRadius": 2
   },
   "trainers": {
+    "_wildDamageComment": "How bots size up a wild Pokémon: they count wildDamageShare of the damage its moves could do. Measured in real fights, wild Pokémon land about half to two thirds of that (they pause between moves, wander and miss), so at 1.0 bots passed up many fights they win.",
+    "wildDamageShare": 0.7,
     "count": 9,
     "_speedComment": "speed: how fast trainers walk to their spots in a one-on-one battle. Out on the map computer trainers walk at the player's pace (player.speedTilesPerSec), start like a new player (one starter rolled from the new-player tiers, the player's level, bag and money) and play by the same rules (src/sim/bot.ts).",
     "speed": 4.8,

@@ -10,7 +10,7 @@ import { openHowToPlay } from './howToPlay';
 import { openCredits } from './credits';
 import { music } from '../audio/music';
 import { loadPc } from '../pc';
-import type { Input } from '../core/input';
+import { Input } from '../core/input';
 import { dirFromVector, type Dir8 } from '../core/math';
 import type { DecorItem, GroundRenderer } from '../ground/types';
 import { Lighting } from '../render/lighting';
@@ -1029,7 +1029,7 @@ export class TitleScreen implements Screen {
       ['Credits', this.rowRect(4)],
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
-    text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler · N music', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
+    text(v, Input.touch ? 'Left thumb on the field to walk · move buttons attack (drag to aim) · tap a wild Pokémon, then Ball · tap a portrait for your team' : 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler · N music', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     const sm = strip(v, stamp, 0, -9999, 11);

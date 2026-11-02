@@ -1,4 +1,4 @@
-import type { Input } from '../core/input';
+import { Input } from '../core/input';
 import type { View } from '../render/view';
 import type { PixelUi } from './pixelUi';
 
@@ -105,6 +105,7 @@ export function fitSize(view: View, s: string, size: number, maxWidth: number, c
  * the last one shrunk to fit if words are left over. Returns the number of lines drawn.
  */
 export function wrapText(view: View, s: string, x: number, y: number, size: number, maxWidth: number, lineHeight: number, maxLines: number, opts: TextOpts = {}): number {
+  if (Input.touch) s = touchWording(s);
   const ctx = opts.ctx ?? view.hud;
   ctx.save();
   ctx.font = uiFont(size * view.baseScale);
@@ -125,6 +126,7 @@ export function wrapText(view: View, s: string, x: number, y: number, size: numb
 }
 
 export function text(view: View, s: string, x: number, y: number, size: number, opts: TextOpts = {}): void {
+  if (Input.touch) s = touchWording(s);
   const ctx = opts.ctx ?? view.hud;
   if (opts.maxWidth !== undefined) size = fitSize(view, s, size, opts.maxWidth, ctx);
   ctx.save();
@@ -150,6 +152,7 @@ const DISABLED = '#44405a';
  * brightens.
  */
 export function button(view: View, label: string, x: number, y: number, w: number, h: number, hover: boolean, accent = PRIMARY): void {
+  if (Input.touch) label = touchWording(label);
   const ctx = view.hud;
   const k = skinPx(view);
   const disabled = accent === DISABLED;
@@ -275,4 +278,22 @@ export function darken(hex: string, k: number): string {
 export function rgba(hex: string, a: number): string {
   const [r, g, b] = hexToRgb(hex);
   return `rgba(${r},${g},${b},${a})`;
+}
+
+/**
+ * A message for a touch screen: the keyboard and mouse hints come out ("(V to land)", "· Esc"),
+ * and clicking becomes tapping.
+ */
+export function touchWording(s: string): string {
+  return s
+    .replace(/[.,]?\s*Esc or click your trainer to go back/g, '')
+    .replace(/\s*\((?:[A-Z]|Esc|Space|Tab|Shift|Enter)(?:[\s+,][^)]*)?\)/g, '')
+    .replace(/\s*·\s*(?:Esc|Space|Tab|Enter|[A-Z])(?=$|\s|\))/g, '')
+    .replace(/,? then (?:press )?[A-Z] to throw/g, ', then tap Ball')
+    .replace(/hover a party card and click its X to release one/g, 'release one from its portrait')
+    .replace(/ or press [0-9](?:-[0-9])?/g, '')
+    .replace(/^[1-9] {2}/, '')
+    .replace(/\bclick/g, 'tap')
+    .replace(/\bClick/g, 'Tap')
+    .trim();
 }

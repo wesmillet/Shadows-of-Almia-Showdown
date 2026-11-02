@@ -893,6 +893,11 @@ export class Match {
     return t.items.findIndex((e) => ITEMS[e?.id ?? '']?.kind === 'styler');
   }
 
+  /** Turns the Snag Machine offer down: the machine is kept. */
+  declineSnag(): void {
+    this.snagOffer = null;
+  }
+
   /**
    * Takes Pokémon `index` of the beaten trainer's party with the Snag Machine (spent). It joins
    * the player's party at half HP. Returns what happened.

@@ -3,6 +3,7 @@
  * minimap with the darkness (top right), party strip with portraits and HP
  * (bottom), move wheel (bottom right) and the item bar (bottom centre).
  */
+import { Input } from '../core/input';
 import { canMega } from '../sim/mega';
 import { DIR_VECTORS, clamp } from '../core/math';
 import type { View } from '../render/view';
@@ -26,7 +27,7 @@ function lightenHex(hex: string): string {
 /** ?debug in the address shows the map and lighting stamp in the corner. */
 const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
 
-export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number };
+export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number } | { kind: 'row'; index: number };
 
 interface Rect {
   x: number;
@@ -36,6 +37,8 @@ interface Rect {
 }
 
 export interface HudState {
+  /** Played by touch: the on-screen controls stand in for the party, moves and bag. */
+  touch?: boolean;
   mouseX: number;
   mouseY: number;
   /** Safe radius of the darkness in tiles (Infinity = none yet). */
@@ -104,6 +107,8 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
 
 /** The button that casts each move slot (Q and E work too). */
 const MOVE_KEYS = ['LMB', 'RMB'];
+/** The keyboard and mouse wording, or the touch wording on a touch screen. */
+const T = (keys: string, touch: string): string => (Input.touch ? touch : keys);
 
 const STATUS_COLORS: Record<string, string> = { sleep: '#8f7cff', burn: '#ff7a3d', paralysis: '#f4d03f', poison: '#b06cff', freeze: '#8fe0ff', confusion: '#ff8fd0' };
 
@@ -217,7 +222,7 @@ export class Hud {
     const title = `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`;
     // The window is as wide as the slots (or the title) and the help wraps to that width.
     const w = this.fitWidth(ctx, [[title, 15]], Math.max(gridW + 48 * s, 330 * s));
-    const help = this.wrapLines(ctx, 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it', 9.5, w - 40 * s);
+    const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it'), 9.5, w - 40 * s);
     const keep = this.wrapLines(ctx, "Every town's chest holds the same things, kept between games and safe if you're wiped out · E to close", 9.5, w - 40 * s);
     const lineH = 14 * s;
     const textH = (help.length + keep.length) * lineH;
@@ -242,7 +247,7 @@ export class Hud {
         ctx.fillStyle = 'rgba(138,106,74,0.15)';
         ctx.fillRect(sx, sy, slot, slot);
       }
-      if (i < 9) this.ink(ctx, String(i + 1), sx + 5 * s, sy + 12 * s - up, 8, FLAT_INK.text);
+      if (i < 9 && !Input.touch) this.ink(ctx, String(i + 1), sx + 5 * s, sy + 12 * s - up, 8, FLAT_INK.text);
       const def = entry ? ITEMS[entry.id] : undefined;
       if (entry && def) {
         const up2 = hover ? this.px2 : 0;
@@ -288,7 +293,14 @@ export class Hud {
     ctx.fillText(t, x + w / 2, y + h - 3 * s);
   }
 
+  /** Lines of a numbered prompt (shop, TM, voucher) a finger or click can pick. */
+  private rowRects: Rect[] = [];
+
   hitTest(x: number, y: number): HudHit | null {
+    for (let i = 0; i < this.rowRects.length; i++) {
+      const r = this.rowRects[i] as Rect;
+      if (hit(x, y, r.x, r.y, r.w, r.h)) return { kind: 'row', index: i };
+    }
     for (const d of this.learnRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'learn', index: d.index };
     for (const d of this.discardRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'discard', index: d.index };
     for (const d of this.releaseRects) if (hit(x, y, d.x, d.y, d.w, d.h)) return { kind: 'release', index: d.index };
@@ -452,7 +464,19 @@ export class Hud {
     this.occupied = [];
     this.drawCounter(ctx, match, st, s);
     this.drawMinimap(ctx, match, st, s);
-    this.drawParty(ctx, match, st, s);
+    // On a touch screen the party, moves and bag are the on-screen controls (touchControls.ts); the
+    // bag row shows here only while a shop or chest needs it.
+    const touch = !!st.touch;
+    if (touch) {
+      this.portraitRects = [];
+      this.behaviorRects = [];
+      this.moveRects = [];
+      this.discardRects = [];
+      this.releaseRects = [];
+      this.heldRects = [];
+      this.itemRects = [];
+      this.tabRects = [];
+    } else this.drawParty(ctx, match, st, s);
     // An item dragged over a party card: that card lights up (the item would go to that Pokémon).
     if (st.dragItem) {
       for (const r of this.portraitRects) {
@@ -466,8 +490,8 @@ export class Hud {
         ctx.restore();
       }
     }
-    this.drawMoves(ctx, match, st, s);
-    this.drawItems(ctx, match, st, s);
+    if (!touch) this.drawMoves(ctx, match, st, s);
+    if (!touch || st.shop || st.chest) this.drawItems(ctx, match, st, s);
     this.drawLearn(ctx, st, s);
     // The darkness strip, top centre (the battle banner takes that spot in a battle), and the
     // messages stacked under it: cream strips, older ones above, smaller and dimmer.
@@ -508,51 +532,55 @@ export class Hud {
         : 'Press its number key to use it';
       this.ink(ctx, hint, tx, y + 44 * s, 10, FLAT_INK.dim, 'left', w - (tx - x) - 16 * s);
     }
+    this.rowRects = [];
     if (st.teach) {
       const head = st.teach.title ?? `Teach ${st.teach.moveName} to ${st.teach.mon}?`;
-      const w = this.fitWidth(ctx, [[head, 14], ['Press 1 or 2 to replace a move, Esc to keep them', 10], ...st.teach.moves.map((m): [string, number] => [`    ${m}`, 12])], 260 * s);
+      const w = this.fitWidth(ctx, [[head, 14], [T('Press 1 or 2 to replace a move, Esc to keep them', 'Tap a move to replace it, Close to keep them'), 10], ...st.teach.moves.map((m): [string, number] => [`    ${m}`, 12])], 260 * s);
       const h = (78 + (st.teach.moves.length - 1) * 20 + 24) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.ink(ctx, head, x + w / 2, y + 32 * s, 14, FLAT_INK.text, 'center', w - 36 * s);
-      this.ink(ctx, 'Press 1 or 2 to replace a move, Esc to keep them', x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
+      this.ink(ctx, T('Press 1 or 2 to replace a move, Esc to keep them', 'Tap a move to replace it, Close to keep them'), x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
       st.teach.moves.forEach((mv, i) => {
-        this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
+        this.rowRects.push({ x: x + 20 * s, y: y + 63 * s + i * 20 * s, w: w - 40 * s, h: 20 * s });
+        if (!Input.touch) this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
         this.ink(ctx, mv, x + 48 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.text, 'left', w - 80 * s);
       });
     }
     if (st.extract) {
-      const w = this.fitWidth(ctx, [['Extraction Voucher', 15], ['Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', 9.5], ...st.extract.names.map((n): [string, number] => [`    ${n}`, 12])], 260 * s);
+      const w = this.fitWidth(ctx, [['Extraction Voucher', 15], [T('Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', 'Tap a Pokémon to send it to your PC, Close to cancel'), 9.5], ...st.extract.names.map((n): [string, number] => [`    ${n}`, 12])], 260 * s);
       const h = (78 + (st.extract.names.length - 1) * 20 + 24) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.ink(ctx, 'Extraction Voucher', x + w / 2, y + 32 * s, 15, FLAT_INK.accent, 'center', w - 36 * s);
-      this.ink(ctx, 'Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
+      this.ink(ctx, T('Press 1-6 (or click a card) to send that Pokémon to your PC, Esc to cancel', 'Tap a Pokémon to send it to your PC, Close to cancel'), x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
       st.extract.names.forEach((n, i) => {
-        this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
+        this.rowRects.push({ x: x + 20 * s, y: y + 63 * s + i * 20 * s, w: w - 40 * s, h: 20 * s });
+        if (!Input.touch) this.ink(ctx, String(i + 1), x + 30 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.accent);
         this.ink(ctx, n, x + 48 * s, y + 78 * s + i * 20 * s, 12, FLAT_INK.text, 'left', w - 80 * s);
       });
     }
     if (st.shop) {
       const widestRow = Math.max(0, ...st.shop.entries.map((e) => this.textW(ctx, `${e.name}   ₽${e.price.toLocaleString()}`, 12)));
-      const w = this.fitWidth(ctx, [[st.shop.name, 15], [`You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, 10], ['Sell: click a bag slot or Shift+1-6 (half price)', 10]], widestRow + 100 * s);
+      const w = this.fitWidth(ctx, [[st.shop.name, 15], [T(`You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, `You have ₽${st.money.toLocaleString()} · tap a line to buy`), 10], [T('Sell: click a bag slot or Shift+1-6 (half price)', 'Sell: tap a bag slot (half price)'), 10]], widestRow + 100 * s);
       const h = (94 + (st.shop.entries.length - 1) * 21 + 22) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.ink(ctx, st.shop.name, x + w / 2, y + 32 * s, 15, FLAT_INK.text, 'center', w - 36 * s);
-      this.ink(ctx, `You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
-      this.ink(ctx, 'Sell: click a bag slot or Shift+1-6 (half price)', x + w / 2, y + 66 * s, 10, FLAT_INK.good, 'center', w - 36 * s);
+      this.ink(ctx, T(`You have ₽${st.money.toLocaleString()} · 1-9 to buy · E or Esc to leave`, `You have ₽${st.money.toLocaleString()} · tap a line to buy`), x + w / 2, y + 50 * s, 10, FLAT_INK.dim, 'center', w - 36 * s);
+      this.ink(ctx, T('Sell: click a bag slot or Shift+1-6 (half price)', 'Sell: tap a bag slot (half price)'), x + w / 2, y + 66 * s, 10, FLAT_INK.good, 'center', w - 36 * s);
       st.shop.entries.forEach((e, i) => {
         const yy = y + 94 * s + i * 21 * s;
         const col = e.affordable ? FLAT_INK.text : '#b8a890';
+        this.rowRects.push({ x: x + 20 * s, y: yy - 15 * s, w: w - 40 * s, h: 21 * s });
         if (i % 2 === 0) {
           ctx.fillStyle = 'rgba(138,106,74,0.1)';
           ctx.fillRect(x + 20 * s, yy - 15 * s, w - 40 * s, 21 * s);
         }
-        this.ink(ctx, String((i + 1) % 10), x + 30 * s, yy, 12, e.affordable ? FLAT_INK.accent : '#b8a890');
+        if (!Input.touch) this.ink(ctx, String((i + 1) % 10), x + 30 * s, yy, 12, e.affordable ? FLAT_INK.accent : '#b8a890');
         this.ink(ctx, e.name, x + 48 * s, yy, 12, col, 'left', w - 130 * s);
         this.ink(ctx, `₽${e.price.toLocaleString()}`, x + w - 30 * s, yy, 12, e.affordable ? FLAT_INK.good : '#b8a890', 'right');
       });
@@ -561,25 +589,26 @@ export class Hud {
     if (st.chest) this.drawChestPanel(ctx, st, st.chest);
     this.snagRects = [];
     if (st.snag) {
-      const w = this.fitWidth(ctx, [[`Snag Machine · beat ${st.snag.from}`, 15], ['Take one of their Pokémon: 1-6 or click · Esc keeps the machine', 9.5], ...st.snag.names.map((n): [string, number] => [`      ${n}`, 12])], 280 * s);
+      const w = this.fitWidth(ctx, [[`Snag Machine · beat ${st.snag.from}`, 15], [T('Take one of their Pokémon: 1-6 or click · Esc keeps the machine', 'Tap one of their Pokémon to take it · Close keeps the machine'), 9.5], ...st.snag.names.map((n): [string, number] => [`      ${n}`, 12])], 280 * s);
       const h = (64 + st.snag.names.length * 26 + 16) * s;
       const x = v.width / 2 - w / 2;
       const y = v.height / 2 - h / 2;
       this.popupBox(ctx, x, y, w, h);
       this.ink(ctx, `Snag Machine · beat ${st.snag.from}`, x + w / 2, y + 32 * s, 15, FLAT_INK.bad, 'center', w - 36 * s);
-      this.ink(ctx, 'Take one of their Pokémon: 1-6 or click · Esc keeps the machine', x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
+      this.ink(ctx, T('Take one of their Pokémon: 1-6 or click · Esc keeps the machine', 'Tap one of their Pokémon to take it · Close keeps the machine'), x + w / 2, y + 50 * s, 9.5, FLAT_INK.dim, 'center', w - 36 * s);
       st.snag.names.forEach((n, i) => {
         const ry = y + 64 * s + i * 26 * s;
         const r = { x: x + 22 * s, y: ry, w: w - 44 * s, h: 23 * s };
         const over = hit(st.mouseX, st.mouseY, r.x, r.y, r.w, r.h);
         ctx.fillStyle = over ? 'rgba(194,97,26,0.22)' : 'rgba(138,106,74,0.1)';
         ctx.fillRect(r.x, r.y - (over ? 2 * s : 0), r.w, r.h);
-        this.ink(ctx, String(i + 1), r.x + 10 * s, ry + 16 * s - (over ? 2 * s : 0), 12, FLAT_INK.accent);
+        if (!Input.touch) this.ink(ctx, String(i + 1), r.x + 10 * s, ry + 16 * s - (over ? 2 * s : 0), 12, FLAT_INK.accent);
         this.ink(ctx, n, r.x + 28 * s, ry + 16 * s - (over ? 2 * s : 0), 12, FLAT_INK.text, 'left', r.w - 40 * s);
         this.snagRects.push(r);
       });
     }
-    if (st.prompt && !st.shop && !st.teach && !st.snag) {
+    // On a touch screen the Interact button says this.
+    if (st.prompt && !st.touch && !st.shop && !st.teach && !st.snag) {
       this.creamStrip(ctx, st.prompt, v.width / 2, v.height - 190 * s, 12, FLAT_INK.accent);
     }
     if (st.aiming > 0) {
@@ -1139,11 +1168,13 @@ export class Hud {
       ctx.restore();
       cy -= 4 * s;
     };
-    chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
+    // On a touch screen the on-screen buttons say these themselves.
+    const keys = !Input.touch;
+    if (keys) chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
     // Dodging is for steering a Pokémon (Pokémon mode or a battle), not walking the trainer.
     const dcd = m.dodgeCd ?? 0;
     if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
-    if (!match.playerDuel) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
+    if (!match.playerDuel && (keys || match.controlled)) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
     if (canMega(match.player, m)) chip('Mega Evolve · M', FLAT_INK.storm, 'rgba(190,120,255,0.95)');
     // A legendary in its bout can be caught: say so, with the balls left.
     if (match.legendBoutFoe()) {
@@ -1234,7 +1265,7 @@ export class Hud {
       this.tabRects.push({ x: tx, y: tabY, w: tw, h: tabH });
       tx += tw + 4 * s;
     });
-    this.label(ctx, 'G', tx + 2 * s, tabY + tabH / 2 + 4 * s, 9, '#ffffff', 'left', '700');
+    if (!Input.touch) this.label(ctx, 'G', tx + 2 * s, tabY + tabH / 2 + 4 * s, 9, '#ffffff', 'left', '700');
     // The Storm Mask at work: a tab over the bag's right end while anyone in the party is in the darkness.
     const masked = p.items.some((e) => e?.id === 'storm-mask') || p.held.some((e) => e?.id === 'storm-mask');
     if (masked && p.party.some((m) => m.inDark && !m.fainted && !m.stowed)) {
@@ -1277,7 +1308,7 @@ export class Hud {
       // The face's middle: below the 6-pixel top, above the 5-pixel lip.
       const cx = x + sw / 2;
       const cyc = y + sh / 2 + 0.5 * k;
-      this.ink(ctx, String(i + 1), x + k + 3 * s, y + 5 * k + 9 * s, 9, selected ? '#b0302a' : FLAT_INK.accent);
+      if (!Input.touch) this.ink(ctx, String(i + 1), x + k + 3 * s, y + 5 * k + 9 * s, 9, selected ? '#b0302a' : FLAT_INK.accent);
       if (id) {
         const def = ITEMS[id];
         if (def) {
@@ -1373,7 +1404,7 @@ export class Hud {
       this.ink(ctx, kind, tx, ry + 32 * s, 9, darken(col, 0.3), 'left', rw * 0.6);
       const nums = `${def.power > 0 ? `Pow ${def.power}` : 'No damage'} · ${def.cooldown}s`;
       this.ink(ctx, nums, rx + rw - 8 * s, ry + 17 * s, 10, FLAT_INK.text, 'right');
-      const tag = state === 'new' ? 'NEW' : state === 'locked' ? 'Signature: kept' : state === 'hover' ? 'Forget this' : 'Click to forget';
+      const tag = state === 'new' ? 'NEW' : state === 'locked' ? 'Signature: kept' : state === 'hover' ? 'Forget this' : T('Click to forget', 'Tap to forget');
       this.ink(ctx, tag, rx + rw - 8 * s, ry + 32 * s, 9, state === 'new' ? FLAT_INK.storm : state === 'hover' ? FLAT_INK.bad : FLAT_INK.dim, 'right');
     };
     const rx = x + pad;

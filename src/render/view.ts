@@ -19,6 +19,7 @@ export class View {
   readonly hud: CanvasRenderingContext2D;
   width = 1280;
   height = 720;
+  private stage: HTMLElement | null = null;
   camX = 0;
   camY = 0;
   zoom = 1;
@@ -39,19 +40,27 @@ export class View {
       c.style.transform = 'translate(-50%, -50%)';
       stage.appendChild(c);
     }
+    this.stage = stage;
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    // The stage can change size without the window doing so (a phone's safe areas on rotation).
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.resize()).observe(stage);
   }
 
   resize(): void {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const ww = window.innerWidth;
-    const wh = window.innerHeight;
+    // The stage is the window less any safe areas (a phone's notch and home bar).
+    const ww = this.stage?.clientWidth || window.innerWidth;
+    const wh = this.stage?.clientHeight || window.innerHeight;
     // The canvas fills the window whatever its shape; the world just shows more or less of the island.
     const cssW = ww;
     const cssH = wh;
-    this.width = Math.max(320, Math.round(cssW * dpr));
-    this.height = Math.max(180, Math.round(cssH * dpr));
+    const w = Math.max(320, Math.round(cssW * dpr));
+    const h = Math.max(180, Math.round(cssH * dpr));
+    // Same size: nothing to do (setting a canvas's size clears it).
+    if (w === this.width && h === this.height && this.outputCanvas.width === w) return;
+    this.width = w;
+    this.height = h;
     for (const c of [this.sceneCanvas, this.lightCanvas, this.outputCanvas, this.hudCanvas]) {
       c.width = this.width;
       c.height = this.height;
@@ -70,8 +79,14 @@ export class View {
 
   /** HUD text scale: 1 at 1280x720, following the shorter way round so the HUD always fits. */
   get baseScale(): number {
-    return Math.min(this.height / 720, this.width / 1280);
+    return Math.min(this.height / 720, this.width / 1280) * View.uiBoost;
   }
+
+  /**
+   * Larger HUD and buttons on a small touch screen (a phone on its side), so fingers can hit them.
+   * Set by the game each frame; 1 with a mouse.
+   */
+  static uiBoost = 1;
 
   /** Everything in the world draws at one integer scale: 16 px tiles at 3x = 48 px, sprites at 3x. */
   static readonly PIXEL_SCALE = 3;

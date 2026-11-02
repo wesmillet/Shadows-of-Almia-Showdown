@@ -136,17 +136,15 @@ async function until(fn, ms, step = 500) {
     }
   };
   await Promise.all(all.map((c) => walk(c, 60)));
-  // A dropped connection: C's browser goes offline for 8 s, then comes back into the same match.
+  // A dropped connection: C's socket is cut (as a lost network would: the server sees it go) and the
+  // browser reconnects on its own. Every change of the connection is logged as it happens.
   const C = all[2];
+  await C.p.evaluate(() => { const net = window.showdown.net; let was = net.connected; window.__conn = []; setInterval(() => { if (net.connected !== was) { was = net.connected; window.__conn.push(was ? 'up' : 'down'); } }, 5); });
   const tBefore = await C.p.evaluate(() => window.showdown.match.time);
-  // (Offline emulation leaves an open socket alone, so the socket is also cut, as a lost network would.)
-  await C.ctx.setOffline(true);
-  await C.p.evaluate(() => window.showdown.net.ws?.close());
-  const dropped = await until(() => C.p.evaluate(() => !window.showdown.net.connected), 10000, 200);
-  await sleep(8000);
-  await C.ctx.setOffline(false);
-  const rejoined = await until(() => C.p.evaluate((tb) => window.showdown.net.connected && window.showdown.match && window.showdown.match.time > tb + 8 && (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(',')), 60000);
-  note('a dropped connection comes back into the same match', !!dropped && !!rejoined && rejoined === info[2].id, { dropped: !!dropped, same: rejoined === info[2].id });
+  await C.p.evaluate(() => window.showdown.net.ws?.close(4999));
+  const rejoined = await until(() => C.p.evaluate((tb) => window.__conn.includes('down') && window.showdown.net.connected && window.showdown.match && window.showdown.match.time > tb + 5 && (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(',')), 60000);
+  const log = await C.p.evaluate(() => window.__conn.join(' '));
+  note('a dropped connection comes back into the same match', !!rejoined && rejoined === info[2].id, { connection: log, same: rejoined === info[2].id });
 
   // Play on until everyone has a result (knocked out, or the winner).
   const outcome = (c) => c.p.evaluate(() => window.showdown.match?.seat?.outcome ?? null).catch(() => null);

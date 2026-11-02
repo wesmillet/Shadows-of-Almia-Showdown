@@ -426,8 +426,15 @@ export class Match {
   refundChests(): void {
     for (const [t, out] of this.chestOut) {
       if (!this.chestKept(t)) continue;
-      const box = this.storageOf(t);
-      for (const [id, n] of out) {
+      // The chest as it is saved now (the player may have changed it in a later match since),
+      // with only what is still unspent in the bag added back: a voucher used to extract a
+      // Pokemon, or a ball thrown, is not refunded.
+      const saved = this.chestStore.load(t);
+      const box = saved ? new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null) : this.storageOf(t);
+      if (saved) saved.filter((e) => ITEMS[e.id]).slice(0, CONFIG.items.storageSlots).forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+      const held = (id: string) => [...t.items, ...t.held].reduce((k, e) => k + (e?.id === id ? e.count : 0), 0);
+      for (const [id, taken] of out) {
+        const n = Math.min(taken, held(id));
         if (n <= 0 || !ITEMS[id]) continue;
         const same = box.find((s) => s?.id === id);
         if (same) same.count = Math.min(CHEST_STACK_MAX, same.count + n);

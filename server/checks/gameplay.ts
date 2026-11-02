@@ -177,7 +177,15 @@ const make = (seed: number) => new Match({ ground, rng: new Rng(seed), sprites }
   check(saves2.length === 0, 'the rare-item chest is never saved');
   const m3 = make(9);
   const saves3: Array<Array<{ id: string; count: number } | null>> = [];
-  m3.chestStore = { load: () => [{ id: 'ultra-ball', count: 5 }], save: (_t, box) => saves3.push(box.map((b) => (b ? { ...b } : null))) };
+  // A chest that keeps what was last saved, as the accounts database does.
+  let stored3: Array<{ id: string; count: number }> = [{ id: 'ultra-ball', count: 5 }];
+  m3.chestStore = {
+    load: () => stored3.map((b) => ({ ...b })),
+    save: (_t, box) => {
+      saves3.push(box.map((b) => (b ? { ...b } : null)));
+      stored3 = box.filter((b): b is { id: string; count: number } => !!b).map((b) => ({ ...b }));
+    },
+  };
   const p3 = m3.seats[0]!.trainer;
   m3.withdraw(p3, 0);
   const afterTake = saves3.at(-1)?.find((b) => b?.id === 'ultra-ball');

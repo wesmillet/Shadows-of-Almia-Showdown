@@ -142,9 +142,9 @@ async function until(fn, ms, step = 500) {
   await C.p.evaluate(() => { const net = window.showdown.net; let was = net.connected; window.__conn = []; setInterval(() => { if (net.connected !== was) { was = net.connected; window.__conn.push(was ? 'up' : 'down'); } }, 5); });
   const tBefore = await C.p.evaluate(() => window.showdown.match.time);
   await C.p.evaluate(() => window.showdown.net.ws?.close(4999));
-  const rejoined = await until(() => C.p.evaluate((tb) => window.__conn.includes('down') && window.showdown.net.connected && window.showdown.match && window.showdown.match.time > tb + 5 && (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(',')), 60000);
-  const log = await C.p.evaluate(() => window.__conn.join(' '));
-  note('a dropped connection comes back into the same match', !!rejoined && rejoined === info[2].id, { connection: log, same: rejoined === info[2].id });
+  const rejoined = await until(() => C.p.evaluate((tb) => window.__conn.includes('down') && window.showdown.net.connected && window.showdown.match && window.showdown.match.time > tb + 5 && (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(','), tBefore), 60000);
+  const seen = await C.p.evaluate((tb) => ({ log: window.__conn.join(' '), connected: window.showdown.net.connected, screen: window.showdown.screen?.constructor?.name ?? null, inMatch: !!window.showdown.match?.seat, advanced: Math.round((window.showdown.match?.time ?? 0) - tb), outcome: window.showdown.match?.seat?.outcome ?? null, roster: (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(',') }), tBefore);
+  note('a dropped connection comes back into the same match', !!rejoined && rejoined === info[2].id, { connection: seen.log, connected: seen.connected, inMatch: seen.inMatch, advanced: seen.advanced, outcome: seen.outcome, sameRoster: seen.roster === info[2].id, roster: seen.roster === info[2].id ? undefined : [info[2].id, seen.roster] });
 
   // Play on until everyone has a result (knocked out, or the winner).
   const outcome = (c) => c.p.evaluate(() => window.showdown.match?.seat?.outcome ?? null).catch(() => null);

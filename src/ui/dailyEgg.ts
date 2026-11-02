@@ -1,6 +1,7 @@
 /**
- * The daily Egg on the home page (signed-in players, a game server): one a day (UTC). The Egg's
- * spots show its rarity before it hatches (the server rolls today's Egg the first time it is asked).
+ * The daily Egg on the home page (signed-in players, a game server): a new one is ready 24 hours
+ * after the last one hatched (the server decides). The Egg's spots show its rarity before it
+ * hatches (the server rolls each Egg the first time it is asked).
  * Clicking it hatches it: it wobbles, cracks (Pokémon Emerald's own hatching frames), bursts into
  * shell pieces in a flash, and the Pokémon steps out, sprite and all; it goes to the PC.
  *
@@ -15,6 +16,8 @@ import type { View } from '../render/view';
 interface EggState {
   ready: boolean;
   nextAt: number;
+  /** The server's clock when it answered (the countdown goes by it, not the browser's). */
+  now?: number;
   tier: string;
   tierName: string;
   color: string;
@@ -29,6 +32,7 @@ interface Hatched {
   tierName: string;
   color: string;
   nextAt: number;
+  now?: number;
   error?: string;
 }
 
@@ -49,6 +53,10 @@ export class DailyEgg {
   private flash = 0;
   private mon: AnimPlayer | null = null;
   private clock = 0;
+  /** Server clock minus this browser's (from the last answer). */
+  private skew = 0;
+  /** When the waiting Egg was last asked about again (ms, this browser's clock). */
+  private asked = 0;
 
   constructor(
     private readonly net: Connection,
@@ -67,6 +75,7 @@ export class DailyEgg {
     if (!this.signedIn) return;
     const st = await this.net.api<EggState>('/api/egg').catch(() => null);
     if (!st || st.error) return;
+    if (typeof st.now === 'number') this.skew = st.now - Date.now();
     this.state = st;
     if (st.today) this.showMon(st.today.dex, st.today.shiny);
   }
@@ -113,6 +122,7 @@ export class DailyEgg {
           void this.refresh();
           return;
         }
+        if (typeof r.now === 'number') this.skew = r.now - Date.now();
         this.result = r;
         this.showMon(r.dex, r.shiny);
       });
@@ -130,6 +140,12 @@ export class DailyEgg {
       p.vy += 260 * dt;
       p.spin += dt * 8;
     }
+    // The wait is over: ask the server for the new Egg (at most every 20 seconds).
+    const st = this.state;
+    if (this.t < 0 && st && !st.ready && Date.now() + this.skew >= st.nextAt && Date.now() - this.asked > 20_000) {
+      this.asked = Date.now();
+      void this.refresh();
+    }
     if (this.t < 0) return;
     const before = this.t;
     // Cracked all the way and still waiting on the server: it keeps shaking.
@@ -144,7 +160,7 @@ export class DailyEgg {
       this.pieces = [0, 1, 2, 3].map((i) => ({ x: 0, y: -10, vx: [-90, -40, 40, 90][i] as number, vy: -150 - (i % 2) * 40, i, spin: 0 }));
     }
     if (this.t >= BURST_AT + 1.2 && this.result) {
-      // Done: today's Egg has hatched.
+      // Done: the Egg has hatched.
       const r = this.result;
       this.state = { ready: false, nextAt: r.nextAt, tier: r.tier, tierName: r.tierName, color: r.color, today: { dex: r.dex, name: r.name, shiny: r.shiny } };
       this.t = -1;
@@ -212,7 +228,7 @@ export class DailyEgg {
     const line2 = r.y + 200 * s;
     if (!this.signedIn) {
       text(v, 'Sign in online for an Egg', cx, line1, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 20 * s });
-      text(v, 'every day', cx, line2, 12, { align: 'center', color: INK.dim, shadow: false });
+      text(v, 'every 24 hours', cx, line2, 12, { align: 'center', color: INK.dim, shadow: false });
       return;
     }
     if (!st) {
@@ -235,7 +251,8 @@ export class DailyEgg {
     if (st.today) {
       text(v, `${st.today.shiny ? '★ ' : ''}${st.today.name} · in your PC`, cx, line1, 12, { align: 'center', color: st.today.shiny ? INK.gold : INK.text, shadow: false, maxWidth: r.w - 20 * s });
     }
-    text(v, `Next Egg in ${until(st.nextAt)}`, cx, line2, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 20 * s });
+    const wait = st.nextAt - (Date.now() + this.skew);
+    text(v, wait > 0 ? `Next Egg in ${until(wait)}` : 'Your next Egg is coming...', cx, line2, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 20 * s });
   }
 
   /** The Pokémon standing where the Egg was, in its own idle animation. */
@@ -261,8 +278,8 @@ function ink(hex: string): string {
   return `#${f((n >> 16) & 255)}${f((n >> 8) & 255)}${f(n & 255)}`;
 }
 
-/** "5 h 12 min" until `at`. */
-function until(at: number): string {
-  const m = Math.max(1, Math.ceil((at - Date.now()) / 60000));
-  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+/** "5h 12m" for a wait in ms. */
+function until(ms: number): string {
+  const m = Math.max(1, Math.ceil(ms / 60000));
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }

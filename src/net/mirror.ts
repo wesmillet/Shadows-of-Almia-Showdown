@@ -23,6 +23,7 @@ import type { RangerSprites } from '../sprites/rangerSprite';
 import type { MirrorNet } from './connection';
 import type { RosterEntry, ServerMsg } from './protocol';
 import { isMon, isTrainer, SyncDecoder } from './sync';
+import { isShownLook, SHOWN_LOOKS } from './progression';
 
 type Obj = Record<string, unknown>;
 
@@ -183,8 +184,9 @@ export class MirrorMatch {
     t.isPlayer = false;
     const stand = ['trainer_a', 'trainer_b', 'trainer_c', 'trainer_d', 'trainer_e', 'trainer_f', 'trainer_g'];
     t.role = stand[t.id % stand.length] as string;
-    const chars = this.rangers.characters();
-    const look = this.looks.get(t.id) ?? chars[t.id % Math.max(1, chars.length)];
+    // No look sent: one of the looks on offer (SHOWN_LOOKS), never a hidden one.
+    const sent = this.looks.get(t.id);
+    const look = sent && isShownLook(sent) ? sent : SHOWN_LOOKS[t.id % SHOWN_LOOKS.length];
     if (!look) return;
     const role = `human:${t.id}`;
     void this.rangers.setRole(role, look).then(() => (t.role = role));

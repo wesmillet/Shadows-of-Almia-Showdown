@@ -26,7 +26,7 @@ import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
 import { COLLECTION_LOG_SQL } from './collectionLog';
-import { ACHIEVEMENTS, canWear, isFreeLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
+import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -64,6 +64,13 @@ export interface UserRow {
 }
 
 const MAX_FRIENDS = 200;
+/** A daily Egg comes back this long after the last one hatched. */
+export const EGG_RECHARGE_MS = 24 * 3600_000;
+/** "5h 12m" for a wait in ms (at least a minute). */
+function eggWait(ms: number): string {
+  const m = Math.max(1, Math.ceil(ms / 60000));
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
+}
 const RECOVERY_CODES = 8;
 /** Recovery codes are typed by hand: case, spaces and dashes do not matter. */
 const normCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -244,10 +251,14 @@ export class Accounts {
     `);
     this.db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('history_since', ?)").run(String(Date.now()));
     // Columns added after the first release (older databases get them here).
-    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER'], ['users', 'last_seen', 'INTEGER']] as const) {
+    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER'], ['users', 'last_seen', 'INTEGER'], ['daily_eggs', 'hatched_at', 'INTEGER']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }
+    // Eggs hatched before hatched_at existed: the hatch time is when their PC entry was made (or,
+    // if that entry is gone, when the Egg was rolled, which is earlier, so never a longer wait).
+    this.db.exec(`UPDATE daily_eggs SET hatched_at = COALESCE((SELECT created_at FROM pc WHERE pc.id = daily_eggs.pc_id), at)
+      WHERE pc_id IS NOT NULL AND hatched_at IS NULL`);
     // v1: the rare-item chest was on for everyone until now and was saved into every account's
     // chest, so those items come out once (what players stored themselves stays), and chests are
     // cut to their ten slots.
@@ -464,7 +475,7 @@ export class Accounts {
     if (ban) return { key: `x${randomBytes(6).toString('base64url')}`, name: 'Banned', accountId: null, banned: ban };
     if (user && !user.banned) {
       const prof = this.profile(user.id);
-      const look = typeof prof.look === 'string' && this.canWear(user.id, prof.look) ? prof.look : undefined;
+      const look = this.wornLook(user.id, prof.look) ?? undefined;
       return { key: `u${user.id}`, name: user.username, accountId: user.id, look, title: this.title(user.id) ?? undefined };
     }
     const url = new URL(req.url ?? '/', 'http://x');
@@ -534,55 +545,68 @@ export class Accounts {
   // ---------------------------------------------------------------- the daily Egg
 
   /**
-   * Today's Egg (UTC day): rolled the first time the player asks (so its colour, the tier, shows
-   * before it hatches; the Pokémon stays secret until then), whether it has hatched, and when the
-   * next one comes.
+   * A player's current Egg: their newest daily_eggs row, unless that one hatched at least
+   * EGG_RECHARGE_MS ago, in which case a new one is rolled (so its colour, the tier, shows before
+   * it hatches; the Pokémon stays secret until then). An Egg comes back exactly 24 hours after the
+   * last one hatched, not at a fixed time of day. The `day` column is the Egg's key: older rows
+   * hold a UTC date (one Egg a calendar day, before this rule), newer ones the ISO time it became
+   * ready. Rows hatched before the hatched_at column existed take their PC entry's time.
    */
-  eggState(userId: number, now = Date.now()): { ready: boolean; nextAt: number; tier: string; tierName: string; color: string; today: { dex: string; name: string; shiny: boolean } | null } {
-    const day = new Date(now).toISOString().slice(0, 10);
-    const d = new Date(now);
-    const nextAt = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
-    type Row = { dex: string; shiny: number; tier: string; pc_id: number | null };
-    const get = () => this.db.prepare('SELECT dex, shiny, tier, pc_id FROM daily_eggs WHERE user_id = ? AND day = ?').get(userId, day) as Row | undefined;
-    let row = get();
-    if (!row) {
-      // The roll: a tier by the starter tiers' weights, a Pokémon in it, shiny at the wild odds.
-      const rng = new Rng(randomInt(1, 2 ** 31));
-      const { tier, dex } = rollEgg(rng);
-      const shiny = SpriteRegistry.hasShiny(dex) && rng.chance(CONFIG.wild.shinyChance);
-      this.db.prepare('INSERT OR IGNORE INTO daily_eggs (user_id, day, dex, shiny, tier, at) VALUES (?, ?, ?, ?, ?, ?)').run(userId, day, dex, shiny ? 1 : 0, tier.id, now);
-      row = get() as Row;
-    }
+  private currentEgg(userId: number, now: number): { key: string; dex: string; shiny: number; tier: string; pc_id: number | null; hatched_at: number | null } {
+    type Row = { key: string; dex: string; shiny: number; tier: string; pc_id: number | null; hatched_at: number | null };
+    const newest = () => this.db.prepare('SELECT day AS key, dex, shiny, tier, pc_id, hatched_at FROM daily_eggs WHERE user_id = ? ORDER BY at DESC, rowid DESC LIMIT 1').get(userId) as Row | undefined;
+    const last = newest();
+    if (last && (last.pc_id === null || now < (last.hatched_at ?? 0) + EGG_RECHARGE_MS)) return last;
+    // The roll: a tier by the starter tiers' weights, a Pokémon in it, shiny at the wild odds.
+    const readyAt = last ? (last.hatched_at ?? 0) + EGG_RECHARGE_MS : now;
+    const key = new Date(readyAt).toISOString();
+    const rng = new Rng(randomInt(1, 2 ** 31));
+    const { tier, dex } = rollEgg(rng);
+    const shiny = SpriteRegistry.hasShiny(dex) && rng.chance(CONFIG.wild.shinyChance);
+    this.db.prepare('INSERT OR IGNORE INTO daily_eggs (user_id, day, dex, shiny, tier, at) VALUES (?, ?, ?, ?, ?, ?)').run(userId, key, dex, shiny ? 1 : 0, tier.id, now);
+    return newest() as Row;
+  }
+
+  /**
+   * The player's Egg: whether it is ready, its tier, and (once hatched) what came out and when
+   * the next one is ready (`nextAt`, 24 hours after the hatch; `now` is the server's clock so the
+   * page can count down without trusting its own).
+   */
+  eggState(userId: number, now = Date.now()): { ready: boolean; nextAt: number; now: number; tier: string; tierName: string; color: string; today: { dex: string; name: string; shiny: boolean } | null } {
+    const row = this.currentEgg(userId, now);
     const t = STARTER_TIERS.find((x) => x.id === row.tier);
     const hatched = row.pc_id !== null;
     return {
-      ready: !hatched, nextAt, tier: row.tier, tierName: t?.name ?? row.tier, color: t?.color ?? '#b8b8c8',
+      ready: !hatched, nextAt: hatched ? (row.hatched_at ?? 0) + EGG_RECHARGE_MS : now, now, tier: row.tier, tierName: t?.name ?? row.tier, color: t?.color ?? '#b8b8c8',
       today: hatched ? { dex: row.dex, name: SPECIES.get(row.dex)?.name ?? row.dex, shiny: !!row.shiny } : null,
     };
   }
 
   /**
-   * Hatches today's Egg into the PC (level 5). Once a day: the row is marked hatched in the same
-   * unit as the PC insert, and only if it was not already, so two requests at once give one Pokémon.
+   * Hatches the player's Egg into the PC (level 5). The row is marked hatched (with the time) in
+   * the same unit as the PC insert, and only if it was not already, so two requests at once give
+   * one Pokémon. The next Egg is ready 24 hours later.
    */
-  hatchEgg(userId: number, now = Date.now()): { dex: string; name: string; shiny: boolean; tier: string; tierName: string; color: string; pcId: number; nextAt: number } | { error: string; nextAt: number } {
+  hatchEgg(userId: number, now = Date.now()): { dex: string; name: string; shiny: boolean; tier: string; tierName: string; color: string; pcId: number; nextAt: number; now: number } | { error: string; nextAt: number; now: number } {
+    const row = this.currentEgg(userId, now);
     const st = this.eggState(userId, now);
-    const later = { error: 'Your Egg for today has hatched. A new one comes every day at midnight UTC', nextAt: st.nextAt };
-    if (!st.ready) return later;
-    const day = new Date(now).toISOString().slice(0, 10);
-    const row = this.db.prepare('SELECT dex, shiny FROM daily_eggs WHERE user_id = ? AND day = ?').get(userId, day) as { dex: string; shiny: number };
+    const later = () => {
+      const s2 = this.eggState(userId, now);
+      return { error: `Your Egg has hatched. The next one is ready in ${eggWait(s2.nextAt - now)}`, nextAt: s2.nextAt, now };
+    };
+    if (!st.ready) return later();
     const sp = SPECIES.get(row.dex);
-    if (!sp) return { error: 'The Egg would not hatch, try again', nextAt: st.nextAt };
+    if (!sp) return { error: 'The Egg would not hatch, try again', nextAt: st.nextAt, now };
     try {
       const pcId = this.atomically(() => {
-        const id = this.addToPc(userId, { dex: row.dex, name: sp.name, level: 5, shiny: !!row.shiny, moves: movesAt(sp, 5) }, 'egg', `egg:${day}`);
-        const r = this.db.prepare('UPDATE daily_eggs SET pc_id = ? WHERE user_id = ? AND day = ? AND pc_id IS NULL').run(id, userId, day);
+        const id = this.addToPc(userId, { dex: row.dex, name: sp.name, level: 5, shiny: !!row.shiny, moves: movesAt(sp, 5) }, 'egg', `egg:${row.key}`);
+        const r = this.db.prepare('UPDATE daily_eggs SET pc_id = ?, hatched_at = ? WHERE user_id = ? AND day = ? AND pc_id IS NULL').run(id, now, userId, row.key);
         if (Number(r.changes) !== 1) throw new Error('already hatched');
         return id;
       });
-      return { dex: row.dex, name: sp.name, shiny: !!row.shiny, tier: st.tier, tierName: st.tierName, color: st.color, pcId, nextAt: st.nextAt };
+      return { dex: row.dex, name: sp.name, shiny: !!row.shiny, tier: st.tier, tierName: st.tierName, color: st.color, pcId, nextAt: now + EGG_RECHARGE_MS, now };
     } catch {
-      return later;
+      return later();
     }
   }
 
@@ -678,7 +702,9 @@ export class Accounts {
       const xpBefore = this.xp(userId);
       this.db.prepare('UPDATE profiles SET xp = xp + ? WHERE user_id = ?').run(gained, userId);
       this.db.prepare('UPDATE match_players SET xp = ? WHERE match_id = ? AND user_id = ?').run(gained, matchId, userId);
-      progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: this.checkAchievements(userId, facts) });
+      // Achievements are still recorded while hidden (ACHIEVEMENTS_ON), just not announced.
+      const earnedNow = this.checkAchievements(userId, facts);
+      progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: ACHIEVEMENTS_ON ? earnedNow : [] });
     }
     return progress;
   }
@@ -729,7 +755,19 @@ export class Accounts {
     return t && titlesFor(this.earned(userId)).includes(t) ? t : null;
   }
 
+  /**
+   * The look a player shows as: their saved one when they can wear it, else the default Ranger
+   * (a saved look that is hidden now stays saved, untouched, for when it comes back). Null when
+   * they never picked one.
+   */
+  wornLook(userId: number, look: unknown): string | null {
+    if (typeof look !== 'string') return null;
+    return this.canWear(userId, look) ? look : DEFAULT_LOOK;
+  }
+
   canWear(userId: number, look: string): boolean {
+    // Hidden looks (src/net/progression.ts SHOWN_LOOKS) can not be worn, however they were earned.
+    if (!isShownLook(look)) return false;
     // A look given by a Mystery Gift code is theirs to wear.
     if (this.gifts.ownedLooks(userId).includes(look)) return true;
     return canWear(look, levelOf(this.xp(userId)).level, this.earned(userId));
@@ -762,8 +800,8 @@ export class Accounts {
     const ach = this.db.prepare('SELECT id, at FROM achievements WHERE user_id = ? ORDER BY at').all(u.id) as Array<{ id: string; at: number }>;
     const xp = this.xp(u.id);
     return {
-      name: u.username, joined: u.created_at, look: prof.look, stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
-      progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ach,
+      name: u.username, joined: u.created_at, look: this.wornLook(u.id, prof.look), stats: prof.stats, recent, pc: pcCount, online: this.presence(u.id).online,
+      progress: { xp, ...levelOf(xp) }, title: this.title(u.id), achievements: ACHIEVEMENTS_ON ? ach : [],
     };
   }
 
@@ -985,8 +1023,8 @@ export class Accounts {
         const prof = this.profile(me.id);
         const earned = this.earned(me.id);
         return send(200, {
-          signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: prof.look, stats: prof.stats,
-          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
+          signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
+          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: ACHIEVEMENTS_ON ? earned : [],
           looks: this.gifts.ownedLooks(me.id),
         });
       }
@@ -1086,7 +1124,8 @@ export class Accounts {
           this.db.exec('ROLLBACK');
           throw e;
         }
-        return send(200, { ok: true, name: pick.name, achievements: this.checkAchievements(me.id, null) });
+        const earnedNow = this.checkAchievements(me.id, null);
+        return send(200, { ok: true, name: pick.name, achievements: ACHIEVEMENTS_ON ? earnedNow : [] });
       }
       if (req.method === 'POST' && path === '/api/title') {
         const b = await readJson(req);
@@ -1122,7 +1161,7 @@ export class Accounts {
         const b = await readJson(req);
         const look = typeof b.look === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(b.look) ? b.look : null;
         if (!look) return send(400, { error: 'Pick a look' });
-        if (!this.canWear(me.id, look)) return send(403, { error: 'That look is not unlocked yet' });
+        if (!this.canWear(me.id, look)) return send(403, { error: isShownLook(look) ? 'That look is not unlocked yet' : 'That look is not available' });
         this.db.prepare('UPDATE profiles SET look = ? WHERE user_id = ?').run(JSON.stringify(look), me.id);
         return send(200, { ok: true });
       }

@@ -3,6 +3,7 @@
  * a Pokémon (sent to their PC) or a trainer look. The server checks the code (server/gifts.ts).
  */
 import type { Connection } from '../net/connection';
+import { isShownLook } from '../net/progression';
 import { el } from './overlay';
 import { modal } from './socialPanel';
 
@@ -55,7 +56,7 @@ export function giftDialog(net: Connection, goOnline: () => void): Promise<void>
       const g = r as Result;
       got.replaceChildren(
         el('h3', '', 'You received a gift!'),
-        el('p', '', g.kind === 'pokemon' ? `${g.shiny ? 'A shiny ' : ''}${g.name} (Lv ${g.level}) was sent to your PC.` : `A new look: ${g.name}. Wear it from the Trainer screen.`),
+        el('p', '', g.kind === 'pokemon' ? `${g.shiny ? 'A shiny ' : ''}${g.name} (Lv ${g.level}) was sent to your PC.` : isShownLook(g.look) ? `A new look: ${g.name}. Wear it from the Trainer screen.` : `A new look: ${g.name}. It is saved to your account for when more looks return.`),
       );
       input.value = '';
       if (g.kind === 'look') void net.refreshMe();

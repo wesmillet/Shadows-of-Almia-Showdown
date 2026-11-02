@@ -8,7 +8,7 @@
 import { gunzipSync } from 'node:zlib';
 import WebSocket from 'ws';
 import type { ClientMsg, ServerMsg } from '../../src/net/protocol';
-import { LEVELS_ON } from '../../src/net/progression';
+import { ACHIEVEMENTS_ON, LEVELS_ON } from '../../src/net/progression';
 
 const BASE = process.argv[2] ?? 'http://localhost:8787';
 const WS = BASE.replace(/^http/, 'ws');
@@ -198,13 +198,15 @@ M.send({ t: 'leave' });
 const prog = await aProgress;
 const gained = prog.xp.reduce((n, x) => n + x.xp, 0);
 check(gained > 0 && prog.xp[0]?.what === 'Played a match', `a finished match earns XP (+${gained}: ${prog.xp.map((x) => x.what).join(', ')})`);
-check(prog.achievements.some((a) => a.id === 'first_match'), 'and the first achievement');
+// (Achievements are hidden for now, ACHIEVEMENTS_ON: none are sent to the browser.)
+check(prog.achievements.some((a) => a.id === 'first_match') === ACHIEVEMENTS_ON, ACHIEVEMENTS_ON ? 'and the first achievement' : 'no achievement announced');
 const meA = (await api(A.cookie, '/api/me')).json as { progress: { xp: number; level: number }; achievements: string[] };
-check(meA.progress.xp === gained && meA.achievements.includes('first_match'), `kept on the account (level ${meA.progress.level})`);
-// (Trainer levels are off for now, LEVELS_ON: then every Ranger look is free.)
-check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === (LEVELS_ON ? 403 : 200), LEVELS_ON ? 'a Ranger look is locked at level 1' : 'Ranger looks are free while trainer levels are off');
-check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are locked');
-check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the first Ranger is free');
+check(meA.progress.xp === gained && meA.achievements.includes('first_match') === ACHIEVEMENTS_ON, `kept on the account (level ${meA.progress.level})`);
+// (Only the male and female Ranger are on offer for now, SHOWN_LOOKS: every other look is refused.)
+check((await api(A.cookie, '/api/look', { look: 'union_09' })).status === 403, 'other Ranger looks are hidden');
+check((await api(A.cookie, '/api/look', { look: 'civ_04' })).status === 403, 'the townsfolk are hidden');
+check((await api(A.cookie, '/api/look', { look: 'union_03' })).json.ok, 'the female Ranger is free');
+check((await api(A.cookie, '/api/look', { look: 'union_00' })).json.ok, 'the male Ranger is free');
 check((await api(A.cookie, '/api/title', { title: 'Master Ranger' })).status === 400, 'titles must be earned');
 const bMe = (await api(B.cookie, '/api/me')).json as { progress: { xp: number } };
 const gMe = (await api('', '/api/me')).json as { signedIn: boolean };
@@ -236,7 +238,7 @@ const ch = await api(rec.cookie, '/api/password', { current: 'Brand-New-Lantern-
 check(ch.json.ok, 'changing the password needs the current one');
 const page = await fetch(`${BASE}/u/${encodeURIComponent(A.name)}`);
 const html = await page.text();
-check(page.status === 200 && html.includes(A.name) && html.includes('First Steps') && html.includes('Trainer level') === LEVELS_ON, 'the public profile page');
+check(page.status === 200 && html.includes(A.name) && html.includes('First Steps') === ACHIEVEMENTS_ON && html.includes('Achievements') === ACHIEVEMENTS_ON && html.includes('Trainer level') === LEVELS_ON, 'the public profile page');
 check((await fetch(`${BASE}/u/NoSuchTrainer9`)).status === 404, 'no page for nobody');
 check(!(await fetch(`${BASE}/u/%3Cscript%3E`).then((r) => r.text())).includes('<script>'), 'names are escaped');
 

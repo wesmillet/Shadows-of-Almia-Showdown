@@ -1,15 +1,18 @@
 /**
- * Pick your trainer: every Ranger Union and townsfolk sheet in assets/rangers, walking in place.
- * Click one (or arrows + Enter) to wear it; Esc or Back returns. With a game server, the townsfolk
- * The first Ranger is free; the other Rangers are earned online by trainer level (src/net/progression.ts)
- * and the townsfolk are locked for now. Without a server only the first Ranger can be worn.
+ * Pick your trainer: the looks on offer (SHOWN_LOOKS in src/net/progression.ts: for now the male
+ * and female Ranger, both free), walking in place. Click one (or arrows + Enter) to wear it; Esc
+ * or Back returns. Every other sheet in assets/rangers is hidden from this screen.
  */
 import type { Input } from '../core/input';
 import { saveLook } from '../look';
+import { DEFAULT_LOOK, isShownLook } from '../net/progression';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
+
+/** Names for the looks on offer. */
+const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger' };
 
 export class CharacterScreen implements Screen {
   private readonly list: string[];
@@ -26,14 +29,17 @@ export class CharacterScreen implements Screen {
     /** Why a look can not be worn yet ("Level 10"), or null when it can. */
     private readonly lock: (look: string) => string | null = () => null,
   ) {
-    this.list = rangers.characters();
-    this.current = rangers.characterOf('player');
+    this.list = rangers.characters().filter(isShownLook);
+    const worn = rangers.characterOf('player');
+    this.current = isShownLook(worn) ? worn : DEFAULT_LOOK;
     this.cursor = Math.max(0, this.list.indexOf(this.current));
     for (const c of this.list) rangers.preview(c);
   }
 
-  /** "Ranger 3" for the Union sheets and "Local 7" for the townsfolk. */
+  /** "Male Ranger" and "Female Ranger" for the two on offer, "Ranger 3" / "Local 7" for the rest. */
   static label(character: string): string {
+    const named = LOOK_NAMES[character];
+    if (named) return named;
     const [kind, n] = character.split('_');
     return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
   }
@@ -48,7 +54,7 @@ export class CharacterScreen implements Screen {
     const roomW = v.width - 60 * s;
     const roomH = v.height - 116 * s - 80 * s;
     let best = { cols: 1, f: 0 };
-    for (let cols = 4; cols <= 14; cols++) {
+    for (let cols = Math.min(4, n); cols <= 14; cols++) {
       const rows = Math.ceil(n / cols);
       const f = Math.min(1, (roomH - (rows - 1) * gap) / (rows * 156 * s), (roomW - (cols - 1) * gap) / (cols * 104 * s));
       if (f > best.f + 0.001) best = { cols, f };

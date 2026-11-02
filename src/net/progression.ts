@@ -60,6 +60,14 @@ export function matchXp(f: MatchFacts): Array<{ what: string; xp: number }> {
 
 // ---------------------------------------------------------------- achievements
 
+/**
+ * Achievements are hidden from players for now: no list on profiles (in the game or at /u/<name>),
+ * no "achievement earned" lines after a match, none in the match result sent to the browser. The
+ * server still records them as before (and the titles they give still unlock), so turning this
+ * back on shows everything players earned in the meantime.
+ */
+export const ACHIEVEMENTS_ON = false;
+
 /** What an achievement can look at: this match, and the player's totals after it. */
 export interface AchievementContext {
   match: MatchFacts | null;
@@ -117,9 +125,25 @@ export function titlesFor(earned: Iterable<string>): string[] {
 
 // ---------------------------------------------------------------- looks
 
-/** The look every trainer has from the start: the game's own Ranger. */
+/**
+ * The trainer looks on offer for now: the Ranger, male (the game's own player Ranger) and female,
+ * both free for everyone from the start. Every other look is hidden: its art and players' saved
+ * picks stay, but it can not be picked or worn (a player saved in one wears DEFAULT_LOOK). Add a
+ * look here to bring it back under its old unlock (LOOK_LEVELS, an achievement, a Mystery Gift).
+ */
+export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03'];
+
+/** The look a trainer wears when theirs is missing or hidden: the male Ranger. */
+export const DEFAULT_LOOK = 'union_00';
+
+/** Can this look be seen and picked at all right now? */
+export function isShownLook(look: string): boolean {
+  return SHOWN_LOOKS.includes(look);
+}
+
+/** The looks every trainer has from the start: the shown Rangers. */
 export function isFreeLook(look: string): boolean {
-  return look === 'union_00';
+  return isShownLook(look);
 }
 
 /** The other Ranger looks unlock with trainer levels. */
@@ -144,6 +168,7 @@ export function lookRequirement(look: string): { level?: number; achievement?: A
 export const LEVELS_ON = false;
 
 export function canWear(look: string, level: number, earned: Iterable<string>): boolean {
+  if (!isShownLook(look)) return false;
   const req = lookRequirement(look);
   if (!req) return true;
   // Trainer levels are switched off for now (LEVELS_ON): looks that needed a level are free.

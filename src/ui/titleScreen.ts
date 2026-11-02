@@ -6,6 +6,8 @@
  * two fight until one of them is driven off. Everyone is drawn at the island's
  * own scale (the camera is zoomed in) and depth-sorted with the trees.
  */
+import { openHowToPlay } from './howToPlay';
+import { openCredits } from './credits';
 import { music } from '../audio/music';
 import { loadPc } from '../pc';
 import type { Input } from '../core/input';
@@ -356,14 +358,14 @@ export class TitleScreen implements Screen {
     return { x: Math.round(v.width / 2 - w / 2), y: Math.round(v.height - 182 * s), w, h };
   }
 
-  /** The row of three under it: Move Gallery, My PC, Trainer. (The demo team is off for now; ?demo=1 still starts it.) */
+  /** The row under it: Move Gallery, My PC, Trainer, How to play, Credits. (The demo team is off for now; ?demo=1 still starts it.) */
   private rowRect(i: number): { x: number; y: number; w: number; h: number } {
     const v = this.ctx.view;
     const s = v.baseScale;
-    const w = Math.round(168 * s);
+    const w = Math.round(148 * s);
     const h = Math.round(52 * s);
-    const gap = Math.round(12 * s);
-    const total = 3 * w + 2 * gap;
+    const gap = Math.round(10 * s);
+    const total = 5 * w + 4 * gap;
     return { x: Math.round(v.width / 2 - total / 2 + i * (w + gap)), y: Math.round(v.height - 112 * s), w, h };
   }
 
@@ -384,13 +386,22 @@ export class TitleScreen implements Screen {
     music.want('darkrai');
     if (input.pressed('KeyN')) music.toggleMute();
     this.stepScene(dt);
+    // A dialog over the title (how to play, credits) takes the clicks and keys.
+    if (document.querySelector('.almia-modal-wrap')) {
+      input.takeClicks();
+      return;
+    }
     const b = this.buttonRect();
     for (const c of input.takeClicks()) {
       if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
       else {
         const g = this.galleryRect();
         const p = this.pcRect();
-        if (hit(c.x, c.y, g.x, g.y, g.w, g.h)) this.leave(this.onGallery);
+        const how = this.rowRect(3);
+        const cr = this.rowRect(4);
+        if (hit(c.x, c.y, how.x, how.y, how.w, how.h)) void openHowToPlay();
+        else if (hit(c.x, c.y, cr.x, cr.y, cr.w, cr.h)) void openCredits();
+        else if (hit(c.x, c.y, g.x, g.y, g.w, g.h)) this.leave(this.onGallery);
         else if (hit(c.x, c.y, p.x, p.y, p.w, p.h)) this.leave(this.onPc);
         else {
           const ch = this.characterRect();
@@ -401,6 +412,7 @@ export class TitleScreen implements Screen {
     if (input.pressed('KeyM')) this.leave(this.onGallery);
     if (input.pressed('KeyP')) this.leave(this.onPc);
     if (input.pressed('KeyC')) this.leave(this.onCharacter);
+    if (input.pressed('KeyH')) void openHowToPlay();
     if (input.pressed('Enter') || input.pressed('Space')) this.leave(this.onStart);
   }
 
@@ -1013,6 +1025,8 @@ export class TitleScreen implements Screen {
       ['Move Gallery (M)', this.galleryRect()],
       [`My PC (P) · ${this.pcCount}`, this.pcRect()],
       ['Trainer (C)', this.characterRect()],
+      ['How to play (H)', this.rowRect(3)],
+      ['Credits', this.rowRect(4)],
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
     text(v, 'WASD move · click your Pokémon to steer it · click / right click or Q, E cast · Space talk, pick up, fish (dodge while steering a Pokémon) · Tab or click a wild for the ball, F throws · V ride · M mega · R auto · hold C styler · N music', v.width / 2, v.height - 22 * s, 11, { align: 'center', weight: '500', color: '#f4ecdc', maxWidth: v.width - 40 * s, shadowColor: 'rgba(20,10,30,0.85)' });

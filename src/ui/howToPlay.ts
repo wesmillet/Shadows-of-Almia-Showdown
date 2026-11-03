@@ -1,6 +1,6 @@
 /**
- * How to play: the goal and the controls on one card. It opens by itself at the start of a
- * browser's first match, and from the title screen (H) at any time.
+ * How to play: the goal and the controls on one card, opened from the menus (Options online; the
+ * title screen and the touch Menu offline). It no longer opens by itself at the start of a match.
  * Nothing secret is mentioned (no hidden encounters or capture rules).
  */
 import { el, overlayRoot } from './overlay';

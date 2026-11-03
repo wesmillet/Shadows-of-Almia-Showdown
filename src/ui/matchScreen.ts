@@ -3,7 +3,6 @@
  * VFX, numbers and hit-stop, draws the world through the lighting
  * pass and the HUD on top.
  */
-import { howToPlayUnseen, openHowToPlay } from './howToPlay';
 import { isDev, rareChest } from '../dev';
 import { Input } from '../core/input';
 import { touchUi, type PartyAct, type TouchAction, type TouchAim, type TouchBagEntry, type TouchFrame, type TouchMon, type TouchMove, type TouchUi } from './touchControls';
@@ -212,15 +211,8 @@ export class MatchScreen implements Screen {
     return dark ? 'abyss' : null;
   }
 
-  /** The how-to-play card has had its chance to open (a browser's first match). */
-  private howChecked = false;
-
   step(dt: number, input: Input): void {
     music.want(this.musicNow());
-    if (!this.howChecked) {
-      this.howChecked = true;
-      if (howToPlayUnseen()) void openHowToPlay();
-    }
     // A dialog over the game pauses the match.
     if (document.querySelector('.almia-modal-wrap')) {
       input.takeClicks();

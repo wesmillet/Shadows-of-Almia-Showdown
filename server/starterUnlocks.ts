@@ -7,7 +7,7 @@
  */
 import type { DatabaseSync } from 'node:sqlite';
 import { randomInt } from 'node:crypto';
-import { STARTER_ACHIEVEMENTS, type StarterStat, type StartersInfo } from '../src/sim/starterAchievements';
+import { LAUNCH_WEEK_START, launchWeek, STARTER_ACHIEVEMENTS, type StarterStat, type StartersInfo } from '../src/sim/starterAchievements';
 import { eligibleNominations, NOMINATION_BUDGET, NOMINATION_SLOTS, nominationProblem, SLOT3_WEIGHT, STARTER_TIERS, TIER_COST, tierOf, usableNominations } from '../src/sim/starters';
 
 export const STARTER_SQL = `
@@ -21,13 +21,16 @@ export const STARTER_SQL = `
 `;
 
 export class StarterUnlocks {
+  /** When launch week starts (src/sim/starterAchievements.ts); tests set their own. */
+  weekStart: string | null = LAUNCH_WEEK_START;
+
   constructor(
     private readonly db: DatabaseSync,
     /** Lifetime catches and matches (the profile's stats). */
     private readonly lifetime: (userId: number) => { catches: number; matches: number },
     private readonly pcDexes: (userId: number) => string[],
     /** Puts a reward's Pokémon in the PC; returns its PC id. */
-    private readonly toPc: (userId: number, dex: string) => number,
+    private readonly toPc: (userId: number, dex: string, shiny: boolean) => number,
   ) {
     // Rewards go to the PC: which unlock row's Pokémon has been delivered there.
     const cols = this.db.prepare('PRAGMA table_info(starter_unlocks)').all() as Array<{ name: string }>;
@@ -38,7 +41,8 @@ export class StarterUnlocks {
   private deliver(userId: number): void {
     const rows = this.db.prepare('SELECT id, dex FROM starter_unlocks WHERE user_id = ? AND dex IS NOT NULL AND pc_id IS NULL').all(userId) as Array<{ id: string; dex: string }>;
     for (const r of rows) {
-      const pcId = this.toPc(userId, r.dex);
+      const a = STARTER_ACHIEVEMENTS.find((x) => x.id === r.id);
+      const pcId = this.toPc(userId, r.dex, a?.reward.kind === 'random' && !!a.reward.shiny);
       this.db.prepare('UPDATE starter_unlocks SET pc_id = ? WHERE user_id = ? AND id = ?').run(pcId, userId, r.id);
     }
   }
@@ -58,7 +62,21 @@ export class StarterUnlocks {
         /* an old row */
       }
     }
-    return { catches: life.catches, matches: life.matches, species: species.size, top3 };
+    // Trainers (players or computer trainers) defeated in matches that ended during launch week.
+    let launchWeekKos = 0;
+    const week = launchWeek(this.weekStart);
+    if (week) {
+      const ko = this.db.prepare('SELECT mp.stats FROM match_players mp JOIN matches m ON m.id = mp.match_id WHERE mp.user_id = ? AND m.ended_at >= ? AND m.ended_at < ?').all(userId, week.start, week.end) as Array<{ stats: string }>;
+      for (const r of ko) {
+        try {
+          launchWeekKos += Number((JSON.parse(r.stats) as { eliminations?: number }).eliminations) || 0;
+        } catch {
+          /* an old row */
+        }
+      }
+    }
+    // Signed in: every account that asks (guests have no account, so no achievements).
+    return { signin: 1, catches: life.catches, matches: life.matches, species: species.size, top3, launchWeekKos };
   }
 
   /** Unlocks every achievement newly reached (a random reward is rolled once, here). */
@@ -68,14 +86,21 @@ export class StarterUnlocks {
     for (const a of STARTER_ACHIEVEMENTS) {
       if (have.has(a.id) || p[a.stat] < a.goal) continue;
       let dex: string | null = null;
+      if (a.launchWeek && !this.inLaunchWeek()) continue;
       if (a.reward.kind === 'random') {
         const id = a.reward.tier;
-        const list = STARTER_TIERS.find((t) => t.id === id)?.dex ?? [];
+        const list = a.reward.options ?? STARTER_TIERS.find((t) => t.id === id)?.dex ?? [];
         dex = list.length ? (list[randomInt(0, list.length)] as string) : null;
       }
       this.db.prepare('INSERT OR IGNORE INTO starter_unlocks (user_id, id, dex, at) VALUES (?, ?, ?, ?)').run(userId, a.id, dex, Date.now());
     }
     this.deliver(userId);
+  }
+
+  /** Launch week is set and not over yet (matches recorded after the week's end do not count anyway). */
+  private inLaunchWeek(): boolean {
+    const w = launchWeek(this.weekStart);
+    return !!w && Date.now() < w.end + 3600_000;
   }
 
   private unlockRows(userId: number): Map<string, string | null> {
@@ -112,7 +137,7 @@ export class StarterUnlocks {
     const rows = this.unlockRows(userId);
     const eligible = this.eligible(userId);
     return {
-      achievements: STARTER_ACHIEVEMENTS.map((a) => ({
+      achievements: STARTER_ACHIEVEMENTS.filter((a) => !a.launchWeek || rows.has(a.id) || (launchWeek(this.weekStart) && this.inLaunchWeek())).map((a) => ({
         id: a.id, name: a.name, desc: a.desc, goal: a.goal, progress: Math.min(a.goal, p[a.stat]), done: rows.has(a.id), reward: a.reward, dex: rows.get(a.id) ?? null,
       })),
       eligible: eligible.map((d) => ({ dex: d, tier: tierOf(d), cost: TIER_COST[tierOf(d)] ?? 1 })),

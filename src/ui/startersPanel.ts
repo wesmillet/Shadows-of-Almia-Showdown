@@ -120,7 +120,7 @@ export function openStarters(net: Connection): Promise<void> {
         row.appendChild(what);
         if (a.dex) {
           const got = el('div', 'got');
-          got.append(face(a.dex), el('span', '', `Unlocked: ${nameOf(a.dex)} (in your PC)`));
+          got.append(face(a.dex), el('span', '', `Unlocked: ${a.reward.kind === 'random' && a.reward.shiny ? 'shiny ' : ''}${nameOf(a.dex)} (in your PC)`));
           row.appendChild(got);
         } else if (a.reward.kind === 'choice') {
           const opts = el('div', 'opts');
@@ -147,7 +147,7 @@ export function openStarters(net: Connection): Promise<void> {
           }
           row.appendChild(opts);
         } else {
-          row.appendChild(el('div', 'sub', 'Reward: a random Uncommon'));
+          row.appendChild(el('div', 'sub', `Reward: ${a.reward.label}`));
         }
         box.appendChild(row);
       }

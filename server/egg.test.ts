@@ -87,8 +87,11 @@ describe('daily Egg', () => {
       const t = rollEgg(rng).tier.id;
       count.set(t, (count.get(t) ?? 0) + 1);
     }
-    const total = STARTER_TIERS.reduce((s, t) => s + t.weight, 0);
-    for (const t of STARTER_TIERS) expect(Math.abs((count.get(t.id) ?? 0) / n - t.weight / total)).toBeLessThan(0.015);
+    // Uncommon or better: never a Common, the rest by their weights.
+    const tiers = STARTER_TIERS.filter((t) => t.id !== 'common');
+    const total = tiers.reduce((s, t) => s + t.weight, 0);
+    expect(count.get('common') ?? 0).toBe(0);
+    for (const t of tiers) expect(Math.abs((count.get(t.id) ?? 0) / n - t.weight / total)).toBeLessThan(0.015);
   });
 
   it('a new account starts from Common only', () => {

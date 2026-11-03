@@ -280,7 +280,7 @@ export class Accounts {
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;
     this.google = gid && gsecret ? { id: gid, secret: gsecret } : null;
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
-    this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex) => this.giveReward(id, dex));
+    this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex, shiny) => this.giveReward(id, dex, shiny));
     this.gifts = new Gifts(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
@@ -653,9 +653,9 @@ export class Accounts {
   }
 
   /** A starter achievement's Pokémon into the PC (level 5, the moves it knows there). */
-  private giveReward(userId: number, dex: string): number {
+  private giveReward(userId: number, dex: string, shiny = false): number {
     const sp = SPECIES.get(dex);
-    return this.addToPc(userId, { dex, name: sp?.name ?? dex, level: CONFIG.player.level, moves: sp ? movesAt(sp, CONFIG.player.level) : [] }, 'reward', 'starter-achievement');
+    return this.addToPc(userId, { dex, name: sp?.name ?? dex, level: CONFIG.player.level, shiny, moves: sp ? movesAt(sp, CONFIG.player.level) : [] }, 'reward', 'starter-achievement');
   }
 
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */

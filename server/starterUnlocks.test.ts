@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Accounts } from './accounts';
 import { STARTER_TIERS } from '../src/sim/starters';
+import { ALL_STARTERS } from '../src/sim/starterAchievements';
 
 function account(): { acc: Accounts; uid: number } {
   const acc = new Accounts(mkdtempSync(join(tmpdir(), 'almia-starters-')), 'live');
@@ -18,18 +19,20 @@ const result = (uid: number, place: number, species: string[]) => ({
 });
 
 describe('starter achievements', () => {
-  it('unlock from matches, roll a random Uncommon, take a final choice, and feed the roll', () => {
+  it('unlock from matches, take a final choice, and feed the roll', () => {
     const { acc, uid } = account();
     let info = acc.starters.info(uid);
-    expect(info.achievements.every((a) => !a.done)).toBe(true);
+    // Signing in is the first unlock; nothing else yet.
+    expect(info.achievements.filter((a) => a.done).map((a) => a.id)).toEqual(['sign_in']);
     expect(info.eligible).toEqual([]);
     acc.recordMatch('m1', [result(uid, 2, ['0025', '0399'])], 'casual');
     acc.recordMatch('m2', [result(uid, 3, ['0041'])], 'casual');
     acc.recordMatch('m3', [result(uid, 1, ['0403'])], 'casual');
     info = acc.starters.info(uid);
     const by = Object.fromEntries(info.achievements.map((a) => [a.id, a]));
-    expect(by.first_catch?.done).toBe(true);
-    expect(STARTER_TIERS.find((t) => t.id === 'uncommon')?.dex).toContain(by.first_catch?.dex);
+    expect(by.sign_in?.done).toBe(true);
+    expect(by.launch_week).toBeUndefined();
+    expect(acc.starters.choose(uid, 'sign_in', '0004')).toBeNull();
     expect(by.three_matches?.done).toBe(true);
     expect(by.three_matches?.dex).toBeNull();
     expect(by.podium_three?.done).toBe(true);
@@ -41,7 +44,7 @@ describe('starter achievements', () => {
     expect(acc.starters.choose(uid, 'three_matches', '0258')).toMatch('already');
     expect(acc.starters.choose(uid, 'ten_species', '0387')).toMatch('Not unlocked');
     // Nominations: only what the account has; saved; the roll uses them.
-    const uncommon = by.first_catch?.dex as string;
+    const uncommon = '0004';
     expect(acc.starters.nominate(uid, ['0255', '0447'])).toMatch('not one you can nominate');
     expect(acc.starters.nominate(uid, ['0255', uncommon])).toBeNull();
     expect(acc.starters.forRoll(uid).sort()).toEqual(['0255', uncommon].sort());
@@ -52,15 +55,37 @@ describe('starter achievements', () => {
     acc.db.prepare('UPDATE profiles SET stats = ? WHERE user_id = ?').run(JSON.stringify({ matches: 5, catches: 12 }), uid);
     const info = acc.starters.info(uid);
     const by = Object.fromEntries(info.achievements.map((a) => [a.id, a]));
-    expect(by.first_catch?.done).toBe(true);
+    expect(by.sign_in?.done).toBe(true);
     expect(by.three_matches?.done).toBe(true);
+  });
+
+  it('launch week: 25 trainers defeated that week give a random shiny starter', () => {
+    const { acc, uid } = account();
+    acc.starters.weekStart = new Date(Date.now() - 3600_000).toISOString();
+    const ko = (n: number) => ({ ...result(uid, 4, []), stats: { catches: 0, knockouts: 0, eliminations: n, damage: 0, timeSurvived: 60, species: [] } });
+    acc.recordMatch('w1', [ko(20)], 'casual');
+    let by = Object.fromEntries(acc.starters.info(uid).achievements.map((a) => [a.id, a]));
+    expect(by.launch_week?.progress).toBe(20);
+    expect(by.launch_week?.done).toBe(false);
+    acc.recordMatch('w2', [ko(5)], 'casual');
+    by = Object.fromEntries(acc.starters.info(uid).achievements.map((a) => [a.id, a]));
+    expect(by.launch_week?.done).toBe(true);
+    expect(ALL_STARTERS).toContain(by.launch_week?.dex);
+    const pc = acc.db.prepare('SELECT entry FROM pc WHERE user_id = ?').all(uid).map((r) => JSON.parse((r as { entry: string }).entry) as { dex: string; shiny?: boolean });
+    expect(pc.find((e) => e.dex === by.launch_week?.dex)?.shiny).toBe(true);
+    // Outside the week it is not shown (unless earned) and nothing counts.
+    acc.starters.weekStart = '2020-01-01T00:00:00Z';
+    const { acc: acc2, uid: uid2 } = account();
+    acc2.starters.weekStart = '2020-01-01T00:00:00Z';
+    expect(acc2.starters.info(uid2).achievements.some((a) => a.id === 'launch_week')).toBe(false);
+    expect(acc.starters.info(uid).achievements.some((a) => a.id === 'launch_week')).toBe(true);
   });
 
   it('rewards go to the PC; Pokémon are kept at their first form, old entries too', () => {
     const { acc, uid } = account();
     const pcIds = () => acc.db.prepare('SELECT entry FROM pc WHERE user_id = ?').all(uid).map((r) => JSON.parse((r as { entry: string }).entry) as { dex: string; name: string; via: string; evolvedFrom?: string; level: number });
     acc.recordMatch('m1', [result(uid, 5, ['0025'])], 'casual');
-    acc.starters.info(uid);
+    expect(acc.starters.choose(uid, 'sign_in', '0007')).toBeNull();
     expect(pcIds().filter((e) => e.via === 'reward').length).toBe(1);
     acc.recordMatch('m2', [result(uid, 5, [])], 'casual');
     acc.recordMatch('m3', [result(uid, 5, [])], 'casual');

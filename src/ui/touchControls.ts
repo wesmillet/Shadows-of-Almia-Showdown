@@ -6,7 +6,7 @@
  * Right thumb: two large move buttons and a smaller dodge button; a ball button above them. A tap
  * on a move uses it on the selected target (or the way you face); dragging from the button aims,
  * and letting go uses it there. The ball works the same way, and a long press picks the ball type.
- * One Interact button shows when something usable is in reach. Bag, Menu and Auto sit under the
+ * One Interact button shows when something usable is in reach. Bag and Menu sit under the
  * minimap. A knocked-out Pokémon in a trainer battle brings up large cards to pick the next one.
  *
  * This file only draws and reports: the match turns the reported actions into the same calls the
@@ -78,7 +78,7 @@ export interface TouchFrame {
   /** Pick the next Pokémon for a trainer battle (seconds left), or null. */
   pick: number | null;
   bag: { items: TouchBagEntry[]; held: TouchBagEntry[] };
-  /** The minimap's box in CSS pixels (Menu sits left of it, Bag and Auto under it), or null. */
+  /** The minimap's box in CSS pixels (Menu sits left of it, Bag under it), or null. */
   minimap: { left: number; top: number; bottom: number } | null;
 }
 
@@ -293,7 +293,6 @@ export class TouchUi {
   // Top right.
   private menuEl: HTMLButtonElement;
   private bagEl: HTMLButtonElement;
-  private autoEl: HTMLButtonElement;
   // Party.
   private partyEl: HTMLDivElement;
   private partySig = '';
@@ -371,14 +370,12 @@ export class TouchUi {
     tapButton(this.interactEl, () => this.actions.push({ t: 'interact' }));
     this.root.appendChild(this.interactEl);
 
-    // Under the minimap: Menu (settings and controls), Bag, and the auto-battle toggle.
+    // By the minimap: Menu (settings and controls) and Bag. Auto battle is keyboard only (not on touch).
     this.menuEl = h('button', 'pill', 'Menu');
     this.bagEl = h('button', 'pill', 'Bag');
-    this.autoEl = h('button', 'pill', 'Auto');
     // Placed each frame against the minimap (placeTop); these are the fallbacks.
     Object.assign(this.menuEl.style, { right: '8px', top: '8px' });
     Object.assign(this.bagEl.style, { right: '8px', top: 'calc(33% + 6px)' });
-    Object.assign(this.autoEl.style, { right: '72px', top: 'calc(33% + 6px)' });
     tapButton(this.menuEl, () => {
       this.closeAll();
       // A prompt open: Close is Esc. Otherwise the game's own menu (Esc, or the hook it set).
@@ -386,8 +383,7 @@ export class TouchUi {
       else this.onMenu();
     });
     tapButton(this.bagEl, () => (this.bagPanel ? this.closeBag() : this.openBag()));
-    tapButton(this.autoEl, () => this.actions.push({ t: 'auto' }));
-    this.root.append(this.menuEl, this.bagEl, this.autoEl);
+    this.root.append(this.menuEl, this.bagEl);
 
     this.partyEl = h('div', 'party');
     this.root.appendChild(this.partyEl);
@@ -485,10 +481,6 @@ export class TouchUi {
     if (f.interact && this.interactEl.textContent !== f.interact) this.interactEl.textContent = f.interact;
     this.menuEl.textContent = f.prompt ? 'Close' : 'Menu';
     show(this.bagEl, play);
-    show(this.autoEl, play && f.auto !== null);
-    const autoText = f.auto ? 'Auto: on' : 'Auto: off';
-    if (this.autoEl.textContent !== autoText) this.autoEl.textContent = autoText;
-    this.autoEl.style.background = f.auto ? 'rgba(46,125,50,0.8)' : '';
     show(this.partyEl, play);
     this.placeTop(f);
     this.drawParty(f);
@@ -506,7 +498,7 @@ export class TouchUi {
 
   // ------------------------------------------------------------------ layout
 
-  /** Menu just left of the minimap, level with its top; Bag and Auto under the minimap, right-aligned. */
+  /** Menu just left of the minimap, level with its top; Bag under the minimap, right-aligned. */
   private placeTop(f: TouchFrame): void {
     const mm = f.minimap;
     if (!mm) return;
@@ -515,8 +507,15 @@ export class TouchUi {
     Object.assign(this.menuEl.style, { right: px(w - mm.left + 8), top: px(mm.top) });
     const below = px(mm.bottom + 6);
     Object.assign(this.bagEl.style, { right: '8px', top: below });
-    const bagW = this.bagEl.offsetWidth || 56;
-    Object.assign(this.autoEl.style, { right: px(8 + bagW + 6), top: below });
+    // A short screen (a small phone, or browser bars showing) brings the right thumb's buttons up to
+    // the Bag: then the Bag sits just under Menu, left of the minimap.
+    const bag = this.bagEl.getBoundingClientRect();
+    const clash = [this.ballEl, this.stylerEl, this.interactEl, ...this.moveEls].some((el) => {
+      if (!el || el.style.display === 'none') return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.left < bag.right + 6 && r.right > bag.left - 6 && r.top < bag.bottom + 6 && r.bottom > bag.top - 6;
+    });
+    if (clash) Object.assign(this.bagEl.style, { right: px(w - mm.left + 8), top: px(mm.top + (this.menuEl.offsetHeight || 32) + 6) });
     // The party strip: portraits sized so a full team of six fits under the trainers-left card.
     const n = Math.max(1, f.party.length);
     const room = this.root.clientHeight - 64;

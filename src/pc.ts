@@ -30,6 +30,24 @@ export interface PcEntry {
   /** When (ISO date) and from which match seed. */
   at: string;
   seed?: number;
+  /** Starred in the PC (sorted first). */
+  fav?: boolean;
+  /** Online: the server's row id (favourites are saved by it). */
+  pcId?: number;
+}
+
+/** Stars or unstars a Pokémon in this browser's PC. */
+export function setFavLocal(uid: string, on: boolean): void {
+  try {
+    const list = loadPc();
+    const e = list.find((x) => x.uid === uid);
+    if (!e) return;
+    if (on) e.fav = true;
+    else delete e.fav;
+    localStorage.setItem(KEY, JSON.stringify(list));
+  } catch {
+    /* storage unavailable: the star lasts this visit */
+  }
 }
 
 const KEY = 'almia.pc.v1';

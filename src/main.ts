@@ -304,14 +304,14 @@ async function boot(): Promise<void> {
   let watchingId: string | null = null;
   const toaster = net ? new Toaster(net) : null;
   if (net) debug.showdown.net = net;
-  // Away for two minutes (no key, click, tap or mouse movement): out of any match, disconnected.
+  // Away for two minutes in a match (no key, click, tap or mouse movement): out of it, disconnected.
   if (net) {
     new AfkWatch(() => {
       net.send({ t: 'leave' });
       playingId = null;
       watchingId = null;
       net.close();
-    });
+    }, () => playingId !== null && screen instanceof MatchScreen);
   }
   // The game's own errors go to the server's error log (a few per visit), so they get fixed.
   if (net) {

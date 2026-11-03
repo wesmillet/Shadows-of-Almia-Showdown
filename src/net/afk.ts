@@ -1,5 +1,5 @@
 /**
- * Away-from-keyboard watch (online only): no key, click, tap or mouse movement for AFK_WARN_MS
+ * Away-from-keyboard watch (online, only while playing a match): no key, click, tap or mouse movement for AFK_WARN_MS
  * shows a warning with a countdown; at AFK_KICK_MS the player is disconnected (out of any match
  * they were in) and shown a screen with a Reconnect button. A key or finger held down counts as
  * active (walking with a held key or the touch stick). A hidden tab keeps counting.
@@ -28,7 +28,11 @@ export class AfkWatch {
   private kicked = false;
 
   /** `onKick` leaves any match and closes the connection; this then shows the away screen. */
-  constructor(private readonly onKick: () => void) {
+  constructor(
+    private readonly onKick: () => void,
+    /** Playing a match right now (menus, the queue and watching never time out). */
+    private readonly playing: () => boolean,
+  ) {
     const st = document.createElement('style');
     st.textContent = CSS;
     document.head.appendChild(st);
@@ -63,6 +67,11 @@ export class AfkWatch {
 
   private tick(): void {
     if (this.kicked) return;
+    if (!this.playing()) {
+      this.last = Date.now();
+      this.hideWarn();
+      return;
+    }
     if (this.held.size && document.visibilityState === 'visible') this.last = Date.now();
     const idle = Date.now() - this.last;
     if (idle >= AFK_KICK_MS) return this.kick();
@@ -98,7 +107,7 @@ export class AfkWatch {
     const h = document.createElement('h2');
     h.textContent = 'Disconnected';
     const p = document.createElement('div');
-    p.textContent = `You were away for ${Math.round(AFK_KICK_MS / 60_000)} minutes, so you were disconnected (and left any match you were in). Your account, PC and progress are saved.`;
+    p.textContent = `You were away for ${Math.round(AFK_KICK_MS / 60_000)} minutes during a match, so you left it and were disconnected. Your account, PC and progress are saved.`;
     const b = document.createElement('button');
     b.textContent = 'Reconnect';
     b.addEventListener('click', () => location.reload());

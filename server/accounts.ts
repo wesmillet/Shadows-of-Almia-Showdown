@@ -375,7 +375,7 @@ export class Accounts {
           this.db.exec('COMMIT');
           return send(400, { error: 'One of those Pokémon is not there any more, so the offer was closed' });
         }
-        const stamp = (entry: string, from: number): string => JSON.stringify({ ...JSON.parse(entry), tradedFrom: nameOf(from), tradedAt: new Date().toISOString() });
+        const stamp = (entry: string, from: number): string => JSON.stringify({ ...JSON.parse(entry), fav: undefined, tradedFrom: nameOf(from), tradedAt: new Date().toISOString() });
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.to_user, stamp(g.entry, t.from_user), t.give_pc);
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.from_user, stamp(w.entry, t.to_user), t.want_pc);
         this.logCollection(t.from_user, 'trade:out', { pcId: t.give_pc, other: t.to_user, ref: `trade:${t.id}`, detail: JSON.parse(g.entry) });
@@ -435,7 +435,7 @@ export class Accounts {
         partnerId = waiting.user_id;
         const stamp = (id: number, from: number): string => {
           const e = (this.db.prepare('SELECT entry FROM pc WHERE id = ?').get(id) as { entry: string }).entry;
-          return JSON.stringify({ ...JSON.parse(e), tradedFrom: nameOf(from), tradedAt: new Date().toISOString(), wonderTrade: true });
+          return JSON.stringify({ ...JSON.parse(e), fav: undefined, tradedFrom: nameOf(from), tradedAt: new Date().toISOString(), wonderTrade: true });
         };
         const mine = give.pcId as number;
         const theirs = waiting.pc_id;
@@ -1139,6 +1139,18 @@ export class Accounts {
         const rows = this.db.prepare('SELECT id, entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ id: number; entry: string }>;
         const pooled = this.pooledIds(me.id);
         return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id, ...(pooled.has(r.id) ? { wonder: true } : {}) })) });
+      }
+      if (req.method === 'POST' && path === '/api/pc/fav') {
+        // A star on a Pokémon in this account's PC (sorting only; nothing else reads it).
+        const b = await readJson(req);
+        const id = Number(b.pcId);
+        const row = Number.isInteger(id) ? (this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(id, me.id) as { entry: string } | undefined) : undefined;
+        if (!row) return send(404, { error: 'Not in your PC' });
+        const e = JSON.parse(row.entry) as Record<string, unknown>;
+        if (b.on) e.fav = true;
+        else delete e.fav;
+        this.db.prepare('UPDATE pc SET entry = ? WHERE id = ? AND user_id = ?').run(JSON.stringify(e), id, me.id);
+        return send(200, { ok: true });
       }
       if (path.startsWith('/api/trade') || path.startsWith('/api/wonder')) return await this.tradeApi(req, path, me, send);
       if (req.method === 'GET' && path === '/api/starters') return send(200, this.starters.info(me.id));

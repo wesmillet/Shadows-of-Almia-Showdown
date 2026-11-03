@@ -1,13 +1,13 @@
 /**
  * The Starters panel (from the hub, signed in): the four starter achievements with their progress
- * and rewards (a choice of three is final), and the five nominations the third starter slot rolls
- * from, with the points budget and each one's odds. Everything is saved to the account by the
- * server (server/starterUnlocks.ts), which checks it all again. Works with a mouse or a finger.
+ * and rewards (a choice of three is final; rewards go to the PC). The third slot's nominations are
+ * chosen in My PC (src/ui/pcScreen.ts); this panel only lists them. Everything is saved to the
+ * account by the server (server/starterUnlocks.ts). Works with a mouse or a finger.
  */
 import type { Connection } from '../net/connection';
 import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES } from '../sim/data';
-import { NOMINATION_SLOTS, nominationCost, STARTER_TIERS } from '../sim/starters';
+import { nominationCost } from '../sim/starters';
 import { ASSET_ROOT } from '../sprites/assets';
 import { el, overlayRoot } from './overlay';
 
@@ -44,24 +44,12 @@ const CSS = `
 let styled = false;
 
 const nameOf = (dex: string): string => SPECIES.get(dex)?.name ?? dex;
-const tierInfo = (id: string): { name: string; color: string } => {
-  const t = STARTER_TIERS.find((x) => x.id === id);
-  return { name: t?.name ?? id, color: t?.color ?? '#8a6a4a' };
-};
-
 function face(dex: string): HTMLImageElement {
   const img = el('img', 'face');
   img.alt = '';
   img.src = `${ASSET_ROOT}portraits/${dex.split('-')[0]}/Normal.png`;
   img.onerror = () => (img.style.visibility = 'hidden');
   return img;
-}
-
-function tierTag(id: string): HTMLSpanElement {
-  const t = tierInfo(id);
-  const tag = el('span', 'tier', t.name);
-  tag.style.background = t.color;
-  return tag;
 }
 
 /** Opens the panel; resolves when it closes. */
@@ -78,7 +66,6 @@ export function openStarters(net: Connection): Promise<void> {
     wrap.appendChild(box);
     overlayRoot().appendChild(wrap);
     let info: StartersInfo | null = null;
-    let picked: string[] = [];
     let confirming: { id: string; dex: string } | null = null;
     let message = '';
     let ok = false;
@@ -106,7 +93,6 @@ export function openStarters(net: Connection): Promise<void> {
         ok = false;
       } else {
         info = r;
-        picked = [...r.nominations];
       }
       draw();
     };
@@ -134,7 +120,7 @@ export function openStarters(net: Connection): Promise<void> {
         row.appendChild(what);
         if (a.dex) {
           const got = el('div', 'got');
-          got.append(face(a.dex), el('span', '', `Unlocked: ${nameOf(a.dex)}`));
+          got.append(face(a.dex), el('span', '', `Unlocked: ${nameOf(a.dex)} (in your PC)`));
           row.appendChild(got);
         } else if (a.reward.kind === 'choice') {
           const opts = el('div', 'opts');
@@ -165,75 +151,15 @@ export function openStarters(net: Connection): Promise<void> {
         }
         box.appendChild(row);
       }
-      // ---- nominations
-      box.appendChild(el('h3', '', 'Third slot nominations'));
-      box.appendChild(el('p', 'sub', `Pick up to ${data.slots} from your PC and unlocks. Stronger tiers cost more points and come up less often; an empty spot rolls a random Common (1 point).`));
-      const used = nominationCost(picked);
-      const meter = el('div', `meter${used > data.budget ? ' over' : ''}`, `Points: ${used} of ${data.budget}`);
-      box.appendChild(meter);
-      // The five spots with their odds (empty spots: a Common, weight as a Common).
-      const weightOf = (d: string): number => data.weights[data.eligible.find((e) => e.dex === d)?.tier ?? 'common'] ?? 1;
-      const emptyW = data.weights.common ?? 1;
-      const total = picked.reduce((n, d) => n + weightOf(d), 0) + (NOMINATION_SLOTS - picked.length) * emptyW;
-      const slots = el('div', 'slots');
-      for (let i = 0; i < data.slots; i++) {
-        const d = picked[i];
-        const s = el('button', d ? 'slot' : 'slot empty');
-        if (d) {
-          const e = data.eligible.find((x) => x.dex === d);
-          const m = el('span', 'mon');
-          m.append(face(d), el('span', '', nameOf(d)));
-          s.append(m, tierTag(e?.tier ?? 'common'), el('span', '', `${e?.cost ?? 1} pt · tap to remove`), el('span', 'odds', `${((weightOf(d) / total) * 100).toFixed(1)}%`));
-          s.addEventListener('click', () => {
-            picked = picked.filter((x) => x !== d);
-            message = '';
-            draw();
-          });
-        } else {
-          s.append(el('span', '', 'Empty: a random Common'), el('span', 'odds', `${((emptyW / total) * 100).toFixed(1)}%`));
-          s.disabled = true;
-        }
-        slots.appendChild(s);
-      }
-      box.appendChild(slots);
-      // ---- what can be nominated
-      box.appendChild(el('h3', '', 'Your Pokémon'));
-      if (!data.eligible.length) {
-        box.appendChild(el('p', 'sub', 'Nothing to nominate yet: keep a Pokémon in your PC (win a match, or hatch an Egg) or earn an unlock above.'));
-      } else {
-        const pool = el('div', 'pool');
-        for (const e of data.eligible) {
-          const on = picked.includes(e.dex);
-          const b = el('button', on ? 'on' : '');
-          const would = nominationCost([...picked, e.dex]);
-          b.disabled = !on && (picked.length >= data.slots || would > data.budget);
-          if (b.disabled) b.title = picked.length >= data.slots ? 'All five spots are taken' : `That would use ${would} of ${data.budget} points`;
-          const txt = el('span', '');
-          txt.append(el('div', '', nameOf(e.dex)), tierTag(e.tier), document.createTextNode(` ${e.cost} pt`));
-          b.append(face(e.dex), txt);
-          b.addEventListener('click', () => {
-            picked = on ? picked.filter((x) => x !== e.dex) : [...picked, e.dex];
-            message = '';
-            draw();
-          });
-          pool.appendChild(b);
-        }
-        box.appendChild(pool);
-      }
+      // ---- nominations live in My PC now (src/ui/pcScreen.ts)
+      box.appendChild(el('h3', '', 'Third slot'));
+      box.appendChild(el('p', 'sub', data.nominations.length
+        ? `Nominated: ${data.nominations.map(nameOf).join(', ')} (${nominationCost(data.nominations)} of ${data.budget} points). Change them in My PC: tap a Pokémon, then Nominate.`
+        : `Nothing nominated yet, so the third slot rolls a random Common. Open My PC, tap a Pokémon and press Nominate (up to ${data.slots}, ${data.budget} points).`));
       const row = el('div', 'row');
-      const save = el('button', 'almia-btn', 'Save nominations');
-      save.disabled = used > data.budget || JSON.stringify(picked) === JSON.stringify(data.nominations);
-      save.addEventListener('click', () => {
-        void net.api<StartersInfo>('/api/starters/nominate', { dexes: picked }).then((r) => {
-          if (r.error) [message, ok] = [r.error, false];
-          else [info, message, ok] = [r, 'Saved: your next roll uses these', true];
-          if (!r.error) picked = [...r.nominations];
-          draw();
-        });
-      });
       const done = el('button', 'almia-btn alt', 'Close');
       done.addEventListener('click', close);
-      row.append(save, done);
+      row.append(done);
       box.appendChild(row);
       box.appendChild(el('div', ok ? 'msg ok' : 'msg', message));
     };

@@ -19,7 +19,7 @@ import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { DEV_CHEST } from '../src/dev';
 import { CONFIG, SPECIES, movesAt } from '../src/sim/data';
-import { rollEgg, STARTER_TIERS } from '../src/sim/starters';
+import { firstForm, rollEgg, STARTER_TIERS } from '../src/sim/starters';
 import { Rng } from '../src/core/rng';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
@@ -263,6 +263,7 @@ export class Accounts {
     // if that entry is gone, when the Egg was rolled, which is earlier, so never a longer wait).
     this.db.exec(`UPDATE daily_eggs SET hatched_at = COALESCE((SELECT created_at FROM pc WHERE pc.id = daily_eggs.pc_id), at)
       WHERE pc_id IS NOT NULL AND hatched_at IS NULL`);
+    this.firstFormsOnce();
     // v1: the rare-item chest was on for everyone until now and was saved into every account's
     // chest, so those items come out once (what players stored themselves stays), and chests are
     // cut to their ten slots.
@@ -279,7 +280,7 @@ export class Accounts {
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;
     this.google = gid && gsecret ? { id: gid, secret: gsecret } : null;
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
-    this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id));
+    this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex) => this.giveReward(id, dex));
     this.gifts = new Gifts(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
@@ -621,11 +622,50 @@ export class Accounts {
     return rows.map((r) => r.dex).filter((d) => typeof d === 'string');
   }
 
+  /**
+   * Once per database: every Pokémon already in a PC goes back to the first stage of its line, as
+   * new ones do (what it was is kept in the entry as evolvedFrom, and the change is in the
+   * collection log). Nothing is removed.
+   */
+  private firstFormsOnce(): void {
+    if (this.db.prepare("SELECT 1 FROM meta WHERE key = 'pc_first_forms'").get()) return;
+    const rows = this.db.prepare('SELECT id, user_id, entry FROM pc').all() as Array<{ id: number; user_id: number; entry: string }>;
+    let changed = 0;
+    this.atomically(() => {
+      for (const r of rows) {
+        let e: { dex: string; name: string; level: number; moves: string[]; evolvedFrom?: string };
+        try {
+          e = JSON.parse(r.entry);
+        } catch {
+          continue;
+        }
+        if (typeof e.dex !== 'string') continue;
+        const b = firstForm({ dex: e.dex, name: e.name, level: e.level ?? 5, moves: e.moves ?? [] });
+        if (b.dex === e.dex) continue;
+        const next = { ...e, dex: b.dex, name: b.name, moves: b.moves, evolvedFrom: e.evolvedFrom ?? b.from };
+        this.db.prepare('UPDATE pc SET entry = ? WHERE id = ?').run(JSON.stringify(next), r.id);
+        this.logCollection(r.user_id, 'first-form', { pcId: r.id, ref: 'migration', detail: { from: e.dex, to: b.dex } });
+        changed++;
+      }
+      this.db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('pc_first_forms', ?)").run(String(Date.now()));
+    });
+    if (changed) console.log(`PC: ${changed} Pokémon put back to their first form`);
+  }
+
+  /** A starter achievement's Pokémon into the PC (level 5, the moves it knows there). */
+  private giveReward(userId: number, dex: string): number {
+    const sp = SPECIES.get(dex);
+    return this.addToPc(userId, { dex, name: sp?.name ?? dex, level: CONFIG.player.level, moves: sp ? movesAt(sp, CONFIG.player.level) : [] }, 'reward', 'starter-achievement');
+  }
+
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
-  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift', matchId: string): number {
+  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift' | 'reward', matchId: string): number {
+    // Kept at the first stage of its line (pcBase): an evolved Pokémon goes back to its first form.
+    const base = firstForm(m);
     const entry = {
-      uid: randomBytes(6).toString('base64url'), dex: m.dex, name: m.name, level: m.level, shiny: m.shiny || undefined, alpha: m.alpha || undefined,
-      legend: m.legend || undefined, shadow: m.shadow || undefined, moves: m.moves, heldItem: m.heldItem ?? null, via, at: new Date().toISOString(), match: matchId,
+      uid: randomBytes(6).toString('base64url'), dex: base.dex, name: base.name, level: m.level, shiny: m.shiny || undefined, alpha: m.alpha || undefined,
+      legend: m.legend || undefined, shadow: m.shadow || undefined, moves: base.moves, heldItem: m.heldItem ?? null, via, at: new Date().toISOString(), match: matchId,
+      evolvedFrom: base.from,
     };
     return this.atomically(() => {
       const r = this.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(userId, JSON.stringify(entry), Date.now());
@@ -1454,4 +1494,3 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
     return {};
   }
 }
-

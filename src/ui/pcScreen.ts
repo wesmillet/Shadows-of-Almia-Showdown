@@ -6,6 +6,10 @@
  * icon and shows the Pokémon on the side panel. Esc or Back returns.
  */
 import type { Input } from '../core/input';
+import type { Connection } from '../net/connection';
+import type { StartersInfo } from '../sim/starterAchievements';
+import { SPECIES } from '../sim/data';
+import { nominationBase, nominationCost, NOMINATION_SLOTS, STARTER_TIERS } from '../sim/starters';
 import { loadPc, type PcEntry } from '../pc';
 import type { Assets } from '../sprites/assets';
 import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
@@ -31,11 +35,56 @@ export class PcScreen implements Screen {
     /** Online: the PC on the server (signed in); offline, this browser's. */
     list?: PcEntry[],
     private readonly where = 'kept in this browser',
+    /** Online and signed in: the third starter slot's nominations are chosen here. */
+    private readonly net: Connection | null = null,
   ) {
     // Oldest first, like filling a box.
     this.list = list ?? loadPc();
     // Shiny ones load their recoloured set (key `dex*`), so they are ready when the box opens too.
     void this.sprites.preload(this.list.map((e) => (e.shiny && SpriteRegistry.hasShiny(e.dex) ? `${e.dex}*` : e.dex)), undefined, true);
+    if (net) void this.loadStarters();
+  }
+
+  // ------------------------------------------------------------------ third-slot nominations
+
+  /** The account's nominations, budget and what it may nominate (server/starterUnlocks.ts). */
+  private starters: StartersInfo | null = null;
+  /** The slot tapped or clicked (the side panel shows it; on a touch screen there is no hover). */
+  private selected = -1;
+  private note = '';
+  private saving = false;
+
+  private async loadStarters(): Promise<void> {
+    if (!this.net) return;
+    const r = await this.net.api<StartersInfo>('/api/starters');
+    if (!r.error) this.starters = r;
+  }
+
+  /** What a PC Pokémon would nominate (its line's first form), or null. */
+  private nomOf(e: PcEntry): string | null {
+    const b = nominationBase(e.dex);
+    return b && this.starters?.eligible.some((x) => x.dex === b) ? b : null;
+  }
+
+  private nominate(dex: string, on: boolean): void {
+    const st = this.starters;
+    if (!st || !this.net || this.saving) return;
+    const next = on ? [...st.nominations, dex] : st.nominations.filter((d) => d !== dex);
+    this.saving = true;
+    void this.net.api<StartersInfo>('/api/starters/nominate', { dexes: next }).then((r) => {
+      this.saving = false;
+      if (r.error) this.note = r.error;
+      else {
+        this.starters = r;
+        this.note = on ? `${SPECIES.get(dex)?.name ?? dex} nominated for the third slot` : 'Nomination removed';
+      }
+    });
+  }
+
+  /** The nominate button on the side panel. */
+  private nomRect(side: Rect): Rect {
+    const s = this.ctx.view.baseScale;
+    return { x: side.x + 20 * s, y: side.y + side.h - 64 * s, w: side.w - 40 * s, h: 44 * s };
   }
 
   private get boxes(): number {
@@ -90,6 +139,22 @@ export class PcScreen implements Screen {
     const L = this.layout();
     const b = this.backRect();
     for (const c of input.takeClicks()) {
+      const nr = this.nomRect(L.side);
+      const shown = this.list[this.selected >= 0 ? this.selected : this.hover];
+      const nd = shown ? this.nomOf(shown) : null;
+      if (nd && this.starters && hit(c.x, c.y, nr.x, nr.y, nr.w, nr.h)) {
+        const on = !this.starters.nominations.includes(nd);
+        if (!on || this.canAdd(nd)) this.nominate(nd, on);
+        continue;
+      }
+      const col = Math.floor((c.x - L.gx) / L.slot);
+      const row = Math.floor((c.y - L.gy) / L.slot);
+      if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
+        const idx = this.box * PER_BOX + row * COLS + col;
+        this.selected = this.list[idx] && this.selected !== idx ? idx : -1;
+        this.note = '';
+        continue;
+      }
       if (hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.onBack();
       else if (hit(c.x, c.y, L.left.x, L.left.y, L.left.w, L.left.h)) this.turn(-1);
       else if (hit(c.x, c.y, L.right.x, L.right.y, L.right.w, L.right.h)) this.turn(1);
@@ -115,8 +180,10 @@ export class PcScreen implements Screen {
     const h = v.hud;
     h.clearRect(0, 0, v.width, v.height);
     backdrop(v);
+    const st = this.starters;
+    const slot3 = st ? ` · Third starter slot: ${st.nominations.length}/${st.slots} nominated, ${nominationCost(st.nominations)} of ${st.budget} points` : '';
     heading(v, 'MY PC', this.list.length
-      ? `${this.list.length} Pokémon extracted · ${this.where} · A/D or the arrows change box · Esc back`
+      ? `${this.list.length} Pokémon · ${this.where}${slot3} · A/D or the arrows change box · Esc back`
       : 'Nothing here yet. Win a match (you pick one Pokémon to extract) or use an Extraction Voucher.', 56 * s);
     const L = this.layout();
     this.drawWallpaper(L.box);
@@ -162,10 +229,31 @@ export class PcScreen implements Screen {
       this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 1.5 * s - up - hop, L.slot - 22 * s);
       if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s, 12, { align: 'center', weight: '900', color: '#ffd36b' });
       if (e.shadow) text(v, '◆', x + 14 * s, y + 18 * s, 11, { align: 'center', weight: '900', color: '#c48bff' });
+      // Nominated for the third starter slot (its line), and the one tapped.
+      const nd = this.nomOf(e);
+      if (nd && this.starters?.nominations.includes(nd)) {
+        h.fillStyle = '#c2611a';
+        h.beginPath();
+        h.arc(x + 15 * s, y + L.slot - 15 * s, 9 * s, 0, Math.PI * 2);
+        h.fill();
+        text(v, '3', x + 15 * s, y + L.slot - 11 * s, 11, { align: 'center', weight: '900', color: '#fff', shadow: false });
+      }
+      if (idx === this.selected) {
+        h.strokeStyle = '#ffd66e';
+        h.lineWidth = 3 * s;
+        h.strokeRect(x + 3 * s, y + 3 * s - up, L.slot - 6 * s, L.slot - 6 * s);
+      }
     }
     this.drawSide(L.side);
     const b = this.backRect();
     button(v, 'Back', b.x, b.y, b.w, b.h, hit(mx, my, b.x, b.y, b.w, b.h), '#f4e6c8');
+  }
+
+  /** Whether one more nomination fits (five spots, the points budget). */
+  private canAdd(dex: string): boolean {
+    const st = this.starters;
+    if (!st || st.nominations.includes(dex)) return false;
+    return st.nominations.length < st.slots && nominationCost([...st.nominations, dex]) <= st.budget;
   }
 
   /**
@@ -184,12 +272,11 @@ export class PcScreen implements Screen {
     if (!box) return;
     const bw = box.x1 - box.x0;
     const bh = box.y1 - box.y0;
-    const want = room / Math.max(bw, bh, 1);
-    // A whole-number scale keeps pixels square, but only when it still fills most of the slot;
-    // otherwise small Pokémon would look much smaller than their neighbours, so the scale is exact.
-    const k = want >= 2 && Math.floor(want) >= want * 0.8 ? Math.floor(want) : want;
+    // Every Pokémon the same size (its idle area fills the slot's room), standing on the same
+    // line near the bottom of the slot, centred across it.
+    const k = room / Math.max(bw, bh, 1);
     const dx = Math.round(cx - ((box.x0 + box.x1) / 2) * k);
-    const dy = Math.round(cy - ((box.y0 + box.y1) / 2) * k);
+    const dy = Math.round(cy + room / 2 - box.y1 * k);
     h.save();
     h.imageSmoothingEnabled = false;
     if (e.shadow) {
@@ -245,9 +332,9 @@ export class PcScreen implements Screen {
     const s = v.baseScale;
     const h = v.hud;
     panel(v, r.x, r.y, r.w, r.h, 16, 'rgba(22,30,52,0.94)');
-    const e = this.list[this.hover];
+    const e = this.list[this.selected >= 0 ? this.selected : this.hover];
     if (!e) {
-      text(v, this.list.length ? 'Point at a Pokémon' : 'Your box is empty', r.x + r.w / 2, r.y + r.h / 2, 14, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 30 * s });
+      text(v, this.list.length ? (this.starters ? 'Point at or tap a Pokémon' : 'Point at a Pokémon') : 'Your box is empty', r.x + r.w / 2, r.y + r.h / 2, 14, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 30 * s });
       return;
     }
     const f = this.sprites.get(e.dex, !!e.shiny).portraitSource();
@@ -271,8 +358,32 @@ export class PcScreen implements Screen {
     text(v, `Lv ${e.level}`, r.x + r.w / 2, y + 26 * s, 15, { align: 'center', color: INK.accent, shadow: false });
     const tags = [(e as PcEntry & { wonder?: boolean }).wonder ? 'On Wonder Trade' : '', e.shadow ? 'Shadow' : '', e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
     if (tags) text(v, tags, r.x + r.w / 2, y + 48 * s, 12, { align: 'center', color: e.shadow ? INK.storm : INK.gold, shadow: false });
-    text(v, e.via === 'win' ? 'Victory prize' : e.via === 'egg' ? 'Daily Egg' : e.via === 'gift' ? 'Mystery Gift' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? INK.gold : e.via === 'egg' ? INK.accent : INK.blue, shadow: false });
+    text(v, e.via === 'win' ? 'Victory prize' : e.via === 'egg' ? 'Daily Egg' : e.via === 'gift' ? 'Mystery Gift' : e.via === 'reward' ? 'Starter achievement' : 'Extraction Voucher', r.x + r.w / 2, y + 70 * s, 12, { align: 'center', color: e.via === 'win' ? INK.gold : e.via === 'egg' ? INK.accent : INK.blue, shadow: false });
     if (e.moves?.length) text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + r.w / 2, y + 94 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });
+    this.drawNominate(r, e);
+  }
+
+  /** The side panel's third-slot part: the line it nominates, its tier and cost, and the button. */
+  private drawNominate(r: Rect, e: PcEntry): void {
+    const st = this.starters;
+    if (!st) return;
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const nd = this.nomOf(e);
+    const b = this.nomRect(r);
+    if (!nd) {
+      text(v, 'Can not be nominated for the third slot', r.x + r.w / 2, b.y + 26 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });
+      return;
+    }
+    const info = st.eligible.find((x) => x.dex === nd);
+    const tier = STARTER_TIERS.find((t) => t.id === info?.tier);
+    const on = st.nominations.includes(nd);
+    const can = on || this.canAdd(nd);
+    text(v, `Third slot: ${SPECIES.get(nd)?.name ?? nd} · ${tier?.name ?? ''} · ${info?.cost ?? 1} pt`, r.x + r.w / 2, b.y - 30 * s, 12, { align: 'center', color: INK.text, shadow: false, maxWidth: r.w - 24 * s });
+    const why = this.note || (can ? '' : st.nominations.length >= NOMINATION_SLOTS ? 'All five spots are taken' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`);
+    if (why) text(v, why, r.x + r.w / 2, b.y - 12 * s, 11, { align: 'center', color: this.note && !this.note.includes(' ') ? INK.dim : INK.accent, shadow: false, maxWidth: r.w - 24 * s });
+    const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
+    button(v, on ? 'Remove from third slot' : 'Nominate for third slot', b.x, b.y, b.w, b.h, over && can, can ? undefined : '#b8ad98');
   }
 
   /** The box: the skin's blue frame, with Gen 5's soft diagonal bands across its field. */

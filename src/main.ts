@@ -543,7 +543,7 @@ async function boot(): Promise<void> {
   const showPc = async (): Promise<void> => {
     if (net?.me.signedIn) {
       const r = await net.api<{ pc: PcEntry[] }>('/api/pc');
-      if (r.pc) return game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false), r.pc, 'kept on the server'));
+      if (r.pc) return game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false), r.pc, 'kept on the server', net));
     }
     game.setScreen(new PcScreen(game, sprites, assets, () => void showTitle(false)));
   };

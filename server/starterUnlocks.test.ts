@@ -55,4 +55,28 @@ describe('starter achievements', () => {
     expect(by.first_catch?.done).toBe(true);
     expect(by.three_matches?.done).toBe(true);
   });
+
+  it('rewards go to the PC; Pokémon are kept at their first form, old entries too', () => {
+    const { acc, uid } = account();
+    const pcIds = () => acc.db.prepare('SELECT entry FROM pc WHERE user_id = ?').all(uid).map((r) => JSON.parse((r as { entry: string }).entry) as { dex: string; name: string; via: string; evolvedFrom?: string; level: number });
+    acc.recordMatch('m1', [result(uid, 5, ['0025'])], 'casual');
+    acc.starters.info(uid);
+    expect(pcIds().filter((e) => e.via === 'reward').length).toBe(1);
+    acc.recordMatch('m2', [result(uid, 5, [])], 'casual');
+    acc.recordMatch('m3', [result(uid, 5, [])], 'casual');
+    expect(acc.starters.choose(uid, 'three_matches', '0258')).toBeNull();
+    const reward = pcIds().find((e) => e.dex === '0258');
+    expect(reward?.via).toBe('reward');
+    expect(reward?.level).toBe(5);
+    // A Charizard won in a match is kept as a Charmander.
+    acc.addToPc(uid, { dex: '0006', name: 'Charizard', level: 40, moves: [] }, 'win', 'm4');
+    const c = pcIds().find((e) => e.evolvedFrom === '0006');
+    expect(c?.dex).toBe('0004');
+    expect(c?.name).toBe('Charmander');
+    // An entry stored before this rule changes on the next start.
+    acc.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(uid, JSON.stringify({ uid: 'old', dex: '0445', name: 'Garchomp', level: 60, moves: [], via: 'win' }), Date.now());
+    acc.db.prepare("DELETE FROM meta WHERE key = 'pc_first_forms'").run();
+    (acc as unknown as { firstFormsOnce(): void }).firstFormsOnce();
+    expect(pcIds().find((e) => e.evolvedFrom === '0445')?.dex).toBe('0443');
+  });
 });

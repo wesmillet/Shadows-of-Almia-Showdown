@@ -118,11 +118,8 @@ async function until(fn, ms, step = 500) {
   const rosterOf = (c) => c.p.evaluate(() => (window.showdown.mirror?.roster ?? []).map((r) => r.name).join(','));
   const info = await Promise.all(all.map(async (c) => { const r = await rosterOf(c); return { id: r, trainers: r ? r.split(',').length : 0 }; }));
   note('all five are in the same ten-trainer match (computer trainers fill the rest)', new Set(info.map((i) => i.id)).size === 1 && info.every((i) => i.trainers === 10), info.map((i) => i.trainers));
-  for (const c of all) {
-    c.howShown = await c.p.evaluate(() => !!document.querySelector('.almia-how'));
-    await c.p.keyboard.press('Enter');
-  }
-  note('the how-to-play card opened for these first-time browsers', all.every((c) => c.howShown));
+  for (const c of all) c.howShown = await c.p.evaluate(() => !!document.querySelector('.almia-how'));
+  note('no how-to-play card pops up at the start (it is in Options)', all.every((c) => !c.howShown));
   await all[0].p.screenshot({ path: `${OUT}/1_match.png` });
 
   // Walking about, as players start out (auto-battle on).

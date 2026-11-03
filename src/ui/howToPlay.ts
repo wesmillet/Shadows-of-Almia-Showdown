@@ -1,6 +1,6 @@
 /**
- * How to play: the goal and the controls on one card. It opens by itself at the start of a
- * browser's first match, and from Options at any time. Keys follow the player's own bindings.
+ * How to play: the goal and the controls on one card, opened from the menus (Options online; the
+ * title screen and the touch Menu offline). It no longer opens by itself at the start of a match.
  * Nothing secret is mentioned (no hidden encounters or capture rules).
  */
 import { boundKey, keyName } from '../settings';

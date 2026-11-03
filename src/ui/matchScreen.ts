@@ -14,7 +14,6 @@ import { View } from '../render/view';
 import { renderWorld } from '../render/world';
 import { music, type TrackId } from '../audio/music';
 import { openOptions } from './optionsMenu';
-import { howToPlayUnseen, openHowToPlay } from './howToPlay';
 import { settings } from '../settings';
 import { BEAM_REACH, areaContains, makeArea, R, strikeDelay, travelDelay, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
@@ -233,15 +232,8 @@ export class MatchScreen implements Screen {
     return dark ? 'abyss' : null;
   }
 
-  /** The how-to-play card has had its chance to open (a browser's first match). */
-  private howChecked = false;
-
   step(dt: number, input: Input): void {
     music.want(this.musicNow());
-    if (!this.howChecked) {
-      this.howChecked = true;
-      if (!this.spectator && howToPlayUnseen()) void openHowToPlay();
-    }
     // Offline, a dialog over the game (Options) pauses the match; online the match goes on.
     if (!this.online && !this.spectator && document.querySelector('.almia-modal-wrap')) {
       input.takeClicks();

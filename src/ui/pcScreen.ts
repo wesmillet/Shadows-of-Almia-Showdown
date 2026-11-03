@@ -184,12 +184,11 @@ export class PcScreen implements Screen {
     if (!box) return;
     const bw = box.x1 - box.x0;
     const bh = box.y1 - box.y0;
-    const want = room / Math.max(bw, bh, 1);
-    // A whole-number scale keeps pixels square, but only when it still fills most of the slot;
-    // otherwise small Pokémon would look much smaller than their neighbours, so the scale is exact.
-    const k = want >= 2 && Math.floor(want) >= want * 0.8 ? Math.floor(want) : want;
+    // Every Pokémon the same size (its idle area fills the slot's room), standing on the same
+    // line near the bottom of the slot, centred across it.
+    const k = room / Math.max(bw, bh, 1);
     const dx = Math.round(cx - ((box.x0 + box.x1) / 2) * k);
-    const dy = Math.round(cy - ((box.y0 + box.y1) / 2) * k);
+    const dy = Math.round(cy + room / 2 - box.y1 * k);
     h.save();
     h.imageSmoothingEnabled = false;
     if (e.shadow) {

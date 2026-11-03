@@ -9,7 +9,7 @@
  * and the pool it handed out, so an online player can only start with one they were offered.
  */
 import { Rng } from '../core/rng';
-import { SPAWNS, SPECIES, type SpeciesDef } from './data';
+import { SPAWNS, SPECIES, movesAt, type SpeciesDef } from './data';
 
 export interface StarterTier {
   id: string;
@@ -146,4 +146,34 @@ export function starterChoices(seed: number, unlocked: readonly string[] = []): 
     out.push(res.dex);
   }
   return out;
+}
+
+/**
+ * The form a Pokémon is kept in in the PC: the first stage of its evolution line (a Charizard is
+ * kept as a Charmander; a Mega as its base species's first stage). Shadow, Unbound and final forms
+ * stay as they are: they are forms, not evolution stages.
+ */
+export function pcBase(dex: string): string {
+  if (/-(shadow|unbound|final)$/.test(dex)) return dex;
+  let d = dex;
+  const sp = SPECIES.get(d) as (SpeciesDef & { megaOf?: string }) | undefined;
+  if (sp?.megaOf) d = sp.megaOf;
+  else if (/-mega.*$/.test(d)) d = d.replace(/-mega.*$/, '');
+  if (!SPECIES.has(d)) return dex;
+  for (let i = 0; i < 4 && PREVO.has(d); i++) d = PREVO.get(d) as string;
+  return SPECIES.has(d) ? d : dex;
+}
+
+/**
+ * A Pokémon as the PC keeps it: the first stage of its line (pcBase), with that
+ * species' name and the moves it knows at the Pokémon's level; `from` is what it was, if different.
+ */
+export function firstForm(m: { dex: string; name: string; level: number; moves: string[] }): { dex: string; name: string; moves: string[]; from?: string } {
+  const dex = pcBase(m.dex);
+  if (dex === m.dex) return { dex, name: m.name, moves: m.moves };
+  const sp = SPECIES.get(dex);
+  if (!sp) return { dex: m.dex, name: m.name, moves: m.moves };
+  const oldName = SPECIES.get(m.dex)?.name;
+  // A name that was just the species' name becomes the first form's; any other name is kept.
+  return { dex, name: !oldName || m.name === oldName ? sp.name : m.name, moves: movesAt(sp, m.level), from: m.dex };
 }

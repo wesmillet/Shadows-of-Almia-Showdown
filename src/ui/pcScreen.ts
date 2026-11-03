@@ -157,9 +157,8 @@ export class PcScreen implements Screen {
       }
       if (!e) continue;
       // Hovered (and every icon now and then) hops like a box icon.
-      const hop = over ? Math.abs(Math.sin(this.t * 9)) * 3 * s : 0;
-      // Centred in the well (which itself rises by `up` when pointed at), with room left for the hop.
-      this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 1.5 * s - up - hop, L.slot - 22 * s);
+      // Centred in the well (which itself rises by `up` when pointed at); only its idle animation plays.
+      this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 1.5 * s - up, L.slot - 22 * s);
       if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s, 12, { align: 'center', weight: '900', color: '#ffd36b' });
       if (e.shadow) text(v, '◆', x + 14 * s, y + 18 * s, 11, { align: 'center', weight: '900', color: '#c48bff' });
     }

@@ -10,7 +10,7 @@
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import type { ClientMsg, PartyState, QueueMode, ServerMsg } from '../src/net/protocol';
-import { starterChoices, unlockedFromPc } from '../src/sim/starters';
+import { starterChoices } from '../src/sim/starters';
 import type { Accounts, Presence } from './accounts';
 import { Matchmaker, type Lineup } from './matchmaker';
 import { newCode, PrivateLobby } from './privateLobby';
@@ -193,8 +193,8 @@ export class Hub {
       case 'roll':
         if (c.room) return;
         c.rollSeed = randomInt(1, 2 ** 31);
-        // A signed-in player's pool grows with their PC; a guest rolls from the starting pool.
-        c.rollPool = c.accountId === null ? [] : unlockedFromPc(this.o.accounts.pcDexes(c.accountId));
+        // The third slot rolls from a signed-in player's nominations; a guest's is all Common.
+        c.rollPool = c.accountId === null ? [] : this.o.accounts.starters.forRoll(c.accountId);
         c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
         return;
       case 'queue':
@@ -776,7 +776,7 @@ export class Hub {
       for (const m of s.members) {
         if (s.picks.has(m.key)) continue;
         const seed = m.rollSeed ?? randomInt(1, 2 ** 31);
-        const pool = m.rollSeed !== null ? m.rollPool : m.accountId === null ? [] : unlockedFromPc(this.o.accounts.pcDexes(m.accountId));
+        const pool = m.rollSeed !== null ? m.rollPool : m.accountId === null ? [] : this.o.accounts.starters.forRoll(m.accountId);
         s.picks.set(m.key, starterChoices(seed, pool)[0] as string);
       }
       this.finishPick(s);

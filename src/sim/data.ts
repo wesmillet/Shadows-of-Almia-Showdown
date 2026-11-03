@@ -82,14 +82,19 @@ export function moveValue(sp: Pick<SpeciesDef, 'role' | 'stats' | 'types'>, id: 
  * its best attack (moveValue), then its best attack of another type, so it carries coverage; a
  * status move only fills a slot no attack can.
  */
-export function movesAt(sp: SpeciesDef, level: number): string[] {
-  const known: string[] = [];
+export function movesAt(sp: SpeciesDef, level: number, opts: { signature?: boolean } = {}): string[] {
+  let known: string[] = [];
   if (!sp.learnset?.length) known.push(...sp.moves.filter((id) => MOVES.has(id)));
   else {
     for (const [lv, id] of sp.learnset) {
       if (lv > level) break;
       if (!known.includes(id) && MOVES.has(id)) known.push(id);
     }
+  }
+  // A starter (see starterMoves) leaves its signature move out while it is young.
+  if (opts.signature === false) {
+    const plain = known.filter((id) => !MOVES.get(id)?.signature);
+    if (plain.length) known = plain;
   }
   const kit = pickMoves(sp, known);
   // A very young Pokémon (under level 5: the wilds at the island's edge) knows just its best attack.
@@ -98,6 +103,24 @@ export function movesAt(sp: SpeciesDef, level: number): string[] {
     return [best];
   }
   return kit;
+}
+
+/** The level a starting legendary gets its signature move back (it starts without it: a fair start). */
+export const SIGNATURE_LEVEL = 30;
+
+/**
+ * A starting Pokémon's moves: the same as any of its species at that level, but a legendary or
+ * mythical leaves its signature move out until SIGNATURE_LEVEL (Behemoth Blade or Aeroblast at
+ * level 5 would decide a match).
+ */
+export function starterMoves(sp: SpeciesDef, level: number): string[] {
+  return movesAt(sp, level, { signature: level >= SIGNATURE_LEVEL });
+}
+
+/** A species' signature moves (from its learnset, or its move list when it has none). */
+export function signatureMoves(sp: SpeciesDef): string[] {
+  const all = sp.learnset?.length ? sp.learnset.map(([, id]) => id) : sp.moves;
+  return [...new Set(all.filter((id) => MOVES.get(id)?.signature))];
 }
 
 /** The MOVE_SLOTS moves to carry out of `known` (see movesAt). Ties go to the move learned later. */

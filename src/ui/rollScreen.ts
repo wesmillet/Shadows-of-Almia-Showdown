@@ -12,7 +12,7 @@ import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
 
-import { poolSize, poolTiers, REEL_CARDS, rollChoice, rollStarter, STARTER_CHOICES, STARTER_TIERS, type StarterTier } from '../sim/starters';
+import { NOMINATION_SLOTS, REEL_CARDS, rollStarter, STARTER_CHOICES, STARTER_TIERS, starterReels, type StarterTier } from '../sim/starters';
 
 export { rollStarter, STARTER_TIERS, type StarterTier };
 
@@ -84,27 +84,18 @@ export class RollScreen implements Screen {
     private readonly onConfirm: (dex: string) => void,
     /** Rolls a fresh set of three (the Reroll button or R); for testing while the PC starters are planned. */
     private readonly onReroll: (() => void) | null = null,
-    /** Starters this player has unlocked through their PC (src/sim/starters.ts). */
+    /** This player's nominations for the third slot (src/sim/starters.ts). */
     private readonly unlocked: readonly string[] = [],
   ) {
-    const rng = new Rng(seed);
-    const tiers = poolTiers(unlocked);
-    this.tiers = tiers;
-    const taken = new Set<string>();
-    for (let r = 0; r < CHOICES; r++) {
-      // Three different Pokémon (the same tier can come up twice): src/sim/starters.ts, which the
-      // game server also uses to know what a seed offered.
-      const res = rollChoice(rng, taken, tiers);
-      const cards: Card[] = [];
-      for (let i = 0; i < REEL - 1; i++) {
-        const o = rollStarter(rng, tiers);
-        cards.push({ def: species(o.dex), tier: o.tier, anim: null });
-      }
-      const pick: Card = { def: species(res.dex), tier: res.tier, anim: null };
-      cards.push(pick);
+    // The first two reels roll Commons; the third rolls from this player's nominations
+    // (src/sim/starters.ts starterReels, which the game server also uses to know what a seed offered).
+    this.tiers = STARTER_TIERS;
+    starterReels(seed, unlocked).forEach((reel, r) => {
+      const cards: Card[] = reel.cards.map((c) => ({ def: species(c.dex), tier: c.tier, anim: null }));
+      const pick = cards[cards.length - 1] as Card;
       const spinFor = SPIN + r * STAGGER;
       this.reels.push({ cards, pick, spinFor, spin: spinFor, pos: 0, since: 0 });
-    }
+    });
     // The three picks load first (the reels settle on them), then the cards that fly past.
     // The reels spin straight away; a card whose sprite is not in yet shows its name.
     const picks = this.reels.map((r) => r.pick.def.dex);
@@ -208,21 +199,12 @@ export class RollScreen implements Screen {
       const hover = this.done && (hit(mx, my, b.x, b.y, b.w, b.h) || hit(mx, my, c.x, c.y, c.w, c.h));
       button(v, this.done ? `${i + 1}  ${r.pick.def.name}` : 'Rolling…', b.x, b.y, b.w, b.h, hover, this.done ? undefined : '#44405a');
     });
-    // The odds of this player's pool, each in its tier colour (tiers they have nothing in yet are left out).
-    const total = this.tiers.reduce((n, t) => n + t.weight, 0) || 1;
-    const odds = [{ t: { color: '#9f97bb' } as StarterTier, label: 'Odds per reel:' }, ...this.tiers.map((t) => ({ t, label: `${t.name} ${Math.round((t.weight / total) * 100)}%` }))];
-    h.save();
-    h.font = `${Math.round(12 * s * 1.3)}px BoldPixels, sans-serif`;
-    const gap = 18 * s;
-    const widths = odds.map((o) => h.measureText(o.label).width);
-    let ox = v.width / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (odds.length - 1)) / 2;
-    h.restore();
-    odds.forEach((o, i) => {
-      text(v, o.label, ox, v.height - 40 * s, 12, { color: o.t.color });
-      ox += (widths[i] ?? 0) + gap;
-    });
-    const all = STARTER_TIERS.reduce((n, t) => n + t.dex.length, 0);
-    text(v, `Click a card or press 1-3 · ${poolSize(this.unlocked)} starters in your pool: every Pokémon you keep in your PC adds its line (${all}+ to find)`, v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6', maxWidth: v.width - 30 * s });
+    // What the reels roll from: Commons on the first two, the player's nominations on the third.
+    const third = this.unlocked.length
+      ? `Slot 3: your ${this.unlocked.length} nomination${this.unlocked.length === 1 ? '' : 's'}${this.unlocked.length < NOMINATION_SLOTS ? ' and Commons' : ''}`
+      : 'Slot 3: Commons until you nominate Pokémon (Starters, in the hub)';
+    text(v, `Slots 1 and 2: Commons · ${third}`, v.width / 2, v.height - 40 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 30 * s });
+    text(v, 'Click a card or press 1-3 to start with it', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6', maxWidth: v.width - 30 * s });
     if (this.onReroll) {
       const rr = this.rerollRect();
       button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#f4e6c8');

@@ -12,7 +12,7 @@ import { decide, partyHpFraction, type AiWorld } from './ai';
 import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, species, statsAtLevel, tmRefusal } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead, partySize } from './entities';
@@ -244,7 +244,7 @@ export class Match {
       const t = this.makeTrainer(h.name, 'player', true, spawn.x, spawn.y);
       if (h.team !== undefined) t.team = h.team;
       this.giveStartingKit(t);
-      for (const dex of h.starters) t.party.push(this.makeMon(dex, opts.level ?? CONFIG.player.level, t, spawn.x, spawn.y));
+      for (const dex of h.starters) t.party.push(this.makeStarter(dex, opts.level ?? CONFIG.player.level, t, spawn.x, spawn.y));
       this.placeParty(t);
       this.seats.push(newSeat(t));
     }
@@ -266,7 +266,7 @@ export class Match {
       const t = this.makeTrainer(name, role, false, spot.x, spot.y);
       // A new player's start: one starter of three rolled from the new-player pool, at the players'
       // level, the same bag and money (botStarter; makeTrainer, giveStartingKit).
-      t.party.push(this.makeMon(botStarter(this.rng), level ?? CONFIG.player.level, t, spot.x, spot.y));
+      t.party.push(this.makeStarter(botStarter(this.rng), level ?? CONFIG.player.level, t, spot.x, spot.y));
       this.giveStartingKit(t);
       botState(t).bold = this.rng.next();
       t.aiTimer = this.rng.range(0.5, 2);
@@ -816,7 +816,10 @@ export class Match {
 
   private learnMoves(m: Mon, fromLevel: number): void {
     const asked: string[] = [];
-    for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
+    const learned = movesLearnedBetween(m.species, fromLevel, m.level);
+    // A legendary that started without its signature move (a starter) gets it back here.
+    if (fromLevel < SIGNATURE_LEVEL && m.level >= SIGNATURE_LEVEL) for (const id of signatureMoves(m.species)) if (!learned.includes(id)) learned.push(id);
+    for (const id of learned) {
       if (m.moves.includes(id) || !MOVES.has(id)) continue;
       if (m.moves.length < MOVE_SLOTS) {
         m.moves.push(id);
@@ -992,7 +995,7 @@ export class Match {
         best.status = null;
         best.anim.play('Idle', { restart: true });
         t.party.push(best);
-        t.stats.catches++;
+        noteCatch(t, best);
         this.takeItem(t, slot);
         this.battle.events.push({ type: 'caught', mon: best, by: t });
         return `Captured ${best.name} with the Styler!`;
@@ -1048,7 +1051,7 @@ export class Match {
     m.y = m.py = p.y + 0.4;
     m.anim.play('Idle', { restart: true });
     p.party.push(m);
-    p.stats.catches++;
+    noteCatch(p, m);
     this.takeItem(p, slot);
     this.snagOffer = null;
     this.fieldParty(p);
@@ -1189,7 +1192,7 @@ export class Match {
             this.battle.cureStatus(w);
           }
           th.thrower.party.push(w);
-          th.thrower.stats.catches++;
+          noteCatch(th.thrower, w);
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
           if (w.alpha) this.alphaReward(th.thrower.x, th.thrower.y, th.thrower, w);
           // The lead that wore it down learns from the catch too.
@@ -1881,6 +1884,18 @@ export class Match {
       stats: { catches: 0, knockouts: 0, eliminations: 0, damage: 0, timeSurvived: 0 },
       ai: 'roam', aiTimer: 0, aiTarget: null, healing: 0, outpostReady: 0, attackTimer: 1, roamTimer: 0, money: SHOPS.startMoney,
     };
+  }
+
+  /**
+   * A trainer's starting Pokémon, the same for everyone who starts with that species: the match's
+   * starting level, the moves its species knows there (a legendary's signature move held back,
+   * data.ts starterMoves), no held item, not shiny.
+   */
+  makeStarter(dex: string, level: number, owner: Trainer, x: number, y: number): Mon {
+    const m = this.makeMon(dex, level, owner, x, y);
+    m.moves = starterMoves(m.species, level);
+    m.cooldowns = m.moves.map(() => 0);
+    return m;
   }
 
   makeMon(dex: string, level: number, owner: Trainer | null, x: number, y: number, shiny = false): Mon {
@@ -3792,7 +3807,7 @@ export class Match {
     L.behavior = joinBehavior(L.owner);
     L.anim.play('Idle', { restart: true });
     by.party.push(L);
-    by.stats.catches++;
+    noteCatch(by, L);
     if (by.duelId) L.stowed = true;
     this.battle.events.push({ type: 'caught', mon: L, by });
     if (d) this.endDuel(d, by);
@@ -3840,7 +3855,7 @@ export class Match {
     L.behavior = joinBehavior(L.owner);
     L.anim.play('Idle', { restart: true });
     p.party.push(L);
-    p.stats.catches++;
+    noteCatch(p, L);
     if (p.duelId) L.stowed = true;
     this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.4, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.6, epic: true });
     this.battle.events.push({ type: 'scene-fx', id: 'fx_239', x: L.x, y: L.y, scale: 2.6, lift: 1, fps: 10, tint: '#b04dff' });
@@ -4527,4 +4542,11 @@ export function shotClear(g: GroundRenderer, ax: number, ay: number, bx: number,
     if (run >= 2) return false;
   }
   return true;
+}
+
+/** A Pokémon joined a trainer's party by a catch (or a snag): counted, and its species noted (starter achievements). */
+function noteCatch(t: Trainer, m: Mon): void {
+  t.stats.catches++;
+  const list = (t.stats.species ??= []);
+  if (!list.includes(m.dex)) list.push(m.dex);
 }

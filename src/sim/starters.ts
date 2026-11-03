@@ -142,16 +142,142 @@ export function rollChoice(rng: Rng, taken: Set<string>, tiers: StarterTier[] = 
   return res;
 }
 
-/** The three starters a seed offers from a pool, exactly as the roll screen shows them. */
-export function starterChoices(seed: number, unlocked: readonly string[] = []): string[] {
-  const tiers = poolTiers(unlocked);
-  const rng = new Rng(seed);
-  const taken = new Set<string>();
-  const out: string[] = [];
-  for (let r = 0; r < STARTER_CHOICES; r++) {
-    const res = rollChoice(rng, taken, tiers);
-    for (let i = 0; i < REEL_CARDS - 1; i++) rollStarter(rng, tiers);
-    out.push(res.dex);
+// ------------------------------------------------------------------ nominations (slot 3)
+
+/** How many Pokémon a player nominates for the third starter slot, and the points they may spend. */
+export const NOMINATION_SLOTS = 5;
+export const NOMINATION_BUDGET = 15;
+/** What a nomination costs, by its line's tier: stronger tiers cost more. */
+export const TIER_COST: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 5, mythic: 8 };
+/** Each nomination's weight in the third slot's roll, by tier: stronger tiers come up less often. */
+export const SLOT3_WEIGHT: Record<string, number> = { common: 30, uncommon: 24, rare: 18, epic: 10, mythic: 5 };
+
+/**
+ * The Pokémon a PC Pokémon (or an unlock) nominates: the first form of its line, in its normal
+ * form (a Mega, Shadow, Unbound or final form counts as its plain species), or null when the game
+ * has no plain form for it.
+ */
+export function nominationBase(dex: string): string | null {
+  const special = /-(shadow|unbound|final|shiny|mega.*)$/;
+  let d = dex;
+  if (special.test(d)) {
+    const plain = d.replace(special, '');
+    if (!SPECIES.has(plain)) return null;
+    d = plain;
+  }
+  const b = lineBase(d);
+  return b && SPECIES.has(b) && !special.test(b) ? b : null;
+}
+
+/** What a player may nominate: their PC's lines and their unlocks, sorted. */
+export function eligibleNominations(pcDexes: Iterable<string>, unlocks: Iterable<string> = []): string[] {
+  const out = new Set<string>();
+  for (const d of [...pcDexes, ...unlocks]) {
+    const b = nominationBase(d);
+    if (b) out.add(b);
+  }
+  return [...out].sort();
+}
+
+/**
+ * Points a set of nominations uses: each one's tier cost, and a Common's cost for every spot left
+ * empty (an empty spot rolls a Common, so leaving spots empty is no cheaper than filling them).
+ */
+export function nominationCost(dexes: readonly string[]): number {
+  const empty = Math.max(0, NOMINATION_SLOTS - dexes.length);
+  return dexes.reduce((n, d) => n + (TIER_COST[tierOf(d)] ?? 1), 0) + empty * (TIER_COST.common ?? 1);
+}
+
+/** Why a set of nominations is not allowed, or null. */
+export function nominationProblem(dexes: readonly string[], eligible: readonly string[]): string | null {
+  if (dexes.length > NOMINATION_SLOTS) return `Nominate at most ${NOMINATION_SLOTS}`;
+  if (new Set(dexes).size !== dexes.length) return 'Each nomination must be a different Pokémon';
+  const ok = new Set(eligible);
+  for (const d of dexes) if (!ok.has(d)) return `${SPECIES.get(d)?.name ?? d} is not one you can nominate`;
+  const cost = nominationCost(dexes);
+  if (cost > NOMINATION_BUDGET) return `That costs ${cost} points; the budget is ${NOMINATION_BUDGET}`;
+  return null;
+}
+
+/** Saved nominations made legal again (a Pokémon no longer owned dropped; the dearest dropped while over budget). */
+export function usableNominations(saved: readonly string[], eligible: readonly string[]): string[] {
+  const ok = new Set(eligible);
+  const out = [...new Set(saved.filter((d) => ok.has(d)))].slice(0, NOMINATION_SLOTS);
+  while (nominationCost(out) > NOMINATION_BUDGET) {
+    let worst = 0;
+    out.forEach((d, i) => {
+      if ((TIER_COST[tierOf(d)] ?? 1) > (TIER_COST[tierOf(out[worst] as string)] ?? 1)) worst = i;
+    });
+    out.splice(worst, 1);
   }
   return out;
+}
+
+function tierById(id: string): StarterTier {
+  return (STARTER_TIERS.find((t) => t.id === id) ?? STARTER_TIERS[0]) as StarterTier;
+}
+
+/** The common tier (the first two slots roll only from it). */
+export function commonTier(): StarterTier {
+  return tierById('common');
+}
+
+/**
+ * The third slot's five: the nominations, then random Commons for any spot left empty (a new
+ * player's third slot is all Common, like the other two).
+ */
+export function slot3Pool(nominations: readonly string[], rng: Rng): string[] {
+  const out = nominations.slice(0, NOMINATION_SLOTS);
+  const commons = commonTier().dex.filter((d) => !out.includes(d));
+  while (out.length < NOMINATION_SLOTS && commons.length) out.push(commons.splice(rng.int(0, commons.length - 1), 1)[0] as string);
+  return out;
+}
+
+/** Each of the third slot's five with its chance (0..1), in pool order. */
+export function slot3Odds(pool: readonly string[]): Array<{ dex: string; tier: string; chance: number }> {
+  const w = pool.map((d) => SLOT3_WEIGHT[tierOf(d)] ?? 1);
+  const total = w.reduce((a, b) => a + b, 0) || 1;
+  return pool.map((d, i) => ({ dex: d, tier: tierOf(d), chance: (w[i] as number) / total }));
+}
+
+export interface StarterReel {
+  /** The cards that fly past, the last one being the result. */
+  cards: Array<{ dex: string; tier: StarterTier }>;
+  pick: { dex: string; tier: StarterTier };
+}
+
+/**
+ * The three reels a seed rolls, exactly as the roll screen shows them (the game server uses the
+ * same to know what a seed offered): the third slot first, from the player's nominations, then the
+ * first two from the Common tier, three different Pokémon.
+ */
+export function starterReels(seed: number, nominations: readonly string[] = []): StarterReel[] {
+  const rng = new Rng(seed);
+  const pool = slot3Pool(nominations, rng);
+  const weighted = slot3Odds(pool);
+  const draw3 = (): { dex: string; tier: StarterTier } => {
+    const o = rng.weighted(weighted, (x) => x.chance);
+    return { dex: o.dex, tier: tierById(o.tier) };
+  };
+  const third = draw3();
+  const common = commonTier();
+  const taken = new Set([third.dex]);
+  const drawCommon = (): { dex: string; tier: StarterTier } => ({ dex: rng.pick(common.dex), tier: common });
+  const reels: StarterReel[] = [];
+  for (let r = 0; r < 2; r++) {
+    const fresh = common.dex.filter((d) => !taken.has(d));
+    const dex = fresh.length ? rng.pick(fresh) : rng.pick(common.dex);
+    taken.add(dex);
+    const cards = Array.from({ length: REEL_CARDS - 1 }, drawCommon);
+    const pick = { dex, tier: common };
+    reels.push({ cards: [...cards, pick], pick });
+  }
+  const cards3 = Array.from({ length: REEL_CARDS - 1 }, draw3);
+  reels.push({ cards: [...cards3, third], pick: third });
+  return reels;
+}
+
+/** The three starters a seed offers (see starterReels). */
+export function starterChoices(seed: number, nominations: readonly string[] = []): string[] {
+  return starterReels(seed, nominations).map((r) => r.pick.dex);
 }

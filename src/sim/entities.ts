@@ -161,6 +161,8 @@ export interface Mon {
 
 export interface TrainerStats {
   catches: number;
+  /** The species caught this match (each once). */
+  species?: string[];
   knockouts: number;
   /** Other trainers knocked out of the match by this trainer's Pokémon. */
   eliminations?: number;

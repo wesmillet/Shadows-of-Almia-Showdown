@@ -25,6 +25,7 @@ import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
+import { STARTER_SQL, StarterUnlocks } from './starterUnlocks';
 import { COLLECTION_LOG_SQL } from './collectionLog';
 import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
@@ -137,6 +138,8 @@ export class Accounts {
   private failures = new Map<string, [number, number]>();
   private readonly google: { id: string; secret: string } | null;
   private readonly publicUrl: string | null;
+  /** Starter achievements and third-slot nominations (server/starterUnlocks.ts). */
+  readonly starters: StarterUnlocks;
   /** Who is online and doing what (main.ts fills this in), for the friends list. */
   presence: (userId: number) => Presence = () => ({ online: false, status: 'offline' });
   /** An API request failed (main.ts records it with the other errors). */
@@ -206,6 +209,7 @@ export class Accounts {
       );
       CREATE TABLE IF NOT EXISTS replay_players (replay_id TEXT NOT NULL REFERENCES replays(id) ON DELETE CASCADE, user_id INTEGER NOT NULL, PRIMARY KEY (replay_id, user_id));
       CREATE INDEX IF NOT EXISTS replay_players_user ON replay_players(user_id);
+      ${STARTER_SQL}
       CREATE TABLE IF NOT EXISTS achievements (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, id)
       );
@@ -275,6 +279,7 @@ export class Accounts {
     const gsecret = process.env.GOOGLE_CLIENT_SECRET;
     this.google = gid && gsecret ? { id: gid, secret: gsecret } : null;
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
+    this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id));
     this.gifts = new Gifts(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
@@ -704,6 +709,7 @@ export class Accounts {
       this.db.prepare('UPDATE match_players SET xp = ? WHERE match_id = ? AND user_id = ?').run(gained, matchId, userId);
       // Achievements are still recorded while hidden (ACHIEVEMENTS_ON), just not announced.
       const earnedNow = this.checkAchievements(userId, facts);
+      this.starters.update(userId);
       progress.set(r.key, { xp: lines, before: levelOf(xpBefore), after: levelOf(xpBefore + gained), achievements: ACHIEVEMENTS_ON ? earnedNow : [] });
     }
     return progress;
@@ -1095,6 +1101,17 @@ export class Accounts {
         return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id, ...(pooled.has(r.id) ? { wonder: true } : {}) })) });
       }
       if (path.startsWith('/api/trade') || path.startsWith('/api/wonder')) return await this.tradeApi(req, path, me, send);
+      if (req.method === 'GET' && path === '/api/starters') return send(200, this.starters.info(me.id));
+      if (req.method === 'POST' && path === '/api/starters/choose') {
+        const b = await readJson(req);
+        const err = this.starters.choose(me.id, String(b.id ?? ''), String(b.dex ?? ''));
+        return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
+      }
+      if (req.method === 'POST' && path === '/api/starters/nominate') {
+        const b = await readJson(req);
+        const err = this.starters.nominate(me.id, b.dexes);
+        return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
+      }
       if (req.method === 'GET' && path === '/api/extract') {
         const row = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 1').get(me.id) as { match_id: string; party: string; picks_left: number; outcome: string } | undefined;
         return send(200, row ? { match: row.match_id, party: JSON.parse(row.party), picks: row.picks_left, outcome: row.outcome } : { match: null });

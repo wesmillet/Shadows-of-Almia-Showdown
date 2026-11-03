@@ -23,7 +23,7 @@ import { loadLook, lookHooks, saveLook } from './look';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
-import { BASE_TIERS, STARTER_TIERS, starterChoices, unlockedFromPc } from './sim/starters';
+import { BASE_TIERS, STARTER_TIERS, starterChoices } from './sim/starters';
 import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
@@ -550,8 +550,8 @@ async function boot(): Promise<void> {
 
   const showRoll = (): void => {
     // A fresh roll every time, even on a fixed ?seed island.
-    // The pool grows with this browser's PC (offline) like an account's does online.
-    const pool = unlockedFromPc(loadPc().map((e) => e.dex));
+    // Offline there are no nominations (they are saved to an account): the third slot rolls Commons.
+    const pool: string[] = [];
     game.setScreen(new RollScreen(game, sprites, (Math.random() * 0xffffffff) >>> 0, (dex) => void startMatch([dex]), showRoll, pool));
   };
 

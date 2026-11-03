@@ -897,6 +897,11 @@ export class MatchScreen implements Screen {
       auto: side ? null : m.auto,
       styler: m.hasStyler(p),
       pick: side?.awaitingPick ? Math.max(0, side.nextAt - m.time) : null,
+      minimap: ((r) => {
+        if (!r) return null;
+        const k = this.ctx.input.dpr();
+        return { left: r.x / k, top: r.y / k, bottom: (r.y + r.h) / k };
+      })(this.hud.minimapRect),
       bag: {
         items: p.items.map(bagEntry('items')).filter((x): x is TouchBagEntry => !!x),
         held: p.held.map(bagEntry('held')).filter((x): x is TouchBagEntry => !!x),

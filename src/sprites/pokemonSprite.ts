@@ -120,8 +120,11 @@ interface Sheet {
   anim: HTMLImageElement | HTMLCanvasElement | null;
   /** The Shadow sheet baked to a dark, translucent drop shadow for this folder's ShadowSize. */
   shadow: HTMLCanvasElement | null;
-  /** Raw Shadow sheet pixels, for finding each frame's ground point. */
-  ground: { px: Uint8ClampedArray; w: number; h: number } | null;
+  /**
+   * Each frame's ground point (x, y pairs, row by row), worked out from the Shadow sheet once at
+   * load: keeping the sheet's raw pixels instead cost about 120 MB in a match, too much for a phone.
+   */
+  ground: { pts: Float32Array; cols: number; rows: number } | null;
   offsets: OffsetTable | undefined;
 }
 
@@ -239,7 +242,7 @@ export class PokemonSprites {
         ...(() => {
           if (!shadow) return { shadow: null, ground: null };
           const spx = imagePixels(shadow);
-          return { shadow: bakeShadow(shadow, this.data?.shadowSize ?? 1, spx), ground: { px: spx, w: shadow.naturalWidth, h: shadow.naturalHeight } };
+          return { shadow: bakeShadow(shadow, this.data?.shadowSize ?? 1, spx), ground: groundPoints(spx, shadow.naturalWidth, shadow.naturalHeight, def.frameWidth, def.frameHeight) };
         })(),
         offsets: table,
       });
@@ -311,8 +314,6 @@ export class PokemonSprites {
     return { image: img, sx: Math.min(index, cols - 1) * def.frameWidth, sy: Math.min(dir, rows - 1) * def.frameHeight, w: def.frameWidth, h: def.frameHeight, placeholder: false };
   }
 
-  private readonly groundCache = new Map<string, [number, number]>();
-
   /**
    * Where the Pokémon touches the ground in a frame, as an offset from the
    * frame centre in sheet pixels: the centre of the Shadow sheet's shape
@@ -322,26 +323,10 @@ export class PokemonSprites {
     const def = this.def(action);
     const g = def ? this.sheets.get(def.sheet)?.ground ?? null : null;
     if (!def || !g) return [0, 0];
-    const fw = def.frameWidth;
-    const fh = def.frameHeight;
-    const col = Math.min(index, Math.max(1, Math.floor(g.w / fw)) - 1);
-    const row = Math.min(dir, Math.max(1, Math.floor(g.h / fh)) - 1);
-    const key = `${def.sheet}:${row}:${col}`;
-    const hit = this.groundCache.get(key);
-    if (hit) return hit;
-    let wx = 0, wy = 0, wn = 0, ax = 0, ay = 0, an = 0;
-    for (let y = row * fh; y < (row + 1) * fh; y++) {
-      for (let x = col * fw; x < (col + 1) * fw; x++) {
-        const i = (y * g.w + x) * 4;
-        if ((g.px[i + 3] ?? 0) < 128) continue;
-        ax += x; ay += y; an++;
-        if ((g.px[i] ?? 0) > 128 && (g.px[i + 1] ?? 0) > 128 && (g.px[i + 2] ?? 0) > 128) { wx += x; wy += y; wn++; }
-      }
-    }
-    const [cx, cy] = wn ? [wx / wn, wy / wn] : an ? [ax / an, ay / an] : [col * fw + fw / 2 - 0.5, row * fh + fh / 2 - 0.5];
-    const out: [number, number] = [cx + 0.5 - col * fw - fw / 2, cy + 0.5 - row * fh - fh / 2];
-    this.groundCache.set(key, out);
-    return out;
+    const col = Math.min(index, g.cols - 1);
+    const row = Math.min(dir, g.rows - 1);
+    const i = (row * g.cols + col) * 2;
+    return [g.pts[i] ?? 0, g.pts[i + 1] ?? 0];
   }
 
   /** Effect anchor for a frame, as an offset from the frame centre in sheet pixels. */
@@ -490,4 +475,29 @@ export class AnimPlayer {
   point(kind: 'head' | 'hands'): [number, number] | null {
     return this.sprites.point(this.action, this.dir, this.frame, kind);
   }
+}
+
+/** Every frame's ground point from a Shadow sheet's pixels (see PokemonSprites.ground). */
+function groundPoints(px: Uint8ClampedArray, w: number, h: number, fw: number, fh: number): { pts: Float32Array; cols: number; rows: number } {
+  const cols = Math.max(1, Math.floor(w / fw));
+  const rows = Math.max(1, Math.floor(h / fh));
+  const pts = new Float32Array(cols * rows * 2);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      let wx = 0, wy = 0, wn = 0, ax = 0, ay = 0, an = 0;
+      for (let y = row * fh; y < (row + 1) * fh; y++) {
+        for (let x = col * fw; x < (col + 1) * fw; x++) {
+          const i = (y * w + x) * 4;
+          if ((px[i + 3] ?? 0) < 128) continue;
+          ax += x; ay += y; an++;
+          if ((px[i] ?? 0) > 128 && (px[i + 1] ?? 0) > 128 && (px[i + 2] ?? 0) > 128) { wx += x; wy += y; wn++; }
+        }
+      }
+      const [cx, cy] = wn ? [wx / wn, wy / wn] : an ? [ax / an, ay / an] : [col * fw + fw / 2 - 0.5, row * fh + fh / 2 - 0.5];
+      const o = (row * cols + col) * 2;
+      pts[o] = cx + 0.5 - col * fw - fw / 2;
+      pts[o + 1] = cy + 0.5 - row * fh - fh / 2;
+    }
+  }
+  return { pts, cols, rows };
 }

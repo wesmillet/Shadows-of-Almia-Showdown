@@ -107,6 +107,8 @@ export class CharacterScreen implements Screen {
     const my = this.ctx.input.mouseY;
     const k = skinPx(v);
     const k2 = skinPx2(v);
+    // One scale for every look (from the tallest sheet), so the Rangers stand at their true sizes.
+    const tallest = Math.max(1, ...this.list.map((c) => this.rangers.preview(c).frame('down', 0, false).h));
     this.list.forEach((c, i) => {
       const r0 = this.rect(i);
       const chosen = c === this.current;
@@ -119,7 +121,7 @@ export class CharacterScreen implements Screen {
       const sheet = this.rangers.preview(c);
       // Walking toward you when picked or pointed at, standing otherwise.
       const f = sheet.frame('down', this.t * 1.6 + i * 0.13, chosen || hover);
-      const kk = Math.max(1, Math.floor((r.h * 0.66) / f.h));
+      const kk = Math.max(1, Math.floor((r.h * 0.66) / tallest));
       h.save();
       h.imageSmoothingEnabled = false;
       // A locked look is a dark silhouette.
@@ -130,7 +132,8 @@ export class CharacterScreen implements Screen {
       const dw = f.w * kk;
       const dh = f.h * kk;
       const dx = Math.round(r.x + r.w / 2 - dw / 2);
-      const dy = Math.round(r.y + 12 * s + (r.h * 0.66 - dh));
+      // Feet on one line (each sheet's own foot row).
+      const dy = Math.round(r.y + 12 * s + r.h * 0.66 - f.footY * kk);
       if (f.flip) {
         h.translate(dx + dw, dy);
         h.scale(-1, 1);

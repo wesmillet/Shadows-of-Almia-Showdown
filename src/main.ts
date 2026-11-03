@@ -21,6 +21,7 @@ import { PcScreen } from './ui/pcScreen';
 import { CharacterScreen } from './ui/characterScreen';
 import { loadLook, lookHooks, saveLook } from './look';
 import { AfkWatch } from './net/afk';
+import { QueueMini } from './ui/queueMini';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
@@ -181,6 +182,8 @@ async function boot(): Promise<void> {
   runner = null;
 
   let screen: Screen | null = null;
+  /** Told of every screen change (the queue's mini window hides on the lobby screen). */
+  let onScreen: ((s: Screen) => void) | null = null;
   const game: GameContext = {
     view,
     input,
@@ -191,6 +194,7 @@ async function boot(): Promise<void> {
       const d = (window as unknown as { showdown?: Record<string, unknown> }).showdown;
       if (d) d.screen = s;
       s.enter?.();
+      onScreen?.(s);
     },
   };
 
@@ -347,6 +351,24 @@ async function boot(): Promise<void> {
     game.setScreen(new OnlineScreen(game, net, hubActions, message));
   };
 
+  /** The full lobby screen (queued); Browse menus goes back to the hub with the mini window showing. */
+  const showLobby = (): void => {
+    if (!net) return;
+    game.setScreen(new LobbyScreen(game, net, (why) => {
+      queueMini?.stop();
+      showOnline(why ?? '');
+    }, () => showOnline()));
+  };
+  const queueMini = net ? new QueueMini(net, () => showLobby(), () => {
+    if (screen instanceof OnlineScreen) showOnline('You left the queue');
+  }) : null;
+  if (queueMini) {
+    onScreen = (s) => {
+      queueMini.onLobbyScreen = s instanceof LobbyScreen;
+      queueMini.sync();
+    };
+  }
+
   const showPrivate = (): void => {
     if (!net) return;
     game.setScreen(new PrivateLobbyScreen(game, net, () => showOnline()));
@@ -371,9 +393,12 @@ async function boot(): Promise<void> {
       const party = net.social.party;
       // A party's leader queues everyone (each of them is then asked to pick a starter).
       if (party && party.members.length > 1) return net.send({ t: 'party', a: 'queue', mode: 'casual' });
+      // Already queued (browsing the menus): back to the lobby screen.
+      if (queueMini?.active) return showLobby();
       rollStarter((pick) => {
         net.send({ t: 'queue', pick, mode });
-        game.setScreen(new LobbyScreen(game, net, (why) => showOnline(why ?? '')));
+        queueMini?.queued();
+        showLobby();
       });
     },
     back: () => void showTitle(false),
@@ -401,7 +426,10 @@ async function boot(): Promise<void> {
     if (m.t === 'pick') {
       rollStarter((pick) => {
         net.send({ t: 'queue', pick });
-        if (m.reason === 'party') game.setScreen(new LobbyScreen(game, net, (why) => showOnline(why ?? '')));
+        if (m.reason === 'party') {
+          queueMini?.queued();
+          showLobby();
+        }
         else showPrivate();
       });
     } else if (m.t === 'start') {

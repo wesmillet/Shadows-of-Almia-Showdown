@@ -5,7 +5,10 @@
  * queue keeps forming lobbies; a group goes into the first one with room for all of it. A lobby
  * starts the moment it is full (after a short beat to see who is in), or `wait` seconds after it
  * opened, with computer trainers in the empty seats, but never with fewer than minPlayers real
- * players: neither the wait running out nor "Start now with bots" starts it before then. The one
+ * players: neither the wait running out nor "Start now with bots" starts it before then, until a
+ * lobby has waited `lonelySeconds` (a minute) below that: then a `fillSeconds` (30 s) countdown
+ * starts and computer trainers fill every other seat, so nobody waits more than a minute and a half.
+ * The one
  * exception is an administrator (checked by the hub from their account's role, never their name):
  * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.
  */
@@ -40,6 +43,10 @@ export interface MatchmakerOptions {
    * (default half the lobby, rounded up). Below that it keeps waiting. */
   minPlayers?: number;
   start: (players: Lineup[], mode: QueueMode) => void;
+  /** Seconds a lobby short of minPlayers waits before it starts filling with computer trainers (default 60). */
+  lonelySeconds?: number;
+  /** The countdown once it does (default 30). */
+  fillSeconds?: number;
   /** Whether this queued player's account is an administrator (may start a lobby below minPlayers). */
   isAdmin?: (peer: Peer) => boolean;
 }
@@ -51,6 +58,8 @@ interface Forming {
   startAt: number;
   /** An administrator started it: it goes ahead below minPlayers. */
   forced?: boolean;
+  /** Waited long enough short of players: counting down to a start with computer trainers. */
+  filling?: boolean;
 }
 
 export class Matchmaker {
@@ -62,6 +71,10 @@ export class Matchmaker {
   /** Real players needed to start (the rest are computer trainers). */
   get minPlayers(): number {
     return Math.min(this.o.size, this.o.minPlayers ?? Math.ceil(this.o.size / 2));
+  }
+
+  private get lonelyMs(): number {
+    return (this.o.lonelySeconds ?? 60) * 1000;
   }
 
   /** Players waiting, by queue. */
@@ -119,9 +132,15 @@ export class Matchmaker {
   /** Called often: starts lobbies whose time has come, and keeps the waiting players informed. */
   tick(now: number): void {
     for (const l of [...this.lobbies]) {
+      // Short of players for a minute: a countdown, then computer trainers fill the rest.
+      if (!l.forced && !l.filling && count(l) < this.minPlayers && now - l.openedAt >= this.lonelyMs) {
+        l.filling = true;
+        l.startAt = now + (this.o.fillSeconds ?? 30) * 1000;
+        this.status(now, true);
+      }
       if (now < l.startAt) continue;
       // Not enough real players yet: keep waiting (the wait starts over once there are).
-      if (count(l) < this.minPlayers && !l.forced) {
+      if (count(l) < this.minPlayers && !l.forced && !l.filling) {
         l.startAt = now + this.o.wait[l.mode] * 1000;
         continue;
       }
@@ -145,13 +164,15 @@ export class Matchmaker {
     for (const l of this.lobbies) {
       const players = l.groups.flatMap((g) => g.tickets.map((t) => t.peer.name));
       // null: waiting for more players (`need` of them) before any countdown
-      const need = l.forced ? 0 : Math.max(0, this.minPlayers - players.length);
+      const need = l.forced || l.filling ? 0 : Math.max(0, this.minPlayers - players.length);
       const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
+      // Still short: when the countdown with computer trainers starts.
+      const botsIn = need ? Math.max(0, Math.ceil((l.openedAt + this.lonelyMs - now) / 1000)) : undefined;
       for (const g of l.groups) {
         for (const t of g.tickets) {
           // Only an administrator's own lobby message offers the admin start (the server checks again).
           const admin = this.o.isAdmin?.(t.peer) || undefined;
-          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin });
+          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined });
         }
       }
     }

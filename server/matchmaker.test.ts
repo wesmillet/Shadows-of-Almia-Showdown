@@ -9,7 +9,7 @@ function peer(name: string): Peer & { got: unknown[] } {
 
 function setup(size = 4) {
   const started: Array<{ players: Lineup[]; mode: QueueMode }> = [];
-  const mm = new Matchmaker({ size, wait: { casual: 10 }, fullSeconds: 2, start: (players, mode) => started.push({ players, mode }) });
+  const mm = new Matchmaker({ size, wait: { casual: 10 }, fullSeconds: 2, lonelySeconds: 10_000, start: (players, mode) => started.push({ players, mode }) });
   return { mm, started };
 }
 
@@ -53,7 +53,7 @@ describe('matchmaker', () => {
 
   it('waits for half the lobby to be real players before starting with bots', () => {
     const started: Array<unknown> = [];
-    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players) });
+    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, lonelySeconds: 10_000, start: (players) => started.push(players) });
     for (const k of ['a', 'b', 'c']) mm.join({ tickets: [{ peer: peer(k), starter: '0001' }], party: false }, 'casual', 0);
     mm.startNow('a', 0);
     mm.tick(60_000);
@@ -65,7 +65,7 @@ describe('matchmaker', () => {
 
   it('never lets the countdown or Start now go below four real players in an eight-player lobby', () => {
     const started: Array<Lineup[]> = [];
-    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players) });
+    const mm = new Matchmaker({ size: 8, wait: { casual: 10 }, fullSeconds: 2, lonelySeconds: 10_000, start: (players) => started.push(players) });
     const peers = ['a', 'b', 'c', 'd'].map(peer);
     for (const p of peers) mm.join({ tickets: [{ peer: p, starter: '0001' }], party: false }, 'casual', 0);
     // Four are in: Start now counts down from two seconds...
@@ -91,7 +91,7 @@ describe('matchmaker', () => {
   it('ten-trainer lobbies need five real players; an administrator may start alone, nobody else may', () => {
     const started: Array<Lineup[]> = [];
     const admins = new Set(['wes']);
-    const mm = new Matchmaker({ size: 10, wait: { casual: 10 }, fullSeconds: 2, start: (players) => started.push(players), isAdmin: (p) => admins.has(p.key) });
+    const mm = new Matchmaker({ size: 10, wait: { casual: 10 }, fullSeconds: 2, lonelySeconds: 10_000, start: (players) => started.push(players), isAdmin: (p) => admins.has(p.key) });
     expect(mm.minPlayers).toBe(5);
     // An ordinary player alone: Start now (even if the client claims to be an admin) does nothing.
     const other = peer('bob');
@@ -116,5 +116,23 @@ describe('matchmaker', () => {
     mm.startNow('wes', 70_000, true);
     mm.tick(72_100);
     expect(started[1]?.map((x) => x.peer.name).sort()).toEqual(['p1', 'p2', 'wes']);
+  });
+  it('a lone player: after a minute a 30 s countdown, then computer trainers fill the match', () => {
+    const started: Array<{ players: Lineup[]; mode: QueueMode }> = [];
+    const mm = new Matchmaker({ size: 10, wait: { casual: 60 }, fullSeconds: 2, start: (players, mode) => started.push({ players, mode }) });
+    const a = peer('a');
+    mm.join({ tickets: [{ peer: a, starter: '0001' }], party: false }, 'casual', 0);
+    mm.tick(30_000);
+    const last = () => a.got.filter((m) => (m as { t: string }).t === 'lobby').at(-1) as { startsIn: number | null; botsIn?: number; bots?: boolean };
+    expect(last().startsIn).toBeNull();
+    expect(last().botsIn).toBe(30);
+    mm.tick(60_000);
+    expect(started.length).toBe(0);
+    expect(last().bots).toBe(true);
+    expect(last().startsIn).toBe(30);
+    mm.tick(89_000);
+    expect(started.length).toBe(0);
+    mm.tick(90_001);
+    expect(started[0]?.players.map((p) => p.peer.name)).toEqual(['a']);
   });
 });

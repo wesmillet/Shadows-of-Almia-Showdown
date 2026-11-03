@@ -1,0 +1,140 @@
+/**
+ * The queue's mini window: while queued for a match, players can leave the lobby screen and use
+ * the menus (PC, Trainer, Options...). A small window in the corner shows the queue (trainers in,
+ * the countdown, or when computer trainers fill in) with Open (back to the lobby screen) and Leave.
+ * The match starts from wherever they are (main.ts handles 'start' on any screen).
+ */
+import type { Connection } from '../net/connection';
+import type { ServerMsg } from '../net/protocol';
+
+type LobbyMsg = Extract<ServerMsg, { t: 'lobby' }>;
+
+const CSS = `
+.almia-qmini { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 2147482000;
+  width: min(260px, calc(100vw - 24px)); background: #f4ecdc; color: #3a2a1a; border: 3px solid #2a1a10; border-radius: 6px;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 10px 24px rgba(0,0,0,0.35); padding: 10px 12px 12px; font: 14px/1.35 system-ui, sans-serif; }
+.almia-qmini .top { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.almia-qmini .dot { width: 10px; height: 10px; border-radius: 50%; background: #2e7d32; flex: none; animation: almia-qpulse 1.2s ease-in-out infinite; }
+.almia-qmini .dot.go { background: #c2611a; }
+@keyframes almia-qpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.almia-qmini .line { color: #6a4a2a; margin-top: 4px; }
+.almia-qmini .time { font-variant-numeric: tabular-nums; font-weight: 700; color: #c2611a; }
+.almia-qmini .bar { height: 6px; background: #e0d0b4; margin-top: 8px; border-radius: 3px; overflow: hidden; }
+.almia-qmini .bar i { display: block; height: 100%; background: #c2611a; transition: width 0.4s; }
+.almia-qmini .btns { display: flex; gap: 8px; margin-top: 10px; }
+.almia-qmini button { flex: 1; min-height: 36px; border: 2px solid #2a1a10; border-radius: 6px; font: 600 14px system-ui, sans-serif; cursor: pointer; }
+.almia-qmini button.open { background: #f4b860; color: #2a1a10; }
+.almia-qmini button.leave { background: #fbf5e9; color: #3a2a1a; }
+`;
+
+const clock = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+export class QueueMini {
+  /** Queued for a public match (set when this browser queues; cleared by a start, a leave or 'unqueued'). */
+  active = false;
+  /** The lobby screen is showing (it has its own full view): the mini window hides. */
+  onLobbyScreen = false;
+  private last: LobbyMsg | null = null;
+  private at = 0;
+  private el: HTMLDivElement | null = null;
+  private timer: number | null = null;
+
+  constructor(
+    private readonly net: Connection,
+    /** Back to the full lobby screen. */
+    private readonly onOpen: () => void,
+    /** Left the queue (the hub says so if they are on it). */
+    private readonly onLeft: () => void,
+  ) {
+    const st = document.createElement('style');
+    st.textContent = CSS;
+    document.head.appendChild(st);
+    net.on((m) => {
+      if (m.t === 'lobby') {
+        this.last = m;
+        this.at = performance.now();
+        this.active = true;
+      } else if (m.t === 'start' || m.t === 'unqueued') this.stop();
+      this.sync();
+    });
+    net.onStatus((s) => {
+      // A dropped connection loses the queue on the server.
+      if (s === 'down' || s === 'takenOver') this.stop();
+      this.sync();
+    });
+  }
+
+  /** This browser just queued (the lobby messages follow). */
+  queued(): void {
+    this.active = true;
+    this.last = null;
+    this.sync();
+  }
+
+  stop(): void {
+    this.active = false;
+    this.last = null;
+    this.sync();
+  }
+
+  leave(): void {
+    this.net.send({ t: 'leaveQueue' });
+    this.stop();
+    this.onLeft();
+  }
+
+  /** Shows, updates or hides the window. */
+  sync(): void {
+    const show = this.active && !this.onLobbyScreen;
+    if (!show) {
+      this.el?.remove();
+      this.el = null;
+      if (this.timer !== null) clearInterval(this.timer);
+      this.timer = null;
+      return;
+    }
+    if (!this.el) {
+      this.el = document.createElement('div');
+      this.el.className = 'almia-qmini';
+      this.el.innerHTML = `<div class="top"><span class="dot"></span><span class="title">Finding a match</span></div>
+        <div class="line who"></div><div class="line when"></div><div class="bar"><i></i></div>
+        <div class="btns"><button class="open">Open</button><button class="leave">Leave</button></div>`;
+      for (const ev of ['pointerdown', 'mousedown', 'touchstart', 'click'] as const) this.el.addEventListener(ev, (e) => e.stopPropagation());
+      (this.el.querySelector('.open') as HTMLButtonElement).onclick = () => this.onOpen();
+      (this.el.querySelector('.leave') as HTMLButtonElement).onclick = () => this.leave();
+      document.body.appendChild(this.el);
+      this.timer = window.setInterval(() => this.paint(), 250);
+    }
+    this.paint();
+  }
+
+  private paint(): void {
+    const el = this.el;
+    if (!el) return;
+    const m = this.last;
+    const gone = (performance.now() - this.at) / 1000;
+    const who = el.querySelector('.who') as HTMLElement;
+    const when = el.querySelector('.when') as HTMLElement;
+    const bar = el.querySelector('.bar i') as HTMLElement;
+    const dot = el.querySelector('.dot') as HTMLElement;
+    const title = el.querySelector('.title') as HTMLElement;
+    if (!m) {
+      who.textContent = 'Joining the queue...';
+      when.textContent = '';
+      bar.style.width = '0%';
+      return;
+    }
+    who.textContent = `${m.players.length} / ${m.size} trainers in the lobby`;
+    bar.style.width = `${Math.round((m.players.length / m.size) * 100)}%`;
+    const starting = m.startsIn !== null;
+    dot.classList.toggle('go', starting);
+    title.textContent = starting ? 'Match starting' : 'Finding a match';
+    if (starting) {
+      const left = Math.max(0, (m.startsIn ?? 0) - gone);
+      when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>${m.bots ? ' with computer trainers' : ''}`;
+    } else if (m.botsIn !== undefined) {
+      const left = Math.max(0, m.botsIn - gone);
+      when.innerHTML = `Computer trainers fill in <span class="time">${clock(Math.ceil(left))}</span>`;
+    } else when.textContent = m.need ? `Waiting for ${m.need} more` : '';
+  }
+}

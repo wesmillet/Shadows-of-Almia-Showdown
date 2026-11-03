@@ -480,6 +480,9 @@ export class LobbyScreen implements Screen {
   /** An administrator's lobby: they may start it now, alone or with whoever is here (the server checks). */
   private admin = false;
   private mode: QueueMode | undefined;
+  /** Short of players: seconds until computer trainers fill in (a countdown then starts). */
+  private botsIn: number | null = null;
+  private bots = false;
   private unsub: (() => void) | null = null;
   private t = 0;
 
@@ -487,6 +490,8 @@ export class LobbyScreen implements Screen {
     private readonly ctx: GameContext,
     private readonly net: Connection,
     private readonly onLeave: (why?: string) => void,
+    /** Stay queued and use the menus (the queue's mini window shows the countdown). */
+    private readonly onBrowse?: () => void,
   ) {}
 
   enter(): void {
@@ -500,6 +505,8 @@ export class LobbyScreen implements Screen {
         this.min = m.min ?? Math.ceil(m.size / 2);
         this.admin = !!m.admin;
         this.mode = m.mode;
+        this.botsIn = m.botsIn ?? null;
+        this.bots = !!m.bots;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
     });
   }
@@ -512,7 +519,16 @@ export class LobbyScreen implements Screen {
   private leaveRect(): Rect {
     const v = this.ctx.view;
     const s = v.baseScale;
-    return { x: v.width / 2 - 110 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
+    if (!this.onBrowse) return { x: v.width / 2 - 110 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
+    return { x: v.width / 2 + 8 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
+  }
+
+  /** Keep browsing: the menus, still queued. */
+  private browseRect(): Rect | null {
+    if (!this.onBrowse) return null;
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    return { x: v.width / 2 - 228 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
   }
 
   /** Casual queues only: done waiting, start with computer trainers filling the rest. */
@@ -528,9 +544,13 @@ export class LobbyScreen implements Screen {
   step(dt: number, input: Input): void {
     this.t += dt;
     if (this.startsIn !== null) this.startsIn = Math.max(0, this.startsIn - dt);
+    if (this.botsIn !== null) this.botsIn = Math.max(0, this.botsIn - dt);
     const b = this.leaveRect();
     const sn = this.startNowRect();
+    const br = this.browseRect();
+    if (this.onBrowse && input.pressed('Escape')) return this.onBrowse();
     for (const c of input.takeClicks()) {
+      if (br && this.onBrowse && hit(c.x, c.y, br.x, br.y, br.w, br.h)) return this.onBrowse();
       if (sn && hit(c.x, c.y, sn.x, sn.y, sn.w, sn.h)) {
         this.net.send({ t: 'startNow' });
         this.startsIn = Math.min(this.startsIn ?? 2, 2);
@@ -552,10 +572,12 @@ export class LobbyScreen implements Screen {
     const sub = waitingParty
       ? `Your party is picking starters (${picked}/${party.members.length})`
       : this.need > 0
-        ? `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'} (${this.min} needed before bots fill in)`
+        ? this.botsIn !== null
+          ? `Waiting for players · computer trainers fill in ${Math.ceil(this.botsIn)}s`
+          : `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'}`
         : this.startsIn === null
           ? 'Joining the queue'
-          : `Starting in ${Math.ceil(this.startsIn)}s`;
+          : `Starting in ${Math.ceil(this.startsIn)}s${this.bots ? ' with computer trainers' : ''}`;
     heading(v, `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
@@ -571,6 +593,8 @@ export class LobbyScreen implements Screen {
     const sn = this.startNowRect();
     if (sn) button(v, this.admin && this.need > 0 ? 'Start now (admin)' : 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
     button(v, 'Leave queue', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), '#f4e6c8');
+    const br = this.browseRect();
+    if (br) button(v, 'Browse menus (Esc)', br.x, br.y, br.w, br.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, br.x, br.y, br.w, br.h));
   }
 }
 

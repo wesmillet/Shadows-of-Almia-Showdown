@@ -20,6 +20,7 @@ import { TitleScreen } from './ui/titleScreen';
 import { PcScreen } from './ui/pcScreen';
 import { CharacterScreen } from './ui/characterScreen';
 import { loadLook, lookHooks, saveLook } from './look';
+import { AfkWatch } from './net/afk';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
@@ -299,6 +300,15 @@ async function boot(): Promise<void> {
   let watchingId: string | null = null;
   const toaster = net ? new Toaster(net) : null;
   if (net) debug.showdown.net = net;
+  // Away for two minutes (no key, click, tap or mouse movement): out of any match, disconnected.
+  if (net) {
+    new AfkWatch(() => {
+      net.send({ t: 'leave' });
+      playingId = null;
+      watchingId = null;
+      net.close();
+    });
+  }
   // The game's own errors go to the server's error log (a few per visit), so they get fixed.
   if (net) {
     const sent = new Set<string>();

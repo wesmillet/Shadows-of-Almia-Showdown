@@ -57,7 +57,9 @@ jobs:
             done
             echo "== HTTPS"
             for h in "$DOMAIN" "www.$DOMAIN"; do
-              echo "$h: $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 "https://$h/health" 2>&1)"
+              echo "$h/health: $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 "https://$h/health" 2>&1)"
+              echo "$h/ : $(curl -s -o /dev/null -w '%{http_code} %{redirect_url} tls=%{ssl_verify_result}' --max-time 15 "https://$h/?check=1" 2>&1)"
+              echo "http://$h/ : $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 "http://$h/" 2>&1)"
             done
           } > out.log
           cat out.log

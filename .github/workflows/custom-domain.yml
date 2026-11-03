@@ -1,0 +1,70 @@
+# Connect a custom domain to the online game on Fly.io (free certificates, no new hosting).
+#   add:   asks Fly for HTTPS certificates for <domain> and www.<domain>, then posts the exact DNS
+#          records to enter at the registrar (as an issue).
+#   check: posts the certificates' status and what the domain's DNS answers now.
+# The www address is sent to the bare domain by the game server itself.
+name: Custom domain
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Domain (without www)
+        default: soashowdown.com
+        required: true
+      app:
+        description: Fly app
+        default: almia-showdown
+        required: true
+      action:
+        description: add (request certificates) or check (status)
+        type: choice
+        options: [add, check]
+        default: add
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  domain:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: ${{ github.event.inputs.app }}
+      DOMAIN: ${{ github.event.inputs.domain }}
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Fly
+        run: |
+          set +e
+          {
+            if [ "${{ github.event.inputs.action }}" = "add" ]; then
+              for h in "$DOMAIN" "www.$DOMAIN"; do
+                echo "== flyctl certs add $h"
+                flyctl certs add "$h" --app "$APP" 2>&1
+              done
+            fi
+            echo "== flyctl ips list"
+            flyctl ips list --app "$APP" 2>&1
+            for h in "$DOMAIN" "www.$DOMAIN"; do
+              echo "== flyctl certs show $h"
+              flyctl certs show "$h" --app "$APP" 2>&1
+            done
+            echo "== DNS now"
+            for h in "$DOMAIN" "www.$DOMAIN" "_acme-challenge.$DOMAIN" "_acme-challenge.www.$DOMAIN"; do
+              echo "$h A: $(dig +short A "$h" | tr '\n' ' ')  AAAA: $(dig +short AAAA "$h" | tr '\n' ' ')  CNAME: $(dig +short CNAME "$h" | tr '\n' ' ')"
+            done
+            echo "== HTTPS"
+            for h in "$DOMAIN" "www.$DOMAIN"; do
+              echo "$h: $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 "https://$h/health" 2>&1)"
+            done
+          } > out.log
+          cat out.log
+      - name: Post
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          { echo "Domain: $DOMAIN · action: ${{ github.event.inputs.action }}"; echo; echo '```'; cat out.log; echo '```'; } > body.md
+          gh issue create --repo "${{ github.repository }}" --title "Custom domain ${{ github.event.inputs.action }}: $DOMAIN (run ${{ github.run_id }})" --body-file body.md

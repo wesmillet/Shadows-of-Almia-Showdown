@@ -17,8 +17,9 @@ kill_timeout = 300
   BACKUP_MINUTES = "15"
   DRAIN_SECONDS = "240"
   RARE_CHEST = "0"
-  # Set to the domain once it is connected, e.g. https://lastlight.gg (Google sign-in needs it).
-  # PUBLIC_URL = "https://example.gg"
+  # The players' address (soashowdown.com; www.soashowdown.com is sent there by the server). The
+  # Fly address keeps working too.
+  PUBLIC_URL = "https://soashowdown.com"
 
 # Prometheus metrics for Fly's Grafana (fly.io/apps/<app>/monitoring), on an internal port.
 [metrics]

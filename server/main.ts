@@ -349,6 +349,13 @@ const http = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, kind: KIND, build: BUILD, ...hub.stats() }));
     return;
   }
+  // www.<domain> is the same game: send it to the bare domain, over HTTPS (one address, one
+  // set of sign-in cookies).
+  const host = (req.headers.host ?? '').toLowerCase();
+  if (KIND === 'live' && host.startsWith('www.') && host.length > 4) {
+    res.writeHead(301, { Location: `https://${host.slice(4)}${url}`, 'Cache-Control': 'public, max-age=3600' }).end();
+    return;
+  }
   if (url.startsWith('/api/ops/')) {
     void ops(req, res, url.split('?')[0] as string);
     return;

@@ -78,5 +78,8 @@ describe('starter achievements', () => {
     acc.db.prepare("DELETE FROM meta WHERE key = 'pc_first_forms'").run();
     (acc as unknown as { firstFormsOnce(): void }).firstFormsOnce();
     expect(pcIds().find((e) => e.evolvedFrom === '0445')?.dex).toBe('0443');
+    // Only the Pikachu caught in m1 counts: collected Pokémon (extracted Charizard and Garchomp,
+    // the rewarded Mudkip) are not catches.
+    expect(acc.starters.progress(uid).species).toBe(1);
   });
 });

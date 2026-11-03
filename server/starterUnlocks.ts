@@ -3,7 +3,7 @@
  * nominations (src/sim/starters.ts): progress, unlocks, the choices made and the saved nominations.
  * Progress counts from what the server already keeps, so players who played before this get their
  * credit: lifetime catches and matches (profile stats), placings (match_players), and the species
- * caught in each recorded match plus the species in their PC.
+ * caught in each recorded match (a Poké Ball catch or a snag; not what was collected into the PC).
  */
 import type { DatabaseSync } from 'node:sqlite';
 import { randomInt } from 'node:crypto';
@@ -46,10 +46,9 @@ export class StarterUnlocks {
   progress(userId: number): Record<StarterStat, number> {
     const life = this.lifetime(userId);
     const rows = this.db.prepare('SELECT place, stats FROM match_players WHERE user_id = ?').all(userId) as Array<{ place: number; stats: string }>;
-    // Species they caught: kept from a match (a win's pick or a voucher, not an Egg, gift or reward),
-    // as they were caught (before going back to a first form), and every recorded match's catches.
-    const kept = this.db.prepare("SELECT COALESCE(json_extract(entry, '$.evolvedFrom'), json_extract(entry, '$.dex')) AS dex FROM pc WHERE user_id = ? AND json_extract(entry, '$.via') IN ('win', 'voucher')").all(userId) as Array<{ dex: string | null }>;
-    const species = new Set(kept.filter((r) => typeof r.dex === 'string').map((r) => (r.dex as string).split('-')[0] as string));
+    // Species they caught: thrown a ball at (or snagged) in a match, as each match recorded it.
+    // Collected Pokémon (extracted, hatched, gifted or rewarded into the PC) do not count.
+    const species = new Set<string>();
     let top3 = 0;
     for (const r of rows) {
       if (r.place >= 1 && r.place <= 3) top3++;

@@ -78,6 +78,8 @@ export interface TouchFrame {
   /** Pick the next Pokémon for a trainer battle (seconds left), or null. */
   pick: number | null;
   bag: { items: TouchBagEntry[]; held: TouchBagEntry[] };
+  /** The minimap's box in CSS pixels (Menu sits left of it, Bag and Auto under it), or null. */
+  minimap: { left: number; top: number; bottom: number } | null;
 }
 
 /** A drag from a move or ball button: which way (unit vector) and how far (0..1 of full reach). */
@@ -124,9 +126,9 @@ const CSS = `
 .almia-touch .styler { width: 50px; height: 50px; font-size: 10px; background: rgba(40,110,170,0.7); }
 .almia-touch .interact { position: absolute; height: 40px; max-width: 46vw; padding: 0 14px; border-radius: 20px; font-size: 13px;
   background: rgba(244,160,40,0.85); border-color: #fff3d6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.almia-touch .party { position: absolute; left: 6px; bottom: 8px; display: flex; flex-direction: column; gap: 5px; }
-.almia-touch .pm { position: relative; width: 46px; height: 46px; border-radius: 9px; padding: 0; background: rgba(30,20,12,0.7); }
-.almia-touch .pm canvas { position: absolute; left: 3px; top: 2px; width: 36px; height: 36px; image-rendering: pixelated; }
+.almia-touch .party { position: absolute; left: 6px; bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.almia-touch .pm { position: relative; width: var(--pm, 38px); height: var(--pm, 38px); border-radius: 8px; padding: 0; background: rgba(30,20,12,0.7); }
+.almia-touch .pm canvas { position: absolute; left: 3px; top: 2px; width: calc(var(--pm, 38px) - 10px); height: calc(var(--pm, 38px) - 10px); margin-left: 2px; image-rendering: pixelated; }
 .almia-touch .pm .hp { position: absolute; left: 3px; right: 3px; bottom: 3px; height: 4px; background: rgba(0,0,0,0.6); border-radius: 2px; overflow: hidden; }
 .almia-touch .pm .hp i { display: block; height: 100%; background: #4cd964; }
 .almia-touch .pm.out { border-color: #ffd66e; }
@@ -135,7 +137,7 @@ const CSS = `
 .almia-touch .pm .tag { position: absolute; right: -4px; top: -6px; font-size: 9px; padding: 1px 4px; border-radius: 6px; background: #1f6aa0; border: 1px solid #fff; }
 .almia-touch .sheet, .almia-touch .panel { pointer-events: auto; position: absolute; background: rgba(28,20,14,0.94); border: 2px solid #f4e6c8;
   border-radius: 12px; padding: 10px; color: #f4e6c8; }
-.almia-touch .sheet { left: 60px; width: 210px; display: flex; flex-direction: column; gap: 6px; }
+.almia-touch .sheet { left: calc(var(--pm, 38px) + 16px); width: 210px; display: flex; flex-direction: column; gap: 6px; }
 .almia-touch .sheet .ttl { font-size: 13px; color: #fff; }
 .almia-touch .sheet .sub { font-size: 11px; opacity: 0.85; margin-bottom: 2px; }
 .almia-touch .sheet button, .almia-touch .panel button.act { position: static; height: 36px; border-radius: 9px; font-size: 13px; text-align: left; padding: 0 12px; }
@@ -373,10 +375,10 @@ export class TouchUi {
     this.menuEl = h('button', 'pill', 'Menu');
     this.bagEl = h('button', 'pill', 'Bag');
     this.autoEl = h('button', 'pill', 'Auto');
-    const topRow = 'calc(33% + 6px)';
-    Object.assign(this.menuEl.style, { right: '8px', top: topRow });
-    Object.assign(this.bagEl.style, { right: '82px', top: topRow });
-    Object.assign(this.autoEl.style, { right: '146px', top: topRow });
+    // Placed each frame against the minimap (placeTop); these are the fallbacks.
+    Object.assign(this.menuEl.style, { right: '8px', top: '8px' });
+    Object.assign(this.bagEl.style, { right: '8px', top: 'calc(33% + 6px)' });
+    Object.assign(this.autoEl.style, { right: '72px', top: 'calc(33% + 6px)' });
     tapButton(this.menuEl, () => {
       this.closeAll();
       // A prompt open: Close is Esc. Otherwise the game's own menu (Esc, or the hook it set).
@@ -488,6 +490,7 @@ export class TouchUi {
     if (this.autoEl.textContent !== autoText) this.autoEl.textContent = autoText;
     this.autoEl.style.background = f.auto ? 'rgba(46,125,50,0.8)' : '';
     show(this.partyEl, play);
+    this.placeTop(f);
     this.drawParty(f);
     this.drawSheet(f);
     this.drawPick(f);
@@ -499,6 +502,26 @@ export class TouchUi {
       this.ballsEl.remove();
       this.ballsEl = null;
     }
+  }
+
+  // ------------------------------------------------------------------ layout
+
+  /** Menu just left of the minimap, level with its top; Bag and Auto under the minimap, right-aligned. */
+  private placeTop(f: TouchFrame): void {
+    const mm = f.minimap;
+    if (!mm) return;
+    const w = this.root.clientWidth;
+    const px = (n: number): string => `${Math.round(n)}px`;
+    Object.assign(this.menuEl.style, { right: px(w - mm.left + 8), top: px(mm.top) });
+    const below = px(mm.bottom + 6);
+    Object.assign(this.bagEl.style, { right: '8px', top: below });
+    const bagW = this.bagEl.offsetWidth || 56;
+    Object.assign(this.autoEl.style, { right: px(8 + bagW + 6), top: below });
+    // The party strip: portraits sized so a full team of six fits under the trainers-left card.
+    const n = Math.max(1, f.party.length);
+    const room = this.root.clientHeight - 64;
+    const size = Math.max(28, Math.min(38, Math.floor((room - 4 * (n - 1)) / n)));
+    this.root.style.setProperty('--pm', `${size}px`);
   }
 
   // ------------------------------------------------------------------ party strip

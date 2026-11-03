@@ -29,7 +29,7 @@ const DEBUG_STAMP = typeof location !== 'undefined' && new URLSearchParams(locat
 
 export type HudHit = { kind: 'portrait'; index: number } | { kind: 'move'; index: number } | { kind: 'item'; index: number } | { kind: 'behavior'; index: number } | { kind: 'tab'; index: number } | { kind: 'discard'; index: number } | { kind: 'release'; index: number } | { kind: 'chest'; index: number } | { kind: 'snag'; index: number } | { kind: 'held'; index: number } | { kind: 'learn'; index: number } | { kind: 'row'; index: number };
 
-interface Rect {
+export interface Rect {
   x: number;
   y: number;
   w: number;
@@ -135,6 +135,9 @@ export class Hud {
   /** How far each bag slot is raised (0..1 of a full lift), eased toward its target every frame. */
   private slotLift: number[] = [];
   private liftClock = 0;
+
+  /** Where the minimap was drawn this frame (canvas pixels): the touch buttons line up with it. */
+  minimapRect: Rect | null = null;
 
   /** The HUD's panels this frame (banner, minimap, party, bag, moves): labels over Pokémon keep out of them. */
   occupied: Rect[] = [];
@@ -734,6 +737,7 @@ export class Hud {
     }
     if (!this.ui.flat(ctx, 'cream', fx, fy, fw, fh, u)) this.panel(ctx, fx, fy, fw, fh, 12, 'rgba(12,12,22,0.55)');
     this.occupied.push({ x: fx, y: fy, w: fw, h: fh });
+    this.minimapRect = { x: fx, y: fy, w: fw, h: fh };
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, mw, mh);

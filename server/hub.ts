@@ -139,7 +139,8 @@ export class Hub {
       wait: o.wait,
       fullSeconds: 3,
       minPlayers: o.minPlayers,
-      start: (players, mode) => this.startRoom(players, mode, {}),
+      // 8 or more real players: no computer trainers (the matchmaker decides; private lobbies keep their own rule).
+      start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? {} : { bots: false }),
       isAdmin: (peer) => this.isAdmin(peer as Client),
     });
     o.accounts.presence = (id) => this.presence(id);

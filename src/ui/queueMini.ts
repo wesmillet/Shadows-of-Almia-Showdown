@@ -131,7 +131,7 @@ export class QueueMini {
     title.textContent = starting ? 'Match starting' : 'Finding a match';
     if (starting) {
       const left = Math.max(0, (m.startsIn ?? 0) - gone);
-      when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>${m.bots ? ' with computer trainers' : ''}`;
+      when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>${m.humansOnly ? ' · real players only' : ' · bots fill empty seats'}`;
     } else if (m.botsIn !== undefined) {
       const left = Math.max(0, m.botsIn - gone);
       when.innerHTML = `Computer trainers fill in <span class="time">${clock(Math.ceil(left))}</span>`;

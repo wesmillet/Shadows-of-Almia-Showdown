@@ -483,6 +483,8 @@ export class LobbyScreen implements Screen {
   /** Short of players: seconds until computer trainers fill in (a countdown then starts). */
   private botsIn: number | null = null;
   private bots = false;
+  /** 8 or more real players: no computer trainers join. */
+  private humansOnly = false;
   private unsub: (() => void) | null = null;
   private t = 0;
 
@@ -507,6 +509,7 @@ export class LobbyScreen implements Screen {
         this.mode = m.mode;
         this.botsIn = m.botsIn ?? null;
         this.bots = !!m.bots;
+        this.humansOnly = !!m.humansOnly;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
     });
   }
@@ -577,7 +580,7 @@ export class LobbyScreen implements Screen {
           : `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'}`
         : this.startsIn === null
           ? 'Joining the queue'
-          : `Starting in ${Math.ceil(this.startsIn)}s${this.bots ? ' with computer trainers' : ''}`;
+          : `Starting in ${Math.ceil(this.startsIn)}s${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'}`;
     heading(v, `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
@@ -591,7 +594,7 @@ export class LobbyScreen implements Screen {
     }
     const b = this.leaveRect();
     const sn = this.startNowRect();
-    if (sn) button(v, this.admin && this.need > 0 ? 'Start now (admin)' : 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
+    if (sn) button(v, this.admin && this.need > 0 ? 'Start now (admin)' : this.humansOnly ? 'Start now' : 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
     button(v, 'Leave queue', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), '#f4e6c8');
     const br = this.browseRect();
     if (br) button(v, 'Browse menus (Esc)', br.x, br.y, br.w, br.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, br.x, br.y, br.w, br.h));

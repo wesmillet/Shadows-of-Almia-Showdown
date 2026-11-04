@@ -135,4 +135,16 @@ describe('matchmaker', () => {
     mm.tick(90_001);
     expect(started[0]?.players.map((p) => p.peer.name)).toEqual(['a']);
   });
+  it('eight or more real players: the match starts with no computer trainers', () => {
+    const got: Array<{ n: number; bots: boolean }> = [];
+    const mm = new Matchmaker({ size: 10, wait: { casual: 10 }, fullSeconds: 2, start: (players, _mode, rules) => got.push({ n: players.length, bots: rules.bots }) });
+    for (const k of ['a', 'b', 'c', 'd', 'e', 'f', 'g']) mm.join({ tickets: [{ peer: peer(k), starter: '0001' }], party: false }, 'casual', 0);
+    mm.tick(10_001);
+    expect(got[0]).toEqual({ n: 7, bots: true });
+    const eight = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((k) => peer(k + '2'));
+    for (const p of eight) mm.join({ tickets: [{ peer: p, starter: '0001' }], party: false }, 'casual', 20_000);
+    expect((eight[0]?.got.at(-1) as { humansOnly?: boolean }).humansOnly).toBe(true);
+    mm.tick(30_001);
+    expect(got[1]).toEqual({ n: 8, bots: false });
+  });
 });

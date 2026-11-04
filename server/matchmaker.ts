@@ -11,6 +11,7 @@
  * The one
  * exception is an administrator (checked by the hub from their account's role, never their name):
  * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.
+ * With `noBotsFrom` (8) real players or more, a match starts with no computer trainers at all.
  */
 import type { Peer } from './room';
 
@@ -42,7 +43,9 @@ export interface MatchmakerOptions {
   /** Real players a lobby needs before it starts with computer trainers in the empty seats
    * (default half the lobby, rounded up). Below that it keeps waiting. */
   minPlayers?: number;
-  start: (players: Lineup[], mode: QueueMode) => void;
+  start: (players: Lineup[], mode: QueueMode, rules: { bots: boolean }) => void;
+  /** Real players from which a match starts without computer trainers (default 8): those seats stay empty. */
+  noBotsFrom?: number;
   /** Seconds a lobby short of minPlayers waits before it starts filling with computer trainers (default 60). */
   lonelySeconds?: number;
   /** The countdown once it does (default 30). */
@@ -71,6 +74,11 @@ export class Matchmaker {
   /** Real players needed to start (the rest are computer trainers). */
   get minPlayers(): number {
     return Math.min(this.o.size, this.o.minPlayers ?? Math.ceil(this.o.size / 2));
+  }
+
+  /** Real players from which no computer trainers join. */
+  get noBotsFrom(): number {
+    return this.o.noBotsFrom ?? 8;
   }
 
   private get lonelyMs(): number {
@@ -152,7 +160,7 @@ export class Matchmaker {
         const t = g.party && g.tickets.length > 1 ? ++team : undefined;
         for (const x of g.tickets) players.push({ peer: x.peer, starter: x.starter, team: t });
       }
-      this.o.start(players, l.mode);
+      this.o.start(players, l.mode, { bots: players.length < this.noBotsFrom });
       this.status(now, true);
     }
     this.status(now, false);
@@ -172,7 +180,7 @@ export class Matchmaker {
         for (const t of g.tickets) {
           // Only an administrator's own lobby message offers the admin start (the server checks again).
           const admin = this.o.isAdmin?.(t.peer) || undefined;
-          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined });
+          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined, humansOnly: players.length >= this.noBotsFrom || undefined, noBotsFrom: this.noBotsFrom });
         }
       }
     }

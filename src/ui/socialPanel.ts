@@ -498,6 +498,31 @@ function accountTools(net: Connection, p: Profile, close: () => void): HTMLEleme
     };
     actions.append(pw, codes);
     wrap.append(actions);
+    // An email for password resets (only when the server can send email).
+    const em = net.me.email;
+    if (em?.on) {
+      const line = el('div', 'almia-email', em.address ? `Email: ${em.address} ${em.confirmed ? '(confirmed)' : '(check your inbox for the confirmation link)'}` : 'No email: add one so you can reset your password by email.');
+      const row2 = el('div', 'almia-tabs');
+      const add = el('button', 'almia-small alt', em.address ? 'Change email' : 'Add email');
+      add.onclick = () => {
+        close();
+        void emailDialog(net);
+      };
+      row2.append(add);
+      if (em.address) {
+        const rm = el('button', 'almia-small alt', 'Remove email');
+        rm.onclick = async () => {
+          const r = await net.api<{ ok?: boolean }>('/api/email/remove', {});
+          await net.refreshMe();
+          note.textContent = r.ok ? 'Email removed' : (r.error ?? 'Could not remove it');
+          line.textContent = 'No email: add one so you can reset your password by email.';
+          rm.remove();
+          add.textContent = 'Add email';
+        };
+        row2.append(rm);
+      }
+      wrap.append(line, row2);
+    }
   }
   wrap.append(note);
   return wrap;
@@ -554,10 +579,42 @@ function changePasswordDialog(net: Connection): Promise<void> {
 }
 
 /** Forgot your password: your trainer name, one recovery code, and a new password. */
+/** Add or change the account's email: a confirmation link goes to it. */
+export function emailDialog(net: Connection): Promise<void> {
+  return modal((box, close) => {
+    box.append(el('h2', '', 'Email for password resets'), el('p', '', 'Optional. It is used only to send you a link if you forget your password, never shown to anyone. We will send a link to confirm it.'));
+    const input = el('input');
+    input.type = 'email';
+    input.autocomplete = 'email';
+    const err = el('div', 'err');
+    const go = el('button', 'almia-btn', 'Send confirmation link');
+    const cancel = el('button', 'almia-btn alt', 'Cancel');
+    cancel.onclick = close;
+    go.onclick = async () => {
+      go.disabled = true;
+      const r = await net.api<{ ok?: boolean }>('/api/email', { email: input.value.trim() });
+      go.disabled = false;
+      if (!r.ok) {
+        err.textContent = r.error ?? 'That did not work';
+        return;
+      }
+      await net.refreshMe();
+      err.style.color = '#2e7d32';
+      err.textContent = 'Sent! Open the link in that email to confirm it (it works for 2 days).';
+      go.remove();
+      cancel.textContent = 'Done';
+    };
+    const row = el('div', 'row');
+    row.append(cancel, go);
+    box.append(el('label', '', 'Email'), input, err, row);
+    input.focus();
+  }, false);
+}
+
 export function recoverDialog(net: Connection): Promise<boolean> {
   let ok = false;
   return modal((box, close) => {
-    box.append(el('h2', '', 'Forgot your password?'), el('p', '', 'Use one of the recovery codes you saved when you made your account.'));
+    box.append(el('h2', '', 'Forgot your password?'), el('p', '', 'Use one of the recovery codes you saved when you made your account (or a reset code from an administrator).'));
     const name = el('input');
     name.autocomplete = 'username';
     const code = el('input');
@@ -587,6 +644,26 @@ export function recoverDialog(net: Connection): Promise<boolean> {
     const row = el('div', 'row');
     row.append(cancel, go);
     box.append(el('label', '', 'Trainer name'), name, el('label', '', 'Recovery code'), code, el('label', '', 'New password (8+ characters)'), pass, err, row);
+    // No codes? A reset link by email, for accounts with a confirmed email.
+    if (net.me.email?.on) {
+      const mail = el('button', 'almia-btn alt', 'Email me a reset link instead');
+      const mailNote = el('div', 'err');
+      mail.onclick = async () => {
+        const who = name.value.trim();
+        if (!who) {
+          mailNote.textContent = 'Type your trainer name first';
+          return;
+        }
+        mail.disabled = true;
+        const r = await net.api<{ ok?: boolean; text?: string }>('/api/forgot', { username: who });
+        mailNote.style.color = r.ok ? '#2e7d32' : '';
+        mailNote.textContent = r.ok ? (r.text ?? 'Check your email') : (r.error ?? 'That did not work');
+        window.setTimeout(() => (mail.disabled = false), 4000);
+      };
+      const or = el('p', '', 'No codes? If your account has a confirmed email, we can email you a link to reset it.');
+      or.style.marginTop = '14px';
+      box.append(or, mail, mailNote);
+    }
     name.focus();
   }, false).then(() => ok);
 }

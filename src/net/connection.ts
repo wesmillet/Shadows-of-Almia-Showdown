@@ -42,6 +42,8 @@ export interface Me {
   achievements?: string[];
   /** Looks given to this account by Mystery Gift codes. */
   looks?: string[];
+  /** Email for password resets: whether the server can send it, and this account's (masked) address. */
+  email?: { on: boolean; address: string | null; confirmed: boolean };
 }
 
 /** What only the browser needs to send messages (the replay player feeds a mirror without a server). */

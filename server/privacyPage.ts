@@ -33,6 +33,7 @@ a { color: #c2611a; }
 <li>If you sign in with Google: Google's number for your account and your first name (to suggest a trainer name). Not your email.</li>
 <li><b>Your game</b>: Pokémon in your PC, your storage chest, your look and title, levels, achievements, stats and match history (and, from before ranked play was retired, any ranked ratings).</li>
 <li><b>Recovery codes</b>, scrambled like the password, so you can get back in without an email.</li>
+<li><b>An email address, only if you add one</b> (it is optional). It is used for one thing: sending you a link to confirm it and, if you forget your password, a link to reset it. No newsletters, nothing else, never shown to anyone. You can remove it from your profile at any time. Emails are sent through Resend (resend.com). If you are under 13, ask a parent before adding one.</li>
 <li>A sign-in cookie, so you stay signed in (for 30 days, or until you sign out).</li>
 </ul>
 <h2>What other players can see</h2>

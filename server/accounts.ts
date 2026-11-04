@@ -27,6 +27,7 @@ import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
 import { STARTER_SQL, StarterUnlocks } from './starterUnlocks';
 import { COLLECTION_LOG_SQL } from './collectionLog';
+import { emailProblem, mailBody, maskEmail, messagePage, resendMailer, resetPage, type Mailer } from './mailer';
 import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
@@ -57,6 +58,9 @@ export interface UserRow {
   id: number;
   username: string;
   pass_hash: string | null;
+  /** For password resets only (optional, kept once confirmed): never shown in full anywhere. */
+  email?: string | null;
+  email_verified?: number;
   google_sub: string | null;
   created_at: number;
   banned: number;
@@ -213,6 +217,10 @@ export class Accounts {
       CREATE TABLE IF NOT EXISTS achievements (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, id)
       );
+      CREATE TABLE IF NOT EXISTS reset_tokens (
+        token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL,
+        created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, used_at INTEGER, email TEXT
+      );
       CREATE TABLE IF NOT EXISTS recovery (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_hash TEXT NOT NULL, used_at INTEGER, PRIMARY KEY (user_id, code_hash)
       );
@@ -255,7 +263,7 @@ export class Accounts {
     `);
     this.db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('history_since', ?)").run(String(Date.now()));
     // Columns added after the first release (older databases get them here).
-    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER'], ['users', 'last_seen', 'INTEGER'], ['daily_eggs', 'hatched_at', 'INTEGER']] as const) {
+    for (const [table, col, def] of [['match_players', 'rating_delta', 'REAL'], ['match_players', 'team_place', 'INTEGER'], ['matches', 'mode', "TEXT NOT NULL DEFAULT 'casual'"], ['profiles', 'xp', 'INTEGER NOT NULL DEFAULT 0'], ['profiles', 'title', 'TEXT'], ['match_players', 'xp', 'INTEGER'], ['users', 'last_seen', 'INTEGER'], ['daily_eggs', 'hatched_at', 'INTEGER'], ['users', 'email', 'TEXT'], ['users', 'email_verified', 'INTEGER NOT NULL DEFAULT 0']] as const) {
       const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }
@@ -466,6 +474,8 @@ export class Accounts {
   onTradesChanged: (userIds: number[]) => void = () => {};
   /** An account's password was changed or recovered: its game connections close (they sign in again). */
   onSignedOut: (userId: number, reason: string) => void = () => {};
+  /** Email for password resets (server/mailer.ts): null when the server has no RESEND_API_KEY. */
+  mailer: Mailer | null = resendMailer();
 
   // ---------------------------------------------------------------- identity
 
@@ -1065,13 +1075,14 @@ export class Accounts {
       }
       const me = this.userFromRequest(req);
       if (req.method === 'GET' && path === '/api/me') {
-        if (!me) return send(200, { signedIn: false, google: !!this.google });
+        if (!me) return send(200, { signedIn: false, google: !!this.google, email: { on: !!this.mailer, address: null, confirmed: false } });
         const prof = this.profile(me.id);
         const earned = this.earned(me.id);
         return send(200, {
           signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
           progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: ACHIEVEMENTS_ON ? earned : [],
           looks: this.gifts.ownedLooks(me.id),
+          email: { on: !!this.mailer, address: me.email ? maskEmail(me.email) : null, confirmed: !!me.email_verified },
         });
       }
       if (req.method === 'POST' && path === '/api/gift/redeem') {
@@ -1094,6 +1105,8 @@ export class Accounts {
       if (req.method === 'POST' && path === '/api/register') return await this.register(req, res, send);
       if (req.method === 'POST' && path === '/api/login') return await this.login(req, res, send);
       if (req.method === 'POST' && path === '/api/recover') return await this.recover(req, send);
+      if (req.method === 'POST' && path === '/api/forgot') return await this.forgot(req, send);
+      if (req.method === 'POST' && path === '/api/reset') return await this.resetWithLink(req, send);
       if (req.method === 'POST' && path === '/api/logout') {
         const token = parseCookies(req.headers.cookie)[COOKIE];
         if (token) this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
@@ -1202,6 +1215,12 @@ export class Accounts {
         if (t && !titlesFor(this.earned(me.id)).includes(t)) return send(400, { error: 'Earn that title first' });
         this.db.prepare('UPDATE profiles SET title = ? WHERE user_id = ?').run(t || null, me.id);
         return send(200, { ok: true, title: t || null });
+      }
+      if (req.method === 'POST' && path === '/api/email') return await this.setEmail(req, me, send);
+      if (req.method === 'POST' && path === '/api/email/remove') {
+        this.db.prepare('UPDATE users SET email = NULL, email_verified = 0 WHERE id = ?').run(me.id);
+        this.db.prepare("DELETE FROM reset_tokens WHERE user_id = ? AND kind IN ('verify', 'email')").run(me.id);
+        return send(200, { ok: true });
       }
       if (req.method === 'POST' && path === '/api/recovery/new') {
         if (!me.pass_hash) return send(400, { error: 'Your account signs in with Google: Google handles its recovery' });
@@ -1327,7 +1346,13 @@ export class Accounts {
     const password = String(b.password ?? '');
     if (this.limited(`rec:${ip}`, 10, 3600_000) || this.limited(`recuser:${username.toLowerCase()}`, 5, 3600_000)) return send(429, { error: 'Too many tries. Try again in an hour' });
     const u = this.db.prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
-    if (!u || !u.pass_hash || u.banned || !this.useRecoveryCode(u.id, code)) {
+    // A recovery code, or a one-time reset code an administrator made for this account.
+    let via: 'recovery' | 'reset' | null = null;
+    if (u && u.pass_hash && !u.banned) {
+      if (this.useRecoveryCode(u.id, code)) via = 'recovery';
+      else if (this.useToken('admin', resetCodeHash(code), u.id) !== null) via = 'reset';
+    }
+    if (!u || !via) {
       this.fail(`rec:${ip}`);
       this.fail(`recuser:${username.toLowerCase()}`);
       return send(401, { error: 'That name and code do not match' });
@@ -1335,14 +1360,134 @@ export class Accounts {
     const err = passwordProblem(password, u.username);
     if (err) {
       // The code was good: give it back so they can try a better password.
-      this.db.prepare('UPDATE recovery SET used_at = NULL WHERE user_id = ? AND code_hash = ?').run(u.id, sha256(normCode(code)));
+      if (via === 'reset') this.db.prepare('UPDATE reset_tokens SET used_at = NULL WHERE token_hash = ?').run(resetCodeHash(code));
+      else this.db.prepare('UPDATE recovery SET used_at = NULL WHERE user_id = ? AND code_hash = ?').run(u.id, sha256(normCode(code)));
       return send(400, { error: err });
     }
     this.db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(password), u.id);
     this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
-    this.onSignedOut(u.id, 'This account was recovered with a recovery code, so this connection was closed');
+    this.onSignedOut(u.id, `This account was recovered with a ${via} code, so this connection was closed`);
     const left = (this.db.prepare('SELECT COUNT(*) AS n FROM recovery WHERE user_id = ? AND used_at IS NULL').get(u.id) as { n: number }).n;
     return send(200, { ok: true, username: u.username, codesLeft: left }, { 'Set-Cookie': this.cookie(req, this.newSession(u.id), SESSION_DAYS * 86400) });
+  }
+
+  // ---------------------------------------------------------------- reset codes and email
+
+  /**
+   * A one-time token for an account: 'admin' (a reset code an administrator made, typed in the
+   * Forgot password box), 'email' (a reset link) or 'verify' (confirming an email address). Only
+   * its hash is kept. Older unused ones of the same kind for the account stop working.
+   */
+  private makeToken(userId: number, kind: 'admin' | 'email' | 'verify', hash: string, ms: number, email: string | null = null): void {
+    const now = Date.now();
+    this.db.prepare('DELETE FROM reset_tokens WHERE (user_id = ? AND kind = ? AND used_at IS NULL) OR expires_at < ?').run(userId, kind, now - 86400_000);
+    this.db.prepare('INSERT INTO reset_tokens (token_hash, user_id, kind, created_at, expires_at, email) VALUES (?, ?, ?, ?, ?, ?)').run(hash, userId, kind, now, now + ms, email);
+  }
+
+  /** Uses a token (once, before it expires): the account it is for, or null. */
+  private useToken(kind: 'admin' | 'email' | 'verify', hash: string, userId?: number): { userId: number; email: string | null } | null {
+    const row = this.db.prepare('SELECT user_id, email FROM reset_tokens WHERE token_hash = ? AND kind = ? AND used_at IS NULL AND expires_at > ?').get(hash, kind, Date.now()) as { user_id: number; email: string | null } | undefined;
+    if (!row || (userId !== undefined && row.user_id !== userId)) return null;
+    const r = this.db.prepare('UPDATE reset_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL').run(Date.now(), hash);
+    return Number(r.changes) === 1 ? { userId: row.user_id, email: row.email } : null;
+  }
+
+  /**
+   * For the admin dashboard: a one-time reset code for an account (24 hours). The player types it
+   * in Forgot password like a recovery code. Nothing changes until it is used; making another
+   * cancels the last. The code is shown to the administrator once and only its hash is kept.
+   */
+  adminResetCode(userId: number, by: { id: number; name: string }): { code: string; username: string; expiresAt: number } | null {
+    const u = this.db.prepare('SELECT username, pass_hash FROM users WHERE id = ?').get(userId) as { username: string; pass_hash: string | null } | undefined;
+    if (!u || !u.pass_hash) return null;
+    const b = randomBytes(5).toString('hex').toUpperCase();
+    const code = `${b.slice(0, 5)}-${b.slice(5)}`;
+    this.makeToken(userId, 'admin', resetCodeHash(code), 24 * 3600_000);
+    this.logMod(by, 'reset-code', u.username, 'a one-time password reset code (24 hours)');
+    return { code, username: u.username, expiresAt: Date.now() + 24 * 3600_000 };
+  }
+
+  private baseUrl(req: IncomingMessage): string {
+    return this.publicUrl ?? `${isHttps(req) ? 'https' : 'http'}://${req.headers.host}`;
+  }
+
+  /** Adds or changes the account's email: kept unconfirmed until the link sent to it is opened. */
+  private async setEmail(req: IncomingMessage, me: UserRow, send: (s: number, b: unknown) => void): Promise<void> {
+    if (!this.mailer) return send(503, { error: "Email isn't set up on this server yet" });
+    if (!me.pass_hash) return send(400, { error: 'Your account signs in with Google: Google handles its recovery' });
+    if (this.limited(`email:${me.id}`, 5, 3600_000)) return send(429, { error: 'Too many tries. Try again in an hour' });
+    const b = await readJson(req);
+    const email = String(b.email ?? '').trim().toLowerCase();
+    const err = emailProblem(email);
+    if (err) return send(400, { error: err });
+    const token = randomBytes(24).toString('base64url');
+    this.makeToken(me.id, 'verify', sha256(token), 48 * 3600_000, email);
+    this.db.prepare('UPDATE users SET email = ?, email_verified = 0 WHERE id = ?').run(email, me.id);
+    const m = mailBody('Confirm your email', [`This confirms the email for ${me.username} on Shadows of Almia Showdown, so you can reset your password if you forget it.`, 'If you did not ask for this, ignore this email.'], { href: `${this.baseUrl(req)}/verify-email?t=${token}`, label: 'Confirm my email' });
+    const ok = await this.mailer.send({ to: email, subject: 'Confirm your email', ...m });
+    if (!ok) return send(502, { error: 'The email could not be sent. Check the address and try again' });
+    return send(200, { ok: true, address: maskEmail(email), confirmed: false });
+  }
+
+  /** Forgot password, by email: a reset link if the account has a confirmed email (the reply never says). */
+  private async forgot(req: IncomingMessage, send: (s: number, b: unknown) => void): Promise<void> {
+    const ip = clientIp(req);
+    const b = await readJson(req);
+    const username = String(b.username ?? '').trim().slice(0, 32);
+    const reply = { ok: true, text: 'If that account has a confirmed email, a reset link is on its way. It works for one hour.' };
+    if (!this.mailer) return send(503, { error: "Email isn't set up on this server yet" });
+    if (this.limited(`forgot:${ip}`, 10, 3600_000) || this.limited(`forgotuser:${username.toLowerCase()}`, 3, 3600_000)) return send(429, { error: 'Too many tries. Try again in an hour' });
+    const u = this.db.prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
+    if (!u || !u.pass_hash || u.banned || !u.email || !u.email_verified) return send(200, reply);
+    const token = randomBytes(24).toString('base64url');
+    this.makeToken(u.id, 'email', sha256(token), 3600_000);
+    const m = mailBody('Reset your password', [`Someone asked to reset the password for ${u.username}. The link works once, for one hour.`, 'If it was not you, ignore this email: your password stays the same.'], { href: `${this.baseUrl(req)}/reset-password?t=${token}`, label: 'Choose a new password' });
+    void this.mailer.send({ to: u.email, subject: 'Reset your password', ...m });
+    return send(200, reply);
+  }
+
+  /** The reset link's form: a new password (signs out everywhere). */
+  private async resetWithLink(req: IncomingMessage, send: (s: number, b: unknown) => void): Promise<void> {
+    const ip = clientIp(req);
+    if (this.limited(`reset:${ip}`, 20, 3600_000)) return send(429, { error: 'Too many tries. Try again in an hour' });
+    const b = await readJson(req);
+    const token = String(b.token ?? '');
+    const password = String(b.password ?? '');
+    const hash = sha256(token);
+    const t = this.useToken('email', hash);
+    const u = t ? (this.db.prepare('SELECT * FROM users WHERE id = ?').get(t.userId) as UserRow | undefined) : undefined;
+    if (!t || !u || u.banned) return send(400, { error: 'This link has expired or was already used. Ask for a new one in the game' });
+    const err = passwordProblem(password, u.username);
+    if (err) {
+      this.db.prepare('UPDATE reset_tokens SET used_at = NULL WHERE token_hash = ?').run(hash);
+      return send(400, { error: err });
+    }
+    this.db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(password), u.id);
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
+    this.onSignedOut(u.id, 'Your password was reset, so please sign in again');
+    return send(200, { ok: true, username: u.username });
+  }
+
+  /** The pages the emails link to: /verify-email and /reset-password (HTML, not the API). */
+  handlePage(req: IncomingMessage, res: ServerResponse): void {
+    const url = new URL(req.url ?? '/', 'http://x');
+    const page = (status: number, html: string): void => {
+      res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' }).end(html);
+    };
+    const token = String(url.searchParams.get('t') ?? '');
+    if (url.pathname === '/verify-email') {
+      const t = /^[A-Za-z0-9_-]{20,64}$/.test(token) ? this.useToken('verify', sha256(token)) : null;
+      // Confirmed only if the account still has that address (it may have been changed since).
+      const r = t ? this.db.prepare('UPDATE users SET email_verified = 1 WHERE id = ? AND email = ?').run(t.userId, t.email) : null;
+      return r && Number(r.changes) === 1
+        ? page(200, messagePage('Email confirmed', 'If you ever forget your password, choose "Forgot your password?" when signing in and we will email you a link.', true))
+        : page(400, messagePage('Link expired', 'This link has expired or was already used. You can send a new one from your profile in the game.', false));
+    }
+    if (url.pathname === '/reset-password') {
+      if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return page(400, messagePage('Link expired', 'This link is not complete. Ask for a new one in the game.', false));
+      return page(200, resetPage(token));
+    }
+    page(404, messagePage('Not found', 'There is nothing here.', false));
   }
 
   // ---------------------------------------------------------------- Google
@@ -1462,6 +1607,11 @@ export function checkPassword(password: string, stored: string): boolean {
 /** A browser's device id (random, kept in its storage): letters, digits, - and _ only. */
 export function cleanDevice(d: string | null | undefined): string | null {
   return d && /^[A-Za-z0-9_-]{16,64}$/.test(d) ? d : null;
+}
+
+/** Reset codes are typed by hand like recovery codes (case, spaces, dashes ignored), and hashed apart from them. */
+function resetCodeHash(code: string): string {
+  return sha256(`reset:${normCode(code)}`);
 }
 
 function sha256(s: string): string {

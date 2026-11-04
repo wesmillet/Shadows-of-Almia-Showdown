@@ -245,6 +245,8 @@ async function account(id) {
     kv('Account id', a.id) + kv('Created', when(a.created_at)) +
     kv('Last seen', j.online ? '<span class="good">online now</span> (' + esc({ hub: 'online menu', lobby: 'lobby / queue / party', match: 'playing match ' + (j.online.room || ''), spectating: 'spectating ' + (j.online.room || '') }[j.online.state]) + ')' : a.last_seen ? when(a.last_seen) + ' (' + ago(a.last_seen) + ')' : j.deviceSeen ? when(j.deviceSeen) + ' <span class="dim">(from the device log; last-seen tracking starts with this release)</span>' : '-') +
     kv('Role', esc(a.role)) + kv('Sign-in', (a.password ? 'password' : '') + (a.password && a.google ? ' + ' : '') + (a.google ? 'Google' : '')) +
+    kv('Email', a.email === 'confirmed' ? 'on file, confirmed <span class="dim">(the player can reset their password by email)</span>' : a.email === 'unconfirmed' ? 'on file, not confirmed yet' : '<span class="dim">none</span>') +
+    (a.password ? kv('Locked out?', '<button class="act" id="reset">Make a reset code</button> <span class="dim">One-time, 24 hours. Give it only to the account owner: they type it in "Forgot your password?" as the recovery code.</span><div id="resetOut"></div>') : '') +
     kv('Status', a.banned ? '<span class="bad">banned</span>' : a.muted_until > Date.now() ? 'muted until ' + when(a.muted_until) : 'in good standing') +
     kv('Progression', 'XP ' + p.xp + ' (level ' + p.level + ', trainer levels are hidden in the game)' + (p.title ? ' · title: ' + esc(p.title) : '')) +
     kv('Achievements', p.achievements.length ? p.achievements.map((x) => '<span class="tag">' + esc(x) + '</span>').join('') : '<span class="dim">none</span>') +
@@ -255,6 +257,16 @@ async function account(id) {
     '<h3>PC (' + pc.length + ' saved Pokémon)</h3><p class="dim">Saved account data: what this account keeps between matches. A match\\'s party is temporary and is not shown here; only Pokémon extracted at the end of a match are saved.</p>' + (pc.length ? '<table><tr><th>#</th><th>Pokémon</th><th>Dex</th><th>Lv</th><th>Shiny</th><th>Other</th><th>Moves</th><th>Held</th><th>Saved</th></tr>' +
       pc.map((m) => '<tr><td>' + m.id + '</td><td>' + esc(m.nickname || m.name) + '</td><td>' + esc(m.dex) + '</td><td>' + esc(m.level) + '</td><td>' + (m.shiny ? '★' : '') + '</td><td>' + ['alpha', 'legend', 'shadow'].filter((k) => m[k]).map((k) => '<span class="tag">' + k + '</span>').join('') + '</td><td>' + esc((m.moves || []).join(', ')) + '</td><td>' + esc(m.heldItem || '') + '</td><td>' + when(m.savedAt) + '</td></tr>').join('') + '</table>' : '<p class="dim">The PC is empty.</p>') +
     '<h3>Matches</h3><div id="am"></div><p><a href="#accounts">Back to accounts</a></p></div>';
+  const rb = document.getElementById('reset');
+  if (rb) rb.onclick = async () => {
+    if (!confirm('Make a one-time password reset code for ' + a.username + '? Only give it to the owner of this account.')) return;
+    rb.disabled = true;
+    const r = await post('/api/admin/account/reset', { id: a.id });
+    rb.disabled = false;
+    const out = document.getElementById('resetOut');
+    if (r.error) { out.innerHTML = '<p class="bad">' + esc(r.error) + '</p>'; return; }
+    out.innerHTML = '<p>Reset code for <b>' + esc(r.username) + '</b> (shown once, works until ' + when(r.expiresAt) + '):</p><p style="font: 22px monospace; letter-spacing: 3px">' + esc(r.code) + '</p><p class="dim">Making another cancels this one. Nothing changes on the account until it is used.</p>';
+  };
   const drawMatches = (r, page) => {
     const pages = Math.max(1, Math.ceil(r.total / r.pageSize));
     $('#am').innerHTML = r.matches.length ? '<table><tr><th>Ended</th><th>Mode</th><th>Place</th><th>Outcome</th><th></th></tr>' + r.matches.map((m) => '<tr class="click" data-id="' + esc(m.id) + '"><td>' + when(m.ended_at) + '</td><td>' + esc(m.mode) + '</td><td>' + m.place + '</td><td>' + esc(m.outcome) + '</td><td class="dim">' + (m.full ? '' : 'player record only') + '</td></tr>').join('') + '</table>' +

@@ -4,14 +4,17 @@
  * For accounts whose server-side role is `admin` only: every request looks the signed-in account
  * up from its session cookie and checks `users.role` in the database (never the display name,
  * never anything the browser says). Guests, players and moderators get 403. Read-only except for
- * Mystery Gift codes (making them and switching them off); nothing edits an account, and no
- * grants, bans or deletions (those stay on the moderators' page, /mod).
- * Nothing here returns password hashes, session tokens, Google ids or recovery codes.
+ * Mystery Gift codes (making them and switching them off) and one-time password reset codes for a
+ * player who is locked out (shown to the administrator once, logged, nothing changes until the
+ * player uses it); no grants, bans or deletions (those stay on the moderators' page, /mod).
+ * Nothing here returns password hashes, session tokens, Google ids, recovery codes or emails (only
+ * whether an account has one).
  *
  *   GET /api/admin/online           who is connected and what they are doing (live, from the hub)
  *   GET/POST /api/admin/gifts       Mystery Gift codes: list, make; POST /api/admin/gifts/active switches one on or off
  *   GET /api/admin/accounts?q=&page= search registered accounts by username
  *   GET /api/admin/account?id=      one account: profile, progression, chest, PC, recent matches
+ *   POST /api/admin/account/reset {id}  a one-time password reset code for that account (24 hours)
  *   GET /api/admin/matches?page=&mode=&player=&aborted=1   completed matches, newest first
  *   GET /api/admin/match?id=        one completed match: participants, places, recorded stats
  *   GET /api/admin/live             matches running now
@@ -86,6 +89,14 @@ export class AdminApi {
       }
       return gifts.setActive(String(body.code ?? ''), body.active === true) ? send(200, { ok: true }) : send(404, { error: 'No such code' });
     }
+    // A player locked out of their account: a one-time reset code they type in Forgot password.
+    if (path === '/api/admin/account/reset') {
+      if (req.method !== 'POST') return send(405, { error: 'POST' });
+      if (req.headers['x-almia'] !== '1') return send(403, { error: 'Missing header' });
+      const body = await readBody(req);
+      const r = this.acc.adminResetCode(Number(body.id), { id: me.id, name: me.username });
+      return r ? send(200, r) : send(404, { error: 'No such account, or it signs in with Google only' });
+    }
     // Everything else is read-only: nothing but GET.
     if (req.method !== 'GET') return send(405, { error: 'The admin dashboard is read-only' });
     const db = this.acc.db;
@@ -125,7 +136,7 @@ export class AdminApi {
       }
       if (path === '/api/admin/account') {
         const id = Number(url.searchParams.get('id'));
-        const u = db.prepare('SELECT id, username, role, created_at, last_seen, banned, muted_until, google_sub IS NOT NULL AS google, pass_hash IS NOT NULL AS password FROM users WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+        const u = db.prepare("SELECT id, username, role, created_at, last_seen, banned, muted_until, google_sub IS NOT NULL AS google, pass_hash IS NOT NULL AS password, CASE WHEN email IS NULL THEN 'none' WHEN email_verified = 1 THEN 'confirmed' ELSE 'unconfirmed' END AS email FROM users WHERE id = ?").get(id) as Record<string, unknown> | undefined;
         if (!u) return send(404, { error: 'No such account' });
         const prof = this.acc.profile(id);
         const xp = this.acc.xp(id);

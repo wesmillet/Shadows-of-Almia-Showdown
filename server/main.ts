@@ -364,6 +364,11 @@ const http = createServer((req, res) => {
     void clientError(req, res);
     return;
   }
+  // The pages the password emails link to.
+  if ((url.split('?')[0] === '/verify-email' || url.split('?')[0] === '/reset-password') && req.method === 'GET') {
+    accounts.handlePage(req, res);
+    return;
+  }
   if (url.split('?')[0] === '/privacy' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }).end(privacyPage(process.env.PRIVACY_CONTACT ?? null));
     return;

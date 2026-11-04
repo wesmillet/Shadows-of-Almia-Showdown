@@ -17,9 +17,9 @@ on:
         default: iad
         required: true
       size:
-        description: "Machine: launch (dedicated core, 2 GB, about $33/mo: what the live server runs) or friends (shared, 1 GB, about $7/mo; picking it downsizes the server)"
+        description: "Machine: launch (1 dedicated core, 2 GB, about $31/mo: the usual size), surge (2 dedicated cores, 4 GB, about $62/mo: about twice the lobbies, for busy days) or friends (shared, 1 GB, about $7/mo; picking it downsizes the server)"
         type: choice
-        options: [launch, friends]
+        options: [launch, surge, friends]
         default: launch
       when_busy:
         description: "If people are playing right now: wait (check every minute, up to 40 min, then give up) or deploy anyway (their matches get 4 minutes, then are called off)"
@@ -100,7 +100,9 @@ jobs:
           fi
       - name: Deploy
         run: |
-          if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"; else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
+          if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"
+          elif [ "$SIZE" = "surge" ]; then VM="--vm-size performance-2x --vm-memory 4096"
+          else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
           : > deploy.log
           # Fly can be out of room on the host that holds an (empty) save disk. Then: replace the
           # unattached disk with a fresh one and try again; the last try moves to a second region.

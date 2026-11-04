@@ -82,7 +82,9 @@ export interface HudState {
 }
 
 /** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
-export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, baseScale: number, color = '#fff', badge: CanvasImageSource | null = null): void {
+export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, scale: number, color = '#fff', badge: CanvasImageSource | null = null): void {
+  // On a touch screen (a phone, small and further from the eye) the label is a third larger.
+  const baseScale = Input.touch ? scale * 1.3 : scale;
   const w = 20 * px;
   const x = Math.round(sx - w / 2);
   const y = Math.round(top - 7 * px - 4 * px);

@@ -40,15 +40,18 @@ export interface Settings {
   shake: boolean;
   /** Plain Canvas 2D drawing instead of WebGL lighting (for browsers that flicker). */
   simpleGraphics: boolean;
+  /** In-game text size, 0.8 to 1.4 (1: normal). */
+  textSize: number;
 }
 
 const KEY = 'almia.settings.v1';
-const DEFAULTS: Settings = { binds: {}, music: 0.8, shake: true, simpleGraphics: false };
+const DEFAULTS: Settings = { binds: {}, music: 0.8, shake: true, simpleGraphics: false, textSize: 1 };
 
 function load(): Settings {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings>;
-    return { ...DEFAULTS, ...raw, binds: { ...(raw.binds ?? {}) } };
+    const textSize = Number(raw.textSize);
+    return { ...DEFAULTS, ...raw, binds: { ...(raw.binds ?? {}) }, textSize: textSize >= 0.8 && textSize <= 1.4 ? textSize : 1 };
   } catch {
     return { ...DEFAULTS, binds: {} };
   }

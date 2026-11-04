@@ -15,7 +15,7 @@ import { nominationBase, nominationCost, NOMINATION_SLOTS, pcBase, STARTER_TIERS
 import { loadPc, setFavLocal, type PcEntry } from '../pc';
 import type { Assets } from '../sprites/assets';
 import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
-import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
+import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, textScale, uiFont, type GameContext, type Screen } from './screens';
 
 /** PC icon size classes by idle sprite size in art pixels (69: the largest, Ho-Oh). */
 const PC_SIZE_CLASSES = [
@@ -348,7 +348,7 @@ export class PcScreen implements Screen {
     const hh = r.h * k;
     Object.assign(el.style, {
       left: `${c.left + r.x * k}px`, top: `${c.top + r.y * k}px`, width: `${Math.max(60, r.w * k)}px`, height: `${hh}px`,
-      fontSize: `${Math.max(8, Math.round(hh * (13 / 36)))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
+      fontSize: `${Math.max(8, Math.round(hh * (13 / 36) * textScale()))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
     });
   }
 
@@ -553,7 +553,7 @@ export class PcScreen implements Screen {
       const mid = mode === 'on' ? r.y + lift + r.h / 2 - k / 2 : r.y + lift + (r.h - 3 * k) / 2;
       const color = mode === 'on' ? '#ffffff' : mode === 'off' ? '#5c6472' : INK.text;
       h.save();
-      h.font = `${Math.max(8, Math.round(SIZE * 1.3 * s))}px "BoldPixels", "Segoe UI", system-ui, sans-serif`;
+      h.font = uiFont(SIZE * s);
       const tw = h.measureText(label).width;
       h.restore();
       const ir = 5 * s;
@@ -683,9 +683,11 @@ export class PcScreen implements Screen {
       const cxx = r.x + pad + (k % 2) * (colW + 12 * s);
       const cyy = y + Math.floor(k / 2) * 18 * s;
       text(v, name, cxx, cyy + 11 * s, 10, { color: INK.text, shadow: false });
-      text(v, String(val), cxx + 50 * s, cyy + 11 * s, 10, { align: 'right', color: INK.text, shadow: false, weight: '900' });
-      const bx = cxx + 56 * s;
-      const bw = colW - 56 * s;
+      // Label and number widths follow the text size (Options), so they never run together.
+      const lw = 50 * s * Math.max(1, textScale());
+      text(v, String(val), cxx + lw, cyy + 11 * s, 10, { align: 'right', color: INK.text, shadow: false, weight: '900' });
+      const bx = cxx + lw + 6 * s;
+      const bw = Math.max(10 * s, colW - lw - 6 * s);
       h.fillStyle = '#e0d0b4';
       h.fillRect(bx, cyy + 4 * s, bw, 7 * s);
       h.fillStyle = val >= 100 ? INK.good : val >= 70 ? '#c9a227' : '#d0703a';
@@ -693,8 +695,13 @@ export class PcScreen implements Screen {
     });
     y += 3 * 18 * s + 18 * s;
     // Its line, where it came from, its moves.
+    // The value column starts after the widest label (LINE, FROM, MOVES) at the player's text size.
+    h.save();
+    h.font = uiFont(11 * s);
+    const kw = Math.max(44 * s, Math.max(...['LINE', 'FROM', 'MOVES'].map((t) => h.measureText(t).width)) + 8 * s);
+    h.restore();
     text(v, 'LINE', r.x + pad, y, 11, { color: INK.dim, shadow: false });
-    text(v, this.lineText(e.dex), r.x + pad + 44 * s, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - 44 * s });
+    text(v, this.lineText(e.dex), r.x + pad + kw, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     y += 20 * s;
     text(v, 'FROM', r.x + pad, y, 11, { color: INK.dim, shadow: false });
     const when = (() => {
@@ -702,11 +709,11 @@ export class PcScreen implements Screen {
       return Number.isFinite(d.getTime()) ? ` · ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : '';
     })();
     const traded = (e as PcEntry & { tradedFrom?: string }).tradedFrom;
-    text(v, `${traded ? `Traded from ${traded}` : viaLabel(e.via)}${when}`, r.x + pad + 44 * s, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - 44 * s });
+    text(v, `${traded ? `Traded from ${traded}` : viaLabel(e.via)}${when}`, r.x + pad + kw, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     y += 20 * s;
     if (e.moves?.length) {
       text(v, 'MOVES', r.x + pad, y, 11, { color: INK.dim, shadow: false });
-      text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + pad + 44 * s, y, 11, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - 44 * s });
+      text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + pad + kw, y, 11, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     }
     this.drawNominate(r, e);
   }

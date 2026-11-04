@@ -98,6 +98,27 @@ export function openOptions(): Promise<void> {
 
       // Display.
       box.appendChild(el('h3', '', 'Display'));
+      const ts = el('div', 'line');
+      ts.appendChild(el('span', '', 'Text size'));
+      const tsSlider = el('input');
+      tsSlider.type = 'range';
+      tsSlider.min = '80';
+      tsSlider.max = '140';
+      tsSlider.step = '10';
+      tsSlider.value = String(Math.round(settings.textSize * 100));
+      const tsPct = el('span', 'hint', `${tsSlider.value}%`);
+      tsSlider.addEventListener('input', () => {
+        settings.textSize = Number(tsSlider.value) / 100;
+        tsPct.textContent = `${tsSlider.value}%`;
+        saveSettings();
+      });
+      const tsRight = el('div');
+      tsRight.style.display = 'flex';
+      tsRight.style.alignItems = 'center';
+      tsRight.style.gap = '10px';
+      tsRight.append(tsSlider, tsPct);
+      ts.appendChild(tsRight);
+      box.appendChild(ts);
       box.appendChild(toggleLine('Camera shake', settings.shake, () => {
         settings.shake = !settings.shake;
         saveSettings();

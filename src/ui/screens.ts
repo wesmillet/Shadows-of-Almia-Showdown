@@ -1,6 +1,7 @@
 import { Input } from '../core/input';
 import type { View } from '../render/view';
 import type { PixelUi } from './pixelUi';
+import { settings } from '../settings';
 
 /** The pixel UI kit buttons are drawn with once it has loaded (set at boot). */
 let skin: PixelUi | null = null;
@@ -72,9 +73,14 @@ export const FONT_FAMILY = '"BoldPixels", "Segoe UI", Inter, system-ui, sans-ser
 /** BoldPixels' capitals are half an em tall (8 of 16 pixels), so sizes are scaled up to read like the old UI font. */
 export const FONT_SCALE = 1.3;
 
-/** A canvas font string for `px` canvas pixels of the old UI font. */
+/** The player's text size (Options: Text size), applied to all in-game lettering. */
+export function textScale(): number {
+  return settings.textSize || 1;
+}
+
+/** A canvas font string for `px` canvas pixels of the old UI font (times the player's text size). */
 export function uiFont(px: number): string {
-  return `${Math.max(8, Math.round(px * FONT_SCALE))}px ${FONT_FAMILY}`;
+  return `${Math.max(8, Math.round(px * FONT_SCALE * textScale()))}px ${FONT_FAMILY}`;
 }
 
 export interface TextOpts {

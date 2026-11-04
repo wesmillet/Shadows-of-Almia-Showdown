@@ -18,6 +18,7 @@
  *   GET /api/admin/matches?page=&mode=&player=&aborted=1   completed matches, newest first
  *   GET /api/admin/match?id=        one completed match: participants, places, recorded stats
  *   GET /api/admin/live             matches running now
+ *   GET /api/admin/server           the server's health: CPU, memory, game-tick timing, the last hour
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts } from './accounts';
@@ -51,6 +52,8 @@ export interface AdminHooks {
   /** Humans who left a running match by losing their connection: their seat waits for them. */
   awaySeats(): Array<{ name: string; accountId: number | null; guest: boolean; room: string }>;
   live(): LiveMatch[];
+  /** The server's health: the last hour of 10-second samples, and the machine. */
+  server(): { build: string; kind: string; startedAt: number; draining: boolean; cores: number; memoryMb: number; samples: unknown[]; workers: unknown };
 }
 
 const PAGE = 25;
@@ -123,6 +126,7 @@ export class AdminApi {
         });
       }
       if (path === '/api/admin/live') return send(200, { matches: this.hooks.live() });
+      if (path === '/api/admin/server') return send(200, { at: Date.now(), ...this.hooks.server() });
       if (path === '/api/admin/accounts') {
         const q = String(url.searchParams.get('q') ?? '').slice(0, 32);
         const where = q ? "WHERE u.username LIKE ? ESCAPE '\\'" : '';

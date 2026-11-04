@@ -9,6 +9,7 @@
  */
 import { createServer } from 'node:http';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
+import { availableParallelism, freemem, totalmem } from 'node:os';
 import type { DatabaseSync } from 'node:sqlite';
 
 // ---------------------------------------------------------------- alerts
@@ -104,6 +105,10 @@ export interface Sample {
   kbOut: number;
   rssMb: number;
   heapMb: number;
+  /** CPU the whole server used (every thread, so every match), as a share of the machine's cores, 0-100. */
+  cpuPct: number;
+  /** The machine's memory in use, 0-100. */
+  memPct: number;
 }
 
 export class Metrics {
@@ -114,6 +119,9 @@ export class Metrics {
   private window = { msgIn: 0, msgOut: 0, bytesOut: 0, at: Date.now() };
   readonly samples: Sample[] = [];
   private readonly loop = monitorEventLoopDelay({ resolution: 10 });
+  private cpuMark = { usage: process.cpuUsage(), at: performance.now() };
+  /** CPU cores this machine has. */
+  readonly cores = availableParallelism();
 
   constructor(private readonly live: () => { players: number; rooms: number; queued: number; watching: number; dbBytes: number; replayBytes: number; errors: number }) {
     this.loop.enable();
@@ -157,6 +165,7 @@ export class Metrics {
       msgIn: Math.round((this.counters.msgIn - this.window.msgIn) / secs), msgOut: Math.round((this.counters.msgOut - this.window.msgOut) / secs),
       kbOut: +((this.counters.bytesOut - this.window.bytesOut) / 1024 / secs).toFixed(1),
       rssMb: Math.round(mem.rss / 1048576), heapMb: Math.round(mem.heapUsed / 1048576),
+      cpuPct: this.cpuSince(), memPct: Math.round((1 - freemem() / totalmem()) * 100),
     };
     this.samples.push(s);
     if (this.samples.length > 360) this.samples.shift();
@@ -164,6 +173,16 @@ export class Metrics {
     this.lagMax = 0;
     this.window = { msgIn: this.counters.msgIn, msgOut: this.counters.msgOut, bytesOut: this.counters.bytesOut, at: now };
     return s;
+  }
+
+  /** CPU used since the last call (user + system, all threads), as a share of every core. */
+  private cpuSince(): number {
+    const now = performance.now();
+    const used = process.cpuUsage(this.cpuMark.usage);
+    const ms = (used.user + used.system) / 1000;
+    const pct = (ms / Math.max(1, now - this.cpuMark.at) / this.cores) * 100;
+    this.cpuMark = { usage: process.cpuUsage(), at: now };
+    return Math.round(Math.min(100, pct));
   }
 
   /** Prometheus text format (for Fly's metrics, fly.toml [metrics]). */
@@ -181,6 +200,7 @@ export class Metrics {
     g('tick_lag_ms', 'How late the clock ran (last 10 s)', s?.lag ?? 0);
     g('event_loop_p99_ms', 'Event loop delay, 99th percentile', +(this.loop.percentile(99) / 1e6).toFixed(2));
     g('rss_bytes', 'Resident memory', process.memoryUsage().rss);
+    g('cpu_percent', 'CPU used by the server, share of all cores (last 10 s)', s?.cpuPct ?? 0);
     g('db_bytes', 'Database size', l.dbBytes);
     g('replay_bytes', 'Replays on disk', l.replayBytes);
     g('matches_started_total', 'Matches started', this.counters.matchesStarted, 'counter');

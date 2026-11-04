@@ -17,7 +17,7 @@ const sent: Mail[] = [];
 beforeAll(async () => {
   acc = new Accounts(mkdtempSync(join(tmpdir(), 'almia-reset-')), 'dev');
   acc.mailer = { send: async (m) => (sent.push(m), true) };
-  const admin = new AdminApi(acc, { online: () => [], awaySeats: () => [], live: () => [] });
+  const admin = new AdminApi(acc, { online: () => [], awaySeats: () => [], live: () => [], server: () => ({ build: 'test', kind: 'dev', startedAt: 0, draining: false, cores: 1, memoryMb: 1024, samples: [], workers: null }) });
   server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0] as string;
     if (path === '/verify-email' || path === '/reset-password') return acc.handlePage(req, res);

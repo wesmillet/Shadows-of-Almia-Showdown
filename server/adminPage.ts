@@ -40,13 +40,22 @@ button.act:disabled { opacity: 0.4; cursor: default; }
 .tag.bot { border-color: var(--dim); color: var(--dim); }
 .tag.human { border-color: var(--blue); color: var(--blue); }
 .note { background: #fffaf0; border-left: 4px solid var(--accent); padding: 6px 10px; margin: 8px 0; }
+.health { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 2px solid var(--ink); margin-bottom: 12px; font-size: 18px; }
+.health .dot { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+.health.ok { background: #e7f3e5; } .health.ok .dot { background: var(--good); }
+.health.busy { background: #fbf0d6; } .health.busy .dot { background: #c98a0a; }
+.health.over { background: #f8e0dc; } .health.over .dot { background: var(--bad); }
+.stat small { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+.spark { width: 100%; height: 70px; display: block; background: #fffaf0; border: 1px solid #e0d0b4; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.charts h4 { margin: 0 0 4px; font-weight: normal; color: var(--dim); font-size: 13px; }
 a { color: var(--accent); }
 .err { color: var(--bad); }
 </style></head><body>
 <header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a href="/mod">Moderation</a></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
-const TABS = [['online', 'Online'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['gifts', 'Mystery Gift']];
+const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['gifts', 'Mystery Gift']];
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const when = (t) => t ? new Date(t).toLocaleString() : '-';
@@ -79,6 +88,7 @@ function fail(e) {
 }
 async function show(t, arg) {
   if (t === 'online') return online();
+  if (t === 'server') return server();
   if (t === 'live') return live();
   if (t === 'history') return arg ? match(arg) : history(0);
   if (t === 'accounts') return arg ? account(Number(arg)) : accounts('', 0);
@@ -149,6 +159,68 @@ async function online() {
   };
   await draw();
   timer = setInterval(() => { if (document.visibilityState === 'visible' && tab === 'online') draw(); }, 10000);
+}
+
+// ---------------------------------------------------------------- server health
+/** A small line chart of one measure over the last hour (an optional dashed line marks trouble). */
+function spark(vals, max, color, warn) {
+  const w = 300, h = 70;
+  if (!vals.length) return '<svg class="spark" viewBox="0 0 300 70"></svg>';
+  const top = Math.max(max, ...vals, 1);
+  const x = (i) => vals.length < 2 ? w : (i / (vals.length - 1)) * w;
+  const y = (v) => h - 4 - (v / top) * (h - 8);
+  const pts = vals.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+  return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+    (warn !== undefined && warn <= top ? '<line x1="0" x2="' + w + '" y1="' + y(warn) + '" y2="' + y(warn) + '" stroke="#b0302a" stroke-dasharray="4 4" stroke-width="1"/>' : '') +
+    '<polyline points="' + x(0) + ',' + h + ' ' + pts + ' ' + w + ',' + h + '" fill="' + color + '22" stroke="none"/>' +
+    '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+}
+async function server() {
+  const draw = async () => {
+    const j = await api('/api/admin/server');
+    if (j.error) { if (timer) clearInterval(timer); return fail(j.error); }
+    const ss = j.samples || [];
+    const s = ss[ss.length - 1] || { players: 0, rooms: 0, queued: 0, cpuPct: 0, memPct: 0, stepAvg: 0, stepMax: 0, lag: 0, rssMb: 0, kbOut: 0 };
+    // About a fifth of a core per full match (measured): three a core is comfortable.
+    const comfy = Math.max(1, j.cores * 3);
+    // Recent worst (the last 30 s) decides the verdict, so one slow moment does not.
+    const recent = ss.slice(-3);
+    const cpu = Math.max(0, ...recent.map((x) => x.cpuPct || 0));
+    // Clock delay only counts while matches run (starting up and quiet moments are not trouble).
+    const lag = Math.max(0, ...recent.map((x) => (x.rooms ? x.lag || 0 : 0)));
+    const busyStep = Math.max(0, ...recent.map((x) => (x.stepAvg || 0) * 60 / 10));
+    const over = cpu >= 85 || lag >= 100 || busyStep >= 70;
+    const busy = !over && (cpu >= 60 || lag >= 50 || s.rooms >= comfy);
+    const verdict = over
+      ? ['over', 'Overloaded: matches are lagging. Scale up now (Launch online server, size surge; see the emergency doc).']
+      : busy ? ['busy', 'Busy: fine for now, but close to the limit. Get ready to scale up if more lobbies fill.']
+      : ['ok', 'Healthy: plenty of room.'];
+    const st = (v, l, sub) => '<div class="stat"><b>' + v + '</b>' + l + (sub ? '<small>' + sub + '</small>' : '') + '</div>';
+    const up = Math.round((Date.now() - j.startedAt) / 1000);
+    const upText = up < 3600 ? Math.round(up / 60) + ' min' : up < 86400 ? (up / 3600).toFixed(1) + ' h' : (up / 86400).toFixed(1) + ' days';
+    const col = (k) => ss.map((x) => x[k] || 0);
+    $('#main').innerHTML = '<div class="panel"><h2>Server health</h2>' +
+      '<div class="health ' + verdict[0] + '"><span class="dot"></span><span>' + verdict[1] + '</span></div>' +
+      '<div class="grid">' +
+        st(s.cpuPct + '%', 'CPU in use', j.cores + ' core' + (j.cores === 1 ? '' : 's') + '; trouble above 85%') +
+        st(s.rooms + ' / ~' + comfy, 'Matches running', 'about ' + comfy + ' fit comfortably') +
+        st(s.players, 'Players connected', s.queued + ' in the queue') +
+        st(s.lag + ' ms', 'Game clock delay', 'worst in 10 s; trouble above 100 ms') +
+        st((s.stepAvg || 0).toFixed(2) + ' ms', 'Per game tick', 'average over all matches; worst ' + (s.stepMax || 0) + ' ms') +
+        st(s.memPct + '%', 'Memory in use', s.rssMb + ' MB by the game of ' + j.memoryMb + ' MB') +
+        st(s.kbOut + ' KB/s', 'Sent to players', 'before compression') +
+        st(upText, 'Up since restart', 'build ' + esc(j.build) + (j.draining ? ' · <span class="bad">draining</span>' : '')) +
+      '</div>' +
+      '<h3>Last hour</h3><div class="charts">' +
+        '<div><h4>CPU % (dashed: 85%)</h4>' + spark(col('cpuPct'), 100, '#c2611a', 85) + '</div>' +
+        '<div><h4>Matches running (dashed: comfortable limit)</h4>' + spark(col('rooms'), comfy + 1, '#1f5aa0', comfy) + '</div>' +
+        '<div><h4>Players connected</h4>' + spark(col('players'), 10, '#2e7d32') + '</div>' +
+        '<div><h4>Game clock delay, ms (dashed: 100)</h4>' + spark(col('lag'), 120, '#b0302a', 100) + '</div>' +
+      '</div>' +
+      '<p class="dim">Samples every 10 s, kept for an hour (they start over when the server restarts). Updated ' + new Date(j.at).toLocaleTimeString() + '; refreshes every 10 s while this tab is open.</p></div>';
+  };
+  await draw();
+  timer = setInterval(() => { if (document.visibilityState === 'visible' && tab === 'server') draw(); }, 10000);
 }
 
 // ---------------------------------------------------------------- live matches

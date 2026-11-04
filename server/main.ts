@@ -13,6 +13,7 @@
  */
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { totalmem } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { ClientMsg, ServerMsg } from '../src/net/protocol';
@@ -228,6 +229,10 @@ const adminApi = new AdminApi(accounts, {
   online: () => hub.onlineEntries(),
   awaySeats: () => hub.awaySeats(),
   live: () => hub.liveMatches(),
+  server: () => ({
+    build: BUILD, kind: KIND, startedAt: metrics.started, draining: hub.draining, cores: metrics.cores,
+    memoryMb: Math.round(totalmem() / 1048576), samples: metrics.samples, workers: pool?.status() ?? null,
+  }),
 });
 
 /**

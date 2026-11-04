@@ -17,6 +17,14 @@ import type { Assets } from '../sprites/assets';
 import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
+/** PC icon size classes by idle sprite size in art pixels (69: the largest, Ho-Oh). */
+const PC_SIZE_CLASSES = [
+  { id: 'S', upTo: 24, fill: 0.9 },
+  { id: 'M', upTo: 30, fill: 1.05 },
+  { id: 'L', upTo: 42, fill: 1.2 },
+  { id: 'XL', upTo: Infinity, fill: 1.3 },
+] as const;
+
 const COLS = 6;
 const ROWS = 5;
 const PER_BOX = COLS * ROWS;
@@ -443,7 +451,13 @@ export class PcScreen implements Screen {
       h.fillStyle = tierInfo(this.tierOf(e)).color;
       h.fillRect(x + 8 * s, y + L.slot - 9 * s - up, L.slot - 16 * s, 3 * s);
       // Centred in the well (which rises by `up` when pointed at); only its idle animation plays.
+      // Clipped to its slot: the biggest (XL) never spill over the edge.
+      h.save();
+      h.beginPath();
+      h.rect(x + 5 * s, y + 5 * s - up, L.slot - 10 * s, L.slot - 10 * s);
+      h.clip();
       this.drawIcon(e, x + L.slot / 2, y + L.slot / 2 + 1 * s - up, L.slot - 22 * s);
+      h.restore();
       if (e.fav) text(v, '♥', x + 13 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#e2574c' });
       if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#ffd36b' });
       if (e.shadow) text(v, '◆', x + L.slot - 12 * s, y + L.slot - 14 * s - up, 11, { align: 'center', weight: '900', color: '#c48bff' });
@@ -732,7 +746,11 @@ export class PcScreen implements Screen {
     if (!box) return;
     const bw = box.x1 - box.x0;
     const bh = box.y1 - box.y0;
-    const k = room / Math.max(bw, bh, 1);
+    // Size classes: S, M, L and XL by the idle animation's size; the largest of each class fills
+    // 90%, 105%, 120% or 130% of the room, so small Pokémon look small and big ones big.
+    const size = Math.max(bw, bh, 1);
+    const cls = PC_SIZE_CLASSES.find((c) => size <= c.upTo) ?? (PC_SIZE_CLASSES[PC_SIZE_CLASSES.length - 1] as (typeof PC_SIZE_CLASSES)[number]);
+    const k = (room * cls.fill) / Math.max(size, cls.upTo === Infinity ? 69 : cls.upTo);
     const dx = Math.round(cx - ((box.x0 + box.x1) / 2) * k);
     // Centred in the slot by its resting frame (the first one), so a Pokémon that bobs
     // (Gengar) sits where it rests.

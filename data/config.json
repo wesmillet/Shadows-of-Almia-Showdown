@@ -310,9 +310,10 @@
     }
   },
   "eggs": {
-    "_comment": "The Breeder's Eggs (src/sim/townsfolk.ts) sit in party slots and hatch after hatchSteps tiles walked with them (counted on the server from the trainer's real movement; standing still or walking into a wall adds nothing). mythicalChance of Eggs hold a small Mythical Pokemon (townsfolk.ts MYTHICAL_EGGS) instead of one of the Breeder's lines.",
+    "_comment": "The Breeder's Eggs (src/sim/townsfolk.ts) sit in party slots and hatch after hatchSteps tiles walked with them (counted on the server from the trainer's real movement; standing still or walking into a wall adds nothing). mythicalChance of Eggs hold a small Mythical Pokemon (townsfolk.ts MYTHICAL_EGGS) instead of one of the Breeder's lines. shinyChance: the chance an Egg hatches shiny (its own odds, not the wild rate).",
     "hatchSteps": 450,
-    "mythicalChance": 0.05
+    "mythicalChance": 0.05,
+    "shinyChance": 0.05
   },
   "respawn": {
     "_comment": "A trainer whose last Pokémon falls to a wild Pokémon comes back after baseSeconds + perMinute for each minute played (up to maxSeconds), at an outpost, with the party healed and every item lost (dropped where they fell). No respawns once the final showdown starts.",

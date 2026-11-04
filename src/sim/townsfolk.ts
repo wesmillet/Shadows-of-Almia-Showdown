@@ -336,7 +336,9 @@ export class TownsfolkCrew {
     if (!inside) return;
     const lead = t.party.find((x) => !x.fainted && !x.captured);
     const level = Math.max(10, Math.round((lead?.level ?? 20) * 0.6));
-    const baby = m.makeMon(inside.dex, level, t, t.x, t.y);
+    // Breeder Eggs have their own shiny odds (CONFIG.eggs.shinyChance, 5%), not the wild rate.
+    const shiny = m.rng.chance((CONFIG.eggs as { shinyChance?: number }).shinyChance ?? 0.05) && SpriteRegistry.hasShiny(inside.dex);
+    const baby = m.makeMon(inside.dex, level, t, t.x, t.y, shiny);
     // The Egg held its party slot, so there is room (unless something else filled it meanwhile).
     if (partySize(t) >= m.partyCap) {
       baby.captured = true;

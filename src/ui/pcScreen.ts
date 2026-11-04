@@ -192,7 +192,7 @@ export class PcScreen implements Screen {
       if (r.error) this.note = r.error;
       else {
         this.starters = r;
-        this.note = on ? `${SPECIES.get(dex)?.name ?? dex} nominated` : 'Nomination removed';
+        this.note = on ? `${SPECIES.get(dex)?.name ?? dex} starred` : 'Star removed';
         if (this.filter === 'nom') this.refresh();
       }
     });
@@ -466,14 +466,14 @@ export class PcScreen implements Screen {
       this.drawIcon(e, x + L.slot / 2, y + 5 * s + (L.slot - 16 * s) / 2 - up, L.slot - 22 * s);
       h.restore();
       if (e.fav) text(v, '♥', x + 13 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#e2574c' });
-      if (e.shiny) text(v, '★', x + L.slot - 12 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#ffd36b' });
+      if (e.shiny) text(v, '✦', x + L.slot - 12 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#e8a400' });
       if (e.shadow) text(v, '◆', x + L.slot - 12 * s, y + L.slot - 14 * s - up, 11, { align: 'center', weight: '900', color: '#c48bff' });
       if (this.isNominated(e)) {
         h.fillStyle = INK.accent;
         h.beginPath();
         h.arc(x + 14 * s, y + L.slot - 16 * s - up, 8 * s, 0, Math.PI * 2);
         h.fill();
-        text(v, '3', x + 14 * s, y + L.slot - 12 * s - up, 10, { align: 'center', weight: '900', color: '#fff', shadow: false });
+        text(v, '★', x + 14 * s, y + L.slot - 12 * s - up, 11, { align: 'center', weight: '900', color: '#fff', shadow: false });
       }
       if (idx === this.selected) {
         h.strokeStyle = INK.accent;
@@ -497,7 +497,7 @@ export class PcScreen implements Screen {
     const my = this.ctx.input.mouseY;
     const over = (r: Rect): boolean => hit(mx, my, r.x, r.y, r.w, r.h);
     button(v, `Sort: ${this.sort}`, L.sortR.x, L.sortR.y, L.sortR.w, L.sortR.h, over(L.sortR), CREAM);
-    const labels: Record<string, string> = { all: 'All', fav: '♥ Favs', shiny: '★ Shiny', nom: '3rd slot', tier: this.tier ? tierInfo(this.tier).name : 'Any tier' };
+    const labels: Record<string, string> = { all: 'All', fav: '♥ Favs', shiny: '✦ Shiny', nom: '★ Starred', tier: this.tier ? tierInfo(this.tier).name : 'Any tier' };
     for (const c of L.chips) {
       const on = c.id === 'tier' ? !!this.tier : this.filter === c.id;
       if (c.id === 'nom' && !this.starters) {
@@ -522,7 +522,7 @@ export class PcScreen implements Screen {
     // Left: the label, the points and their meter, centred against the spots.
     const lx = r.x + 16 * s;
     const mid = first.y + first.h / 2;
-    text(v, '3RD SLOT', lx, mid - 10 * s, 13, { color: INK.accent, shadow: false, maxWidth: 80 * s });
+    text(v, '★ STARRED', lx, mid - 10 * s, 13, { color: INK.accent, shadow: false, maxWidth: 80 * s });
     text(v, `${used} / ${st.budget} pts`, lx, mid + 8 * s, 11, { color: used > st.budget ? INK.bad : INK.text, shadow: false, maxWidth: 80 * s });
     const mw = 74 * s;
     h.fillStyle = '#e0d0b4';
@@ -705,9 +705,9 @@ export class PcScreen implements Screen {
     y += 10 * s;
     const shiny = this.list.filter((e) => e.shiny).length;
     const favs = this.list.filter((e) => e.fav).length;
-    text(v, `★ ${shiny} shiny   ♥ ${favs} favourite${favs === 1 ? '' : 's'}`, r.x + pad, y + 10 * s, 12, { color: INK.text, shadow: false });
+    text(v, `✦ ${shiny} shiny   ♥ ${favs} favourite${favs === 1 ? '' : 's'}`, r.x + pad, y + 10 * s, 12, { color: INK.text, shadow: false });
     y += 34 * s;
-    const tips = this.starters ? ['Tap a Pokémon to see it, favourite it', 'or nominate it for your third starter slot.'] : ['Tap a Pokémon to see it', 'or favourite it.'];
+    const tips = this.starters ? ['Tap a Pokémon to see it, favourite it', 'or star it to make it a likelier third starter.'] : ['Tap a Pokémon to see it', 'or favourite it.'];
     tips.forEach((t, k) => text(v, t, r.x + r.w / 2, y + 10 * s + k * 18 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - pad * 2 }));
   }
 
@@ -720,7 +720,7 @@ export class PcScreen implements Screen {
     const nd = this.nomOf(e);
     const b = this.nomRect(r);
     if (!nd) {
-      text(v, 'Can not be nominated for the third slot', r.x + r.w / 2, b.y + 26 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });
+      text(v, 'Can not be starred', r.x + r.w / 2, b.y + 26 * s, 11, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 24 * s });
       return;
     }
     const info = st.eligible.find((x) => x.dex === nd);
@@ -730,16 +730,16 @@ export class PcScreen implements Screen {
     let line: string;
     if (on) {
       const k = st.nominations.indexOf(nd);
-      line = `Nominated · ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% in the third slot`;
+      line = `★ Starred · ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance as your third starter`;
     } else if (can) {
       const w = (t: string): number => st.weights[t] ?? 1;
       const next = [...st.nominations, nd];
       const total = next.reduce((n, d) => n + w(st.eligible.find((x) => x.dex === d)?.tier ?? 'common'), 0) + (st.slots - next.length) * w('common');
       line = `${SPECIES.get(nd)?.name ?? nd} · ${info?.cost ?? 1} pt · would be ${((w(info?.tier ?? 'common') / total) * 100).toFixed(0)}%`;
-    } else line = st.nominations.length >= NOMINATION_SLOTS ? 'All five spots are taken' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
+    } else line = st.nominations.length >= NOMINATION_SLOTS ? 'All five stars are used' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
     text(v, this.note || line, r.x + r.w / 2, b.y - 10 * s, 11, { align: 'center', color: can ? INK.text : INK.bad, shadow: false, maxWidth: r.w - 24 * s });
     const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
-    button(v, on ? 'Remove from third slot' : 'Nominate for third slot', b.x, b.y, b.w, b.h, over && can, can ? (on ? CREAM : undefined) : '#44405a');
+    button(v, on ? 'Remove star' : '★ Star it', b.x, b.y, b.w, b.h, over && can, can ? (on ? CREAM : undefined) : '#44405a');
   }
 
   /**

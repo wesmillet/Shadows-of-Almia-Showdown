@@ -207,10 +207,10 @@ export function nominationCost(dexes: readonly string[]): number {
 
 /** Why a set of nominations is not allowed, or null. */
 export function nominationProblem(dexes: readonly string[], eligible: readonly string[]): string | null {
-  if (dexes.length > NOMINATION_SLOTS) return `Nominate at most ${NOMINATION_SLOTS}`;
-  if (new Set(dexes).size !== dexes.length) return 'Each nomination must be a different Pokémon';
+  if (dexes.length > NOMINATION_SLOTS) return `Star at most ${NOMINATION_SLOTS}`;
+  if (new Set(dexes).size !== dexes.length) return 'Each star must be on a different Pokémon';
   const ok = new Set(eligible);
-  for (const d of dexes) if (!ok.has(d)) return `${SPECIES.get(d)?.name ?? d} is not one you can nominate`;
+  for (const d of dexes) if (!ok.has(d)) return `${SPECIES.get(d)?.name ?? d} is not one you can star`;
   const cost = nominationCost(dexes);
   if (cost > NOMINATION_BUDGET) return `That costs ${cost} points; the budget is ${NOMINATION_BUDGET}`;
   return null;

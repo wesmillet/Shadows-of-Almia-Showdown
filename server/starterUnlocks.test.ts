@@ -45,7 +45,7 @@ describe('starter achievements', () => {
     expect(acc.starters.choose(uid, 'ten_species', '0387')).toMatch('Not unlocked');
     // Nominations: only what the account has; saved; the roll uses them.
     const uncommon = '0004';
-    expect(acc.starters.nominate(uid, ['0255', '0447'])).toMatch('not one you can nominate');
+    expect(acc.starters.nominate(uid, ['0255', '0447'])).toMatch('not one you can star');
     expect(acc.starters.nominate(uid, ['0255', uncommon])).toBeNull();
     expect(acc.starters.forRoll(uid).sort()).toEqual(['0255', uncommon].sort());
   });

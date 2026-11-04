@@ -152,10 +152,10 @@ export function openStarters(net: Connection): Promise<void> {
         box.appendChild(row);
       }
       // ---- nominations live in My PC now (src/ui/pcScreen.ts)
-      box.appendChild(el('h3', '', 'Third slot'));
+      box.appendChild(el('h3', '', '★ Starred Pokémon'));
       box.appendChild(el('p', 'sub', data.nominations.length
-        ? `Nominated: ${data.nominations.map(nameOf).join(', ')} (${nominationCost(data.nominations)} of ${data.budget} points). Change them in My PC: tap a Pokémon, then Nominate.`
-        : `Nothing nominated yet, so the third slot rolls a random Common. Open My PC, tap a Pokémon and press Nominate (up to ${data.slots}, ${data.budget} points).`));
+        ? `Starred: ${data.nominations.map(nameOf).join(', ')} (${nominationCost(data.nominations)} of ${data.budget} points). Your third starter is likelier to be one of them. Change them in My PC: tap a Pokémon, then Star it.`
+        : `Nothing starred yet, so your third starter is a random Common. Open My PC, tap a Pokémon and press Star it (up to ${data.slots}, ${data.budget} points).`));
       const row = el('div', 'row');
       const done = el('button', 'almia-btn alt', 'Close');
       done.addEventListener('click', close);

@@ -47,7 +47,7 @@ describe('nominations', () => {
     expect(nominationProblem(['0443', '0371', '0147'], ['0443', '0371', '0147'])).toMatch('budget');
     expect(nominationCost(['0249'])).toBe(12);
     expect(nominationCost([])).toBe(5);
-    expect(nominationProblem(['0255'], [])).toMatch('not one you can nominate');
+    expect(nominationProblem(['0255'], [])).toMatch('not one you can star');
   });
 
   it('forms and evolutions nominate their plain first form; Shadow Mewtwo has none', () => {

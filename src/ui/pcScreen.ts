@@ -734,7 +734,9 @@ export class PcScreen implements Screen {
     const bh = box.y1 - box.y0;
     const k = room / Math.max(bw, bh, 1);
     const dx = Math.round(cx - ((box.x0 + box.x1) / 2) * k);
-    const dy = Math.round(cy + room / 2 - box.y1 * k);
+    // Standing on the line by its resting frame (the first): a Pokémon that bobs (Gengar) would
+    // otherwise sit high, lined up by the lowest point of its bob.
+    const dy = Math.round(cy + room / 2 - box.rest * k);
     h.save();
     h.imageSmoothingEnabled = false;
     if (e.shadow) {
@@ -746,9 +748,10 @@ export class PcScreen implements Screen {
   }
 
   /** Per species: the opaque area of all its front-facing idle frames, in frame pixels. */
-  private static bounds = new Map<string, { x0: number; y0: number; x1: number; y1: number } | null>();
+  private static bounds = new Map<string, { x0: number; y0: number; x1: number; y1: number; rest: number } | null>();
 
-  private idleBounds(e: PcEntry, f: FrameRect): { x0: number; y0: number; x1: number; y1: number } | null {
+  /** The union of every idle frame (for size), and `rest`: the first frame's bottom row (for the line). */
+  private idleBounds(e: PcEntry, f: FrameRect): { x0: number; y0: number; x1: number; y1: number; rest: number } | null {
     const key = `${e.dex}:${f.w}x${f.h}`;
     const known = PcScreen.bounds.get(key);
     if (known !== undefined) return known;
@@ -768,18 +771,19 @@ export class PcScreen implements Screen {
     } catch {
       return null;
     }
-    let x0 = f.w, y0 = f.h, x1 = 0, y1 = 0;
+    let x0 = f.w, y0 = f.h, x1 = 0, y1 = 0, rest = 0;
     for (let y = 0; y < f.h; y++) {
       for (let x = 0; x < c.width; x++) {
         if ((px[(y * c.width + x) * 4 + 3] ?? 0) < 24) continue;
         const fx = x % f.w;
+        if (x < f.w && y + 1 > rest) rest = y + 1;
         if (fx < x0) x0 = fx;
         if (fx + 1 > x1) x1 = fx + 1;
         if (y < y0) y0 = y;
         if (y + 1 > y1) y1 = y + 1;
       }
     }
-    const r = x1 > x0 && y1 > y0 ? { x0, y0, x1, y1 } : null;
+    const r = x1 > x0 && y1 > y0 ? { x0, y0, x1, y1, rest: rest || y1 } : null;
     if (r) PcScreen.bounds.set(key, r);
     return r;
   }

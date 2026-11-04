@@ -120,6 +120,12 @@ export class Hub {
   private readonly privates = new Map<string, PrivateLobby>();
   private readonly parties = new Map<string, Party>();
   private sessions = new Set<PickSession>();
+  /**
+   * Each player's starter roll, kept until a match uses it: leaving the queue, rolling again or
+   * reloading the page brings back the same three starters (no rerolling for a better one).
+   * By player key (account or guest); rolls older than a day are dropped.
+   */
+  private kept = new Map<string, { seed: number; pool: string[]; at: number }>();
   readonly matchmaker: Matchmaker;
   private lastPresence = 0;
   /** Getting ready to update: matches running finish, no new ones start. */
@@ -192,9 +198,18 @@ export class Hub {
     switch (msg.t) {
       case 'roll':
         if (c.room) return;
-        c.rollSeed = randomInt(1, 2 ** 31);
-        // The third slot rolls from a signed-in player's nominations; a guest's is all Common.
-        c.rollPool = c.accountId === null ? [] : this.o.accounts.starters.forRoll(c.accountId);
+        {
+          const now = Date.now();
+          let k = this.kept.get(c.key);
+          if (!k || now - k.at > 86400_000) {
+            // The third slot rolls from a signed-in player's starred Pokémon; a guest's is all Common.
+            k = { seed: randomInt(1, 2 ** 31), pool: c.accountId === null ? [] : this.o.accounts.starters.forRoll(c.accountId), at: now };
+            this.kept.set(c.key, k);
+            if (this.kept.size > 5000) for (const [key, v] of this.kept) if (now - v.at > 86400_000) this.kept.delete(key);
+          }
+          c.rollSeed = k.seed;
+          c.rollPool = k.pool;
+        }
         c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
         return;
       case 'queue':
@@ -573,6 +588,8 @@ export class Hub {
       for (const p of live) p.peer.send({ t: 'unqueued', text: DRAIN_TEXT });
       return;
     }
+    // Their rolls are used up: the next match rolls fresh starters.
+    for (const p of live) this.kept.delete(p.peer.key);
     const seed = randomInt(1, 2 ** 31);
     const size = rules.size ?? this.o.size;
     // Events boost public matches; private ones keep their own rules.

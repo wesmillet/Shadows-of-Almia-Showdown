@@ -47,6 +47,50 @@ const tierInfo = (id: string): { name: string; color: string } => {
 const viaLabel = (via: PcEntry['via']): string =>
   via === 'win' ? 'Victory prize' : via === 'egg' ? 'Daily Egg' : via === 'gift' ? 'Mystery Gift' : via === 'reward' ? 'Starter achievement' : 'Extraction Voucher';
 
+type Glyph = 'heart' | 'heartOutline' | 'star' | 'sparkle';
+
+/** A symbol drawn as a shape (the pixel font has none): centred on (cx, cy), `r` from centre to edge. */
+function glyph(h: CanvasRenderingContext2D, kind: Glyph, cx: number, cy: number, r: number, color: string, outline?: string): void {
+  h.save();
+  h.beginPath();
+  if (kind === 'star') {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? r * 0.45 : r;
+      h.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 1.0 + r * 0.08);
+    }
+    h.closePath();
+  } else if (kind === 'sparkle') {
+    for (let i = 0; i < 8; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 4;
+      const rr = i % 2 ? r * 0.3 : r;
+      h.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    }
+    h.closePath();
+  } else {
+    // A heart: two lobes and a point, filling a 2r x 2r box centred on (cx, cy).
+    const top = cy - r * 0.55;
+    h.moveTo(cx, cy + r * 0.9);
+    h.bezierCurveTo(cx - r * 1.25, cy + r * 0.05, cx - r * 0.95, top - r * 0.6, cx, top + r * 0.15);
+    h.bezierCurveTo(cx + r * 0.95, top - r * 0.6, cx + r * 1.25, cy + r * 0.05, cx, cy + r * 0.9);
+    h.closePath();
+  }
+  if (kind === 'heartOutline') {
+    h.lineWidth = Math.max(1.5, r * 0.28);
+    h.strokeStyle = color;
+    h.stroke();
+  } else {
+    h.fillStyle = color;
+    h.fill();
+    if (outline) {
+      h.lineWidth = Math.max(1, r * 0.18);
+      h.strokeStyle = outline;
+      h.stroke();
+    }
+  }
+  h.restore();
+}
+
 export class PcScreen implements Screen {
   private readonly list: PcEntry[];
   private box = 0;
@@ -304,7 +348,7 @@ export class PcScreen implements Screen {
     const hh = r.h * k;
     Object.assign(el.style, {
       left: `${c.left + r.x * k}px`, top: `${c.top + r.y * k}px`, width: `${Math.max(60, r.w * k)}px`, height: `${hh}px`,
-      fontSize: `${Math.max(9, Math.round(hh * 0.5))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
+      fontSize: `${Math.max(8, Math.round(hh * (13 / 36)))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
     });
   }
 
@@ -465,15 +509,15 @@ export class PcScreen implements Screen {
       h.clip();
       this.drawIcon(e, x + L.slot / 2, y + 5 * s + (L.slot - 16 * s) / 2 - up, L.slot - 22 * s);
       h.restore();
-      if (e.fav) text(v, '♥', x + 13 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#e2574c' });
-      if (e.shiny) text(v, '✦', x + L.slot - 12 * s, y + 18 * s - up, 12, { align: 'center', weight: '900', color: '#e8a400' });
+      if (e.fav) glyph(h, 'heart', x + 14 * s, y + 14 * s - up, 5.5 * s, '#e2574c', 'rgba(255,255,255,0.9)');
+      if (e.shiny) glyph(h, 'sparkle', x + L.slot - 14 * s, y + 14 * s - up, 6.5 * s, '#e8a400', 'rgba(255,255,255,0.9)');
       if (e.shadow) text(v, '◆', x + L.slot - 12 * s, y + L.slot - 14 * s - up, 11, { align: 'center', weight: '900', color: '#c48bff' });
       if (this.isNominated(e)) {
         h.fillStyle = INK.accent;
         h.beginPath();
         h.arc(x + 14 * s, y + L.slot - 16 * s - up, 8 * s, 0, Math.PI * 2);
         h.fill();
-        text(v, '★', x + 14 * s, y + L.slot - 12 * s - up, 11, { align: 'center', weight: '900', color: '#fff', shadow: false });
+        glyph(h, 'star', x + 14 * s, y + L.slot - 16 * s - up, 5.5 * s, '#ffffff');
       }
       if (idx === this.selected) {
         h.strokeStyle = INK.accent;
@@ -493,18 +537,40 @@ export class PcScreen implements Screen {
 
   private drawToolbar(L: ReturnType<PcScreen['layout']>): void {
     const v = this.ctx.view;
+    const s = v.baseScale;
+    const h = v.hud;
+    const k = skinPx(v);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const over = (r: Rect): boolean => hit(mx, my, r.x, r.y, r.w, r.h);
-    button(v, `Sort: ${this.sort}`, L.sortR.x, L.sortR.y, L.sortR.w, L.sortR.h, over(L.sortR), CREAM);
-    const labels: Record<string, string> = { all: 'All', fav: '♥ Favs', shiny: '✦ Shiny', nom: '★ Starred', tier: this.tier ? tierInfo(this.tier).name : 'Any tier' };
+    const SIZE = 10;
+    /** A toolbar button: its label at one fixed size, with a symbol beside it, centred together. */
+    const chip = (r: Rect, label: string, mode: 'cream' | 'on' | 'off', icon?: Glyph, iconColor?: string): void => {
+      const hov = mode !== 'off' && over(r);
+      button(v, '', r.x, r.y, r.w, r.h, hov, mode === 'on' ? undefined : mode === 'off' ? '#44405a' : CREAM);
+      const lift = hov ? -k : 0;
+      // The same middle the skin's buttons use (cream pieces have a deeper lip than the orange one).
+      const mid = mode === 'on' ? r.y + lift + r.h / 2 - k / 2 : r.y + lift + (r.h - 3 * k) / 2;
+      const color = mode === 'on' ? '#ffffff' : mode === 'off' ? '#5c6472' : INK.text;
+      h.save();
+      h.font = `${Math.max(8, Math.round(SIZE * 1.3 * s))}px "BoldPixels", "Segoe UI", system-ui, sans-serif`;
+      const tw = h.measureText(label).width;
+      h.restore();
+      const ir = 5 * s;
+      const gap = icon ? ir * 2 + 5 * s : 0;
+      const x0 = r.x + r.w / 2 - (tw + gap) / 2;
+      if (icon) glyph(h, icon, x0 + ir, mid, ir, mode === 'on' ? '#ffffff' : (iconColor ?? INK.text));
+      text(v, label, x0 + gap, mid + 1, SIZE, { baseline: 'middle', color, shadow: mode === 'on', shadowColor: INK.onOrangeShadow });
+    };
+    chip(L.sortR, `Sort: ${this.sort}`, 'cream');
     for (const c of L.chips) {
       const on = c.id === 'tier' ? !!this.tier : this.filter === c.id;
-      if (c.id === 'nom' && !this.starters) {
-        button(v, labels[c.id] as string, c.r.x, c.r.y, c.r.w, c.r.h, false, '#44405a');
-        continue;
-      }
-      button(v, labels[c.id] as string, c.r.x, c.r.y, c.r.w, c.r.h, over(c.r), on ? undefined : CREAM);
+      const mode = c.id === 'nom' && !this.starters ? 'off' : on ? 'on' : 'cream';
+      if (c.id === 'all') chip(c.r, 'All', mode);
+      else if (c.id === 'fav') chip(c.r, 'Favs', mode, 'heart', '#e2574c');
+      else if (c.id === 'shiny') chip(c.r, 'Shiny', mode, 'sparkle', '#e8a400');
+      else if (c.id === 'nom') chip(c.r, 'Starred', mode, 'star', INK.accent);
+      else chip(c.r, this.tier ? tierInfo(this.tier).name : 'Any tier', mode);
     }
   }
 
@@ -522,7 +588,8 @@ export class PcScreen implements Screen {
     // Left: the label, the points and their meter, centred against the spots.
     const lx = r.x + 16 * s;
     const mid = first.y + first.h / 2;
-    text(v, '★ STARRED', lx, mid - 10 * s, 13, { color: INK.accent, shadow: false, maxWidth: 80 * s });
+    glyph(h, 'star', lx + 5 * s, mid - 14 * s, 5.5 * s, INK.accent);
+    text(v, 'STARRED', lx + 14 * s, mid - 10 * s, 13, { color: INK.accent, shadow: false, maxWidth: 70 * s });
     text(v, `${used} / ${st.budget} pts`, lx, mid + 8 * s, 11, { color: used > st.budget ? INK.bad : INK.text, shadow: false, maxWidth: 80 * s });
     const mw = 74 * s;
     h.fillStyle = '#e0d0b4';
@@ -604,7 +671,7 @@ export class PcScreen implements Screen {
     const sr = this.starRect(r);
     const overStar = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sr.x, sr.y, sr.w, sr.h);
     button(v, '', sr.x, sr.y, sr.w, sr.h, overStar, CREAM);
-    text(v, e.fav ? '♥' : '♡', sr.x + sr.w / 2, sr.y + sr.h / 2 + 4 * s - (overStar ? skinPx(v) : 0), 18, { align: 'center', color: e.fav ? '#e2574c' : INK.dim, shadow: false, weight: '900' });
+    glyph(h, e.fav ? 'heart' : 'heartOutline', sr.x + sr.w / 2, sr.y + (sr.h - 3 * skinPx(v)) / 2 - (overStar ? skinPx(v) : 0), 8 * s, e.fav ? '#e2574c' : INK.dim);
     // Base stats.
     let y = py + ps + 34 * s;
     text(v, 'BASE STATS', r.x + pad, y, 11, { color: INK.dim, shadow: false });
@@ -705,7 +772,10 @@ export class PcScreen implements Screen {
     y += 10 * s;
     const shiny = this.list.filter((e) => e.shiny).length;
     const favs = this.list.filter((e) => e.fav).length;
-    text(v, `✦ ${shiny} shiny   ♥ ${favs} favourite${favs === 1 ? '' : 's'}`, r.x + pad, y + 10 * s, 12, { color: INK.text, shadow: false });
+    glyph(h, 'sparkle', r.x + pad + 5 * s, y + 6 * s, 6 * s, '#e8a400');
+    text(v, `${shiny} shiny`, r.x + pad + 16 * s, y + 10 * s, 12, { color: INK.text, shadow: false });
+    glyph(h, 'heart', r.x + pad + 105 * s, y + 6 * s, 5.5 * s, '#e2574c');
+    text(v, `${favs} favourite${favs === 1 ? '' : 's'}`, r.x + pad + 116 * s, y + 10 * s, 12, { color: INK.text, shadow: false });
     y += 34 * s;
     const tips = this.starters ? ['Tap a Pokémon to see it, favourite it', 'or star it to make it a likelier third starter.'] : ['Tap a Pokémon to see it', 'or favourite it.'];
     tips.forEach((t, k) => text(v, t, r.x + r.w / 2, y + 10 * s + k * 18 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - pad * 2 }));
@@ -730,7 +800,7 @@ export class PcScreen implements Screen {
     let line: string;
     if (on) {
       const k = st.nominations.indexOf(nd);
-      line = `★ Starred · ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance as your third starter`;
+      line = `Starred · ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance as your third starter`;
     } else if (can) {
       const w = (t: string): number => st.weights[t] ?? 1;
       const next = [...st.nominations, nd];
@@ -739,7 +809,7 @@ export class PcScreen implements Screen {
     } else line = st.nominations.length >= NOMINATION_SLOTS ? 'All five stars are used' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
     text(v, this.note || line, r.x + r.w / 2, b.y - 10 * s, 11, { align: 'center', color: can ? INK.text : INK.bad, shadow: false, maxWidth: r.w - 24 * s });
     const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
-    button(v, on ? 'Remove star' : '★ Star it', b.x, b.y, b.w, b.h, over && can, can ? (on ? CREAM : undefined) : '#44405a');
+    button(v, on ? 'Remove star' : 'Star it', b.x, b.y, b.w, b.h, over && can, can ? (on ? CREAM : undefined) : '#44405a');
   }
 
   /**

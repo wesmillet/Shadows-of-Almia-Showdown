@@ -7,7 +7,6 @@
 import type { Connection } from '../net/connection';
 import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES } from '../sim/data';
-import { nominationCost } from '../sim/starters';
 import { ASSET_ROOT } from '../sprites/assets';
 import { el, overlayRoot } from './overlay';
 
@@ -151,11 +150,6 @@ export function openStarters(net: Connection): Promise<void> {
         }
         box.appendChild(row);
       }
-      // ---- nominations live in My PC now (src/ui/pcScreen.ts)
-      box.appendChild(el('h3', '', '★ Starred Pokémon'));
-      box.appendChild(el('p', 'sub', data.nominations.length
-        ? `Starred: ${data.nominations.map(nameOf).join(', ')} (${nominationCost(data.nominations)} of ${data.budget} points). Your third starter is likelier to be one of them. Change them in My PC: tap a Pokémon, then Star it.`
-        : `Nothing starred yet, so your third starter is a random Common. Open My PC, tap a Pokémon and press Star it (up to ${data.slots}, ${data.budget} points).`));
       const row = el('div', 'row');
       const done = el('button', 'almia-btn alt', 'Close');
       done.addEventListener('click', close);

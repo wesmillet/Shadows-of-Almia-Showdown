@@ -246,7 +246,7 @@
   },
   "visitors": {
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address, or turn on tester mode with ?dev=1, to force it).",
-    "hoopaChance": 0.15,
+    "hoopaChance": 0.1,
     "_portalComment": "Hoopa's portal legendary comes through at your best level + portalLevelOver, at least portalLevelMin (at most 100). Legendaries in a bout can be caught with balls at legendCatchScale of the ball's usual rate, or join you when worn to their last HP.",
     "portalLevelOver": 20,
     "portalLevelMin": 60,
@@ -336,7 +336,7 @@
     "stormMaskSeconds": 120,
     "_trainerComment": "Trainers last trainerToleranceScale times as long as their Pokemon in the storm (16 s, or 8 minutes with a Storm Mask), then pass out: Darkrai drags them into the shadows and they are out of the match. Their exposure drains twice as fast outside the storm.",
     "trainerToleranceScale": 4,
-    "stormMaskChance": 0.05,
+    "stormMaskChance": 0,
     "stormMaskPrice": 20000,
     "badDreamsFraction": 0.0625,
     "wakeAfterSecondsOutside": 3

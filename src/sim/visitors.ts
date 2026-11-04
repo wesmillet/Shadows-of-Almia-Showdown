@@ -125,7 +125,7 @@ export class Visitors {
     const ms = spot();
     const merchant = m.makeTrainer('Wandering Merchant', 'merchant', false, ms.x, ms.y);
     const stock = MERCHANT_STOCK.map(([id, price]) => ({ id, price }));
-    // Now and then (every match in tester mode) a Storm Mask: the one way to last in the storm.
+    // A Storm Mask in stock only in tester mode now (players find it in Ultra Ball loot, 1%: loot.json).
     const dk = CONFIG.darkness as { stormMaskChance?: number; stormMaskPrice?: number };
     if (isDev() || rng.chance(dk.stormMaskChance ?? 0.05)) stock.unshift({ id: 'storm-mask', price: dk.stormMaskPrice ?? 20000 });
     m.npcs.push(merchant);

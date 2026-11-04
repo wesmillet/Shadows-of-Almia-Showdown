@@ -205,6 +205,10 @@
         {
           "id": "super-rod",
           "weight": 2
+        },
+        {
+          "id": "storm-mask",
+          "weight": 0.545
         }
       ]
     }

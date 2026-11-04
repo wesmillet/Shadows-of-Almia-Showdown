@@ -605,7 +605,7 @@
     ],
     "groups": {
       "starters": {
-        "perMatch": 0.25,
+        "perMatch": 0.093,
         "lands": {
           "forest": [
             "0001",

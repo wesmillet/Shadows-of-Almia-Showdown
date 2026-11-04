@@ -185,7 +185,7 @@ export class TownsfolkCrew {
     }
     const wants = WANTS.filter((d) => SPECIES.has(d));
     const eggs = EGG_POOL.filter((d) => SPECIES.has(d));
-    if (wants.length && eggs.length && (isDev() || rng.chance(0.35))) {
+    if (wants.length && eggs.length && (isDev() || rng.chance(0.2))) {
       const s = this.spot(25);
       if (s) {
         this.want = wants[rng.int(0, wants.length - 1)] as string;

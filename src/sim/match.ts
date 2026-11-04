@@ -538,7 +538,7 @@ export class Match {
 
   /**
    * The guaranteed Alpha prize, dropped when one is knocked out or caught: a
-   * rare TM, two Rare Candies or a rare-tier roll, plus a small chance at an
+   * rare TM, three Rare Candies or a rare-tier roll, plus a small chance at an
    * Extraction Voucher on top. It lands as a rare-tier ball with known contents.
    */
   alphaReward(x: number, y: number, by: Trainer | null, alpha: Mon | null = null): void {
@@ -549,7 +549,7 @@ export class Match {
     const usable = rareTms.filter((t) => !!t.move && (by?.party ?? []).some((m) => canLearnTm(m.species, t.move as string)));
     const tmPool = usable.length && this.rng.chance(0.65) ? usable : rareTms;
     if (r < 0.4 && tmPool.length) contents.push({ id: this.rng.pick(tmPool).id, count: 1 });
-    else if (r < 0.75) contents.push({ id: 'rare-candy', count: 2 });
+    else if (r < 0.75) contents.push({ id: 'rare-candy', count: 3 });
     else contents.push(rollLoot(this.rng, 'rare'));
     const voucher = this.rng.chance(0.12);
     if (voucher) contents.push({ id: 'extraction-voucher', count: 1 });

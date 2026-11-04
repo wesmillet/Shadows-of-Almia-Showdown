@@ -35,6 +35,8 @@ export interface ItemDef {
   move?: string;
   tmType?: string;
   rare?: boolean;
+  /** A TM no longer dropped (owned ones still work). */
+  retired?: boolean;
   stack?: number;
   /** Mega Stones: the base dex that Mega Evolves holding it. */
   megaFor?: string;
@@ -44,13 +46,14 @@ export type LootTier = 'common' | 'uncommon' | 'rare';
 
 export const ITEMS: Record<string, ItemDef> = {};
 for (const it of (itemsJson as { items: ItemDef[] }).items) ITEMS[it.id] = it;
-for (const tm of (tmsJson as { tms: Array<{ id: string; move: string; rare?: boolean }> }).tms) {
+for (const tm of (tmsJson as { tms: Array<{ id: string; move: string; rare?: boolean; retired?: boolean }> }).tms) {
   const mv = MOVES.get(tm.move);
   if (!mv) continue;
-  ITEMS[tm.id] = { id: tm.id, name: `TM ${mv.name}`, short: 'TM', kind: 'tm', move: tm.move, tmType: mv.type, rare: !!tm.rare };
+  ITEMS[tm.id] = { id: tm.id, name: `TM ${mv.name}`, short: 'TM', kind: 'tm', move: tm.move, tmType: mv.type, rare: !!tm.rare, retired: !!tm.retired || undefined };
 }
 export const ITEM_LIST: ItemDef[] = Object.values(ITEMS);
-export const TM_LIST: ItemDef[] = ITEM_LIST.filter((i) => i.kind === 'tm');
+/** The TMs loot and Alpha prizes can give (retired ones excluded). */
+export const TM_LIST: ItemDef[] = ITEM_LIST.filter((i) => i.kind === 'tm' && !i.retired);
 export const BALL_LIST: ItemDef[] = ITEM_LIST.filter((i) => i.kind === 'ball');
 
 interface LootEntry {

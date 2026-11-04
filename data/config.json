@@ -69,8 +69,8 @@
       9
     ],
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
-    "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 0.01 (1 in 100) gives about three shinies among a match's 310 or so wild Pokemon and fishing bites, so most matches have one or two somewhere, and a trainer who meets 40-60 wilds sees one about every other match. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
-    "shinyChance": 0.01,
+    "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 1 in 2048 (twice the 1 in 4096 of the latest main games) gives a shiny somewhere among a match's 310 or so wild Pokemon and fishing bites about every 7 matches; a trainer who meets 40-60 wilds sees one about every 40 matches. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
+    "shinyChance": 0.00048828125,
     "alphaShinyMultiplier": 4,
     "alphaChance": 0.07,
     "alphaRadius": 55,
@@ -246,7 +246,7 @@
   },
   "visitors": {
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address, or turn on tester mode with ?dev=1, to force it).",
-    "hoopaChance": 0.15,
+    "hoopaChance": 0.1,
     "_portalComment": "Hoopa's portal legendary comes through at your best level + portalLevelOver, at least portalLevelMin (at most 100). Legendaries in a bout can be caught with balls at legendCatchScale of the ball's usual rate, or join you when worn to their last HP.",
     "portalLevelOver": 20,
     "portalLevelMin": 60,
@@ -336,7 +336,7 @@
     "stormMaskSeconds": 120,
     "_trainerComment": "Trainers last trainerToleranceScale times as long as their Pokemon in the storm (16 s, or 8 minutes with a Storm Mask), then pass out: Darkrai drags them into the shadows and they are out of the match. Their exposure drains twice as fast outside the storm.",
     "trainerToleranceScale": 4,
-    "stormMaskChance": 0.05,
+    "stormMaskChance": 0,
     "stormMaskPrice": 20000,
     "badDreamsFraction": 0.0625,
     "wakeAfterSecondsOutside": 3

@@ -88,7 +88,7 @@ export class PcScreen implements Screen {
     el.setAttribute('aria-label', 'Search the PC by name');
     Object.assign(el.style, {
       position: 'fixed', zIndex: '20', boxSizing: 'border-box', border: '3px solid #2a1a10', borderRadius: '4px',
-      background: '#fffaf0', color: '#3a2a1a', padding: '0 10px', font: '600 14px system-ui, sans-serif', outline: 'none',
+      background: '#fffaf0', color: '#4a3424', padding: '0 10px', fontFamily: '"BoldPixels", "Segoe UI", system-ui, sans-serif', outline: 'none',
     } as Partial<CSSStyleDeclaration>);
     el.addEventListener('input', () => {
       this.query = el.value.trim().toLowerCase();
@@ -239,7 +239,7 @@ export class PcScreen implements Screen {
     const by = tool.y + tool.h + 10 * s;
     const box = { x: x0, y: by, w: bw, h: bh };
     const title = { x: x0 + 56 * s, y: by + 12 * s, w: bw - 112 * s, h: 40 * s };
-    const strip = { x: x0, y: by + bh + 10 * s, w: bw, h: 70 * s };
+    const strip = { x: x0, y: by + bh + 10 * s, w: bw, h: 82 * s };
     const sideH = (this.starters ? strip.y + strip.h : by + bh) - by;
     // The toolbar: Sort, the filter chips, then the search box filling the rest.
     let cx = x0;
@@ -286,9 +286,14 @@ export class PcScreen implements Screen {
   /** The strip's five spots. */
   private spotRects(strip: Rect): Rect[] {
     const s = this.ctx.view.baseScale;
-    const lead = 92 * s;
-    const w = (strip.w - lead - 12 * s - 4 * 5 * s) / 5;
-    return Array.from({ length: NOMINATION_SLOTS }, (_, i) => ({ x: strip.x + lead + i * (w + 5 * s), y: strip.y + 6 * s, w, h: strip.h - 12 * s }));
+    // Inside the cream piece: clear of its frame on top and its lip at the bottom.
+    const lead = 100 * s;
+    const gap = 6 * s;
+    const right = 12 * s;
+    const w = (strip.w - lead - right - gap * (NOMINATION_SLOTS - 1)) / NOMINATION_SLOTS;
+    const top = strip.y + 9 * s;
+    const h = strip.h - 9 * s - 15 * s;
+    return Array.from({ length: NOMINATION_SLOTS }, (_, i) => ({ x: strip.x + lead + i * (w + gap), y: top, w, h }));
   }
 
   private placeSearch(r: Rect): void {
@@ -299,7 +304,7 @@ export class PcScreen implements Screen {
     const hh = r.h * k;
     Object.assign(el.style, {
       left: `${c.left + r.x * k}px`, top: `${c.top + r.y * k}px`, width: `${Math.max(60, r.w * k)}px`, height: `${hh}px`,
-      fontSize: `${Math.max(8, Math.round(hh * 0.42))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
+      fontSize: `${Math.max(9, Math.round(hh * 0.5))}px`, padding: `0 ${Math.round(hh * 0.3)}px`, borderWidth: `${Math.max(1, Math.round(hh / 12))}px`,
     });
   }
 
@@ -512,15 +517,18 @@ export class PcScreen implements Screen {
     if (!st) return;
     if (!skinPiece(v, 'cream', r.x, r.y, r.w, r.h, skinPx(v))) panel(v, r.x, r.y, r.w, r.h);
     const { spots, used } = this.odds();
-    text(v, '3RD SLOT', r.x + 14 * s, r.y + 26 * s, 12, { color: INK.accent, shadow: false, maxWidth: 76 * s });
-    text(v, `${used} / ${st.budget} pts`, r.x + 14 * s, r.y + 44 * s, 12, { color: used > st.budget ? INK.bad : INK.text, shadow: false });
-    // Points meter.
-    const mw = 70 * s;
-    h.fillStyle = '#e0d0b4';
-    h.fillRect(r.x + 14 * s, r.y + 52 * s, mw, 5 * s);
-    h.fillStyle = used > st.budget ? INK.bad : INK.accent;
-    h.fillRect(r.x + 14 * s, r.y + 52 * s, mw * Math.min(1, used / st.budget), 5 * s);
     const rects = this.spotRects(r);
+    const first = rects[0] as Rect;
+    // Left: the label, the points and their meter, centred against the spots.
+    const lx = r.x + 16 * s;
+    const mid = first.y + first.h / 2;
+    text(v, '3RD SLOT', lx, mid - 10 * s, 13, { color: INK.accent, shadow: false, maxWidth: 80 * s });
+    text(v, `${used} / ${st.budget} pts`, lx, mid + 8 * s, 11, { color: used > st.budget ? INK.bad : INK.text, shadow: false, maxWidth: 80 * s });
+    const mw = 74 * s;
+    h.fillStyle = '#e0d0b4';
+    h.fillRect(lx, mid + 14 * s, mw, 5 * s);
+    h.fillStyle = used > st.budget ? INK.bad : INK.accent;
+    h.fillRect(lx, mid + 14 * s, mw * Math.min(1, used / st.budget), 5 * s);
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     spots.forEach((sp, i) => {
@@ -532,19 +540,19 @@ export class PcScreen implements Screen {
       h.lineWidth = 2 * s;
       h.strokeRect(c.x + s, c.y + s, c.w - 2 * s, c.h - 2 * s);
       const cx = c.x + c.w / 2;
+      const ps = 24 * s;
       if (sp.dex) {
         const f = this.sprites.get(sp.dex, false).portraitSource();
-        const ps = 26 * s;
         h.save();
         h.imageSmoothingEnabled = false;
-        h.drawImage(f.image, f.sx, f.sy, f.w, f.h, cx - ps / 2, c.y + 4 * s, ps, ps);
+        h.drawImage(f.image, f.sx, f.sy, f.w, f.h, cx - ps / 2, c.y + 5 * s, ps, ps);
         h.restore();
-        text(v, SPECIES.get(sp.dex)?.name ?? sp.dex, cx, c.y + 41 * s, 10, { align: 'center', color: INK.text, shadow: false, maxWidth: c.w - 6 * s });
+        text(v, SPECIES.get(sp.dex)?.name ?? sp.dex, cx, c.y + ps + 17 * s, 10, { align: 'center', color: INK.text, shadow: false, maxWidth: c.w - 8 * s });
       } else {
-        text(v, '?', cx, c.y + 25 * s, 18, { align: 'center', color: '#c8b896', shadow: false });
-        text(v, 'Random Common', cx, c.y + 41 * s, 9, { align: 'center', color: INK.dim, shadow: false, maxWidth: c.w - 6 * s });
+        text(v, '?', cx, c.y + 5 * s + ps * 0.8, 18, { align: 'center', color: '#c8b896', shadow: false });
+        text(v, 'Random', cx, c.y + ps + 17 * s, 10, { align: 'center', color: INK.dim, shadow: false, maxWidth: c.w - 8 * s });
       }
-      text(v, `${(sp.chance * 100).toFixed(0)}%`, cx, c.y + c.h - 4 * s, 11, { align: 'center', color: INK.good, shadow: false, weight: '900' });
+      text(v, `${(sp.chance * 100).toFixed(0)}%`, cx, c.y + c.h - 5 * s, 11, { align: 'center', color: INK.good, shadow: false, weight: '900' });
     });
   }
 
@@ -596,7 +604,7 @@ export class PcScreen implements Screen {
     const sr = this.starRect(r);
     const overStar = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sr.x, sr.y, sr.w, sr.h);
     button(v, '', sr.x, sr.y, sr.w, sr.h, overStar, CREAM);
-    text(v, e.fav ? '♥' : '♡', sr.x + sr.w / 2, sr.y + sr.h / 2 + 4 * s, 18, { align: 'center', color: e.fav ? '#e2574c' : INK.dim, shadow: false, weight: '900' });
+    text(v, e.fav ? '♥' : '♡', sr.x + sr.w / 2, sr.y + sr.h / 2 + 4 * s - (overStar ? skinPx(v) : 0), 18, { align: 'center', color: e.fav ? '#e2574c' : INK.dim, shadow: false, weight: '900' });
     // Base stats.
     let y = py + ps + 34 * s;
     text(v, 'BASE STATS', r.x + pad, y, 11, { color: INK.dim, shadow: false });

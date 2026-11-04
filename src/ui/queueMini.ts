@@ -11,20 +11,20 @@ type LobbyMsg = Extract<ServerMsg, { t: 'lobby' }>;
 
 const CSS = `
 .almia-qmini { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 2147482000;
-  width: min(260px, calc(100vw - 24px)); background: #f4ecdc; color: #3a2a1a; border: 3px solid #2a1a10; border-radius: 6px;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 10px 24px rgba(0,0,0,0.35); padding: 10px 12px 12px; font: 14px/1.35 system-ui, sans-serif; }
-.almia-qmini .top { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
-.almia-qmini .dot { width: 10px; height: 10px; border-radius: 50%; background: #2e7d32; flex: none; animation: almia-qpulse 1.2s ease-in-out infinite; }
+  width: min(270px, calc(100vw - 24px)); background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424;
+  box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; padding: 10px 12px 12px; font: 14px/1.4 "BoldPixels", "Segoe UI", system-ui, sans-serif; image-rendering: pixelated; }
+.almia-qmini .top { display: flex; align-items: center; gap: 8px; font-size: 16px; color: #c2611a; }
+.almia-qmini .dot { width: 10px; height: 10px; background: #2e7d32; flex: none; animation: almia-qpulse 1.2s steps(2) infinite; }
 .almia-qmini .dot.go { background: #c2611a; }
 @keyframes almia-qpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.almia-qmini .line { color: #6a4a2a; margin-top: 4px; }
-.almia-qmini .time { font-variant-numeric: tabular-nums; font-weight: 700; color: #c2611a; }
-.almia-qmini .bar { height: 6px; background: #e0d0b4; margin-top: 8px; border-radius: 3px; overflow: hidden; }
+.almia-qmini .line { color: #8a6a4a; margin-top: 4px; }
+.almia-qmini .time { color: #c2611a; }
+.almia-qmini .bar { height: 6px; background: #e0d0b4; margin-top: 8px; }
 .almia-qmini .bar i { display: block; height: 100%; background: #c2611a; transition: width 0.4s; }
-.almia-qmini .btns { display: flex; gap: 8px; margin-top: 10px; }
-.almia-qmini button { flex: 1; min-height: 36px; border: 2px solid #2a1a10; border-radius: 6px; font: 600 14px system-ui, sans-serif; cursor: pointer; }
-.almia-qmini button.open { background: #f4b860; color: #2a1a10; }
-.almia-qmini button.leave { background: #fbf5e9; color: #3a2a1a; }
+.almia-qmini .btns { display: flex; gap: 8px; margin-top: 12px; }
+.almia-qmini button { flex: 1; min-height: 36px; border: 0; font: inherit; font-size: 15px; cursor: pointer; }
+.almia-qmini button.open { background: #c2611a; color: #fff; text-shadow: 0 1px 0 #8a3a0a; box-shadow: 0 3px 0 #8a3a0a; }
+.almia-qmini button.leave { background: #fbf5e9; color: #4a3424; border: 2px solid #4a3424; box-shadow: 0 3px 0 #c9b48e; }
 `;
 
 const clock = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;

@@ -9,15 +9,16 @@ export const AFK_WARN_MS = 90_000;
 
 const CSS = `
 .almia-afk-warn { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 2147483000;
-  background: rgba(28,20,14,0.95); color: #fff; border: 2px solid #f4b860; border-radius: 12px; padding: 10px 16px;
-  font: 600 15px/1.35 system-ui, sans-serif; text-align: center; pointer-events: none; max-width: calc(100vw - 24px); }
-.almia-afk-warn b { color: #ffd66e; }
+  background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset; padding: 10px 18px;
+  font: 16px/1.4 "BoldPixels", "Segoe UI", system-ui, sans-serif; text-align: center; pointer-events: none; max-width: calc(100vw - 24px); image-rendering: pixelated; }
+.almia-afk-warn b { color: #c2611a; font-weight: normal; }
 .almia-afk-gone { position: fixed; inset: 0; z-index: 2147483001; display: flex; align-items: center; justify-content: center;
-  background: rgba(14,10,24,0.92); font: 16px/1.4 system-ui, sans-serif; color: #fff; padding: 16px; }
-.almia-afk-gone .box { background: #f4ecdc; color: #3a2a1a; border: 3px solid #2a1a10; border-radius: 6px; padding: 20px 22px; max-width: 420px; text-align: center; }
-.almia-afk-gone h2 { margin: 0 0 8px; font-size: 20px; }
-.almia-afk-gone button { margin-top: 14px; min-height: 44px; padding: 0 22px; font: 600 16px system-ui, sans-serif; border: 2px solid #2a1a10;
-  border-radius: 6px; background: #f4b860; color: #2a1a10; cursor: pointer; }
+  background: rgba(14,10,24,0.88); font: 16px/1.45 "BoldPixels", "Segoe UI", system-ui, sans-serif; padding: 16px; }
+.almia-afk-gone .box { background: #f4ecdc; color: #4a3424; border: 3px solid #4a3424; box-shadow: 0 4px 0 #2a1d14, 0 0 0 3px #f4ecdc inset;
+  padding: 22px 24px; max-width: 440px; text-align: center; }
+.almia-afk-gone h2 { margin: 0 0 10px; font-size: 24px; font-weight: normal; color: #c2611a; }
+.almia-afk-gone button { margin-top: 16px; min-height: 44px; padding: 0 26px; font: inherit; font-size: 17px; border: 0; background: #c2611a; color: #fff;
+  text-shadow: 0 1px 0 #8a3a0a; box-shadow: 0 4px 0 #8a3a0a; cursor: pointer; }
 `;
 
 export class AfkWatch {

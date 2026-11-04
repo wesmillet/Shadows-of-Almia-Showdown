@@ -311,7 +311,8 @@ async function boot(): Promise<void> {
       playingId = null;
       watchingId = null;
       net.close();
-    }, () => playingId !== null && screen instanceof MatchScreen);
+    // Only while actually playing: not while knocked out and waiting to come back (up to 90 s).
+    }, () => playingId !== null && screen instanceof MatchScreen && screen.match.player.downUntil == null);
   }
   // The game's own errors go to the server's error log (a few per visit), so they get fixed.
   if (net) {

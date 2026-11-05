@@ -816,7 +816,8 @@ export class Match {
 
   private learnMoves(m: Mon, fromLevel: number): void {
     const asked: string[] = [];
-    const learned = movesLearnedBetween(m.species, fromLevel, m.level);
+    // Tackle is only ever a starting move: never offered on levelling up (nobody wants to learn it).
+    const learned = movesLearnedBetween(m.species, fromLevel, m.level).filter((id) => id !== 'tackle');
     // A legendary that started without its signature move (a starter) gets it back here.
     if (fromLevel < SIGNATURE_LEVEL && m.level >= SIGNATURE_LEVEL) for (const id of signatureMoves(m.species)) if (!learned.includes(id)) learned.push(id);
     for (const id of learned) {

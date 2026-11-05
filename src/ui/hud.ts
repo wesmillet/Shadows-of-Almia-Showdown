@@ -229,7 +229,7 @@ export class Hud {
     const title = `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`;
     // The window is as wide as the slots (or the title) and the help wraps to that width.
     const w = this.fitWidth(ctx, [[title, 15]], Math.max(gridW + 48 * s, 330 * s));
-    const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-9) to take it'), 9.5, w - 40 * s);
+    const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-0) to take it'), 9.5, w - 40 * s);
     const keep = this.wrapLines(ctx, "Every town's chest holds the same things, kept between games and safe if you're wiped out · E to close", 9.5, w - 40 * s);
     const lineH = 14 * s;
     const textH = (help.length + keep.length) * lineH;
@@ -254,7 +254,7 @@ export class Hud {
         ctx.fillStyle = 'rgba(138,106,74,0.15)';
         ctx.fillRect(sx, sy, slot, slot);
       }
-      if (i < 9 && !Input.touch) this.ink(ctx, String(i + 1), sx + 5 * s, sy + 12 * s - up, 8, FLAT_INK.text);
+      if (i < 10 && !Input.touch) this.ink(ctx, String((i + 1) % 10), sx + 5 * s, sy + 12 * s - up, 8, FLAT_INK.text);
       const def = entry ? ITEMS[entry.id] : undefined;
       if (entry && def) {
         const up2 = hover ? this.px2 : 0;
@@ -515,20 +515,9 @@ export class Hud {
     if (st.popup) {
       const names = st.popup.items.map((it) => `${ITEMS[it.id]?.name ?? it.id}${it.count > 1 ? ` ×${it.count}` : ''}`);
       const title = `Found ${names.join(', ')}!`;
-      ctx.font = this.font(14, '800');
       const ids = [...new Set(st.popup.items.map((it) => it.id))].slice(0, 4);
-      const iconW = 36 * s;
-      const pad = 22 * s + ids.length * iconW;
-      const w = Math.max(300 * s, pad + ctx.measureText(title).width + 30 * s);
-      const h = 62 * s;
-      const x = v.width / 2 - w / 2;
-      const y = (140 + Math.max(0, st.notices.length - 1) * 40) * s;
       const first = st.popup.items[0];
       const def = first ? ITEMS[first.id] : undefined;
-      this.popupBox(ctx, x, y, w, h);
-      ids.forEach((id, i) => this.icons.draw(ctx, id, x + 30 * s + i * iconW, y + h / 2 - 2 * s, 30 * s, ITEMS[id]?.tmType));
-      const tx = x + pad;
-      this.ink(ctx, title, tx, y + 28 * s, 14, FLAT_INK.text);
       const hint = st.popup.healed ? 'Your party is fully healed'
         : def?.kind === 'tm' ? `Teaches ${def.name.replace('TM ', '')} · Held & TMs tab`
         : def?.effect === 'mega' ? `Mega Stone · give it to ${def.megaFor ? (SPECIES.get(def.megaFor)?.name ?? 'its Pokémon') : 'its Pokémon'}, then press M`
@@ -537,7 +526,27 @@ export class Hud {
         : def?.kind === 'ball' ? (def.desc ?? 'Hold F to throw')
         : def?.kind === 'styler' ? `${def.desc ?? ''} · its number key`
         : 'Press its number key to use it';
-      this.ink(ctx, hint, tx, y + 44 * s, 10, FLAT_INK.dim, 'left', w - (tx - x) - 16 * s);
+      // Sized to its text at full size: the title and the line under it grow the card (up to the
+      // screen's width) and the line wraps onto more lines instead of shrinking.
+      const iconW = 36 * s;
+      const pad = 22 * s + ids.length * iconW;
+      const maxW = Math.min(v.width - 24 * s, 560 * s);
+      const titleSize = 14;
+      const hintSize = 11;
+      const tW = this.textW(ctx, title, titleSize);
+      const hW = this.textW(ctx, hint, hintSize);
+      const w = Math.min(maxW, Math.max(300 * s, pad + Math.max(tW, Math.min(hW, 360 * s)) + 24 * s));
+      const room = w - pad - 18 * s;
+      const hints = this.wrapLines(ctx, hint, hintSize, room).slice(0, 3);
+      const lineH = 15 * s;
+      const h = Math.max(62 * s, (40 + 10) * s + hints.length * lineH);
+      const x = v.width / 2 - w / 2;
+      const y = (140 + Math.max(0, st.notices.length - 1) * 40) * s;
+      this.popupBox(ctx, x, y, w, h);
+      ids.forEach((id, i) => this.icons.draw(ctx, id, x + 30 * s + i * iconW, y + h / 2 - 2 * s, 30 * s, ITEMS[id]?.tmType));
+      const tx = x + pad;
+      this.ink(ctx, title, tx, y + 28 * s, titleSize, FLAT_INK.text, 'left', room);
+      hints.forEach((line, i) => this.ink(ctx, line, tx, y + 45 * s + i * lineH, hintSize, FLAT_INK.dim, 'left', room));
     }
     this.rowRects = [];
     if (st.teach) {
@@ -1059,7 +1068,8 @@ export class Hud {
         ctx.fillRect(px, py, 28 * s, 13 * s);
         ctx.strokeStyle = '#1a1028';
         ctx.strokeRect(px + 0.5, py + 0.5, 28 * s - 1, 13 * s - 1);
-        this.label(ctx, tag, px + 14 * s, py + 10 * s, 8.5, '#1a1028', 'center', '800', 26 * s);
+        // dark letters on the bright chip, no drop shadow (a shadow smudges dark text)
+        this.ink(ctx, tag, px + 14 * s, py + 10 * s, 8.5, '#1a1028', 'center', 26 * s);
       }
       if (m.heldItem) {
         // The held item on the portrait's corner; hovered, a ring and a tooltip (a click takes it back).

@@ -42,8 +42,12 @@ def blocks(tileset):
             return 0 <= b < ts.count and a not in animated and b not in animated and bool((alpha(b) > 0).any())
         while c0 > 0 and c0 - 1 > (tid % cols) - step and (alpha(r0 * cols + c0 - 1) > 0).any() and same(r0 * cols + c0 - 1, r0 * cols + c0 - 1 + step):
             c0 -= 1
+        nframes = max(1, len(frames))
+        def drawn(t):
+            # drawn in any frame (a waving banner's tip reaches cells its first frame leaves empty)
+            return any((alpha(t + k * step) > 0).any() for k in range(nframes) if t % cols + k * step < cols)
         def row_cells(r):
-            return [r * cols + c for c in range(c0, min(cols, c0 + step)) if (alpha(r * cols + c) > 0).any()]
+            return [r * cols + c for c in range(c0, min(cols, c0 + step)) if drawn(r * cols + c)]
         band = [r0]
         r = r0 + 1
         while r * cols + c0 < ts.count and any(joined_v(a, a + cols) for a in row_cells(r - 1) if a + cols in animated or (alpha(a + cols) > 0).any()) and row_cells(r):

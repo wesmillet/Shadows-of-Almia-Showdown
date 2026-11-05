@@ -359,6 +359,11 @@ export class Room implements RoomHandle {
     p.peer = peer;
     p.goneAt = null;
     p.seat.trainer.away = false;
+    // A reloaded page numbers its input frames from 1 again: the old count would make the server
+    // drop every new frame as already seen (the trainer could not move after a reload).
+    p.seat.inputs.length = 0;
+    p.seat.ack = 0;
+    p.seat.moveX = p.seat.moveY = 0;
     p.enc = new SyncEncoder(this.ids, p.seat.trainer);
     peer.send({ t: 'start', matchId: this.id, seed: this.seed, you: p.seat.trainer.id, roster: this.roster, mode: this.mode });
   }

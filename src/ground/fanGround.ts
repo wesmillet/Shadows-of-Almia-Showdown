@@ -478,7 +478,67 @@ export class FanGround implements GroundRenderer {
         extent: Math.ceil(Math.max(w, fh) / 16) + 1,
       });
     }
+    const arch = this.gateArch();
+    if (arch) this.decor.push(arch);
     this.decor.sort((a, b) => (a.sortY ?? a.y) - (b.sortY ?? b.y));
+  }
+
+  /**
+   * The castle's south gate: its wall walk crosses over the way in, so the walk (and the parapet
+   * along it) is drawn again as a depth-sorted object. Anyone in the passage goes under it; anyone
+   * south of the wall still draws in front. The passage is the walkable cells the wall walk
+   * (Castle Floor 2) covers; the arch is those rows (and the parapet row above), one tile wider
+   * each side. Nothing about the layout changes.
+   */
+  private gateArch(): DecorItem | null {
+    const names = ['Castle Floor 2', 'Castle Walls', 'Castle Walls 2'];
+    const idx = names.map((nm) => this.map.stack.findIndex((it) => it.name === nm)).filter((i) => i >= 0 && this.layers[i]);
+    const floor = this.layers[this.map.stack.findIndex((it) => it.name === 'Castle Floor 2')];
+    if (!floor || !idx.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+    for (let i = 0; i < floor.length; i++) {
+      if (!floor[i] || !this.walk[i]) continue;
+      const x = i % this.cols, y = Math.floor(i / this.cols);
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    if (x1 < 0 || x1 - x0 > 12 || y1 - y0 > 8) return null;
+    x0 -= 1; x1 += 1; y0 -= 1;
+    const w = (x1 - x0 + 1) * 16, h = (y1 - y0 + 1) * 16;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    const ac = this.map.atlas.columns;
+    for (const li of idx) {
+      const layer = this.layers[li] as Int32Array;
+      ctx.globalAlpha = this.map.stack[li]?.opacity ?? 1;
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const v = layer[y * this.cols + x] ?? 0;
+          if (!v) continue;
+          const a = v - 1;
+          ctx.drawImage(this.atlas, (a % ac) * 16, Math.floor(a / ac) * 16, 16, 16, (x - x0) * 16, (y - y0) * 16, 16, 16);
+        }
+      }
+    }
+    return {
+      kind: 'prop',
+      x: (x0 * 16 + w / 2) / 16,
+      y: y1 + 1,
+      image: c,
+      frameW: w,
+      frameH: h,
+      frames: 1,
+      fps: 0,
+      anchorX: w / 2,
+      anchorY: h,
+      blockRadius: 0,
+      // behind anyone whose feet are south of the wall walk
+      sortY: y1 + 1,
+      extent: Math.ceil(Math.max(w, h) / 16) + 1,
+    };
   }
 
   biomeAt(tx: number, ty: number): Biome {

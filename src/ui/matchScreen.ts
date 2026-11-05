@@ -475,8 +475,10 @@ export class MatchScreen implements Screen {
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
     const shift = input.down('ShiftLeft') || input.down('ShiftRight');
-    for (let i = 0; i < 9; i++) {
-      if (!input.pressed(`Digit${i + 1}`)) continue;
+    // 1-9 and 0 (the tenth chest slot; Shift+0 takes it, a bag has no tenth slot to store).
+    for (let i = 0; i < 10; i++) {
+      if (!input.pressed(`Digit${(i + 1) % 10}`)) continue;
+      if (!shift && i >= 9) continue;
       const msg = shift ? this.match.withdraw(p, i) : this.match.deposit(p, tab, i);
       if (msg) this.say(msg, 1.4);
     }

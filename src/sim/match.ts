@@ -701,7 +701,8 @@ export class Match {
    */
   learnOnLevelUp(m: Mon, fromLevel: number): void {
     const asked: string[] = [];
-    for (const id of movesLearnedBetween(m.species, fromLevel, m.level)) {
+    // Tackle is only ever a starting move: never offered on levelling up (nobody wants to learn it).
+    for (const id of movesLearnedBetween(m.species, fromLevel, m.level).filter((mid) => mid !== 'tackle')) {
       if (m.moves.includes(id) || !MOVES.has(id)) continue;
       if (m.moves.length < MOVE_SLOTS) {
         m.moves.push(id);

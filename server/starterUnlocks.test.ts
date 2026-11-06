@@ -28,6 +28,8 @@ describe('starter achievements', () => {
     acc.recordMatch('m1', [result(uid, 2, ['0025', '0399'])], 'casual');
     acc.recordMatch('m2', [result(uid, 3, ['0041'])], 'casual');
     acc.recordMatch('m3', [result(uid, 1, ['0403'])], 'casual');
+    // No launch date set: the launch week achievement is hidden.
+    acc.starters.weekStart = null;
     info = acc.starters.info(uid);
     const by = Object.fromEntries(info.achievements.map((a) => [a.id, a]));
     expect(by.sign_in?.done).toBe(true);

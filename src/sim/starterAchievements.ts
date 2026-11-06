@@ -17,7 +17,7 @@ export const ALL_STARTERS = [
  * Launch Week Champion. null until the launch date is set: the achievement is hidden until then.
  * Set as an ISO time with its offset, e.g. '2026-11-10T12:00:00-05:00'.
  */
-export const LAUNCH_WEEK_START: string | null = null;
+export const LAUNCH_WEEK_START: string | null = '2026-11-06T00:00:00-05:00';
 export const LAUNCH_WEEK_MS = 7 * 24 * 3600 * 1000;
 
 export function launchWeek(startAt: string | null = LAUNCH_WEEK_START): { start: number; end: number } | null {

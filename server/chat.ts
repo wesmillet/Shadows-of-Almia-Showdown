@@ -21,6 +21,12 @@ const STRIKES = 3;
 const STRIKE_WINDOW = 10 * 60_000;
 /** Minutes for the first, second and later automatic mutes in a week. */
 const AUTO_MUTES = [10, 60, 24 * 60];
+/**
+ * Update, restart and maintenance notices (LIKE patterns): they are only for whoever is online at
+ * the time, so the server's own are sent with `keep: false` and any saved ones (an older build's, or
+ * a "going down for maintenance" message, whoever sent it) are cleared from the history on start.
+ */
+export const UPDATE_NOTICES = ['The server is updating%', 'The server is restarting%', '%going down for maintenance%'];
 
 interface Speaker {
   key: string;
@@ -38,6 +44,7 @@ export class Chat {
   private slowed = new Map<string, number>();
 
   constructor(private readonly broadcast: (msg: ServerMsg) => void, private readonly accounts: Accounts) {
+    accounts.db.prepare(`DELETE FROM chat WHERE ${UPDATE_NOTICES.map(() => 'text LIKE ?').join(' OR ')}`).run(...UPDATE_NOTICES);
     const rows = accounts.db.prepare('SELECT id, name, text, at FROM chat ORDER BY id DESC LIMIT ?').all(HISTORY) as Array<{ id: number; name: string; text: string; at: number }>;
     this.recent = rows.reverse().map((r) => ({ t: 'chat', id: r.id, from: r.name, text: r.text, at: r.at }));
   }
@@ -123,8 +130,10 @@ export class Chat {
   }
 
   /** A message from the server to everyone (an announcement). */
-  announce(text: string): void {
+  announce(text: string, opts: { keep?: boolean } = {}): void {
     const now = Date.now();
+    // keep: false shows it to everyone online now without saving it to the history.
+    if (opts.keep === false) return this.broadcast({ t: 'chat', from: 'Announcement', text, at: now, system: true, announce: true });
     const id = Number(this.accounts.db.prepare('INSERT INTO chat (user_id, name, text, at) VALUES (NULL, ?, ?, ?)').run('Announcement', text, now).lastInsertRowid);
     const msg: Extract<ServerMsg, { t: 'chat' }> = { t: 'chat', id, from: 'Announcement', text, at: now, system: true, announce: true };
     this.recent.push(msg);

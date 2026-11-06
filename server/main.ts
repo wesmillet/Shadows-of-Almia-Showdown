@@ -285,7 +285,7 @@ async function ops(req: IncomingMessage, res: ServerResponse, path: string): Pro
   if (req.method === 'POST' && (path === '/api/ops/drain' || path === '/api/ops/undrain')) {
     const on = path === '/api/ops/drain';
     hub.drain(on);
-    if (on) chat.announce('The server is updating in a few minutes. Matches running now will finish; new ones start right after.');
+    if (on) chat.announce('The server is updating in a few minutes. Matches running now will finish; new ones start right after.', { keep: false });
     log(on ? 'Draining for an update' : 'Draining stopped');
     return send(200, { ok: true, ...hub.stats() });
   }
@@ -633,7 +633,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   log(`${signal}: draining (${hub.rooms.size} match(es) running)`);
   hub.drain(true);
-  if (hub.rooms.size) chat.announce('The server is restarting soon. Matches running now have a few minutes to finish.');
+  if (hub.rooms.size) chat.announce('The server is restarting soon. Matches running now have a few minutes to finish.', { keep: false });
   const until = Date.now() + DRAIN_SECONDS * 1000;
   while (hub.rooms.size && Date.now() < until) await new Promise((r) => setTimeout(r, 1000));
   if (hub.rooms.size) {

@@ -1074,8 +1074,9 @@ export class Match {
     const entry = t.items[slot];
     const def = entry ? ITEMS[entry.id] : undefined;
     if (!entry || !def || def.kind !== 'ball') return false;
-    if (partySize(t) >= this.partyCap) {
-      this.battle.events.push({ type: 'notice', text: `Your party is full (${this.partyCap}). Release one from its card to make room`, seconds: 2.4 });
+    // Balls still in the air count: each one may yet add a Pokémon (two quick throws at five used to make seven).
+    if (partySize(t) + this.ballsInFlight(t) >= this.partyCap) {
+      this.battle.events.push({ type: 'notice', text: partySize(t) >= this.partyCap ? `Your party is full (${this.partyCap}). Release one from its card to make room` : 'Wait for your last ball: your party only has room for one more', seconds: 2.4 });
       return false;
     }
     this.takeItem(t, slot);
@@ -1083,6 +1084,11 @@ export class Match {
     th.homing = follow;
     this.throws.push(th);
     return true;
+  }
+
+  /** This trainer's balls that are still flying or rocking (each could become a catch). */
+  ballsInFlight(t: Trainer): number {
+    return this.throws.filter((th) => th.thrower === t && th.phase !== 'done').length;
   }
 
   private stepThrows(dt: number): void {
@@ -1178,6 +1184,14 @@ export class Match {
         w.visual = { scale: 1, alpha: 1, flash: 0 };
         if (th.roll?.caught && w.owner?.legendBout) {
           this.catchBoutLegend(w, w.owner, th.thrower);
+          return;
+        }
+        if (th.roll?.caught && partySize(th.thrower) >= this.partyCap) {
+          // No room after all (the party filled while this ball rocked): it breaks free.
+          w.captured = false;
+          w.anim.play('Idle', { restart: true });
+          this.battle.events.push({ type: 'broke-free', mon: w });
+          this.battle.events.push({ type: 'notice', text: `Your party is full (${this.partyCap}), so ${w.name} got away`, seconds: 2.4 });
           return;
         }
         if (th.roll?.caught) {

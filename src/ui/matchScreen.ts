@@ -1731,8 +1731,13 @@ export class MatchScreen implements Screen {
         break;
       case 'xp':
         if (ev.mon.owner?.isPlayer) {
-          if (ev.xp > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
-          if (ev.levels > 0) this.floaters.add(ev.mon.x, ev.mon.y - 0.9, `Level ${ev.mon.level}!`, '#ffe76b', 18);
+          // A Pokémon in its ball keeps the spot where it was last out (often by a trainer it fought),
+          // so its share shows over its trainer instead, with its name.
+          const t = ev.mon.owner;
+          const away = ev.mon.stowed || ev.mon.fainted;
+          const x = away ? t.x : ev.mon.x, y = away ? t.y - 0.6 : ev.mon.y;
+          if (ev.xp > 0 && !away) this.floaters.add(x, y - 0.5, `+${ev.xp} XP`, '#9fd0ff', 12);
+          if (ev.levels > 0) this.floaters.add(x, y - 0.9, away ? `${ev.mon.name} Lv ${ev.mon.level}!` : `Level ${ev.mon.level}!`, '#ffe76b', away ? 14 : 18);
         }
         break;
       case 'evolve-start':

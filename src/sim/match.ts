@@ -2468,8 +2468,13 @@ export class Match {
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
     } else if (duel) {
       // A battle: moves go where the player aims (the reticle on the cursor), as in Pokémon mode.
+      // Aimed near the foe, it snaps onto it: a tap on a phone aims at the foe exactly, so a mouse
+      // that is close gets the same (the same snap as outside battles, aimSnap).
       const f = DIR_VECTORS[m.dir] as { x: number; y: number };
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
+      const side = duel.a.trainer === p ? duel.b : duel.a;
+      const foe = side.mon;
+      if (foe && !foe.fainted && this.aim && Math.hypot(foe.x - this.aim.x, foe.y - this.aim.y) < 1.6) a = { x: foe.x, y: foe.y };
     } else {
       const f = DIR_VECTORS[p.dir] as { x: number; y: number };
       const snap = this.aimSnap();

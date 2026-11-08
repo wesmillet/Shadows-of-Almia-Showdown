@@ -114,6 +114,31 @@ def duo(near_w, far_w, lh, ox, oy, toward, arm=5):
     g = Glasses(px); g.force = frozenset(force)
     return place_at(g, ox, oy)
 
+def stacked(lw, lh, near, far, arm_y, arm, toward):
+    """A side view with the head turned so the eyes sit one above the other: two lenses of the same
+    size, the near one over the upper eye and the far one below it (offset along the face), their
+    frames touching as the bridge, and the arm from the near lens back to the ear. `near` and `far`
+    are the lenses' top-left corners in the right-facing drawing; facing left mirrors it about
+    `toward` = ('l', axis) where x -> axis - x."""
+    px = {}
+    px.update(lens(far[0], far[1], lw, lh, glint=1, rim=False, shine_from=1, gap=1))
+    farset = set(px)
+    px.update(lens(near[0], near[1], lw, lh, glint=1, rim=False, shine_from=1, gap=1))
+    # the bridge: the frames joined where the lenses meet (corners are cut, so fill them)
+    a = (near[0] + lw - 1, near[1] + lh - 1)          # the near lens's bottom-right corner
+    b = far                                            # the far lens's top-left corner
+    n = max(abs(b[0] - a[0]), abs(b[1] - a[1]), 1)
+    for i in range(n + 1):
+        px[(round(a[0] + (b[0] - a[0]) * i / n), round(a[1] + (b[1] - a[1]) * i / n))] = K
+    for k in range(1, arm + 1): px[(near[0] - k, arm_y)] = K
+    force = {q for q in farset if q in px and q not in lens(near[0], near[1], lw, lh)}
+    if toward != 'r':
+        axis = toward[1]
+        px = {(axis - x, y): c for (x, y), c in px.items()}
+        force = {(axis - x, y) for (x, y) in force}
+    g = Glasses(px); g.force = frozenset(force)
+    return g
+
 def prof(lw, lh, ox, oy, toward, arm=5):
     return place_at(profile_px(lw, lh, toward, arm), ox, oy)
 
@@ -123,7 +148,7 @@ SPEC = {
     '0060': {0: front(6, 5, 1, -7, -5), 1: three_q(6, 5, 0, -8, -4, 2, 'r'), 7: three_q(6, 5, 0, -5, -4, 2, 'l'),
              2: prof(5, 5, -6, -3, 'r'), 6: prof(5, 5, 3, -3, 'l')},
     '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r'), 7: three_q(7, 6, 3, -6, -3, 3, 'l'),
-             2: duo(6, 4, 6, -4, -2, 'r'), 6: duo(6, 5, 6, -3, -2, 'l')},
+             2: stacked(4, 5, (-4, -2), (0, 2), -1, 4, 'r'), 6: stacked(4, 5, (-4, -2), (0, 2), -1, 4, ('l', 2))},
     '0062': {0: front(7, 5, 5, -10, -5), 1: three_q(7, 5, 2, -10, -3, 1, 'r'), 7: three_q(7, 5, 2, -7, -3, 1, 'l'),
              2: prof(5, 5, -5, -1, 'r'), 6: prof(5, 5, 3, -1, 'l')},
     '0186': {0: front(6, 6, 3, -8, -8), 1: three_q(6, 7, 2, -9, -7, 1, 'r'), 7: three_q(6, 7, 2, -5, -7, 1, 'l'),

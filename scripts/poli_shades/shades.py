@@ -72,19 +72,39 @@ def front(lw, lh, bridge, ox, oy, glint=1):
     px = place_at(pair(lw, lh, bridge, glint=glint, rim=False, bar_row=1, bar_h=2, shine_from=2, gap=1), ox, oy)
     return px
 
-def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1, lift=1):
+def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1, lift=1, near_up=0, near_trim=0, near_grow=0):
     """The pair turned: sheared so the far end is `tilt` px higher, the far lens lifted `lift` px
     more over the far eye, and the bridge kept one unbroken line between the lenses."""
     bar_row, bar_h = 1, 2
     px = pair(lw, lh, bridge, glint=glint, rim=False, bar_row=bar_row, bar_h=bar_h, shine_from=2, gap=1)
     xs = [x for x, _ in px]; x0, x1 = min(xs), max(xs); span = max(1, x1 - x0)
     rx = 1 + lw + bridge          # the right lens's left edge; the left lens's right edge is lw
+    # the near lens (the lower one) can be a column narrower on its outer side
+    for _ in range(near_trim):
+        if toward == 'l':
+            edge = rx + lw - 1
+            px = {(x - 1 if x >= edge else x, y): c for (x, y), c in px.items() if x != edge - 1}
+        else:
+            px = {(x + 1 if x <= 1 else x, y): c for (x, y), c in px.items() if x != 2}
+    # ... and a row taller (it reaches down over the lower eye)
+    if near_grow:
+        nx = (lambda x: x >= rx) if toward == 'l' else (lambda x: x <= lw)
+        mid = lh // 2
+        grown = {}
+        for (x, y), c in px.items():
+            if nx(x) and y >= mid: grown[(x, y + 1)] = c
+            else: grown[(x, y)] = c
+            if nx(x) and y == mid: grown[(x, y)] = px.get((x, mid - 1), c) if (x, mid - 1) in px else c
+        px = grown
     def off(x):
         t = (x - x0) / span if toward == 'r' else (x1 - x) / span
         if toward == 'r': u = 1.0 if x >= rx else max(0.0, (x - lw) / max(1, rx - lw))
         else: u = 1.0 if x <= lw else max(0.0, (rx - x) / max(1, rx - lw))
-        return round(t * tilt + u * lift)
+        return round(t * tilt + u * lift + (1 - u) * near_up)
     out = {(x, y - off(x)): c for (x, y), c in px.items()}
+    # the bridge itself: both rows solid across the gap
+    for x in range(lw + 1, rx):
+        for b in range(bar_row, bar_row + bar_h): out[(x, b - off(x))] = K
     # join the bridge: where neighbouring columns step more than a pixel, fill the frame line
     for x in range(lw, rx):
         for b in range(bar_row, bar_row + bar_h):
@@ -147,7 +167,7 @@ def prof(lw, lh, ox, oy, toward, arm=5):
 SPEC = {
     '0060': {0: front(6, 5, 1, -7, -5), 1: three_q(6, 5, 0, -8, -4, 2, 'r'), 7: three_q(6, 5, 0, -5, -4, 2, 'l'),
              2: prof(5, 5, -6, -3, 'r'), 6: prof(5, 5, 3, -3, 'l')},
-    '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r'), 7: three_q(7, 6, 3, -6, -3, 3, 'l'),
+    '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r', near_up=1, near_trim=1, near_grow=1), 7: three_q(7, 6, 3, -6, -3, 3, 'l', near_up=1, near_trim=1, near_grow=1),
              2: stacked(4, 5, (-4, -2), (0, 2), -1, 4, 'r'), 6: stacked(4, 5, (-4, -2), (0, 2), -1, 4, ('l', 2))},
     '0062': {0: front(7, 5, 5, -10, -5), 1: three_q(7, 5, 2, -10, -3, 1, 'r'), 7: three_q(7, 5, 2, -7, -3, 1, 'l'),
              2: prof(5, 5, -5, -1, 'r'), 6: prof(5, 5, 3, -1, 'l')},

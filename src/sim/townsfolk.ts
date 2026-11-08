@@ -37,6 +37,7 @@ export const FOLK_POOL: Folk[] = [
     name: 'Hiker Bruno', role: 'villager_c', lines: [
       'I hiked all five lands in one day! My knees would like a word with whoever built those stairs.',
       'Snow, sand, leaves, grass: every Pokémon has its ground. Hunt where your target lives.',
+      "Wild Pokémon get tougher the closer you hike to the Shadow Crystal. Out by the coast they're gentle. Train at the edges, then work your way in.",
     ],
   },
   {

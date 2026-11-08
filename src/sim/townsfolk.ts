@@ -37,6 +37,7 @@ export const FOLK_POOL: Folk[] = [
     name: 'Hiker Bruno', role: 'villager_c', lines: [
       'I hiked all five lands in one day! My knees would like a word with whoever built those stairs.',
       'Snow, sand, leaves, grass: every Pokémon has its ground. Hunt where your target lives.',
+      "Wild Pokémon get tougher the closer you hike to the Shadow Crystal. Out by the coast they're gentle. Train at the edges, then work your way in.",
     ],
   },
   {
@@ -72,7 +73,7 @@ export const FOLK_POOL: Folk[] = [
   },
   {
     name: 'Gambler Dice', role: 'villager_a', lines: [
-      'Every storage chest on this island remembers you between matches. I keep my winnings in one. And my losses.',
+      'Every storage chest on this island remembers one stack of yours between matches. Choose it wisely. I chose my losses.',
       "One in five hundred. Those are shiny odds. I've beaten worse, friend. I've also lost to better.",
     ],
   },

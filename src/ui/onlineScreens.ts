@@ -10,6 +10,7 @@ import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
 import { recoverDialog, recoveryCodesDialog } from './socialPanel';
 import { openOptions } from './optionsMenu';
+import { showInbox } from './giftDialog';
 import { openStarters } from './startersPanel';
 import { ACHIEVEMENTS_ON, LEVELS_ON } from '../net/progression';
 import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
@@ -99,7 +100,11 @@ export class OnlineScreen implements Screen {
   enter(): void {
     loadHubLogo();
     this.chat = new ChatPanel(this.net, { side: true, collapsed: window.innerWidth < 900, onName: (n) => void openTrainerCard(this.net, n).then(() => this.checkTrades()) });
-    void this.net.refreshMe().then(() => this.checkTrades());
+    void this.net.refreshMe().then(() => {
+      void this.checkTrades();
+      // Gifts and messages from the game's makers.
+      if (this.net.me.inbox?.length) void showInbox(this.net);
+    });
     this.unsubTrades = this.net.on((m) => {
       if (m.t === 'trades') void this.checkTrades();
     });

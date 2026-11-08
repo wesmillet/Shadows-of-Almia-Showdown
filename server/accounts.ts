@@ -25,6 +25,7 @@ import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
+import { Feedback } from './feedback';
 import { STARTER_SQL, StarterUnlocks } from './starterUnlocks';
 import { COLLECTION_LOG_SQL } from './collectionLog';
 import { emailProblem, mailBody, maskEmail, messagePage, resendMailer, resetPage, type Mailer } from './mailer';
@@ -138,6 +139,8 @@ export class Accounts {
   readonly db: DatabaseSync;
   /** Mystery Gift codes (server/gifts.ts). */
   readonly gifts: Gifts;
+  /** Players' bug reports and suggestions (server/feedback.ts). */
+  readonly feedback: Feedback;
   /** Failed sign-ins per IP and per username: [count, window start]. */
   private failures = new Map<string, [number, number]>();
   private readonly google: { id: string; secret: string } | null;
@@ -290,6 +293,7 @@ export class Accounts {
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
     this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex, shiny) => this.giveReward(id, dex, shiny));
     this.gifts = new Gifts(this);
+    this.feedback = new Feedback(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
   }
@@ -1082,6 +1086,7 @@ export class Accounts {
           signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
           progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: ACHIEVEMENTS_ON ? earned : [],
           looks: this.gifts.ownedLooks(me.id),
+          inbox: me.banned ? [] : this.gifts.inbox(me.id),
           email: { on: !!this.mailer, address: me.email ? maskEmail(me.email) : null, confirmed: !!me.email_verified },
         });
       }
@@ -1090,6 +1095,21 @@ export class Accounts {
         if (me.banned) return send(403, { error: 'This account is banned' });
         const b = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
         const r = this.gifts.redeem(me.id, b.code);
+        return 'error' in r ? send(400, r) : send(200, r);
+      }
+      // A gift (or message) from the game's makers, waiting on the online menu.
+      if (req.method === 'POST' && path === '/api/inbox/claim') {
+        if (!me) return send(401, { error: 'Sign in first' });
+        if (me.banned) return send(403, { error: 'This account is banned' });
+        const b = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+        const r = this.gifts.claim(me.id, Number(b.id));
+        return 'error' in r ? send(409, r) : send(200, r);
+      }
+      // Feedback, suggestions and bug reports (guests too), for the admin dashboard.
+      if (req.method === 'POST' && path === '/api/feedback') {
+        if (me?.banned) return send(403, { error: 'This account is banned' });
+        const b = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+        const r = this.feedback.submit(me ? { id: me.id, username: me.username } : null, clientIp(req), b);
         return 'error' in r ? send(400, r) : send(200, r);
       }
       if (req.method === 'GET' && path === '/api/egg') {

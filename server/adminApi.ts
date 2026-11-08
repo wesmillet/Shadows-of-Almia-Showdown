@@ -19,9 +19,16 @@
  *   GET /api/admin/match?id=        one completed match: participants, places, recorded stats
  *   GET /api/admin/live             matches running now
  *   GET /api/admin/server           the server's health: CPU, memory, game-tick timing, the last hour
+ *   GET /api/admin/feedback?kind=&status=   players' feedback, suggestions and bug reports
+ *   POST /api/admin/feedback {id, status?, note?}  mark one new, seen or done, keep a note
+ *   POST /api/admin/account/gift {id, message, kind?, ...}  send one player a message and a gift (they claim it on the online menu)
+ *   GET /api/admin/account/gifts?id= what was sent to an account, and whether it was claimed
+ *
+ * Accounts and match history take sort=<column>&dir=asc|desc (whitelisted columns).
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts } from './accounts';
+import { ITEMS } from '../src/sim/items';
 
 /** A connected player as the dashboard shows them (hub.ts builds these). */
 export interface OnlineEntry {
@@ -92,6 +99,23 @@ export class AdminApi {
       }
       return gifts.setActive(String(body.code ?? ''), body.active === true) ? send(200, { ok: true }) : send(404, { error: 'No such code' });
     }
+    // Feedback: marking one seen or done (and a note) is the only write.
+    if (path === '/api/admin/feedback') {
+      if (req.method === 'GET') return send(200, this.acc.feedback.list(String(url.searchParams.get('kind') ?? ''), String(url.searchParams.get('status') ?? '')));
+      if (req.method !== 'POST') return send(405, { error: 'GET or POST' });
+      if (req.headers['x-almia'] !== '1') return send(403, { error: 'Missing header' });
+      const body = await readBody(req);
+      return this.acc.feedback.update(Number(body.id), body) ? send(200, { ok: true }) : send(404, { error: 'No such feedback' });
+    }
+    // A gift (and a message) for one player; nothing changes until they claim it.
+    if (path === '/api/admin/account/gift') {
+      if (req.method !== 'POST') return send(405, { error: 'POST' });
+      if (req.headers['x-almia'] !== '1') return send(403, { error: 'Missing header' });
+      const body = await readBody(req);
+      const r = this.acc.gifts.send(me.username, Number(body.id), body);
+      if (!('error' in r)) this.acc.logMod({ id: me.id, name: me.username }, 'gift', String((this.acc.db.prepare('SELECT username FROM users WHERE id = ?').get(Number(body.id)) as { username: string } | undefined)?.username ?? body.id), JSON.stringify({ kind: body.kind ?? 'message', message: String(body.message ?? '').slice(0, 120) }));
+      return 'error' in r ? send(400, r) : send(200, r);
+    }
     // A player locked out of their account: a one-time reset code they type in Forgot password.
     if (path === '/api/admin/account/reset') {
       if (req.method !== 'POST') return send(405, { error: 'POST' });
@@ -121,6 +145,7 @@ export class AdminApi {
             bots: live.reduce((n, m) => n + m.trainers.filter((t) => !t.human).length, 0),
             away: this.hooks.awaySeats().length,
           },
+          feedbackNew: this.acc.feedback.newCount(),
           players: humans.sort((a, b) => a.state.localeCompare(b.state) || a.name.localeCompare(b.name)),
           away: this.hooks.awaySeats(),
         });
@@ -132,10 +157,11 @@ export class AdminApi {
         const where = q ? "WHERE u.username LIKE ? ESCAPE '\\'" : '';
         const args = q ? [`%${likeEscape(q)}%`] : [];
         const total = (db.prepare(`SELECT COUNT(*) AS n FROM users u ${where}`).get(...args) as { n: number }).n;
+        const order = sortSql(url, { username: 'u.username COLLATE NOCASE', role: 'u.role', created_at: 'u.created_at', last_seen: 'COALESCE(u.last_seen, device_seen, 0)', pc: 'pc' }, 'u.username COLLATE NOCASE');
         const rows = db.prepare(`SELECT u.id, u.username, u.role, u.created_at, u.last_seen, u.banned,
             (SELECT COUNT(*) FROM pc WHERE pc.user_id = u.id) AS pc,
             (SELECT MAX(last_seen) FROM devices d WHERE d.user_id = u.id) AS device_seen
-          FROM users u ${where} ORDER BY u.username COLLATE NOCASE LIMIT ? OFFSET ?`).all(...args, PAGE, page * PAGE);
+          FROM users u ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, PAGE, page * PAGE);
         return send(200, { total, page, pageSize: PAGE, accounts: rows });
       }
       if (path === '/api/admin/account') {
@@ -160,6 +186,7 @@ export class AdminApi {
           matches: this.matchesOf(id, 0),
         });
       }
+      if (path === '/api/admin/account/gifts') return send(200, { gifts: this.acc.gifts.sent(Number(url.searchParams.get('id'))), looks: this.acc.gifts.lookOptions(), items: Object.entries(ITEMS).map(([id, d]) => ({ id, name: d.name })).sort((a, b) => a.name.localeCompare(b.name)) });
       if (path === '/api/admin/account/matches') {
         const id = Number(url.searchParams.get('id'));
         return send(200, this.matchesOf(id, page));
@@ -181,7 +208,7 @@ export class AdminApi {
         }
         const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
         const total = (db.prepare(`SELECT COUNT(*) AS n FROM match_log ${where}`).get(...args) as { n: number }).n;
-        const rows = (db.prepare(`SELECT id, mode, started_at, ended_at, seconds, winner, trainers_n, humans, bots, aborted FROM match_log ${where} ORDER BY ended_at DESC LIMIT ? OFFSET ?`).all(...args, PAGE, page * PAGE));
+        const rows = (db.prepare(`SELECT id, mode, started_at, ended_at, seconds, winner, trainers_n, humans, bots, aborted FROM match_log ${where} ORDER BY ${sortSql(url, { ended_at: 'ended_at', mode: 'mode', seconds: 'seconds', winner: 'winner COLLATE NOCASE', trainers_n: 'trainers_n', humans: 'humans', bots: 'bots' }, 'ended_at DESC')} LIMIT ? OFFSET ?`).all(...args, PAGE, page * PAGE));
         const legacy = (db.prepare('SELECT COUNT(*) AS n FROM matches WHERE id NOT IN (SELECT id FROM match_log)').get() as { n: number }).n;
         return send(200, { total, page, pageSize: PAGE, matches: rows, since: this.acc.historySince(), legacy });
       }
@@ -216,6 +243,13 @@ export class AdminApi {
       ) ORDER BY ended_at DESC LIMIT ? OFFSET ?`).all(userId, userId, userId, PAGE, page * PAGE);
     return { page, pageSize: PAGE, total, matches: rows };
   }
+}
+
+/** ORDER BY for ?sort=&dir= from a whitelist of columns (anything else: the default order). */
+function sortSql(url: URL, cols: Record<string, string>, fallback: string): string {
+  const col = cols[String(url.searchParams.get('sort') ?? '')];
+  if (!col) return fallback;
+  return `${col} ${url.searchParams.get('dir') === 'asc' ? 'ASC' : 'DESC'}, rowid`;
 }
 
 /** Text for a LIKE pattern, its wildcards taken literally (with ESCAPE '\\'). */

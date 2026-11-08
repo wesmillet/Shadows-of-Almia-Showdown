@@ -13,6 +13,7 @@ import type { Accounts } from './accounts';
 import { SPECIES, movesAt } from '../src/sim/data';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { isFreeLook } from '../src/net/progression';
+import { ITEMS } from '../src/sim/items';
 
 export interface GiftCode {
   code: string;
@@ -27,6 +28,13 @@ export interface GiftCode {
   created_by: string;
   created_at: number;
 }
+
+/** A gift sent to one player (gift_inbox). */
+export type DirectGift =
+  | { kind: 'pokemon'; dex: string; level: number; shiny: boolean; name: string }
+  | { kind: 'look'; look: string; name: string }
+  | { kind: 'item'; item: string; count: number; name: string };
+export interface InboxEntry { id: number; from: string; message: string; gift: DirectGift | null; at: number }
 
 export type GiftResult =
   | { kind: 'pokemon'; dex: string; name: string; level: number; shiny: boolean }
@@ -61,6 +69,11 @@ export class Gifts {
       CREATE TABLE IF NOT EXISTS gift_redemptions (
         code TEXT NOT NULL, user_id INTEGER NOT NULL, at INTEGER NOT NULL, pc_id INTEGER, PRIMARY KEY (code, user_id)
       );
+      CREATE TABLE IF NOT EXISTS gift_inbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, from_name TEXT NOT NULL, message TEXT NOT NULL,
+        gift TEXT, at INTEGER NOT NULL, claimed_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS gift_inbox_user ON gift_inbox (user_id, claimed_at);
       CREATE TABLE IF NOT EXISTS user_looks (
         user_id INTEGER NOT NULL, look TEXT NOT NULL, via TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, look)
       );
@@ -178,6 +191,98 @@ export class Gifts {
     } catch (e) {
       return { error: String((e as Error).message) === 'used up' ? 'That code has been used up' : 'That code could not be used right now' };
     }
+  }
+
+  // ---------------------------------------------------------------- gifts sent to one player
+
+  /**
+   * The administrator sends one account a message, with a Pokémon, a look or items if they like.
+   * Nothing is handed over yet: the player sees it on the online menu and claims it there (out of
+   * any match, so a chest a match is holding can not overwrite the items).
+   */
+  send(by: string, userId: number, b: Record<string, unknown>): { id: number } | { error: string } {
+    if (!this.acc.db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return { error: 'No such account' };
+    const message = String(b.message ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);
+    let gift: DirectGift | null = null;
+    if (b.kind === 'pokemon') {
+      const dex = this.dexOf(b.dex);
+      if (!dex) return { error: 'No such Pokémon (use its number, like 25 or 0025, or its name)' };
+      const level = Math.round(Number(b.level ?? 5));
+      if (!(level >= 1 && level <= 100)) return { error: 'Level 1 to 100' };
+      const shiny = b.shiny === true;
+      if (shiny && !SpriteRegistry.hasShiny(dex)) return { error: `${SPECIES.get(dex)?.name} has no shiny colours in the game` };
+      gift = { kind: 'pokemon', dex, level, shiny, name: SPECIES.get(dex)?.name ?? dex };
+    } else if (b.kind === 'look') {
+      const look = String(b.look ?? '');
+      if (!this.lookIds().includes(look)) return { error: 'No such look' };
+      if (this.ownedLooks(userId).includes(look)) return { error: 'They already have that look' };
+      gift = { kind: 'look', look, name: lookLabel(look) };
+    } else if (b.kind === 'item') {
+      const item = this.itemOf(b.item);
+      if (!item) return { error: 'No such item (use its id, like rare-candy, or its name)' };
+      const count = Math.round(Number(b.count ?? 1));
+      if (!(count >= 1 && count <= 999)) return { error: 'Count 1 to 999' };
+      gift = { kind: 'item', item, count, name: ITEMS[item]?.name ?? item };
+    }
+    if (!message && !gift) return { error: 'Write a message or pick a gift' };
+    const id = Number(this.acc.db.prepare('INSERT INTO gift_inbox (user_id, from_name, message, gift, at) VALUES (?, ?, ?, ?, ?)')
+      .run(userId, by, message, gift ? JSON.stringify(gift) : null, Date.now()).lastInsertRowid);
+    return { id };
+  }
+
+  /** What is waiting for a player (unclaimed, oldest first). */
+  inbox(userId: number): InboxEntry[] {
+    const rows = this.acc.db.prepare('SELECT id, from_name, message, gift, at FROM gift_inbox WHERE user_id = ? AND claimed_at IS NULL ORDER BY id LIMIT 20').all(userId) as Array<{ id: number; from_name: string; message: string; gift: string | null; at: number }>;
+    return rows.map((r) => ({ id: r.id, from: r.from_name, message: r.message, gift: r.gift ? (JSON.parse(r.gift) as DirectGift) : null, at: r.at }));
+  }
+
+  /** Everything sent to an account (the dashboard). */
+  sent(userId: number): Array<InboxEntry & { claimedAt: number | null }> {
+    const rows = this.acc.db.prepare('SELECT id, from_name, message, gift, at, claimed_at FROM gift_inbox WHERE user_id = ? ORDER BY id DESC LIMIT 50').all(userId) as Array<{ id: number; from_name: string; message: string; gift: string | null; at: number; claimed_at: number | null }>;
+    return rows.map((r) => ({ id: r.id, from: r.from_name, message: r.message, gift: r.gift ? (JSON.parse(r.gift) as DirectGift) : null, at: r.at, claimedAt: r.claimed_at }));
+  }
+
+  /** The player claims one: it is handed over and marked claimed together (never twice). */
+  claim(userId: number, id: number, now = Date.now()): { ok: true; gift: DirectGift | null } | { error: string } {
+    const row = this.acc.db.prepare('SELECT gift FROM gift_inbox WHERE id = ? AND user_id = ? AND claimed_at IS NULL').get(id, userId) as { gift: string | null } | undefined;
+    if (!row) return { error: 'Already claimed' };
+    const gift = row.gift ? (JSON.parse(row.gift) as DirectGift) : null;
+    try {
+      this.acc.unit(() => {
+        const took = this.acc.db.prepare('UPDATE gift_inbox SET claimed_at = ? WHERE id = ? AND claimed_at IS NULL').run(now, id);
+        if (Number(took.changes) !== 1) throw new Error('claimed');
+        if (gift?.kind === 'pokemon') {
+          const sp = SPECIES.get(gift.dex);
+          if (!sp) throw new Error('no species');
+          this.acc.addToPc(userId, { dex: gift.dex, name: sp.name, level: gift.level, shiny: gift.shiny, moves: movesAt(sp, gift.level) }, 'gift', `inbox:${id}`);
+        } else if (gift?.kind === 'look') {
+          this.acc.db.prepare('INSERT OR IGNORE INTO user_looks (user_id, look, via, at) VALUES (?, ?, ?, ?)').run(userId, gift.look, `inbox:${id}`, now);
+          this.acc.logCollection(userId, 'add:look', { ref: `inbox:${id}`, detail: { look: gift.look } });
+        } else if (gift?.kind === 'item') {
+          // Into the storage chest: onto its stack, or a slot of its own (emptied like an old one).
+          const chest = this.acc.loadChest(userId);
+          const same = chest.find((e) => e.id === gift.item);
+          if (same) same.count = Math.min(9999, same.count + gift.count);
+          else if (chest.length < 10) chest.push({ id: gift.item, count: gift.count });
+          else throw new Error('chest full');
+          this.acc.saveChest(userId, chest, `inbox:${id}`);
+        }
+      });
+    } catch (e) {
+      const m = String((e as Error).message);
+      return { error: m === 'claimed' ? 'Already claimed' : m === 'chest full' ? 'Your storage chest is full: take something out first' : 'Could not claim it right now' };
+    }
+    return { ok: true, gift };
+  }
+
+  /** An item from its id (rare-candy) or its name (Rare Candy). */
+  private itemOf(v: unknown): string | null {
+    const s = String(v ?? '').trim();
+    if (!s) return null;
+    if (ITEMS[s]) return s;
+    const lower = s.toLowerCase();
+    for (const [id, def] of Object.entries(ITEMS)) if (def.name.toLowerCase() === lower) return id;
+    return null;
   }
 
   private randomPart(): string {

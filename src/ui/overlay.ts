@@ -224,8 +224,35 @@ export class ChatPanel {
     };
     const close = el('button', 'almia-btn alt', 'Cancel');
     close.onclick = () => menu.remove();
-    menu.append(mute, report, close);
+    menu.append(mute, report);
+    // Moderators and admins: remove the message for everyone, or mute its sender from chat.
+    const role = this.net.me.user?.role;
+    if ((role === 'mod' || role === 'admin') && m.from !== this.net.me.user?.username) {
+      const say = (text: string) => this.add({ t: 'chat', from: 'System', text, at: Date.now(), system: true });
+      if (m.id !== undefined) {
+        const del = el('button', 'almia-btn', 'Delete message');
+        del.onclick = async () => {
+          menu.remove();
+          const r = await this.net.api<{ ok?: boolean }>('/api/mod/chat/remove', { id: m.id });
+          if (!r.ok) say(r.error ?? 'Could not delete it');
+        };
+        menu.appendChild(del);
+      }
+      for (const [label, minutes] of [['Chat-mute 1 hour', 60], ['Chat-mute 1 day', 1440]] as const) {
+        const b = el('button', 'almia-btn alt', label);
+        b.onclick = async () => {
+          menu.remove();
+          const r = await this.net.api<{ ok?: boolean }>('/api/mod/action', { name: m.from, action: 'mute', minutes, reason: `From chat: "${m.text.slice(0, 120)}"` });
+          say(r.ok ? `${m.from} is muted from chat for ${minutes === 60 ? '1 hour' : '1 day'}.` : (r.error ?? 'Could not mute them'));
+        };
+        menu.appendChild(b);
+      }
+    }
+    menu.append(close);
     overlayRoot().appendChild(menu);
+    // Taller for moderators: lifted to stay on screen.
+    const over = menu.getBoundingClientRect().bottom - (window.innerHeight - 8);
+    if (over > 0) menu.style.top = `${Math.max(8, parseFloat(menu.style.top) - over)}px`;
     this.menu = menu;
   }
 

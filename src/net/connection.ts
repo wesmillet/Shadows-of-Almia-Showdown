@@ -28,6 +28,12 @@ function deviceId(): string {
   }
 }
 
+export type DirectGift =
+  | { kind: 'pokemon'; dex: string; level: number; shiny: boolean; name: string }
+  | { kind: 'look'; look: string; name: string }
+  | { kind: 'item'; item: string; count: number; name: string };
+export interface InboxEntry { id: number; from: string; message: string; gift: DirectGift | null; at: number }
+
 export interface Me {
   signedIn: boolean;
   google: boolean;
@@ -42,6 +48,8 @@ export interface Me {
   achievements?: string[];
   /** Looks given to this account by Mystery Gift codes. */
   looks?: string[];
+  /** Gifts and messages from the game's makers, waiting to be claimed (server/gifts.ts). */
+  inbox?: InboxEntry[];
   /** Email for password resets: whether the server can send it, and this account's (masked) address. */
   email?: { on: boolean; address: string | null; confirmed: boolean };
 }

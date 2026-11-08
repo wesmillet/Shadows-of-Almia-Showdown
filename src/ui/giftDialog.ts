@@ -67,3 +67,44 @@ export function giftDialog(net: Connection, goOnline: () => void): Promise<void>
     });
   }, false);
 }
+
+/**
+ * Gifts and messages the game's makers sent this player (server/gifts.ts send): shown on the online
+ * menu one at a time; Claim hands the gift over (a Pokémon to the PC, a look, items to the chest).
+ */
+export async function showInbox(net: Connection): Promise<void> {
+  const list = net.me.inbox ?? [];
+  for (const g of list) {
+    await modal((box, close) => {
+      box.append(el('h2', '', g.gift ? 'You got a gift!' : 'A message for you'));
+      box.append(el('div', 'almia-note', `From ${g.from}`));
+      if (g.message) {
+        const p = el('p', '', g.message);
+        Object.assign(p.style, { color: '#4a3424', fontSize: '16px', whiteSpace: 'pre-wrap' });
+        box.append(p);
+      }
+      const what = g.gift
+        ? g.gift.kind === 'pokemon' ? `${g.gift.shiny ? 'A shiny ' : ''}${g.gift.name} (Lv ${g.gift.level}), sent to your PC`
+          : g.gift.kind === 'look' ? `A new look: ${g.gift.name}`
+            : `${g.gift.name}${g.gift.count > 1 ? ` x${g.gift.count}` : ''}, sent to your storage chest`
+        : null;
+      if (what) box.append(el('h3', '', what));
+      const err = el('div', 'err');
+      const row = el('div', 'row');
+      const claim = el('button', 'almia-btn', g.gift ? 'Claim' : 'OK');
+      row.append(claim);
+      box.append(err, row);
+      claim.onclick = async () => {
+        claim.disabled = true;
+        const r = await net.api<{ ok?: boolean }>('/api/inbox/claim', { id: g.id });
+        claim.disabled = false;
+        if (!r.ok && r.error !== 'Already claimed') {
+          err.textContent = r.error ?? 'Could not claim it';
+          return;
+        }
+        close();
+      };
+    }, false);
+  }
+  if (list.length) await net.refreshMe();
+}

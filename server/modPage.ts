@@ -35,6 +35,8 @@ input, select, textarea { border: 2px solid var(--ink); background: #fffaf0; col
 a { color: var(--accent); }
 .err { color: var(--bad); }
 .tag { display: inline-block; padding: 0 5px; border: 1px solid var(--dim); font-size: 12px; margin-right: 3px; }
+tr:first-child > th { cursor: pointer; user-select: none; white-space: nowrap; }
+th[data-dir="asc"]::after { content: " \\25B2"; } th[data-dir="desc"]::after { content: " \\25BC"; }
 </style></head><body>
 <header><h1>Moderators</h1><span id="tabs"></span><span class="who" id="who"></span></header>
 <main id="main"><div class="panel">Loading...</div></main>
@@ -51,7 +53,22 @@ function spark(samples, key, label, unit) {
 }
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const when = (t) => t ? new Date(t).toLocaleString() : '-';
+const when = (t) => t ? '<span data-v="' + t + '">' + new Date(t).toLocaleString() + '</span>' : '-';
+// Click a column header to sort its table (again to reverse).
+document.addEventListener('click', (e) => {
+  const th = e.target.closest ? e.target.closest('th') : null;
+  if (!th) return;
+  const tr = th.parentElement, table = th.closest('table');
+  if (!tr || !table || tr.querySelector('td')) return;
+  const i = Array.prototype.indexOf.call(tr.children, th);
+  const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+  for (const h of tr.children) delete h.dataset.dir;
+  th.dataset.dir = dir;
+  const rows = Array.from(table.querySelectorAll('tr')).filter((r) => r !== tr && r.querySelector('td') && r.closest('table') === table);
+  const val = (r) => { const c = r.children[i]; if (!c) return ''; const v = c.querySelector('[data-v]'); if (v) return Number(v.dataset.v); const t = c.textContent.trim(); const n = Number(t.replace(/[,%]/g, '')); return t !== '' && t !== '-' && !isNaN(n) ? n : t.toLowerCase(); };
+  rows.sort((a, b) => { const x = val(a), y = val(b); const c = typeof x === 'number' && typeof y === 'number' ? x - y : typeof x === 'number' ? -1 : typeof y === 'number' ? 1 : String(x).localeCompare(String(y), undefined, { numeric: true }); return dir === 'asc' ? c : -c; });
+  for (const r of rows) r.parentElement.appendChild(r);
+});
 const api = async (path, body) => {
   const r = await fetch(path, body === undefined ? { credentials: 'include' } : { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Almia': '1' }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({ error: 'Bad reply' }));
@@ -126,8 +143,9 @@ async function render() {
   }
   if (tab === 'chat') {
     const r = await api('/api/mod/chat' + (arg ? '?q=' + encodeURIComponent(arg) : ''));
-    main('<div class="panel"><h2>Chat</h2><div class="row"><input id="q" value="' + esc(arg) + '" placeholder="Search words or names"><button class="act" id="qgo">Search</button></div><table>' +
-      (r.chat || []).map((x) => '<tr><td class="dim">' + when(x.at) + '</td><td>' + player(x.name) + '</td><td>' + esc(x.text) + '</td><td>' + (x.text === '[removed]' ? '' : '<button class="act alt" data-rm="' + x.id + '">Remove</button>') + '</td></tr>').join('') + '</table></div>');
+    main('<div class="panel"><h2>Chat</h2><p class="dim">Remove deletes a message for everyone. Mute stops a player talking in chat (they can still read and play). You can also do both in the game: click a name in chat.</p><div class="row"><input id="q" value="' + esc(arg) + '" placeholder="Search words or names"><button class="act" id="qgo">Search</button></div><table><tr><th>When</th><th>Player</th><th>Message</th><th></th></tr>' +
+      (r.chat || []).map((x) => '<tr><td class="dim">' + when(x.at) + '</td><td>' + player(x.name) + '</td><td>' + esc(x.text) + '</td><td style="white-space:nowrap">' + (x.text === '[removed]' ? '' : '<button class="act alt" data-rm="' + x.id + '">Remove</button>') + (x.name === 'Announcement' || x.name === '[deleted]' ? '' : ' <button class="act alt" data-mute="' + esc(x.name) + '" data-min="60">Mute 1 h</button> <button class="act alt" data-mute="' + esc(x.name) + '" data-min="1440">Mute 1 day</button>') + '</td></tr>').join('') + '</table></div>');
+    for (const b of document.querySelectorAll('[data-mute]')) b.onclick = async () => { const r2 = await api('/api/mod/action', { name: b.dataset.mute, action: 'mute', minutes: Number(b.dataset.min), reason: 'From the chat log' }); b.textContent = r2.ok ? 'Muted' : (r2.error || 'Failed'); b.disabled = true; };
     $('#qgo').onclick = () => go('chat', $('#q').value.trim());
     for (const b of document.querySelectorAll('[data-rm]')) b.onclick = async () => { await api('/api/mod/chat/remove', { id: Number(b.dataset.rm) }); render(); };
     return wire();
@@ -156,7 +174,7 @@ async function render() {
     html += '<div class="panel"><h2>Backups</h2><div class="row">' + (b.last ? 'Last: ' + when(b.last.at) + ' · ' + Math.round(b.last.bytes / 1024) + ' KB · ' + b.last.ms + ' ms' + (b.last.uploaded.length ? ' · uploaded ' + b.last.uploaded.map(esc).join(', ') : '') : 'None yet (the first runs a minute after start)') +
       (b.lastError ? ' · <span class="bad">failing: ' + esc(b.lastError) + '</span>' : '') + '<span style="margin-left:auto"></span><button class="act alt" id="bk">Back up now</button></div><div class="dim">' + (b.s3 ? 'Off the machine: s3://' + esc(b.s3) : '<span class="bad">Only on the volume: set up S3 storage (fly storage create) for copies off the machine.</span>') + '</div>' +
       '<table>' + b.local.map((f) => '<tr><td>' + esc(f.name) + '</td><td>' + Math.round(f.bytes / 1024) + ' KB</td><td class="dim">' + when(f.at) + '</td></tr>').join('') + '</table></div>';
-    html += '<div class="panel"><h2>Errors</h2><table><tr><th>Last</th><th>Where</th><th>Count</th><th>What</th><th></th></tr>' + (r.errors || []).map((e) => '<tr><td class="dim">' + when(e.last_at) + '</td><td><span class="tag">' + esc(e.source) + '</span></td><td>' + e.count + '</td><td>' + esc(e.message) + '<details><summary class="dim">details</summary><pre style="white-space:pre-wrap;font-size:12px">' + esc(e.stack) + '\n' + esc(e.context) + '</pre></details></td><td><button class="act alt" data-clr="' + esc(e.key) + '">Clear</button></td></tr>').join('') + '</table>' + (r.errors && r.errors.length ? '' : '<p class="dim">No errors. Nice.</p>') + '</div>';
+    html += '<div class="panel"><h2>Errors</h2><table><tr><th>Last</th><th>Where</th><th>Count</th><th>What</th><th></th></tr>' + (r.errors || []).map((e) => '<tr><td class="dim">' + when(e.last_at) + '</td><td><span class="tag">' + esc(e.source) + '</span></td><td>' + e.count + '</td><td>' + esc(e.message) + '<details><summary class="dim">details</summary><pre style="white-space:pre-wrap;font-size:12px">' + esc(e.stack) + '\\n' + esc(e.context) + '</pre></details></td><td><button class="act alt" data-clr="' + esc(e.key) + '">Clear</button></td></tr>').join('') + '</table>' + (r.errors && r.errors.length ? '' : '<p class="dim">No errors. Nice.</p>') + '</div>';
     main(html);
     for (const x of document.querySelectorAll('[data-drain]')) x.onclick = async () => { const res = await api('/api/mod/drain', { on: x.dataset.drain === '1' }); if (res.error) alert(res.error); render(); };
     $('#bk').onclick = async () => { $('#bk').textContent = 'Backing up...'; const res = await api('/api/mod/backup', {}); if (res.error) alert(res.error); render(); };

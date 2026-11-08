@@ -51,16 +51,41 @@ button.act:disabled { opacity: 0.4; cursor: default; }
 .charts h4 { margin: 0 0 4px; font-weight: normal; color: var(--dim); font-size: 13px; }
 a { color: var(--accent); }
 .err { color: var(--bad); }
+tr:first-child > th { cursor: pointer; user-select: none; white-space: nowrap; }
+tr:first-child > th:hover { color: var(--ink); }
+th[data-dir="asc"]::after { content: " \\25B2"; } th[data-dir="desc"]::after { content: " \\25BC"; }
+.fb { white-space: pre-wrap; max-width: 420px; }
+.badge { background: var(--bad); color: #fff; padding: 0 5px; margin-left: 4px; font-size: 11px; }
 </style></head><body>
 <header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a href="/mod">Moderation</a></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
-const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['gifts', 'Mystery Gift']];
+const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['feedback', 'Feedback'], ['gifts', 'Mystery Gift']];
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const when = (t) => t ? new Date(t).toLocaleString() : '-';
-const ago = (t) => { if (!t) return '-'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' days ago'; };
-const dur = (s) => s == null ? '-' : Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
+// Times and durations carry their raw value (data-v) so a column of them sorts by time, not text.
+const when = (t) => t ? '<span data-v="' + t + '">' + new Date(t).toLocaleString() + '</span>' : '-';
+const ago = (t) => { if (!t) return '-'; const s = Math.round((Date.now() - t) / 1000); return '<span data-v="' + t + '">' + (s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' days ago') + '</span>'; };
+const dur = (s) => s == null ? '-' : '<span data-v="' + s + '">' + Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0') + '</span>';
+// Click a column header to sort its table (again to reverse). Lists the server pages through
+// (accounts, match history) mark their headers data-sort and ask the server instead.
+document.addEventListener('click', (e) => {
+  const th = e.target.closest ? e.target.closest('th') : null;
+  if (!th || th.dataset.sort) return;
+  const tr = th.parentElement, table = th.closest('table');
+  if (!tr || !table || tr.querySelector('td')) return;
+  const i = Array.prototype.indexOf.call(tr.children, th);
+  const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+  for (const h of tr.children) delete h.dataset.dir;
+  th.dataset.dir = dir;
+  const rows = Array.from(table.querySelectorAll('tr')).filter((r) => r !== tr && r.querySelector('td') && r.closest('table') === table);
+  const val = (r) => { const c = r.children[i]; if (!c) return ''; const v = c.querySelector('[data-v]'); if (v) return Number(v.dataset.v); const t = c.textContent.trim(); const n = Number(t.replace(/[,%]/g, '')); return t !== '' && t !== '-' && !isNaN(n) ? n : t.toLowerCase(); };
+  rows.sort((a, b) => { const x = val(a), y = val(b); const c = typeof x === 'number' && typeof y === 'number' ? x - y : typeof x === 'number' ? -1 : typeof y === 'number' ? 1 : String(x).localeCompare(String(y), undefined, { numeric: true }); return dir === 'asc' ? c : -c; });
+  for (const r of rows) r.parentElement.appendChild(r);
+});
+// A header row for a list the server sorts: key = column, current = { sort, dir }.
+const sortHead = (cols, cur) => '<tr>' + cols.map(([k, l]) => k ? '<th data-sort="' + k + '"' + (cur.sort === k ? ' data-dir="' + cur.dir + '"' : '') + '>' + l + '</th>' : '<th>' + l + '</th>').join('') + '</tr>';
+const sortClicks = (cur, redo) => { for (const th of document.querySelectorAll('th[data-sort]')) th.onclick = () => { cur.dir = cur.sort === th.dataset.sort && cur.dir === 'asc' ? 'desc' : 'asc'; cur.sort = th.dataset.sort; redo(); }; };
 const who = (p) => p.guest ? '<span class="tag guest">guest</span>' : p.human === false || p.bot ? '<span class="tag bot">bot</span>' : '<span class="tag human">account</span>';
 const api = async (path) => {
   let r;
@@ -93,6 +118,7 @@ async function show(t, arg) {
   if (t === 'history') return arg ? match(arg) : history(0);
   if (t === 'accounts') return arg ? account(Number(arg)) : accounts('', 0);
   if (t === 'gifts') return gifts();
+  if (t === 'feedback') return feedback();
 }
 
 // ---------------------------------------------------------------- Mystery Gift
@@ -239,12 +265,14 @@ async function live() {
 
 // ---------------------------------------------------------------- history
 let hf = { mode: '', player: '', aborted: false };
+const hs = { sort: '', dir: 'desc' };
 async function history(page) {
   $('#main').innerHTML = '<div class="panel">Loading matches...</div>';
   const q = new URLSearchParams({ page: String(page) });
   if (hf.mode) q.set('mode', hf.mode);
   if (hf.player) q.set('player', hf.player);
   if (hf.aborted) q.set('aborted', '1');
+  if (hs.sort) { q.set('sort', hs.sort); q.set('dir', hs.dir); }
   const j = await api('/api/admin/matches?' + q);
   if (j.error) return fail(j.error);
   const pages = Math.max(1, Math.ceil(j.total / j.pageSize));
@@ -252,7 +280,7 @@ async function history(page) {
     '<div class="note">Full match records (duration, every trainer with bots marked, places, stats) start ' + (j.since ? when(j.since) : 'with this release') + '. Matches before that were recorded only for signed-in players (their place, outcome and stats): ' + j.legacy + ' such match' + (j.legacy === 1 ? '' : 'es') + ' can be opened from an account\\'s page.</div>' +
     '<div class="row"><select id="fm"><option value="">Any mode</option><option value="casual">Public</option><option value="private">Private</option></select>' +
     '<input id="fp" placeholder="Trainer name" value="' + esc(hf.player) + '"><label><input type="checkbox" id="fa"' + (hf.aborted ? ' checked' : '') + '> include called-off matches</label><button class="act" id="fgo">Filter</button></div>' +
-    (j.matches.length ? '<table><tr><th>Ended</th><th>Mode</th><th>Duration</th><th>Winner</th><th>Trainers</th><th>Humans</th><th>Bots</th></tr>' +
+    (j.matches.length ? '<table>' + sortHead([['ended_at', 'Ended'], ['mode', 'Mode'], ['seconds', 'Duration'], ['winner', 'Winner'], ['trainers_n', 'Trainers'], ['humans', 'Humans'], ['bots', 'Bots']], hs) +
       j.matches.map((m) => '<tr class="click" data-id="' + esc(m.id) + '"><td>' + when(m.ended_at) + '</td><td>' + esc(m.mode) + (m.aborted ? ' <span class="tag">called off</span>' : '') + '</td><td>' + dur(m.seconds) + '</td><td>' + esc(m.winner || '-') + '</td><td>' + m.trainers_n + '</td><td>' + m.humans + '</td><td>' + m.bots + '</td></tr>').join('') + '</table>'
       : '<p class="dim">No completed matches recorded' + (hf.mode || hf.player ? ' for this filter' : ' yet') + '.</p>') +
     '<div class="row"><button class="act alt" id="prev"' + (page <= 0 ? ' disabled' : '') + '>Newer</button><span class="dim">Page ' + (page + 1) + ' of ' + pages + ' · ' + j.total + ' match' + (j.total === 1 ? '' : 'es') + '</span><button class="act alt" id="next"' + (page + 1 >= pages ? ' disabled' : '') + '>Older</button></div></div>';
@@ -260,6 +288,7 @@ async function history(page) {
   $('#fgo').onclick = () => { hf = { mode: $('#fm').value, player: $('#fp').value.trim(), aborted: $('#fa').checked }; history(0); };
   $('#prev').onclick = () => history(page - 1);
   $('#next').onclick = () => history(page + 1);
+  sortClicks(hs, () => history(0));
   for (const r of document.querySelectorAll('tr.click')) r.onclick = () => go('history', r.dataset.id);
 }
 async function match(id) {
@@ -284,19 +313,52 @@ async function match(id) {
     '<p><a href="#history">Back to the list</a></p></div>';
 }
 
+// ---------------------------------------------------------------- feedback
+let ff = { kind: '', status: 'new' };
+async function feedback() {
+  const q = new URLSearchParams(ff);
+  const j = await api('/api/admin/feedback?' + q);
+  if (j.error) return fail(j.error);
+  const c = j.counts || {};
+  const kinds = { bug: 'Bug', suggestion: 'Suggestion', feedback: 'Feedback' };
+  $('#main').innerHTML = '<div class="panel"><h2>Feedback</h2>' +
+    '<p class="dim">Sent from Options, Send feedback (guests too). ' + (c.new || 0) + ' new · ' + (c.seen || 0) + ' seen · ' + (c.done || 0) + ' done. Click a column header to sort.</p>' +
+    '<div class="row"><select id="fk"><option value="">Every kind</option><option value="bug">Bugs</option><option value="suggestion">Suggestions</option><option value="feedback">Feedback</option></select>' +
+    '<select id="fs"><option value="">Any status</option><option value="new">New</option><option value="seen">Seen</option><option value="done">Done</option></select><button class="act" id="fgo">Show</button></div>' +
+    (j.items.length ? '<table><tr><th>When</th><th>From</th><th>Kind</th><th>Message</th><th>Status</th><th>Note</th><th>Build / device</th></tr>' +
+      j.items.map((f) => '<tr><td>' + when(f.at) + '</td><td>' + (f.user_id ? '<a href="#accounts/' + f.user_id + '">' + esc(f.name) + '</a>' : '<span class="tag guest">guest</span>') + '</td><td>' + esc(kinds[f.kind] || f.kind) + '</td><td class="fb">' + esc(f.text) + '</td>' +
+        '<td><select data-st="' + f.id + '">' + ['new', 'seen', 'done'].map((s) => '<option value="' + s + '"' + (f.status === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
+        '<td>' + (f.note ? esc(f.note) + ' ' : '') + '<a href="#" data-note="' + f.id + '">' + (f.note ? 'edit' : 'add') + '</a></td><td class="dim" style="font-size:12px">' + esc(f.build || '') + '<br>' + esc(f.device || '') + '</td></tr>').join('') + '</table>'
+      : '<p class="dim">Nothing here.</p>') + '</div>';
+  $('#fk').value = ff.kind;
+  $('#fs').value = ff.status;
+  $('#fgo').onclick = () => { ff = { kind: $('#fk').value, status: $('#fs').value }; feedback(); };
+  for (const s of document.querySelectorAll('[data-st]')) s.onchange = async () => { const r = await post('/api/admin/feedback', { id: Number(s.dataset.st), status: s.value }); if (r.error) alert(r.error); };
+  for (const a of document.querySelectorAll('[data-note]')) a.onclick = async (e) => {
+    e.preventDefault();
+    const f = j.items.find((x) => x.id === Number(a.dataset.note));
+    const note = prompt('A note for yourself on this one:', (f && f.note) || '');
+    if (note === null) return;
+    const r = await post('/api/admin/feedback', { id: Number(a.dataset.note), note });
+    if (r.error) alert(r.error); else feedback();
+  };
+}
+
 // ---------------------------------------------------------------- accounts
+const as = { sort: '', dir: 'asc' };
 async function accounts(q, page) {
   $('#main').innerHTML = '<div class="panel"><h2>Accounts</h2><div class="row"><input id="q" placeholder="Search by username" value="' + esc(q) + '" autofocus><button class="act" id="go">Search</button></div><div id="res" class="dim">Loading...</div></div>';
   const run = async (q, page) => {
-    const j = await api('/api/admin/accounts?' + new URLSearchParams({ q, page: String(page) }));
+    const j = await api('/api/admin/accounts?' + new URLSearchParams(Object.assign({ q, page: String(page) }, as.sort ? { sort: as.sort, dir: as.dir } : {})));
     if (j.error) return fail(j.error);
     const pages = Math.max(1, Math.ceil(j.total / j.pageSize));
     $('#res').className = '';
-    $('#res').innerHTML = j.accounts.length ? '<table><tr><th>Username</th><th>Role</th><th>Created</th><th>Last seen</th><th>PC</th></tr>' +
+    $('#res').innerHTML = j.accounts.length ? '<table>' + sortHead([['username', 'Username'], ['role', 'Role'], ['created_at', 'Created'], ['last_seen', 'Last seen'], ['pc', 'PC']], as) +
       j.accounts.map((a) => '<tr class="click" data-id="' + a.id + '"><td>' + esc(a.username) + (a.banned ? ' <span class="tag">banned</span>' : '') + '</td><td>' + esc(a.role) + '</td><td>' + when(a.created_at) + '</td><td>' + (a.last_seen ? ago(a.last_seen) : a.device_seen ? ago(a.device_seen) + ' <span class="dim">(device log)</span>' : '-') + '</td><td>' + a.pc + '</td></tr>').join('') + '</table>' +
       '<div class="row"><button class="act alt" id="prev"' + (page <= 0 ? ' disabled' : '') + '>Previous</button><span class="dim">Page ' + (page + 1) + ' of ' + pages + ' · ' + j.total + ' account' + (j.total === 1 ? '' : 's') + '</span><button class="act alt" id="next"' + (page + 1 >= pages ? ' disabled' : '') + '>Next</button></div>'
       : '<p class="dim">No account matches "' + esc(q) + '".</p>';
     for (const r of document.querySelectorAll('tr.click')) r.onclick = () => go('accounts', r.dataset.id);
+    sortClicks(as, () => run(q, 0));
     const p = $('#prev'), n = $('#next');
     if (p) p.onclick = () => run(q, page - 1);
     if (n) n.onclick = () => run(q, page + 1);
@@ -304,6 +366,35 @@ async function accounts(q, page) {
   $('#go').onclick = () => run($('#q').value.trim(), 0);
   $('#q').onkeydown = (e) => { if (e.key === 'Enter') run($('#q').value.trim(), 0); };
   run(q, page);
+}
+async function drawGift(a) {
+  const g = await api('/api/admin/account/gifts?id=' + a.id);
+  const box = document.getElementById('gift');
+  if (!box) return;
+  if (g.error) { box.innerHTML = '<p class="err">' + esc(g.error) + '</p>'; return; }
+  const what = (x) => !x ? 'message only' : x.kind === 'pokemon' ? (x.shiny ? '★ ' : '') + esc(x.name) + ' Lv ' + x.level : x.kind === 'look' ? 'look: ' + esc(x.name) : esc(x.name) + ' x' + x.count;
+  box.className = '';
+  box.innerHTML = '<p class="dim">They see it the next time they open the online menu, and claim it there: a Pokémon goes to their PC, a look to their Trainer screen, items to their storage chest.</p>' +
+    '<div class="row"><label>Message <input id="gm" maxlength="500" size="60" placeholder="e.g. Thanks for reporting that bug!"></label></div>' +
+    '<div class="row"><label>Gift <select id="gk2"><option value="">nothing, just the message</option><option value="pokemon">a Pokémon</option><option value="item">items</option><option value="look">a look</option></select></label>' +
+    '<span id="gp2" style="display:none"><input id="gd2" placeholder="Pokémon: number or name" size="22"> Lv <input id="gl2" type="number" min="1" max="100" value="5" style="width:64px"> <label><input type="checkbox" id="gs2"> Shiny</label></span>' +
+    '<span id="gi2" style="display:none"><input id="gitem" list="gitems" placeholder="item name" size="22"><datalist id="gitems">' + g.items.map((i) => '<option value="' + esc(i.name) + '">').join('') + '</datalist> x <input id="gc2" type="number" min="1" max="999" value="1" style="width:70px"></span>' +
+    '<span id="glk2" style="display:none"><select id="glook">' + g.looks.map((l) => '<option value="' + esc(l.id) + '">' + esc(l.name) + '</option>').join('') + '</select></span></div>' +
+    '<div class="row"><button class="act" id="gsend">Send to ' + esc(a.username) + '</button><span id="gout"></span></div>' +
+    (g.gifts.length ? '<table><tr><th>Sent</th><th>From</th><th>Gift</th><th>Message</th><th>Claimed</th></tr>' + g.gifts.map((x) => '<tr><td>' + when(x.at) + '</td><td>' + esc(x.from) + '</td><td>' + what(x.gift) + '</td><td>' + esc(x.message) + '</td><td>' + (x.claimedAt ? when(x.claimedAt) : '<span class="dim">waiting</span>') + '</td></tr>').join('') + '</table>' : '');
+  const kind = $('#gk2');
+  kind.onchange = () => { $('#gp2').style.display = kind.value === 'pokemon' ? '' : 'none'; $('#gi2').style.display = kind.value === 'item' ? '' : 'none'; $('#glk2').style.display = kind.value === 'look' ? '' : 'none'; };
+  $('#gsend').onclick = async () => {
+    const body = { id: a.id, message: $('#gm').value.trim() };
+    if (kind.value === 'pokemon') Object.assign(body, { kind: 'pokemon', dex: $('#gd2').value.trim(), level: Number($('#gl2').value), shiny: $('#gs2').checked });
+    if (kind.value === 'item') Object.assign(body, { kind: 'item', item: $('#gitem').value.trim(), count: Number($('#gc2').value) });
+    if (kind.value === 'look') Object.assign(body, { kind: 'look', look: $('#glook').value });
+    $('#gsend').disabled = true;
+    const r = await post('/api/admin/account/gift', body);
+    $('#gsend').disabled = false;
+    if (r.error) { $('#gout').innerHTML = '<span class="err">' + esc(r.error) + '</span>'; return; }
+    drawGift(a);
+  };
 }
 async function account(id) {
   $('#main').innerHTML = '<div class="panel">Loading the account...</div>';
@@ -328,7 +419,9 @@ async function account(id) {
     '</table>' +
     '<h3>PC (' + pc.length + ' saved Pokémon)</h3><p class="dim">Saved account data: what this account keeps between matches. A match\\'s party is temporary and is not shown here; only Pokémon extracted at the end of a match are saved.</p>' + (pc.length ? '<table><tr><th>#</th><th>Pokémon</th><th>Dex</th><th>Lv</th><th>Shiny</th><th>Other</th><th>Moves</th><th>Held</th><th>Saved</th></tr>' +
       pc.map((m) => '<tr><td>' + m.id + '</td><td>' + esc(m.nickname || m.name) + '</td><td>' + esc(m.dex) + '</td><td>' + esc(m.level) + '</td><td>' + (m.shiny ? '★' : '') + '</td><td>' + ['alpha', 'legend', 'shadow'].filter((k) => m[k]).map((k) => '<span class="tag">' + k + '</span>').join('') + '</td><td>' + esc((m.moves || []).join(', ')) + '</td><td>' + esc(m.heldItem || '') + '</td><td>' + when(m.savedAt) + '</td></tr>').join('') + '</table>' : '<p class="dim">The PC is empty.</p>') +
+    '<h3>Send a gift or message</h3><div id="gift" class="dim">Loading...</div>' +
     '<h3>Matches</h3><div id="am"></div><p><a href="#accounts">Back to accounts</a></p></div>';
+  drawGift(a);
   const rb = document.getElementById('reset');
   if (rb) rb.onclick = async () => {
     if (!confirm('Make a one-time password reset code for ' + a.username + '? Only give it to the owner of this account.')) return;

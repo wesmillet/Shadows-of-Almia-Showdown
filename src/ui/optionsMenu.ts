@@ -8,6 +8,7 @@ import { KEY_ACTIONS, boundKey, keyName, saveSettings, settings } from '../setti
 import { el, overlayRoot } from './overlay';
 import { openHowToPlay } from './howToPlay';
 import { openCredits } from './credits';
+import { canSendFeedback, openFeedback } from './feedbackDialog';
 
 /** Layout only: the look is the game's own cream panel, modal and buttons (overlay.ts). */
 const CSS = `
@@ -66,6 +67,11 @@ export function openOptions(): Promise<void> {
       credits.addEventListener('click', () => void openCredits());
       const top = el('div', 'row');
       top.append(how, credits);
+      if (canSendFeedback()) {
+        const fb = el('button', 'almia-btn', 'Send feedback');
+        fb.addEventListener('click', () => void openFeedback());
+        top.append(fb);
+      }
       box.appendChild(top);
       box.appendChild(el('div', 'hint', 'Saved in this browser as you change them.'));
 

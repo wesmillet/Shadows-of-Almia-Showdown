@@ -19,10 +19,25 @@
       canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
       /* No page scroll, zoom or pull-to-refresh from a stray swipe (scrolling panels still scroll). */
       html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+      /* The demo points players to the online game. */
+      #online-banner { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
+        top: calc(8px + env(safe-area-inset-top)); max-width: calc(100vw - 24px); box-sizing: border-box;
+        display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 10px;
+        background: #f4e6c8; color: #2a1a10; border: 2px solid #2a1a10; box-shadow: 0 3px 0 #2a1a10;
+        font-size: 14px; font-weight: 600; touch-action: manipulation; }
+      #online-banner a { color: #2f55c9; font-weight: 800; white-space: nowrap; }
+      #online-banner button { border: 0; background: transparent; color: #2a1a10; font-size: 18px; line-height: 1;
+        cursor: pointer; padding: 2px 6px; }
+      #online-banner[hidden] { display: none; }
+      @media (max-width: 520px) { #online-banner { font-size: 12px; } }
     </style>
   </head>
   <body>
     <div id="stage"></div>
+    <div id="online-banner" role="note">
+      <span>Shadows of Almia is now online! Play with real players at <a href="https://soashowdown.com" target="_blank" rel="noopener">soashowdown.com</a></span>
+      <button type="button" aria-label="Hide this message" onclick="this.parentElement.hidden = true">&times;</button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
     <script data-goatcounter="https://wesmillet.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
   </body>

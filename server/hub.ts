@@ -159,6 +159,12 @@ export class Hub {
   }
 
   /** A signed-in, unbanned account whose role is admin (read from the database each time). */
+  /** `dex`, marked shiny ('*') when this signed-in player has that species shiny in their PC. */
+  private shinyStarter(c: Client | null | undefined, dex: string): string {
+    if (!c || c.accountId === null || c.guest || dex.endsWith('*')) return dex;
+    return this.o.accounts.ownsShiny(c.accountId, dex) ? `${dex}*` : dex;
+  }
+
   isAdmin(c: Client | null | undefined): boolean {
     if (!c || c.accountId === null || c.guest) return false;
     const u = this.o.accounts.user(c.accountId);
@@ -607,7 +613,8 @@ export class Hub {
     const boosts = mode !== 'private' && ev ? { shinyBoost: ev.boost('shiny'), storm: ev.storm() } : {};
     const make = this.o.makeRoom ?? localRoom(this.o.world);
     const spec: RoomSpec = {
-      entries: live.map((q) => ({ name: q.peer.name, starter: q.starter, team: q.team, peer: q.peer })), size, seed,
+      // A starter the player owns as a shiny (a Mystery Gift, a shiny catch) comes out shiny ('*').
+      entries: live.map((q) => ({ name: q.peer.name, starter: this.shinyStarter(q.peer as Client, q.starter), team: q.team, peer: q.peer })), size, seed,
       opts: { mode, id: `m${randomBytes(8).toString('hex')}`, bots: rules.bots, level: rules.level, storm: rules.storm, rareChest: rules.rareChest, ...boosts }, replayDir: this.o.replayDir,
     };
     const room = make(spec, this.o.hooks, (r, report) => this.endRoom(r, report));

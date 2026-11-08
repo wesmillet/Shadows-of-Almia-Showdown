@@ -1945,10 +1945,12 @@ export class Match {
   /**
    * A trainer's starting Pokémon, the same for everyone who starts with that species: the match's
    * starting level, the moves its species knows there (a legendary's signature move held back,
-   * data.ts starterMoves), no held item, not shiny.
+   * data.ts starterMoves), no held item. Not shiny, unless the dex ends in '*' (online: a player
+   * starting with a Pokémon they own as a shiny).
    */
   makeStarter(dex: string, level: number, owner: Trainer, x: number, y: number): Mon {
-    const m = this.makeMon(dex, level, owner, x, y);
+    const shiny = dex.endsWith('*');
+    const m = this.makeMon(shiny ? dex.slice(0, -1) : dex, level, owner, x, y, shiny);
     m.moves = starterMoves(m.species, level);
     m.cooldowns = m.moves.map(() => 0);
     return m;

@@ -350,6 +350,11 @@ export class PcScreen implements Screen {
     });
   }
 
+  /** Administrators may change today's starter as often as they like (to test any Pokémon). */
+  private isAdmin(): boolean {
+    return this.net?.me.user?.role === 'admin';
+  }
+
   /** The side panel's Today's starter button. */
   private drawDaily(r: Rect, e: PcEntry): void {
     const st = this.starters;
@@ -357,8 +362,8 @@ export class PcScreen implements Screen {
     const v = this.ctx.view;
     const b = this.dailyRect(r);
     const mine = st.daily && st.daily.pcId === e.pcId;
-    const can = !st.daily && e.pcId !== undefined;
-    const label = mine ? "Today's starter" : st.daily ? `Today: ${st.daily.name}` : "Today's starter";
+    const can = !mine && (!st.daily || this.isAdmin()) && e.pcId !== undefined;
+    const label = mine ? "Today's starter" : st.daily && !this.isAdmin() ? `Today: ${st.daily.name}` : "Today's starter";
     const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
     button(v, label, b.x, b.y, b.w, b.h, over && can, mine ? '#9fd8a8' : can ? undefined : '#44405a');
   }
@@ -425,11 +430,11 @@ export class PcScreen implements Screen {
         }
         const dr = this.dailyRect(L.side);
         if (this.net && this.starters && hit(c.x, c.y, dr.x, dr.y, dr.w, dr.h)) {
-          if (this.starters.daily) {
+          if (this.starters.daily && !this.isAdmin() && this.starters.daily.pcId !== shown.pcId) {
             const left = Math.max(0, this.starters.dailyResetAt - Date.now());
             const hrs = Math.floor(left / 3600_000), mins = Math.ceil((left % 3600_000) / 60_000);
             this.note = `${this.starters.daily.name} is today's starter. New pick in ${hrs ? `${hrs} h ` : ''}${mins} min`;
-          } else this.pickDaily(shown);
+          } else if (this.starters.daily?.pcId !== shown.pcId) this.pickDaily(shown);
           continue;
         }
         const nd = this.nomOf(shown);

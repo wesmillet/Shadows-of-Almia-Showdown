@@ -170,7 +170,7 @@ export class StarterUnlocks {
   }
 
   /** Picks today's starter from the PC (once a day). Returns an error, or null. */
-  pickDaily(userId: number, pcId: unknown, now = Date.now()): string | null {
+  pickDaily(userId: number, pcId: unknown, now = Date.now(), admin = false): string | null {
     const id = Number(pcId);
     if (!Number.isInteger(id)) return 'Pick a Pokémon from your PC';
     const row = this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(id, userId) as { entry: string } | undefined;
@@ -184,7 +184,8 @@ export class StarterUnlocks {
     if (!SPECIES.has(dex)) return 'That Pokémon can not be a starter';
     const { day } = starterDay(now);
     const had = this.db.prepare('SELECT dex FROM daily_starters WHERE user_id = ? AND day = ?').get(userId, day) as { dex: string } | undefined;
-    if (had && this.daily(userId, now)) return `You already picked ${SPECIES.get(had.dex)?.name ?? had.dex} today. Pick again after midnight UTC`;
+    // An administrator may change it as often as they like (testing any Pokémon in their PC).
+    if (had && !admin && this.daily(userId, now)) return `You already picked ${SPECIES.get(had.dex)?.name ?? had.dex} today. Pick again after midnight UTC`;
     // A pick whose Pokémon has since left the PC may be replaced.
     this.db.prepare('INSERT OR REPLACE INTO daily_starters (user_id, day, pc_id, dex, at) VALUES (?, ?, ?, ?, ?)').run(userId, day, id, dex, now);
     return null;

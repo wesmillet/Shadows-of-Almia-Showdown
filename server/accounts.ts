@@ -630,6 +630,11 @@ export class Accounts {
     }
   }
 
+  /** Whether a player's PC holds a shiny of this species (their starter comes out shiny then). */
+  ownsShiny(userId: number, dex: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM pc WHERE user_id = ? AND json_extract(entry, '$.dex') = ? AND json_extract(entry, '$.shiny') IN (1, 'true') LIMIT 1").get(userId, dex);
+  }
+
   /** The species in a player's PC (for their starter pool). */
   pcDexes(userId: number): string[] {
     const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex FROM pc WHERE user_id = ?").all(userId) as Array<{ dex: string }>;
@@ -1194,7 +1199,7 @@ export class Accounts {
       }
       if (req.method === 'POST' && path === '/api/starters/daily') {
         const b = await readJson(req);
-        const err = this.starters.pickDaily(me.id, b.pcId);
+        const err = this.starters.pickDaily(me.id, b.pcId, Date.now(), me.role === 'admin' && !me.banned);
         return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
       }
       if (req.method === 'POST' && path === '/api/starters/nominate') {

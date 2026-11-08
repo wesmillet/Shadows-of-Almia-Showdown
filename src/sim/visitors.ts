@@ -558,9 +558,10 @@ export class Visitors {
       for (const [i, r] of [1.6, 2.6, 3.6].entries()) m.battle.events.push({ type: 'scene-fx', id: ['fx_225', 'fx_226', 'fx_229'][i] as string, x: from.x, y: from.y, scale: r, ground: true, fps: 9, tint: ring });
       s.stage = 1;
     } else if (s.stage === 1 && s.t >= 1.1) {
-      // Lugia bursts out of the lake (Guardian Signs' own Lugia sheet), in a column of spray.
+      // Lugia bursts out of the lake (Guardian Signs' own Lugia sheet), in a column of spray. The sheet
+      // is Lugia diving head first, so it is turned over: head up, out of the water.
       const ink = s.shadow ? '#5a1f8f' : undefined;
-      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, shake: 0.7, tint: ink, epic: true });
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_135', x: from.x, y: from.y, scale: 2.6, lift: 2.2, fps: 7, rotation: Math.PI, shake: 0.7, tint: ink, epic: true });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_081', x: from.x, y: from.y, scale: 3.2, tint: ink });
       m.battle.events.push({ type: 'scene-fx', id: 'fx_070', x: from.x, y: from.y, scale: 3.6, ground: true, tint: ink });
       m.battle.events.push({ type: 'notice', text: s.shadow ? 'SHADOW LUGIA rises from the storm-black lake!' : 'Lugia bursts out of the lake!', seconds: 3 });

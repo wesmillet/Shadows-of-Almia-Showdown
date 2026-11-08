@@ -19,6 +19,11 @@ from shadesart import K, B, A, G, W, lens, pair
 
 BASE, OUT = sys.argv[1], sys.argv[2]
 
+class Glasses(dict):
+    """A drawing, plus `force`: pixels drawn even where the head isn't (the far lens peeking past
+    the face in profile)."""
+    force = frozenset()
+
 def sheared(px, tilt, up_right):
     """Shear a drawn pair vertically: one end `tilt` px higher than the other."""
     xs = [x for x, _ in px]
@@ -34,29 +39,61 @@ def sheared(px, tilt, up_right):
             pass
     return out
 
-def profile_px(w, h, toward, arm=5):
+def profile_px(w, h, toward, arm=5, peek=True):
     """The near lens seen from the side (the same lens, narrower) over the eye, and the arm back to
     the ear. Facing right: the lens's front edge is its right edge and the arm leaves from the left."""
     px = lens(0, 0, w, h, glint=1, rim=False, shine_from=1, gap=1)
     bar = 1
     for k in range(1, arm + 1): px[(-k, bar)] = K
-    if toward == 'l': px = {(w - 1 - x, y): c for (x, y), c in px.items()}
-    return px
+    force = set()
+    if peek:
+        # the bridge, and the far lens's rim just showing past the front of the face, level
+        # with the top of the near lens (above the mouth)
+        shape = {(w, bar): K, (w + 1, 0): K, (w + 1, 1): A, (w + 1, 2): K, (w + 2, 1): K}
+        for q, c in shape.items(): px[q] = c; force.add(q)
+        px = {q: c for q, c in px.items() if c is not None}
+        force = {q for q in force if q in px}
+    if toward == 'l':
+        px = {(w - 1 - x, y): c for (x, y), c in px.items()}
+        force = {(w - 1 - x, y) for (x, y) in force}
+    g = Glasses(px); g.force = frozenset(force)
+    return g
 
 def place_at(px, ox, oy):
-    return {(x + ox, y + oy): c for (x, y), c in px.items()}
+    g = Glasses({(x + ox, y + oy): c for (x, y), c in px.items()})
+    g.force = frozenset((x + ox, y + oy) for (x, y) in getattr(px, 'force', ()))
+    return g
 
 def cells_of(px):
-    return [p for p, c in px.items() if c in (A, B, W, G)]
+    force = getattr(px, 'force', ())
+    return [p for p, c in px.items() if c in (A, B, W, G) and p not in force]
 
 def front(lw, lh, bridge, ox, oy, glint=1):
     px = place_at(pair(lw, lh, bridge, glint=glint, rim=False, bar_row=1, bar_h=2, shine_from=2, gap=1), ox, oy)
     return px
 
-def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1):
-    px = pair(lw, lh, bridge, glint=glint, rim=False, bar_row=1, bar_h=2, shine_from=2, gap=1)
-    px = sheared(px, tilt, up_right=(toward == 'r'))
-    return place_at(px, ox, oy)
+def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1, lift=1):
+    """The pair turned: sheared so the far end is `tilt` px higher, the far lens lifted `lift` px
+    more over the far eye, and the bridge kept one unbroken line between the lenses."""
+    bar_row, bar_h = 1, 2
+    px = pair(lw, lh, bridge, glint=glint, rim=False, bar_row=bar_row, bar_h=bar_h, shine_from=2, gap=1)
+    xs = [x for x, _ in px]; x0, x1 = min(xs), max(xs); span = max(1, x1 - x0)
+    rx = 1 + lw + bridge          # the right lens's left edge; the left lens's right edge is lw
+    def off(x):
+        t = (x - x0) / span if toward == 'r' else (x1 - x) / span
+        if toward == 'r': u = 1.0 if x >= rx else max(0.0, (x - lw) / max(1, rx - lw))
+        else: u = 1.0 if x <= lw else max(0.0, (rx - x) / max(1, rx - lw))
+        return round(t * tilt + u * lift)
+    out = {(x, y - off(x)): c for (x, y), c in px.items()}
+    # join the bridge: where neighbouring columns step more than a pixel, fill the frame line
+    for x in range(lw, rx):
+        for b in range(bar_row, bar_row + bar_h):
+            ya, yb = b - off(x), b - off(x + 1)
+            lo, hi = sorted((ya, yb))
+            for y in range(lo + 1, hi):
+                for q in ((x, y), (x + 1, y)):
+                    if out.get(q, K) == K: out[q] = K; break
+    return place_at(out, ox, oy)
 
 def prof(lw, lh, ox, oy, toward, arm=5):
     return place_at(profile_px(lw, lh, toward, arm), ox, oy)
@@ -74,6 +111,7 @@ SPEC = {
              2: prof(5, 6, -4, -7, 'r'), 6: prof(5, 6, 2, -7, 'l')},
 }
 FACINGS = (0, 1, 7, 2, 6)
+KEEP_FACING = False
 
 def anims(path):
     r = ET.parse(f'{path}/AnimData.xml').getroot()
@@ -132,7 +170,7 @@ def find_face(frame, h, patches, row, R=6, spin=False):
     turns the body), so a walk cycle's in-between frames never swap to another facing's glasses."""
     if not spin and row in patches:
         own = best_for(frame, h, patches, [row], R)
-        if own[0] <= 120: return own
+        if own[0] <= 120 or KEEP_FACING: return own
     return best_for(frame, h, patches, FACINGS, R)
 
 def best_for(frame, h, patches, facings, R):
@@ -158,8 +196,9 @@ def best_for(frame, h, patches, facings, R):
 def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin):
     p = im.load()
     def opaque(x, y): return 0 <= x < fw and 0 <= y < fh and p[ox + x, oy + y][3] > 0
+    force = getattr(px, 'force', frozenset())
     cells = cells_of(px)
-    off_face = [(x, y) for (x, y) in cells if not opaque(hx + x, hy + y)]
+    off_face = [(x, y) for (x, y) in cells if not opaque(hx + x, hy + y) and (x, y) not in force]
     # front and profile glasses sit on the face; a three-quarter pair may overhang the far cheek
     allow = len(cells) // 3 if facing in (1, 7) else max(2, len(cells) // 8)
     if len(off_face) > allow: return False
@@ -169,10 +208,11 @@ def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin):
         q = p[ox + x, oy + y]
         if min(q[:3]) > 200: return True
         return max(q[:3]) < 40 and all(opaque(x + a, y + b) and max(p[ox + x + a, oy + y + b][:3]) >= 0 for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))) and sum(1 for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)) if max(p[ox + x + a, oy + y + b][:3]) >= 40) >= 2
-    if spin and sum(1 for (x, y) in cells if opaque(hx + x, hy + y) and eye(hx + x, hy + y)) < 2: return False
+    if spin and sum(1 for (x, y) in cells if (x, y) not in force and opaque(hx + x, hy + y) and eye(hx + x, hy + y)) < 2: return False
     for (x, y), c in px.items():
         X, Y = hx + x, hy + y
         if not (0 <= X < fw and 0 <= Y < fh): continue
+        if (x, y) in force: p[ox + X, oy + Y] = c; continue
         # arm pixels only over the head (never a stick in the air)
         if c == K and not opaque(X, Y) and (x, y) not in px or (c == K and not opaque(X, Y) and not any(q in px and px[q] != K for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))):
             continue
@@ -183,6 +223,8 @@ def main(dex):
     src, dst = f'{BASE}/{dex}', f'{OUT}/{dex}-rad'
     if os.path.exists(dst): shutil.rmtree(dst)
     shutil.copytree(src, dst)
+    global KEEP_FACING
+    KEEP_FACING = dex in ('0062',)
     spec = SPEC[dex]
     patches = face_patches(dex, spec)
     eyes = idle_eyes(dex, spec)
@@ -209,6 +251,7 @@ def main(dex):
                     sc2, c2, dx2, dy2 = best_for(frame, h, patches, [d], 6)
                     ok = draw(im, f * fw, d * fh, fw, fh, h[0] + dx2, h[1] + dy2, spec[d], d, False)
                 done += ok; miss += not ok
+                if not ok and d in spec and not spin: print('  BARE', dex, name, 'row', d, 'frame', f)
         im.save(f'{dst}/{name}-Anim.png')
     with open(f'{dst}/credits.txt', 'a') as fh_:
         fh_.write('\nSunglasses (from a shades design by the game\'s developer) added for Shadows of Almia Showdown, a gift for PoliRad Gaming, on the PMD SpriteCollab sprite above.\n')

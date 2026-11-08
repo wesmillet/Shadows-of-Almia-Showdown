@@ -25,7 +25,6 @@ export const KEY_ACTIONS: KeyAction[] = [
   { code: 'KeyF', label: 'Throw a ball' },
   { code: 'KeyC', label: 'Capture Styler (hold)' },
   { code: 'KeyV', label: 'Ride / land' },
-  { code: 'KeyX', label: 'Next Pokémon in the lead (Shift: previous)' },
   { code: 'KeyM', label: 'Mega Evolve' },
   { code: 'KeyR', label: 'Auto-battle on / off' },
   { code: 'KeyG', label: 'Held items & TMs' },

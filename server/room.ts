@@ -160,11 +160,11 @@ export class Room implements RoomHandle {
     this.match.chestStore = {
       load: (t) => {
         const key = this.keyOf(t);
-        return key ? hooks.chestLoad(key) : null;
+        return key && hooks.chestLoad ? hooks.chestLoad(key) : null;
       },
       save: (t, box) => {
         const key = this.keyOf(t);
-        if (key && this.mode !== 'private') hooks.chestSave(key, box);
+        if (key && this.mode !== 'private' && hooks.chestSave) hooks.chestSave(key, box);
       },
     };
     this.match.seats.forEach((seat, i) => {
@@ -172,6 +172,9 @@ export class Room implements RoomHandle {
       const enc = new SyncEncoder(this.ids, seat.trainer);
       this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, goneAt: null, commands: 0, ended: false, flags: new Map(), flagScore: 0 });
     });
+    // Each player's saved chest is loaded now, so it reaches their screen with the first update. (Made
+    // on first use instead, the chest looked empty to the player until they put something in it.)
+    for (const p of this.players.values()) this.match.storageOf(p.seat.trainer);
     const roster: RosterEntry[] = this.match.allTrainers.filter((t) => !t.visitor).map((t) => {
       const owner = [...this.players.values()].find((p) => p.seat.trainer === t);
       return { trainerId: t.id, name: t.name, human: t.isPlayer, look: owner?.peer?.look, team: t.team, title: owner?.peer?.title };

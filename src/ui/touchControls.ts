@@ -4,7 +4,7 @@
  * Left thumb: a floating stick anywhere on the open field (drawn by the match), and a compact party
  * strip along the left edge: tap a portrait for its actions (send out, recall, control...).
  * Right thumb: two large move buttons and a smaller dodge button; a ball button above them. A tap
- * on a move uses it on the selected target (or the way you face); dragging from the button aims,
+ * on a move fires it straight ahead the way you face (no aim assist); dragging from the button aims,
  * and letting go uses it there. The ball works the same way, and a long press picks the ball type.
  * One Interact button shows when something usable is in reach. Bag and Menu sit under the
  * minimap. A knocked-out Pokémon in a trainer battle brings up large cards to pick the next one.

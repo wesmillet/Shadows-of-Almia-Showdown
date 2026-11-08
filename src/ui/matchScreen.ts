@@ -441,12 +441,12 @@ export class MatchScreen implements Screen {
       if (input.pressed('KeyF') && (this.match.legendBoutFoe() || this.match.shadowBoutFoe())) this.throwAtTarget();
       return;
     }
-    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.onItemSlot(i);
+    // Shift+1-6: that party slot takes the lead; 1-6 alone use the bag.
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) shift ? this.leadSlot(i) : this.onItemSlot(i);
     // Q and E: moves 1 and 2 again, next to WASD.
     if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
     if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
-    // X: the next Pokémon takes the lead (Shift+X the one before), round the party in a fixed order.
-    if (input.pressed('KeyX')) this.cycleLead(input.down('ShiftLeft') || input.down('ShiftRight') ? -1 : 1);
     // M: Mega Evolve the Pokémon you are steering (or your lead) when it holds its Mega Stone.
     if (input.pressed('KeyM')) {
       const msg = this.match.megaEvolve(this.match.player);
@@ -644,30 +644,15 @@ export class MatchScreen implements Screen {
   }
 
   /**
-   * Where a tap on a move goes: the foe's Pokémon in a trainer battle, else the selected target
-   * while it is on screen, else straight ahead the way the trainer (or the steered Pokémon) faces.
+   * Where a tap on a move goes: straight ahead the way the steered Pokémon (or the trainer) faces,
+   * with no aim assist. A drag from the button aims it by hand (touchAimPoint).
    */
   private touchTarget(): { x: number; y: number } {
-    const side = this.playerDuelSide();
-    const d = this.match.playerDuel;
-    if (side && d) {
-      const foe = d.a === side ? d.b : d.a;
-      if (foe.mon && !foe.mon.fainted) return { x: foe.mon.x, y: foe.mon.y };
-    }
-    const t = this.match.lockTarget;
-    if (t && !t.fainted && !t.captured && this.onScreen(t.x, t.y)) return { x: t.x, y: t.y };
     const from = this.touchFrom();
     const facer = this.match.controlled ?? this.match.player;
     const f = DIR_VECTORS[facer.dir] ?? { x: 0, y: 1 };
     const n = Math.hypot(f.x, f.y) || 1;
     return { x: from.x + (f.x / n) * 4, y: from.y + (f.y / n) * 4 };
-  }
-
-  private onScreen(x: number, y: number): boolean {
-    const v = this.ctx.view;
-    const sx = v.toScreenX(x);
-    const sy = v.toScreenY(y);
-    return sx >= 0 && sy >= 0 && sx <= v.width && sy <= v.height;
   }
 
   /** A drag from a move or ball button, as a point on the field. */
@@ -777,29 +762,16 @@ export class MatchScreen implements Screen {
     }
   }
 
-  /** The last lead X picked (online the party order catches up a moment later, so quick presses keep going round). */
-  private cycledTo: { id: number; at: number } | null = null;
-
-  /** X / Shift+X: the next (or previous) Pokémon that can lead, in a fixed order round the party. */
-  private cycleLead(step: 1 | -1): void {
+  /** Shift+1-6: the Pokémon in that slot of the party strip takes the lead (not in a trainer battle). */
+  private leadSlot(i: number): void {
     const p = this.match.player;
     if (p.duelId) return this.say('You choose who goes out in a battle when one faints', 1.4);
-    const can = (x: Mon) => !x.fainted && !x.captured && !isRoaming(x) && p.mount?.mon !== x;
-    const order = [...p.party].sort((a, b) => a.id - b.id);
-    if (order.filter(can).length < 2) return this.say('No other Pokémon to lead', 1.2);
-    const fresh = this.cycledTo && performance.now() - this.cycledTo.at < 1500 ? this.cycledTo.id : p.party[0]?.id;
-    let i = Math.max(0, order.findIndex((x) => x.id === fresh));
-    for (let k = 0; k < order.length; k++) {
-      i = (i + step + order.length) % order.length;
-      const next = order[i] as Mon;
-      if (!can(next)) continue;
-      const at = p.party.indexOf(next);
-      if (at > 0 && this.match.swapLead(at)) {
-        this.cycledTo = { id: next.id, at: performance.now() };
-        this.say(`${next.name} takes the lead`, 1);
-      }
-      return;
-    }
+    const m = p.party[i];
+    if (!m) return;
+    if (i === 0) return this.say(`${m.name} is already in the lead`, 1);
+    if (isRoaming(m)) return this.say(`${m.name} is off roaming`, 1.2);
+    if (m.fainted || m.captured || p.mount?.mon === m) return this.say(`${m.name} can't lead right now`, 1.2);
+    if (this.match.swapLead(i)) this.say(`${m.name} takes the lead`, 1);
   }
 
   /** A party member's action from its portrait. Send out and recall reorder the party the way a lead swap does. */
@@ -1704,7 +1676,7 @@ export class MatchScreen implements Screen {
         if (ev.ground) {
           const sh = this.fx.sheet(ev.id);
           if (sh) this.groundVfx.add(new FxAnim(sh, { x: ev.x, y: ev.y, lift: 0, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint }));
-        } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: ev.lift ?? 0.6, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint });
+        } else this.playFx(ev.id, { x: ev.x, y: ev.y, lift: ev.lift ?? 0.6, scale: ev.scale, fps: ev.fps ?? 14, tint: ev.tint, rotation: ev.rotation });
         // The camera shakes only for Lugia, Darkrai and Shadow Mewtwo.
         if (ev.shake && ev.epic) this.shake = Math.max(this.shake, ev.shake);
         break;

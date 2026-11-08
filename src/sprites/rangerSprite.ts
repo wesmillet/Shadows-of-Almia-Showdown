@@ -21,6 +21,8 @@ export interface AlmiaCharacter {
   frame_h: number;
   frames: number;
   anchor?: string;
+  /** This sheet's own frame order, when it differs from the shared table (civ_03 and civ_13 put the back view second). */
+  animations?: Record<string, number[]>;
 }
 
 export interface AlmiaManifest {
@@ -77,10 +79,11 @@ export class RangerSheet {
   private clip(name: string): { frames: number[]; flip: boolean } {
     const m = this.manifest;
     if (!m) return { frames: [0], flip: false };
-    const direct = m.animations[name];
+    const table = this.def?.animations ?? m.animations;
+    const direct = table[name];
     if (direct && direct.length) return { frames: direct, flip: false };
     const mirrored = m.mirror?.[name];
-    const alt = mirrored ? m.animations[mirrored] : undefined;
+    const alt = mirrored ? table[mirrored] : undefined;
     if (alt && alt.length) return { frames: alt, flip: true };
     const fallback = m.animations.idle_down ?? [0];
     return { frames: fallback, flip: false };

@@ -4581,12 +4581,14 @@ export class Match {
     // past its corner when it is clear, else the nearest clear spot round it). Checking only that one
     // corner spot used to rule out three of the five outposts, so everyone came back at the castle
     // or Sunreach.
+    // The paid healer by the Shadow Crystal (the centre) is used only when it is the one outpost left
+    // out of the dark: a trainer wiped out near the middle still comes back at the edge.
     const spots = this.outposts
       .filter((o) => !this.isDark(o.x, o.y))
-      .map((o) => this.outpostSpot(o))
-      .filter((s): s is { x: number; y: number } => !!s && !this.isDark(s.x, s.y));
-    spots.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
-    const at = spots[0] ?? { x: t.x, y: t.y };
+      .map((o) => ({ spot: this.outpostSpot(o), centre: !!o.cost }))
+      .filter((s): s is { spot: { x: number; y: number }; centre: boolean } => !!s.spot && !this.isDark(s.spot.x, s.spot.y));
+    spots.sort((a, b) => Number(a.centre) - Number(b.centre) || Math.hypot(a.spot.x - t.x, a.spot.y - t.y) - Math.hypot(b.spot.x - t.x, b.spot.y - t.y));
+    const at = spots[0]?.spot ?? { x: t.x, y: t.y };
     t.x = t.px = at.x;
     t.y = t.py = at.y;
     for (const m of t.party) {

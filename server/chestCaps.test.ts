@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { loadWorld } from './world';
 import { Match, chestCap } from '../src/sim/match';
 import { Rng } from '../src/core/rng';
-import type { InventorySlot } from '../src/sim/items';
+import type { InventorySlot } from '../src/sim/entities';
 
 describe('storage chest caps', async () => {
   const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));

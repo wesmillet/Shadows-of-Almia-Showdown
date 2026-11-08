@@ -64,8 +64,6 @@ const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAY
  * gather into fewer, fuller matches (each match is a share of the one CPU) instead of many small ones.
  */
 const LONELY = Number(process.env.LONELY_SECONDS ?? (KIND === 'live' ? 150 : 60));
-/** While players are still finishing public matches, a short lobby waits up to this long for them. */
-const LONELY_MAX = Number(process.env.LONELY_MAX_SECONDS ?? (KIND === 'live' ? 300 : LONELY));
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -173,7 +171,7 @@ const pool: WorkerPool | null = WORKERS > 0
   : null;
 const hub: Hub = new Hub({
   makeRoom: pool?.factory(),
-  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, lonelyMaxSeconds: LONELY_MAX, hooks: roomHooks,
+  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
   onMatchEnd: (_r, report) => {

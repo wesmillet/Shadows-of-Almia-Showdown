@@ -92,8 +92,6 @@ export interface HubOptions {
   minPlayers?: number;
   /** Seconds a lobby short of minPlayers waits before its computer-trainer countdown starts (default 60). */
   lonelySeconds?: number;
-  /** The longest that wait grows to while other players are finishing public matches (default 300). */
-  lonelyMaxSeconds?: number;
   hooks: RoomHooks;
   /** Where replays go (null: not recorded). */
   replayDir: string | null;
@@ -144,8 +142,6 @@ export class Hub {
       fullSeconds: 3,
       minPlayers: o.minPlayers,
       lonelySeconds: o.lonelySeconds,
-      lonelyMaxSeconds: o.lonelyMaxSeconds,
-      demand: () => this.demand(),
       // 8 or more real players: no computer trainers (the matchmaker decides; private lobbies keep their own rule).
       start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? {} : { bots: false }),
       isAdmin: (peer) => this.isAdmin(peer as Client),
@@ -689,20 +685,6 @@ export class Hub {
   // ---------------------------------------------------------------- the admin dashboard
 
   /** Where a connected player is: playing, watching, in a lobby (queue, party, picking, private), or on the menu. */
-  /** Players who could be in a public match (connected, not in a private lobby or private match),
-   * and those still playing one: the matchmaker asks for fuller lobbies when more are around. */
-  demand(): { online: number; playing: number } {
-    let online = 0;
-    for (const c of this.clients.values()) {
-      if (c.private) continue;
-      if (c.room && c.room.mode === 'private' && c.room.playing(c.key)) continue;
-      online++;
-    }
-    let playing = 0;
-    for (const r of this.rooms) if (!r.closed && r.mode !== 'private') playing += r.humansIn;
-    return { online, playing };
-  }
-
   activity(c: Client): OnlineEntry['state'] {
     if (c.room && c.room.playing(c.key)) return 'match';
     if (c.watching) return 'spectating';

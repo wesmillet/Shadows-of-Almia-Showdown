@@ -279,7 +279,7 @@ export class Accounts {
       const rare = new Set(DEV_CHEST.map(([id]) => id));
       const rows = this.db.prepare('SELECT user_id, chest FROM profiles').all() as Array<{ user_id: number; chest: string }>;
       for (const r of rows) {
-        const list = (JSON.parse(r.chest || '[]') as Array<{ id: string; count: number }>).filter((e) => e && !rare.has(e.id)).slice(0, CONFIG.items.storageSlots);
+        const list = (JSON.parse(r.chest || '[]') as Array<{ id: string; count: number }>).filter((e) => e && !rare.has(e.id)).slice(0, 10);
         this.db.prepare('UPDATE profiles SET chest = ? WHERE user_id = ?').run(JSON.stringify(list), r.user_id);
       }
       this.db.exec('PRAGMA user_version = 1');
@@ -531,7 +531,7 @@ export class Accounts {
   }
 
   saveChest(userId: number, box: Array<InventorySlot | null>, ref: string | null = null): void {
-    const list = box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: Math.min(e.count, 9999) })).slice(0, CONFIG.items.storageSlots);
+    const list = box.filter((e): e is InventorySlot => !!e).map((e) => ({ id: e.id, count: Math.min(e.count, 9999) })).slice(0, 10);
     const before = (this.db.prepare('SELECT chest FROM profiles WHERE user_id = ?').get(userId) as { chest: string } | undefined)?.chest ?? '[]';
     const after = JSON.stringify(list);
     if (before === after) return;

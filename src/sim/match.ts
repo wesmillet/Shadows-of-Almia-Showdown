@@ -58,6 +58,19 @@ export type { MatchOutcome } from './seat';
 
 /** The most of one item a storage chest stack holds. */
 export const CHEST_STACK_MAX = 9999;
+/** How many slots chests had before they kept just one: saved chests are never cut below this. */
+export const CHEST_OLD_SLOTS = 10;
+
+/**
+ * A chest from its saved list: CONFIG.items.storageSlots slots (one now), each stacking one item.
+ * Chests saved when they held ten keep those stacks (up to CHEST_OLD_SLOTS) until they are taken out.
+ */
+export function chestBox(saved: Array<{ id: string; count: number }> | null): Array<InventorySlot | null> {
+  const kept = (saved ?? []).filter((e) => e && ITEMS[e.id] && e.count > 0).slice(0, CHEST_OLD_SLOTS);
+  const box = new Array<InventorySlot | null>(Math.max(CONFIG.items.storageSlots, kept.length)).fill(null);
+  kept.forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+  return box;
+}
 
 /** The most of one item a chest stack takes (rare items are capped, config items.chestCaps). */
 export function chestCap(id: string): number {
@@ -387,10 +400,7 @@ export class Match {
   storageOf(t: Trainer): Array<InventorySlot | null> {
     if (t.storage) return t.storage;
     // The player's chest is kept between games (chestStore).
-    const kept = (this.chestStore.load(t) ?? []).filter((e) => ITEMS[e.id]);
-    // Ten slots (CONFIG.items.storageSlots), each stacking any number of one item.
-    const box = new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null);
-    kept.slice(0, CONFIG.items.storageSlots).forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+    const box = chestBox(this.chestStore.load(t));
     // The rare-item chest (src/dev.ts): every rare thing is there, topped back up at the start of
     // each match, beside whatever the player stored themselves.
     if (t.isPlayer && this.rareChest) {
@@ -437,8 +447,7 @@ export class Match {
       // with only what is still unspent in the bag added back: a voucher used to extract a
       // Pokemon, or a ball thrown, is not refunded.
       const saved = this.chestStore.load(t);
-      const box = saved ? new Array<InventorySlot | null>(CONFIG.items.storageSlots).fill(null) : this.storageOf(t);
-      if (saved) saved.filter((e) => ITEMS[e.id]).slice(0, CONFIG.items.storageSlots).forEach((e, i) => (box[i] = { id: e.id, count: e.count }));
+      const box = saved ? chestBox(saved) : this.storageOf(t);
       const held = (id: string) => [...t.items, ...t.held].reduce((k, e) => k + (e?.id === id ? e.count : 0), 0);
       for (const [id, taken] of out) {
         const n = Math.min(taken, held(id));
@@ -447,8 +456,9 @@ export class Match {
         if (same) same.count = Math.min(CHEST_STACK_MAX, same.count + n);
         else {
           const free = box.indexOf(null);
-          if (free < 0) continue;
-          box[free] = { id, count: Math.min(CHEST_STACK_MAX, n) };
+          // A refund never gets lost for want of room: it takes an extra slot, emptied like an old one.
+          if (free < 0) box.push({ id, count: Math.min(CHEST_STACK_MAX, n) });
+          else box[free] = { id, count: Math.min(CHEST_STACK_MAX, n) };
         }
       }
       this.chestStore.save(t, box);
@@ -468,6 +478,8 @@ export class Match {
     const entry = list[slot];
     if (!entry) return '';
     const box = this.storageOf(t);
+    // Chests used to keep ten slots: those old extra slots can only be emptied now.
+    if (box.length > CONFIG.items.storageSlots) return `Your chest now keeps ${CONFIG.items.storageSlots === 1 ? 'one slot' : `${CONFIG.items.storageSlots} slots`}: take out your old items first`;
     const same = box.find((s) => s?.id === entry.id);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest),
@@ -498,6 +510,8 @@ export class Match {
     if (!entry) return '';
     if (!this.giveItem(t, entry.id, entry.count)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     box[slot] = null;
+    // An old extra slot (from when chests kept ten) goes away once it is emptied.
+    if (box.length > CONFIG.items.storageSlots) box.splice(slot, 1);
     this.noteChest(t, entry.id, entry.count);
     this.saveChest(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;

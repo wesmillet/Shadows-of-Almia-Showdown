@@ -1,0 +1,3 @@
+2020-10-07 17:58:43.517919	CHUNSOFT	CUR	Unspecified	Walk,Attack,Strike,Shoot,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+Sunglasses added for Shadows of Almia Showdown (a gift for PoliRad Gaming), on the PMD SpriteCollab sprite above.

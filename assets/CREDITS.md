@@ -117,6 +117,15 @@ license, sheets). The current artists per folder, resolved through
 ### 0055 Golduck
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,MultiScratch,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0060 Poliwag
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,RearUp,Appeal,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0061 Poliwhirl
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0062 Poliwrath
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
 ### 0072 Tentacool
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Slam,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -300,6 +309,9 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 - <@!702275233125630042>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
 - <@!702275233125630042>: EventSleep,Wake,Float,DeepBreath,Nod,Sink,Trip,Laying,LostBalance,TumbleBack,Faint
+
+### 0186 Politoed
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
 ### 0196 Espeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
@@ -1522,6 +1534,23 @@ license, sheets). The current artists per folder, resolved through
 - <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!330751862590406656>: Crying,Stunned,Dizzy
 
+### 0060 Poliwag
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
+- <@!662304890143375391>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Special0,Worried^,Determined^,Special0^
+
+### 0061 Poliwhirl
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
+- <@!702275233125630042>: Angry,Angry^,Crying,Crying^,Determined,Determined^,Dizzy,Dizzy^,Happy,Happy^,Inspired,Inspired^,Joyous,Joyous^,Normal,Normal^,Pain,Pain^,Sad,Sad^,Shouting,Shouting^,Sigh,Sigh^,Stunned,Stunned^,Surprised,Surprised^,Teary-Eyed,Teary-Eyed^,Worried,Worried^
+- <@!702275233125630042>: Sad,Joyous,Sad^,Joyous^,Happy,Crying,Inspired,Sigh,Happy^,Crying^,Inspired^,Sigh^,Pain,Shouting,Surprised,Stunned,Pain^,Shouting^,Surprised^,Stunned^,Angry,Teary-Eyed,Dizzy,Angry^,Teary-Eyed^,Dizzy^,Worried,Determined,Worried^,Determined^
+
+### 0062 Poliwrath
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Normal^
+- <@!108260609241423872>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+- <@!108260609241423872>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+- <@!108260609241423872>: Sad,Crying
+- <@!108260609241423872>: Crying,Inspired,Pain,Surprised,Stunned,Teary-Eyed,Worried
+- <@!1377429093997477928>: Sad^,Joyous^,Happy^,Crying^,Inspired^,Sigh^,Pain^,Shouting^,Surprised^,Stunned^,Angry^,Teary-Eyed^,Dizzy^,Worried^,Determined^
+
 ### 0072 Tentacool
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!330751862590406656>: Angry
@@ -1776,6 +1805,10 @@ license, sheets). The current artists per folder, resolved through
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
 - <@!571847167489343507>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 - <@!571847167489343507>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0186 Politoed
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!330751862590406656>: Inspired,Shouting,Surprised
 
 ### 0196 Espeon
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal
@@ -3120,7 +3153,3 @@ license, sheets). The current artists per folder, resolved through
 
 Pokémon Ranger 2: Shadows of Almia overworld NPCs ripped by Lemon for The
 Spriters Resource; see `assets/rangers/README.md` and the root `CREDITS.md`.
-
-## Daily Egg (assets/ui/eggs)
-
-- The Egg and its hatching frames and shell pieces: Pokémon Emerald ((c) Nintendo / Creatures / GAME FREAK), from the pret/pokeemerald decompilation (https://github.com/pret/pokeemerald, graphics/pokemon/egg/hatch.png and shard.png). The spots are recoloured per starter tier by scripts/eggs.py.

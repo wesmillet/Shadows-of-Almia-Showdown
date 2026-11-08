@@ -226,7 +226,10 @@ export class Match {
     for (const n of npcs) {
       if (n.role === 'healer') {
         this.outposts.push({ x: n.x, y: n.y, users: [] });
-        this.npcs.push(this.makeTrainer('Healer', 'healer', false, n.x, n.y - 0.6));
+        const nurse = this.makeTrainer('Healer', 'healer', false, n.x, n.y - 0.6);
+        // The nurse faces the trainers who come to her (down), like the vendors.
+        nurse.dir = 0;
+        this.npcs.push(nurse);
       } else if (n.role === 'vendor') {
         const npc = this.makeTrainer('Vendor', ['vendor_a', 'vendor_b', 'vendor_c'][v++ % 3] as string, false, n.x, n.y);
         npc.dir = 0;
@@ -268,7 +271,9 @@ export class Match {
     }
     if (!best) return;
     this.outposts.push({ x: best.x, y: best.y, users: [], cost });
-    this.npcs.push(this.makeTrainer('Crystal Healer', 'healer', false, best.x, best.y - 0.6));
+    const nurse = this.makeTrainer('Crystal Healer', 'healer', false, best.x, best.y - 0.6);
+    nurse.dir = 0;
+    this.npcs.push(nurse);
   }
 
   /**

@@ -61,7 +61,8 @@
    "frame_w": 26,
    "frame_h": 36,
    "frames": 15,
-   "anchor": "bottom-center"
+   "anchor": "bottom-center",
+   "animations": {"idle_down": [0], "idle_up": [1], "idle_left": [2], "walk_left": [3, 4, 5, 6, 7, 8], "walk_up": [9, 10, 11], "walk_down": [12, 13, 14]}
   },
   "civ_04": {
    "file": "civ_04.png",
@@ -201,7 +202,8 @@
    "frame_w": 26,
    "frame_h": 36,
    "frames": 15,
-   "anchor": "bottom-center"
+   "anchor": "bottom-center",
+   "animations": {"idle_down": [0], "idle_up": [1], "idle_left": [2], "walk_left": [3, 4, 5, 6, 7, 8], "walk_up": [9, 10, 11], "walk_down": [12, 13, 14]}
   }
  }
 }

@@ -95,6 +95,25 @@ def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1, lift=1):
                     if out.get(q, K) == K: out[q] = K; break
     return place_at(out, ox, oy)
 
+def duo(near_w, far_w, lh, ox, oy, toward, arm=5):
+    """A side view where the far eye still shows past the face: the near lens, and the far lens seen
+    edge on (narrow) sharing its frame edge as the bridge, then the arm back from the near lens.
+    ox is the drawing's left edge (lenses only)."""
+    near = lens(0, 0, near_w, lh, glint=1, rim=False, shine_from=1, gap=1)
+    far = lens(near_w - 1, 0, far_w, lh, glint=1, rim=False, shine_from=1, gap=1)
+    px = {**far, **near}
+    for y in (1, 2):                     # the bridge: both frame edges joined, two rows deep
+        px[(near_w - 1, y)] = K
+    for k in range(1, arm + 1): px[(-k, 1)] = K
+    w = near_w + far_w - 1
+    # the far lens may run past the face's edge (it is in front of the far eye): always drawn
+    force = {q for q in far if q[0] > near_w - 1}
+    if toward == 'l':
+        px = {(w - 1 - x, y): c for (x, y), c in px.items()}
+        force = {(w - 1 - x, y) for (x, y) in force}
+    g = Glasses(px); g.force = frozenset(force)
+    return place_at(g, ox, oy)
+
 def prof(lw, lh, ox, oy, toward, arm=5):
     return place_at(profile_px(lw, lh, toward, arm), ox, oy)
 
@@ -103,11 +122,11 @@ def prof(lw, lh, ox, oy, toward, arm=5):
 SPEC = {
     '0060': {0: front(6, 5, 1, -7, -5), 1: three_q(6, 5, 0, -8, -4, 2, 'r'), 7: three_q(6, 5, 0, -5, -4, 2, 'l'),
              2: prof(5, 5, -6, -3, 'r'), 6: prof(5, 5, 3, -3, 'l')},
-    '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r'), 7: three_q(7, 6, 1, -4, -3, 3, 'l'),
-             2: prof(5, 6, -4, -2, 'r'), 6: prof(5, 6, 1, -2, 'l')},
+    '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r'), 7: three_q(7, 6, 3, -6, -3, 3, 'l'),
+             2: duo(6, 4, 6, -4, -2, 'r'), 6: duo(6, 5, 6, -3, -2, 'l')},
     '0062': {0: front(7, 5, 5, -10, -5), 1: three_q(7, 5, 2, -10, -3, 1, 'r'), 7: three_q(7, 5, 2, -7, -3, 1, 'l'),
              2: prof(5, 5, -5, -1, 'r'), 6: prof(5, 5, 3, -1, 'l')},
-    '0186': {0: front(6, 6, 3, -8, -8), 1: three_q(6, 6, 2, -9, -7, 1, 'r'), 7: three_q(6, 6, 2, -5, -7, 1, 'l'),
+    '0186': {0: front(6, 6, 3, -8, -8), 1: three_q(6, 7, 2, -9, -7, 1, 'r'), 7: three_q(6, 7, 2, -5, -7, 1, 'l'),
              2: prof(5, 6, -4, -7, 'r'), 6: prof(5, 6, 2, -7, 'l')},
 }
 FACINGS = (0, 1, 7, 2, 6)
@@ -193,7 +212,7 @@ def best_for(frame, h, patches, facings, R):
                 if best is None or sc < best[0]: best = (sc, c, dx, dy)
     return best
 
-def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin):
+def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin, strict=True):
     p = im.load()
     def opaque(x, y): return 0 <= x < fw and 0 <= y < fh and p[ox + x, oy + y][3] > 0
     force = getattr(px, 'force', frozenset())
@@ -201,7 +220,7 @@ def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin):
     off_face = [(x, y) for (x, y) in cells if not opaque(hx + x, hy + y) and (x, y) not in force]
     # front and profile glasses sit on the face; a three-quarter pair may overhang the far cheek
     allow = len(cells) // 3 if facing in (1, 7) else max(2, len(cells) // 8)
-    if len(off_face) > allow: return False
+    if strict and len(off_face) > allow: return False
     # in a spin, only where an eye is under the lenses: a white, or a dark pixel inside the body
     # (not the outline), so the back of the head never gets glasses
     def eye(x, y):
@@ -249,7 +268,7 @@ def main(dex):
                 if not ok and not spin and d in spec:
                     # never a bare frame in a normal move: the row's own glasses where its face matches best
                     sc2, c2, dx2, dy2 = best_for(frame, h, patches, [d], 6)
-                    ok = draw(im, f * fw, d * fh, fw, fh, h[0] + dx2, h[1] + dy2, spec[d], d, False)
+                    ok = draw(im, f * fw, d * fh, fw, fh, h[0] + dx2, h[1] + dy2, spec[d], d, False, strict=False)
                 done += ok; miss += not ok
                 if not ok and d in spec and not spin: print('  BARE', dex, name, 'row', d, 'frame', f)
         im.save(f'{dst}/{name}-Anim.png')

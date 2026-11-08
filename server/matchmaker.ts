@@ -12,6 +12,9 @@
  * exception is an administrator (checked by the hub from their account's role, never their name):
  * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.
  * With `noBotsFrom` (8) real players or more, a match starts with no computer trainers at all.
+ * With `demand` (the live server), both numbers follow how many are online: a lobby needs half of
+ * the players connected (5 to 10), and waits up to `lonelyMaxSeconds` while the players it is
+ * missing are still in matches, so a busy evening makes a few full matches, not many half-empty ones.
  */
 import type { Peer } from './room';
 
@@ -52,6 +55,16 @@ export interface MatchmakerOptions {
   fillSeconds?: number;
   /** Whether this queued player's account is an administrator (may start a lobby below minPlayers). */
   isAdmin?: (peer: Peer) => boolean;
+  /**
+   * How busy the server is: players connected who could join a public match (`online`, queue
+   * included) and those still playing a public match (`playing`, back in the queue soon). With it,
+   * the lobby asks for more players when more are around (half of those online, at least
+   * minPlayers, at most a full lobby), and waits up to `lonelyMaxSeconds` before computer trainers
+   * fill it while enough players to complete it are still finishing their matches.
+   */
+  demand?: () => { online: number; playing: number };
+  /** The longest a lobby short of players waits while others are finishing matches (default 300). */
+  lonelyMaxSeconds?: number;
 }
 
 interface Forming {
@@ -71,9 +84,12 @@ export class Matchmaker {
 
   constructor(private readonly o: MatchmakerOptions) {}
 
-  /** Real players needed to start (the rest are computer trainers). */
+  /** Real players needed to start (the rest are computer trainers): more when more are online. */
   get minPlayers(): number {
-    return Math.min(this.o.size, this.o.minPlayers ?? Math.ceil(this.o.size / 2));
+    const base = Math.min(this.o.size, this.o.minPlayers ?? Math.ceil(this.o.size / 2));
+    const d = this.o.demand?.();
+    if (!d) return base;
+    return Math.max(base, Math.min(this.o.size, Math.ceil(d.online / 2)));
   }
 
   /** Real players from which no computer trainers join. */
@@ -81,8 +97,14 @@ export class Matchmaker {
     return this.o.noBotsFrom ?? 8;
   }
 
-  private get lonelyMs(): number {
-    return (this.o.lonelySeconds ?? 60) * 1000;
+  /** How long a lobby short of players waits before computer trainers: longer while the players
+   * it is missing are still in matches (they come back to the queue when those end). */
+  private lonelyMsFor(l: Forming, min = this.minPlayers): number {
+    const base = (this.o.lonelySeconds ?? 60) * 1000;
+    const d = this.o.demand?.();
+    if (!d) return base;
+    const missing = min - count(l);
+    return d.playing >= missing ? Math.max(base, (this.o.lonelyMaxSeconds ?? 300) * 1000) : base;
   }
 
   /** Players waiting, by queue. */
@@ -139,16 +161,17 @@ export class Matchmaker {
 
   /** Called often: starts lobbies whose time has come, and keeps the waiting players informed. */
   tick(now: number): void {
+    const min = this.minPlayers;
     for (const l of [...this.lobbies]) {
-      // Short of players for a minute: a countdown, then computer trainers fill the rest.
-      if (!l.forced && !l.filling && count(l) < this.minPlayers && now - l.openedAt >= this.lonelyMs) {
+      // Short of players too long: a countdown, then computer trainers fill the rest.
+      if (!l.forced && !l.filling && count(l) < min && now - l.openedAt >= this.lonelyMsFor(l, min)) {
         l.filling = true;
         l.startAt = now + (this.o.fillSeconds ?? 30) * 1000;
         this.status(now, true);
       }
       if (now < l.startAt) continue;
       // Not enough real players yet: keep waiting (the wait starts over once there are).
-      if (count(l) < this.minPlayers && !l.forced && !l.filling) {
+      if (count(l) < min && !l.forced && !l.filling) {
         l.startAt = now + this.o.wait[l.mode] * 1000;
         continue;
       }
@@ -169,18 +192,19 @@ export class Matchmaker {
   private status(now: number, force: boolean): void {
     if (!force && now - this.lastStatus < 1000) return;
     this.lastStatus = now;
+    const min = this.minPlayers;
     for (const l of this.lobbies) {
       const players = l.groups.flatMap((g) => g.tickets.map((t) => t.peer.name));
       // null: waiting for more players (`need` of them) before any countdown
-      const need = l.forced || l.filling ? 0 : Math.max(0, this.minPlayers - players.length);
+      const need = l.forced || l.filling ? 0 : Math.max(0, min - players.length);
       const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
       // Still short: when the countdown with computer trainers starts.
-      const botsIn = need ? Math.max(0, Math.ceil((l.openedAt + this.lonelyMs - now) / 1000)) : undefined;
+      const botsIn = need ? Math.max(0, Math.ceil((l.openedAt + this.lonelyMsFor(l, min) - now) / 1000)) : undefined;
       for (const g of l.groups) {
         for (const t of g.tickets) {
           // Only an administrator's own lobby message offers the admin start (the server checks again).
           const admin = this.o.isAdmin?.(t.peer) || undefined;
-          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined, humansOnly: players.length >= this.noBotsFrom || undefined, noBotsFrom: this.noBotsFrom });
+          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min, admin, botsIn, bots: l.filling || undefined, humansOnly: players.length >= this.noBotsFrom || undefined, noBotsFrom: this.noBotsFrom });
         }
       }
     }

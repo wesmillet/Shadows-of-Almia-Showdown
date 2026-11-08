@@ -211,7 +211,7 @@ export class Hub {
           c.rollSeed = k.seed;
           c.rollPool = k.pool;
         }
-        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool });
+        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null });
         return;
       case 'queue':
         // Every public match is casual (ranked play has been retired; an old client asking for it plays casual).
@@ -275,6 +275,11 @@ export class Hub {
     if (c.rollSeed === null) return c.send({ t: 'unqueued', text: 'Your roll expired, roll again' });
     if (this.draining && !c.pick) return c.send({ t: 'notice', text: DRAIN_TEXT });
     const choices = starterChoices(c.rollSeed, c.rollPool);
+    // A fourth choice: today's pick from their PC (checked again now, so it is theirs today).
+    if (c.accountId !== null) {
+      const daily = this.o.accounts.starters.daily(c.accountId);
+      if (daily) choices.push(daily.dex);
+    }
     const starter = typeof pick === 'number' && Number.isInteger(pick) ? choices[pick] : undefined;
     if (!starter) return c.send({ t: 'unqueued', text: 'Pick one of the starters you rolled' });
     // Part of a party or a private lobby that is picking: this is that pick.

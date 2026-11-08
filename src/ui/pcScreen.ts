@@ -324,7 +324,43 @@ export class PcScreen implements Screen {
 
   private nomRect(side: Rect): Rect {
     const s = this.ctx.view.baseScale;
-    return { x: side.x + 18 * s, y: side.y + side.h - 58 * s, w: side.w - 36 * s, h: 42 * s };
+    // Online, the bottom row is split: Star it on the left, Today's starter on the right.
+    const full = side.w - 36 * s;
+    const w = this.net ? (full - 8 * s) / 2 : full;
+    return { x: side.x + 18 * s, y: side.y + side.h - 58 * s, w, h: 42 * s };
+  }
+
+  private dailyRect(side: Rect): Rect {
+    const n = this.nomRect(side);
+    const s = this.ctx.view.baseScale;
+    return { x: n.x + n.w + 8 * s, y: n.y, w: n.w, h: n.h };
+  }
+
+  /** Makes a PC Pokémon today's starter: a fourth choice on the starter roll until midnight UTC. */
+  private pickDaily(e: PcEntry): void {
+    if (!this.net || e.pcId === undefined || this.saving) return;
+    this.saving = true;
+    void this.net.api<StartersInfo>('/api/starters/daily', { pcId: e.pcId }).then((r) => {
+      this.saving = false;
+      if (r.error) this.note = r.error;
+      else {
+        this.starters = r;
+        this.note = `${r.daily?.name ?? 'It'} is today's starter: pick it on the starter roll`;
+      }
+    });
+  }
+
+  /** The side panel's Today's starter button. */
+  private drawDaily(r: Rect, e: PcEntry): void {
+    const st = this.starters;
+    if (!st || !this.net) return;
+    const v = this.ctx.view;
+    const b = this.dailyRect(r);
+    const mine = st.daily && st.daily.pcId === e.pcId;
+    const can = !st.daily && e.pcId !== undefined;
+    const label = mine ? "Today's starter" : st.daily ? `Today: ${st.daily.name}` : "Today's starter";
+    const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
+    button(v, label, b.x, b.y, b.w, b.h, over && can, mine ? '#9fd8a8' : can ? undefined : '#44405a');
   }
 
   /** The strip's five spots. */
@@ -385,6 +421,15 @@ export class PcScreen implements Screen {
         const sr = this.starRect(L.side);
         if (hit(c.x, c.y, sr.x, sr.y, sr.w, sr.h)) {
           this.toggleFav(shownI);
+          continue;
+        }
+        const dr = this.dailyRect(L.side);
+        if (this.net && this.starters && hit(c.x, c.y, dr.x, dr.y, dr.w, dr.h)) {
+          if (this.starters.daily) {
+            const left = Math.max(0, this.starters.dailyResetAt - Date.now());
+            const hrs = Math.floor(left / 3600_000), mins = Math.ceil((left % 3600_000) / 60_000);
+            this.note = `${this.starters.daily.name} is today's starter. New pick in ${hrs ? `${hrs} h ` : ''}${mins} min`;
+          } else this.pickDaily(shown);
           continue;
         }
         const nd = this.nomOf(shown);
@@ -716,6 +761,7 @@ export class PcScreen implements Screen {
       text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + pad + kw, y, 11, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     }
     this.drawNominate(r, e);
+    this.drawDaily(r, e);
   }
 
   /** "Charmander → Charmeleon → Charizard" (branches: "Eevee → Vaporeon / Jolteon +6"). */

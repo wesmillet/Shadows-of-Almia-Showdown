@@ -383,7 +383,10 @@ async function boot(): Promise<void> {
       off();
       const rollSeed = m.seed;
       const pool = m.pool ?? [];
-      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => onPicked(starterChoices(rollSeed, pool).indexOf(dex)), null, pool));
+      const daily = m.daily ?? null;
+      // Today's pick (from the PC) is the fourth choice, after the three rolled.
+      const choices = [...starterChoices(rollSeed, pool), ...(daily ? [daily] : [])];
+      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => onPicked(choices.indexOf(dex)), null, pool, daily));
     });
     net.send({ t: 'roll' });
   };

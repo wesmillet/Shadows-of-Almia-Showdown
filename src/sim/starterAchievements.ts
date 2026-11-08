@@ -53,4 +53,15 @@ export interface StartersInfo {
   slots: number;
   costs: Record<string, number>;
   weights: Record<string, number>;
+  /** Today's pick from the PC: offered beside the three rolled starters in every match today. */
+  daily: { dex: string; name: string; pcId: number } | null;
+  /** When a new daily pick can be made (ms since 1970; midnight UTC). */
+  dailyResetAt: number;
+}
+
+/** The day a daily starter pick belongs to (UTC date), and when the next day starts. */
+export function starterDay(now = Date.now()): { day: string; resetAt: number } {
+  const d = new Date(now);
+  const start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return { day: new Date(start).toISOString().slice(0, 10), resetAt: start + 86400_000 };
 }

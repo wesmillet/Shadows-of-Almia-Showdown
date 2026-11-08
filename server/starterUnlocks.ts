@@ -7,13 +7,18 @@
  */
 import type { DatabaseSync } from 'node:sqlite';
 import { randomInt } from 'node:crypto';
-import { LAUNCH_WEEK_START, launchWeek, STARTER_ACHIEVEMENTS, type StarterStat, type StartersInfo } from '../src/sim/starterAchievements';
+import { LAUNCH_WEEK_START, launchWeek, STARTER_ACHIEVEMENTS, starterDay, type StarterStat, type StartersInfo } from '../src/sim/starterAchievements';
+import { SPECIES } from '../src/sim/data';
 import { eligibleNominations, NOMINATION_BUDGET, NOMINATION_SLOTS, nominationProblem, SLOT3_WEIGHT, STARTER_TIERS, TIER_COST, tierOf, usableNominations } from '../src/sim/starters';
 
 export const STARTER_SQL = `
   CREATE TABLE IF NOT EXISTS starter_unlocks (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, id TEXT NOT NULL, dex TEXT, at INTEGER NOT NULL,
     PRIMARY KEY (user_id, id)
+  );
+  CREATE TABLE IF NOT EXISTS daily_starters (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, day TEXT NOT NULL, pc_id INTEGER NOT NULL, dex TEXT NOT NULL, at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, day)
   );
   CREATE TABLE IF NOT EXISTS starter_nominations (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, dexes TEXT NOT NULL, at INTEGER NOT NULL
@@ -146,7 +151,43 @@ export class StarterUnlocks {
       slots: NOMINATION_SLOTS,
       costs: TIER_COST,
       weights: SLOT3_WEIGHT,
+      daily: this.daily(userId),
+      dailyResetAt: starterDay().resetAt,
     };
+  }
+
+  /**
+   * Today's starter pick (one PC Pokémon a day, chosen in the PC): offered as a fourth choice
+   * beside the rolled three in every match until midnight UTC. Null when none is picked today, or
+   * the picked Pokémon has left the PC (traded or released).
+   */
+  daily(userId: number, now = Date.now()): { dex: string; name: string; pcId: number } | null {
+    const row = this.db.prepare('SELECT pc_id, dex FROM daily_starters WHERE user_id = ? AND day = ?').get(userId, starterDay(now).day) as { pc_id: number; dex: string } | undefined;
+    if (!row) return null;
+    const still = this.db.prepare('SELECT 1 FROM pc WHERE id = ? AND user_id = ?').get(row.pc_id, userId);
+    if (!still) return null;
+    return { dex: row.dex, name: SPECIES.get(row.dex)?.name ?? row.dex, pcId: row.pc_id };
+  }
+
+  /** Picks today's starter from the PC (once a day). Returns an error, or null. */
+  pickDaily(userId: number, pcId: unknown, now = Date.now()): string | null {
+    const id = Number(pcId);
+    if (!Number.isInteger(id)) return 'Pick a Pokémon from your PC';
+    const row = this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(id, userId) as { entry: string } | undefined;
+    if (!row) return 'That Pokémon is not in your PC';
+    let dex = '';
+    try {
+      dex = String((JSON.parse(row.entry) as { dex?: string }).dex ?? '');
+    } catch {
+      /* a broken row */
+    }
+    if (!SPECIES.has(dex)) return 'That Pokémon can not be a starter';
+    const { day } = starterDay(now);
+    const had = this.db.prepare('SELECT dex FROM daily_starters WHERE user_id = ? AND day = ?').get(userId, day) as { dex: string } | undefined;
+    if (had && this.daily(userId, now)) return `You already picked ${SPECIES.get(had.dex)?.name ?? had.dex} today. Pick again after midnight UTC`;
+    // A pick whose Pokémon has since left the PC may be replaced.
+    this.db.prepare('INSERT OR REPLACE INTO daily_starters (user_id, day, pc_id, dex, at) VALUES (?, ?, ?, ?, ?)').run(userId, day, id, dex, now);
+    return null;
   }
 
   /** A choice reward taken (final). Returns an error, or null. */

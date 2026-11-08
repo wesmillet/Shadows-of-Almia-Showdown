@@ -55,7 +55,7 @@ function withEvolutions(dexes: Iterable<string>): Set<string> {
 function matchCast(): Set<string> {
   // Computer trainers start like new players: one starter from the new-player tiers.
   const botStarters = STARTER_TIERS.filter((t) => BASE_TIERS.includes(t.id)).flatMap((t) => t.dex);
-  const out = new Set<string>(['0491', '0491-final', ...DEMO_PARTY, ...botStarters, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
+  const out = new Set<string>(['0491', ...DEMO_PARTY, ...botStarters, ...SHOPS.challenger.party, ...VISITOR_DEXES]);
   for (const b of Object.values(SPAWNS.biomes) as Array<{ table?: Array<{ dex: string }> }>) for (const r of b.table ?? []) out.add(r.dex);
   for (const b of (SPAWNS as unknown as { bosses?: Array<{ dex: string }> }).bosses ?? []) out.add(b.dex);
   // The rotation pools, the starters and pseudo-legendaries (rare) and the stronger encounters.

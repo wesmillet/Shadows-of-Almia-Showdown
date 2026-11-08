@@ -38,7 +38,7 @@ const ACE_TEAM = ['0445', '0448', '0130'];
 /**
  * Every species Celeste may give: the game's ordinary species, all of them. Left out: legendary and
  * Mythical species (species.json class), Mega forms, the hand-fetched variant folders (shiny sets,
- * shadows, Darkrai's final form, Hoopa Unbound: any dex with a "-" that is not a regional form) and
+ * shadows, Hoopa Unbound: any dex with a "-" that is not a regional form) and
  * species with no shiny colours (the prize is always shiny). Regional forms (Alolan, Galarian) count.
  */
 export function celestePrizePool(): string[] {

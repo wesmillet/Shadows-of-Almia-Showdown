@@ -130,6 +130,17 @@ export class Nav {
    * null when the goal cannot be reached on foot (or is already this tile).
    */
   dir(x: number, y: number, tx: number, ty: number): { x: number; y: number } | null {
+    const next = this.nextTile(x, y, tx, ty);
+    if (!next) return null;
+    // aim at the next tile's centre so 1-wide ladders and bridges are taken squarely
+    const vx = next.x + 0.5 - x;
+    const vy = next.y + 0.5 - y;
+    const vl = Math.hypot(vx, vy) || 1;
+    return { x: vx / vl, y: vy / vl };
+  }
+
+  /** The next tile on the way from (x, y) to (tx, ty), or null when there is no way (or it is here). */
+  nextTile(x: number, y: number, tx: number, ty: number): { x: number; y: number } | null {
     const goal = this.settle(Math.floor(tx), Math.floor(ty));
     if (!goal) return null;
     const cx = Math.floor(x);
@@ -163,11 +174,7 @@ export class Nav {
       }
     }
     if (best === -1 || (here !== UNSEEN && best >= here)) return null;
-    // aim at the next tile's centre so 1-wide ladders and bridges are taken squarely
-    const vx = bx + 0.5 - x;
-    const vy = by + 0.5 - y;
-    const vl = Math.hypot(vx, vy) || 1;
-    return { x: vx / vl, y: vy / vl };
+    return { x: bx, y: by };
   }
 
   /** True when a straight walk from a to b stays on walkable tiles. */

@@ -135,6 +135,7 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, pace: 
   const d = Math.hypot(dx, dy);
   let vx = 0;
   let vy = 0;
+  let pathing = false;
   if (d > stopAt) {
     let ux = dx / d;
     let uy = dy / d;
@@ -143,6 +144,7 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, pace: 
       if (step) {
         ux = step.x;
         uy = step.y;
+        pathing = true;
       }
     }
     vx = ux * speed;
@@ -158,7 +160,10 @@ function steer(m: Mon, t: Trainer, w: PartyWorld, px: number, py: number, pace: 
     vx = (vx / v) * cap;
     vy = (vy / v) * cap;
   }
-  const moved = moveAround(w.ground, m, vx * dt, vy * dt, 0.22, dt);
+  // On a path round something: slide along walls toward the next tile. moveAround's own
+  // step-round turns fought the path's direction, and the Pokémon jittered on the spot at corners.
+  if (pathing) m.detourT = 0;
+  const moved = pathing ? tryMove(w.ground, m, vx * dt, vy * dt, 0.22) : moveAround(w.ground, m, vx * dt, vy * dt, 0.22, dt);
   if (moved > 1e-4) m.dir = dirFromVector(vx, vy, m.dir);
   // Trying to get somewhere and barely moving: stuck on something (see unstick).
   if (d > stopAt + 0.3 && moved < speed * dt * 0.25) m.stuckT = (m.stuckT ?? 0) + dt;

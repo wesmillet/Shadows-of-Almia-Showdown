@@ -240,6 +240,8 @@ export interface Trainer {
   duelId?: number;
   /** Match time before which this trainer cannot be drawn into another one-on-one battle. */
   duelReadyAt?: number;
+  /** Match time before which this trainer cannot use another healing item in a battle (CONFIG.items.healCooldown). */
+  healReadyAt?: number;
   /** Mega Evolution is once a match per trainer. */
   megaUsed?: boolean;
   /** Riding or flying on a party Pokémon (Match.toggleRide); it is out of the fight meanwhile. */

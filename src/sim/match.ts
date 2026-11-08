@@ -801,6 +801,12 @@ export class Match {
     const m = this.itemTarget(t, target);
     // Dropped on a fainted Pokémon: only a Revive does anything for it.
     if (picked && m?.fainted && def.kind !== 'revive') return `${m.name} has fainted`;
+    // In a battle (a trainer battle or a legendary's bout) healing items have a cooldown.
+    const healing = def.kind === 'heal' || def.kind === 'revive';
+    if (healing && t.duelId !== undefined && this.time < (t.healReadyAt ?? 0)) return `Wait ${Math.ceil((t.healReadyAt ?? 0) - this.time)} s before another healing item`;
+    const healed = (): void => {
+      if (t.duelId !== undefined) t.healReadyAt = this.time + ((CONFIG.items as { healCooldown?: number }).healCooldown ?? 10);
+    };
     switch (def.kind) {
       case 'ball':
         return 'Hold F to aim, release to throw';
@@ -809,6 +815,7 @@ export class Match {
         if (m.hp >= m.maxHp) return `${m.name} is at full HP`;
         m.hp = Math.min(m.maxHp, m.hp + (def.amount ?? 20));
         this.takeItem(t, slot);
+        healed();
         this.battle.events.push({ type: 'text', mon: m, text: `+${def.amount}` });
         return `${m.name} recovered HP`;
       }
@@ -822,6 +829,7 @@ export class Match {
         down.behavior = joinBehavior(t);
         down.anim.play('Idle', { restart: true });
         this.takeItem(t, slot);
+        healed();
         return `${down.name} was revived!`;
       }
       case 'cure': {

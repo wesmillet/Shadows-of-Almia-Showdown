@@ -189,6 +189,8 @@
     "playerReach": 1.4,
     "_storageComment": "Every town has a storage chest beside its healer. They share one store per trainer (storageSlots slots, each stacking any number of one item) that keeps items safe when you are wiped out.",
     "storageSlots": 10,
+    "_healCooldownComment": "Seconds a trainer waits between healing items (Potions, Revives) while in a trainer battle or a legendary bout.",
+    "healCooldown": 10,
     "_chestCapsComment": "The most of one rare item a chest stack can hold (stored in a match; more stays in the bag). megaStone covers every Mega Stone. Stacks already above a cap stay as they are but take no more.",
     "chestCaps": { "rare-candy": 10, "extraction-voucher": 3, "megaStone": 1 },
     "_alphaMegaStoneComment": "The chance an Alpha of a Mega-capable line drops its Mega Stone (item balls also hold one now and then, loot.json).",

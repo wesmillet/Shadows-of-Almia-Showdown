@@ -28,7 +28,7 @@ import { SpriteRegistry } from '../sprites/pokemonSprite';
 
 /** The merchant's stock: rare things the town stalls do not carry (evolution stones are the towns' to sell). */
 const MERCHANT_STOCK: Array<[string, number]> = [
-  ['rare-candy', 900], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
+  ['rare-candy', 1200], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
   ['leftovers', 2200], ['life-orb', 2600], ['max-revive', 2500],
 ];
 
@@ -571,7 +571,7 @@ export class Visitors {
 
   // ---------------------------------------------------------------- outcomes
 
-  /** A legendary worn down to its last HP joins whoever's Pokémon did it. */
+  /** A legendary worn down to its last HP joins whoever's Pokémon did it (not Lugia: it escapes, and only a ball catches it). */
   legendYields(L: Mon, by: Mon | null): void {
     const m = this.m;
     const t = by?.owner;
@@ -587,6 +587,14 @@ export class Visitors {
     L.status = null;
     L.behavior = joinBehavior(t);
     m.wilds = m.wilds.filter((w) => w !== L);
+    if (L.dex === LUGIA) {
+      // Lugia never joins for being beaten: only a ball catches it. Worn down, it dives back into the lake.
+      L.captured = true;
+      this.lugiaDone = true;
+      m.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.4, tint: '#9fd8ff' });
+      m.battle.events.push({ type: 'notice', text: t.isPlayer ? 'Lugia dives back into the lake! Only a ball can catch it' : 'Lugia dives back into the lake', seconds: 3.5 });
+      return;
+    }
     if (partySize(t) >= m.partyCap) {
       // No room: it flies off, leaving the trainer a voucher to remember it by.
       L.captured = true;

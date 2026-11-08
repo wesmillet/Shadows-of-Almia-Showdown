@@ -1,0 +1,218 @@
+"""Sunglasses on the Poliwag line from the user's shades asset (tools/shadesart.py), per facing.
+
+front:  the pair at sprite size over both eyes.
+three-quarter (facings 1 and 7): the same pair, same size, sheared so the line through the lenses
+        runs on the diagonal of the turned head (the far side higher), overhanging the far cheek a
+        little as real frames do.
+profile (2 and 6): one lens seen edge on in front of the eye, and the arm back to the ear.
+
+Each facing's glasses are fitted to Idle frame 0 relative to the head marker. In every frame of
+every animation the face is found again (which facing it shows, and where, near the head marker)
+and the glasses for that facing drawn there; a spin frame showing the back of the head gets none.
+"""
+import os, shutil, sys
+import xml.etree.ElementTree as ET
+import numpy as np
+from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from shadesart import K, B, A, G, W, lens, pair
+
+BASE, OUT = sys.argv[1], sys.argv[2]
+
+def sheared(px, tilt, up_right):
+    """Shear a drawn pair vertically: one end `tilt` px higher than the other."""
+    xs = [x for x, _ in px]
+    x0, x1 = min(xs), max(xs)
+    span = max(1, x1 - x0)
+    out = {}
+    for (x, y), c in px.items():
+        t = (x - x0) / span if up_right else (x1 - x) / span
+        out[(x, round(y - t * tilt))] = c
+    # fill one-pixel tears in the frame lines the shear opens up
+    for (x, y), c in list(out.items()):
+        if c == K and (x + 1, y) not in out and (x + 1, y - 1) in out and out[(x + 1, y - 1)] == K:
+            pass
+    return out
+
+def profile_px(w, h, toward, arm=5):
+    """The near lens seen from the side (the same lens, narrower) over the eye, and the arm back to
+    the ear. Facing right: the lens's front edge is its right edge and the arm leaves from the left."""
+    px = lens(0, 0, w, h, glint=1, rim=False, shine_from=1, gap=1)
+    bar = 1
+    for k in range(1, arm + 1): px[(-k, bar)] = K
+    if toward == 'l': px = {(w - 1 - x, y): c for (x, y), c in px.items()}
+    return px
+
+def place_at(px, ox, oy):
+    return {(x + ox, y + oy): c for (x, y), c in px.items()}
+
+def cells_of(px):
+    return [p for p, c in px.items() if c in (A, B, W, G)]
+
+def front(lw, lh, bridge, ox, oy, glint=1):
+    px = place_at(pair(lw, lh, bridge, glint=glint, rim=False, bar_row=1, bar_h=2, shine_from=2, gap=1), ox, oy)
+    return px
+
+def three_q(lw, lh, bridge, ox, oy, tilt, toward, glint=1):
+    px = pair(lw, lh, bridge, glint=glint, rim=False, bar_row=1, bar_h=2, shine_from=2, gap=1)
+    px = sheared(px, tilt, up_right=(toward == 'r'))
+    return place_at(px, ox, oy)
+
+def prof(lw, lh, ox, oy, toward, arm=5):
+    return place_at(profile_px(lw, lh, toward, arm), ox, oy)
+
+# Anchors: where each facing's glasses go relative to the head marker of Idle frame 0 (the top-left
+# of the drawing, nub included), from the eyes in each view.
+SPEC = {
+    '0060': {0: front(6, 5, 1, -7, -5), 1: three_q(6, 5, 0, -8, -4, 2, 'r'), 7: three_q(6, 5, 0, -5, -4, 2, 'l'),
+             2: prof(5, 5, -6, -3, 'r'), 6: prof(5, 5, 3, -3, 'l')},
+    '0061': {0: front(7, 6, 3, -9, -4), 1: three_q(7, 6, 1, -9, -3, 4, 'r'), 7: three_q(7, 6, 1, -4, -3, 3, 'l'),
+             2: prof(5, 6, -4, -2, 'r'), 6: prof(5, 6, 1, -2, 'l')},
+    '0062': {0: front(7, 5, 5, -10, -5), 1: three_q(7, 5, 2, -10, -3, 1, 'r'), 7: three_q(7, 5, 2, -7, -3, 1, 'l'),
+             2: prof(5, 5, -5, -1, 'r'), 6: prof(5, 5, 3, -1, 'l')},
+    '0186': {0: front(6, 6, 3, -8, -8), 1: three_q(6, 6, 2, -9, -7, 1, 'r'), 7: three_q(6, 6, 2, -5, -7, 1, 'l'),
+             2: prof(5, 6, -4, -7, 'r'), 6: prof(5, 6, 2, -7, 'l')},
+}
+FACINGS = (0, 1, 7, 2, 6)
+
+def anims(path):
+    r = ET.parse(f'{path}/AnimData.xml').getroot()
+    return {a.find('Name').text: (int(a.find('FrameWidth').text), int(a.find('FrameHeight').text)) for a in r.iter('Anim') if a.find('CopyOf') is None}
+
+def head(off, x0, y0, fw, fh):
+    for y in range(fh):
+        for x in range(fw):
+            p = off.getpixel((x0 + x, y0 + y))
+            if p[3] > 0 and p[:3] == (0, 0, 0): return (x, y)
+    return None
+
+def face_patches(dex, spec):
+    fw, fh = anims(f'{BASE}/{dex}')['Idle']
+    im = np.asarray(Image.open(f'{BASE}/{dex}/Idle-Anim.png').convert('RGBA')).astype(np.int32)
+    off = Image.open(f'{BASE}/{dex}/Idle-Offsets.png').convert('RGBA')
+    out = {}
+    for d in FACINGS:
+        hx, hy = head(off, 0, d * fh, fw, fh)
+        cells = cells_of(spec[d])
+        xs = [c[0] for c in cells]; ys = [c[1] for c in cells]
+        x0, x1, y0, y1 = min(xs) - 2, max(xs) + 2, min(ys) - 2, max(ys) + 2
+        P = np.zeros((y1 - y0 + 1, x1 - x0 + 1, 4), np.int32)
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                X, Y = hx + x, hy + y
+                if 0 <= X < fw and 0 <= Y < fh: P[y - y0, x - x0] = im[d * fh + Y, X]
+        out[d] = (x0, y0, P)
+    return out
+
+def eye_like(arr, x, y):
+    """A white, or a dark pixel inside the body with lighter neighbours (an eye or a pupil, not the outline)."""
+    H, Wd = arr.shape[:2]
+    if not (0 <= x < Wd and 0 <= y < H) or arr[y, x, 3] == 0: return False
+    q = arr[y, x]
+    if min(q[:3]) > 200: return True
+    if max(q[:3]) >= 40: return False
+    n = [(x + a, y + b) for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    if any(not (0 <= u < Wd and 0 <= v < H) or arr[v, u, 3] == 0 for u, v in n): return False
+    return sum(1 for u, v in n if max(arr[v, u, :3]) >= 40) >= 2
+
+def idle_eyes(dex, spec):
+    """Head-relative eye pixels under each facing's lenses in Idle frame 0."""
+    fw, fh = anims(f'{BASE}/{dex}')['Idle']
+    im = np.asarray(Image.open(f'{BASE}/{dex}/Idle-Anim.png').convert('RGBA')).astype(np.int32)
+    off = Image.open(f'{BASE}/{dex}/Idle-Offsets.png').convert('RGBA')
+    out = {}
+    for d in FACINGS:
+        hx, hy = head(off, 0, d * fh, fw, fh)
+        fr = im[d * fh:(d + 1) * fh, 0:fw]
+        out[d] = [(x, y) for (x, y) in cells_of(spec[d]) if eye_like(fr, hx + x, hy + y)]
+    return out
+
+def find_face(frame, h, patches, row, R=6, spin=False):
+    """Outside spins the frame's own facing is kept unless its face isn't there at all (a move that
+    turns the body), so a walk cycle's in-between frames never swap to another facing's glasses."""
+    if not spin and row in patches:
+        own = best_for(frame, h, patches, [row], R)
+        if own[0] <= 120: return own
+    return best_for(frame, h, patches, FACINGS, R)
+
+def best_for(frame, h, patches, facings, R):
+    row = facings[0] if len(facings) == 1 else None
+    fh, fw = frame.shape[:2]
+    big = np.zeros((fh + 40, fw + 40, 4), np.int32); big[20:20 + fh, 20:20 + fw] = frame
+    best = None
+    for c in facings:
+        x0, y0, P = patches[c]
+        ph, pw = P.shape[:2]
+        pa = P[..., 3] > 0
+        for dy in range(-R, R + 1):
+            for dx in range(-R, R + 1):
+                X, Y = 20 + h[0] + dx + x0, 20 + h[1] + dy + y0
+                if X < 0 or Y < 0 or X + pw > big.shape[1] or Y + ph > big.shape[0]: continue
+                Q = big[Y:Y + ph, X:X + pw]
+                qa = Q[..., 3] > 0
+                diff = np.abs(P[..., :3] - Q[..., :3]).sum(-1)
+                sc = (diff[pa & qa].sum() + 300 * (pa ^ qa).sum()) / (ph * pw)
+                if best is None or sc < best[0]: best = (sc, c, dx, dy)
+    return best
+
+def draw(im, ox, oy, fw, fh, hx, hy, px, facing, spin):
+    p = im.load()
+    def opaque(x, y): return 0 <= x < fw and 0 <= y < fh and p[ox + x, oy + y][3] > 0
+    cells = cells_of(px)
+    off_face = [(x, y) for (x, y) in cells if not opaque(hx + x, hy + y)]
+    # front and profile glasses sit on the face; a three-quarter pair may overhang the far cheek
+    allow = len(cells) // 3 if facing in (1, 7) else max(2, len(cells) // 8)
+    if len(off_face) > allow: return False
+    # in a spin, only where an eye is under the lenses: a white, or a dark pixel inside the body
+    # (not the outline), so the back of the head never gets glasses
+    def eye(x, y):
+        q = p[ox + x, oy + y]
+        if min(q[:3]) > 200: return True
+        return max(q[:3]) < 40 and all(opaque(x + a, y + b) and max(p[ox + x + a, oy + y + b][:3]) >= 0 for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))) and sum(1 for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)) if max(p[ox + x + a, oy + y + b][:3]) >= 40) >= 2
+    if spin and sum(1 for (x, y) in cells if opaque(hx + x, hy + y) and eye(hx + x, hy + y)) < 2: return False
+    for (x, y), c in px.items():
+        X, Y = hx + x, hy + y
+        if not (0 <= X < fw and 0 <= Y < fh): continue
+        # arm pixels only over the head (never a stick in the air)
+        if c == K and not opaque(X, Y) and (x, y) not in px or (c == K and not opaque(X, Y) and not any(q in px and px[q] != K for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))):
+            continue
+        p[ox + X, oy + Y] = c
+    return True
+
+def main(dex):
+    src, dst = f'{BASE}/{dex}', f'{OUT}/{dex}-rad'
+    if os.path.exists(dst): shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    spec = SPEC[dex]
+    patches = face_patches(dex, spec)
+    eyes = idle_eyes(dex, spec)
+    done = miss = 0
+    for name, (fw, fh) in anims(src).items():
+        im = Image.open(f'{src}/{name}-Anim.png').convert('RGBA')
+        off = Image.open(f'{src}/{name}-Offsets.png').convert('RGBA')
+        spin = name in ('Swing', 'Rotate')
+        for d in range(im.height // fh):
+            if d not in spec and not spin: continue
+            for f in range(im.width // fw):
+                if im.crop((f * fw, d * fh, (f + 1) * fw, (d + 1) * fh)).getbbox() is None: continue
+                h = head(off, f * fw, d * fh, fw, fh)
+                if not h: continue
+                frame = np.asarray(im.crop((f * fw, d * fh, (f + 1) * fw, (d + 1) * fh))).astype(np.int32)
+                sc, c, dx, dy = find_face(frame, h, patches, d, spin=spin)
+                # in a spin the eyes must be where that facing has them (the back of the head has none)
+                seen = sum(1 for (x, y) in eyes[c] if eye_like(frame, h[0] + dx + x, h[1] + dy + y)) if spin else 0
+                if spin and (sc > (160 if c == d else 110) or seen * 2 < len(eyes[c])): ok = False
+                elif sc > 200: ok = False
+                else: ok = draw(im, f * fw, d * fh, fw, fh, h[0] + dx, h[1] + dy, spec[c], c, False)
+                if not ok and not spin and d in spec:
+                    # never a bare frame in a normal move: the row's own glasses where its face matches best
+                    sc2, c2, dx2, dy2 = best_for(frame, h, patches, [d], 6)
+                    ok = draw(im, f * fw, d * fh, fw, fh, h[0] + dx2, h[1] + dy2, spec[d], d, False)
+                done += ok; miss += not ok
+        im.save(f'{dst}/{name}-Anim.png')
+    with open(f'{dst}/credits.txt', 'a') as fh_:
+        fh_.write('\nSunglasses (from a shades design by the game\'s developer) added for Shadows of Almia Showdown, a gift for PoliRad Gaming, on the PMD SpriteCollab sprite above.\n')
+    print(dex, 'with glasses', done, 'without', miss)
+
+if __name__ == '__main__':
+    for dex in sys.argv[3:]: main(dex)

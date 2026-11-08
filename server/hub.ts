@@ -92,6 +92,10 @@ export interface HubOptions {
   minPlayers?: number;
   /** Seconds a lobby short of minPlayers waits before its computer-trainer countdown starts (default 60). */
   lonelySeconds?: number;
+  /** Scheduled public matches: one starts every this many seconds, on the clock (0: off). */
+  scheduleSeconds?: number;
+  /** Scheduled public matches: the most players in one. */
+  seats?: number;
   hooks: RoomHooks;
   /** Where replays go (null: not recorded). */
   replayDir: string | null;
@@ -143,7 +147,9 @@ export class Hub {
       minPlayers: o.minPlayers,
       lonelySeconds: o.lonelySeconds,
       // 8 or more real players: no computer trainers (the matchmaker decides; private lobbies keep their own rule).
-      start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? {} : { bots: false }),
+      start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? { size: rules.size } : { bots: false, size: rules.size }),
+      everySeconds: o.scheduleSeconds || undefined,
+      seats: o.seats,
       isAdmin: (peer) => this.isAdmin(peer as Client),
     });
     o.accounts.presence = (id) => this.presence(id);

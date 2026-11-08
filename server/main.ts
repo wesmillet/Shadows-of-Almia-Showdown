@@ -64,6 +64,14 @@ const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAY
  * gather into fewer, fuller matches (each match is a share of the one CPU) instead of many small ones.
  */
 const LONELY = Number(process.env.LONELY_SECONDS ?? (KIND === 'live' ? 150 : 60));
+/**
+ * Scheduled public matches (the live server): one starts every SCHEDULE_SECONDS on the clock, with
+ * up to SEATS players (computer trainers fill a lobby to MATCH_SIZE). Six minutes: busy matches last
+ * about 11 minutes on average (16 at the longest), so about two run at once, three only while a
+ * long one finishes, never four. Twelve seats: room for a busy evening in those two or three.
+ */
+const SCHEDULE = Number(process.env.SCHEDULE_SECONDS ?? (KIND === 'live' ? 360 : 0));
+const SEATS = Number(process.env.SEATS ?? 12);
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -171,7 +179,7 @@ const pool: WorkerPool | null = WORKERS > 0
   : null;
 const hub: Hub = new Hub({
   makeRoom: pool?.factory(),
-  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, hooks: roomHooks,
+  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, scheduleSeconds: SCHEDULE, seats: SEATS, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
   onMatchEnd: (_r, report) => {

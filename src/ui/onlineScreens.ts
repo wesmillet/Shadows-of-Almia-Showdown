@@ -474,6 +474,11 @@ export class PrivateLobbyScreen implements Screen {
  * trainers). A party waits here first for everyone to pick. The match itself starts from main.ts,
  * whatever screen is up when the server says so.
  */
+/** m:ss */
+const clockOf = (sec: number): string => `${Math.floor(Math.ceil(sec) / 60)}:${String(Math.ceil(sec) % 60).padStart(2, '0')}`;
+/** A start time as the player reads a clock ("6:06 PM"), to the minute. */
+export const timeOfDay = (ms: number): string => new Date(Math.round(ms / 60000) * 60000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
 export class LobbyScreen implements Screen {
   private chat: ChatPanel | null = null;
   private players: string[] = [];
@@ -490,6 +495,8 @@ export class LobbyScreen implements Screen {
   private bots = false;
   /** 8 or more real players: no computer trainers join. */
   private humansOnly = false;
+  /** Scheduled matches: this one's start on this device's clock. */
+  private at: number | null = null;
   private unsub: (() => void) | null = null;
   private t = 0;
 
@@ -515,6 +522,8 @@ export class LobbyScreen implements Screen {
         this.botsIn = m.botsIn ?? null;
         this.bots = !!m.bots;
         this.humansOnly = !!m.humansOnly;
+        // From the countdown, not the server's clock (the two clocks can disagree).
+        this.at = m.at !== undefined && m.startsIn !== null ? Date.now() + m.startsIn * 1000 : null;
       } else if (m.t === 'unqueued') this.onLeave(m.text);
     });
   }
@@ -585,15 +594,18 @@ export class LobbyScreen implements Screen {
           : `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'}`
         : this.startsIn === null
           ? 'Joining the queue'
-          : `Starting in ${Math.ceil(this.startsIn)}s${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'}`;
-    heading(v, `Finding trainers${dots}`, sub, 80 * s);
+          : this.at !== null
+            ? `Starts in ${clockOf(this.startsIn)}${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'} · browse the menus meanwhile`
+            : `Starting in ${Math.ceil(this.startsIn)}s${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'}`;
+    heading(v, this.at !== null && !waitingParty ? `Your match: ${timeOfDay(this.at)}` : `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;
     const py = v.height / 2 - 170 * s;
     panel(v, px, py, pw, 340 * s, 18, 'rgba(18,14,34,0.9)');
     text(v, `${this.players.length} / ${this.size} trainers`, v.width / 2, py + 34 * s, 18, { align: 'center', color: INK.accent, shadow: false });
+    const row = this.size > 10 ? 22 : 27;
     for (let i = 0; i < this.size; i++) {
-      const y = py + 66 * s + i * 27 * s;
+      const y = py + 66 * s + i * row * s;
       const name = this.players[i];
       text(v, name ?? (i < this.players.length ? '' : 'waiting...'), v.width / 2, y, 15, { align: 'center', color: name ? INK.text : INK.dim, shadow: false });
     }

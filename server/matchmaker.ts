@@ -12,6 +12,13 @@
  * exception is an administrator (checked by the hub from their account's role, never their name):
  * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.
  * With `noBotsFrom` (8) real players or more, a match starts with no computer trainers at all.
+ *
+ * Scheduled matches (`everySeconds`, the live server): instead, public matches start on the clock,
+ * one every few minutes (6:00, 6:06, 6:12...). Joining the queue gives a seat in the next match with
+ * room (up to `seats` players), so a player knows from the start exactly when they will play, and
+ * can use the menus meanwhile. It starts on time with whoever is in it, computer trainers filling
+ * the rest; no minimum and no waiting for more. Spacing the starts keeps the number of matches
+ * running at once (each a share of the CPU) steady.
  */
 import type { Peer } from './room';
 
@@ -43,7 +50,7 @@ export interface MatchmakerOptions {
   /** Real players a lobby needs before it starts with computer trainers in the empty seats
    * (default half the lobby, rounded up). Below that it keeps waiting. */
   minPlayers?: number;
-  start: (players: Lineup[], mode: QueueMode, rules: { bots: boolean }) => void;
+  start: (players: Lineup[], mode: QueueMode, rules: { bots: boolean; size: number }) => void;
   /** Real players from which a match starts without computer trainers (default 8): those seats stay empty. */
   noBotsFrom?: number;
   /** Seconds a lobby short of minPlayers waits before it starts filling with computer trainers (default 60). */
@@ -52,6 +59,12 @@ export interface MatchmakerOptions {
   fillSeconds?: number;
   /** Whether this queued player's account is an administrator (may start a lobby below minPlayers). */
   isAdmin?: (peer: Peer) => boolean;
+  /** Scheduled matches: a public match starts every this many seconds, on the clock (see above). */
+  everySeconds?: number;
+  /** Scheduled matches: the most players in one (default `size`); more wait for the next one. */
+  seats?: number;
+  /** Scheduled matches: a slot closer than this (seconds) is not offered to a new player (default 5). */
+  graceSeconds?: number;
 }
 
 interface Forming {
@@ -96,8 +109,41 @@ export class Matchmaker {
     return this.lobbies.some((l) => l.groups.some((g) => g.tickets.some((t) => t.peer.key === key)));
   }
 
+  /** Scheduled matches are on. */
+  get scheduled(): boolean {
+    return !!this.o.everySeconds;
+  }
+
+  /** The most players in one lobby. */
+  get seats(): number {
+    return this.scheduled ? Math.max(this.o.size, this.o.seats ?? this.o.size) : this.o.size;
+  }
+
+  /** The next scheduled start a player joining now can make (epoch ms, on the clock). */
+  nextSlot(now: number, after = 0): number {
+    const every = (this.o.everySeconds ?? 60) * 1000;
+    const from = Math.max(now + (this.o.graceSeconds ?? 5) * 1000, after + 1);
+    return Math.ceil(from / every) * every;
+  }
+
+  private joinScheduled(group: Group, mode: QueueMode, now: number): void {
+    const n = group.tickets.length;
+    if (n > this.seats) return;
+    // The earliest upcoming match with room for the whole group; else a new one after the last.
+    const ahead = this.lobbies.filter((l) => l.mode === mode).sort((a, b) => a.startAt - b.startAt);
+    let lobby = ahead.find((l) => count(l) + n <= this.seats && l.startAt >= now + (this.o.graceSeconds ?? 5) * 1000);
+    if (!lobby) {
+      const last = ahead.length ? (ahead[ahead.length - 1] as Forming).startAt : 0;
+      lobby = { mode, groups: [], openedAt: now, startAt: this.nextSlot(now, last) };
+      this.lobbies.push(lobby);
+    }
+    lobby.groups.push(group);
+    this.status(now, true);
+  }
+
   join(group: Group, mode: QueueMode, now: number): void {
     for (const t of group.tickets) this.leave(t.peer.key, false);
+    if (this.scheduled) return this.joinScheduled(group, mode, now);
     const n = group.tickets.length;
     if (n > this.o.size) return;
     let lobby = this.lobbies.find((l) => l.mode === mode && count(l) + n <= this.o.size);
@@ -116,7 +162,7 @@ export class Matchmaker {
       if (l.mode !== 'casual') continue;
       if (!l.groups.some((g) => g.tickets.some((t) => t.peer.key === key))) continue;
       if (admin) l.forced = true;
-      else if (count(l) < this.minPlayers) return;
+      else if (this.scheduled || count(l) < this.minPlayers) return;
       l.startAt = Math.min(l.startAt, now + 2000);
       this.status(now, true);
       return;
@@ -140,6 +186,10 @@ export class Matchmaker {
   /** Called often: starts lobbies whose time has come, and keeps the waiting players informed. */
   tick(now: number): void {
     for (const l of [...this.lobbies]) {
+      if (this.scheduled && !l.forced) {
+        if (now >= l.startAt) this.launch(l, now);
+        continue;
+      }
       // Short of players for a minute: a countdown, then computer trainers fill the rest.
       if (!l.forced && !l.filling && count(l) < this.minPlayers && now - l.openedAt >= this.lonelyMs) {
         l.filling = true;
@@ -152,18 +202,22 @@ export class Matchmaker {
         l.startAt = now + this.o.wait[l.mode] * 1000;
         continue;
       }
-      this.lobbies.splice(this.lobbies.indexOf(l), 1);
-      // Parties are squads (team 1, 2, ...); everyone else plays alone.
-      let team = 0;
-      const players: Lineup[] = [];
-      for (const g of l.groups) {
-        const t = g.party && g.tickets.length > 1 ? ++team : undefined;
-        for (const x of g.tickets) players.push({ peer: x.peer, starter: x.starter, team: t });
-      }
-      this.o.start(players, l.mode, { bots: players.length < this.noBotsFrom });
-      this.status(now, true);
+      this.launch(l, now);
     }
     this.status(now, false);
+  }
+
+  private launch(l: Forming, now: number): void {
+    this.lobbies.splice(this.lobbies.indexOf(l), 1);
+    // Parties are squads (team 1, 2, ...); everyone else plays alone.
+    let team = 0;
+    const players: Lineup[] = [];
+    for (const g of l.groups) {
+      const t = g.party && g.tickets.length > 1 ? ++team : undefined;
+      for (const x of g.tickets) players.push({ peer: x.peer, starter: x.starter, team: t });
+    }
+    this.o.start(players, l.mode, { bots: players.length < this.noBotsFrom, size: Math.max(this.o.size, players.length) });
+    this.status(now, true);
   }
 
   private status(now: number, force: boolean): void {
@@ -172,7 +226,7 @@ export class Matchmaker {
     for (const l of this.lobbies) {
       const players = l.groups.flatMap((g) => g.tickets.map((t) => t.peer.name));
       // null: waiting for more players (`need` of them) before any countdown
-      const need = l.forced || l.filling ? 0 : Math.max(0, this.minPlayers - players.length);
+      const need = l.forced || l.filling || this.scheduled ? 0 : Math.max(0, this.minPlayers - players.length);
       const startsIn = need ? null : Math.max(0, Math.ceil((l.startAt - now) / 1000));
       // Still short: when the countdown with computer trainers starts.
       const botsIn = need ? Math.max(0, Math.ceil((l.openedAt + this.lonelyMs - now) / 1000)) : undefined;
@@ -180,7 +234,7 @@ export class Matchmaker {
         for (const t of g.tickets) {
           // Only an administrator's own lobby message offers the admin start (the server checks again).
           const admin = this.o.isAdmin?.(t.peer) || undefined;
-          t.peer.send({ t: 'lobby', players, startsIn, size: this.o.size, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined, humansOnly: players.length >= this.noBotsFrom || undefined, noBotsFrom: this.noBotsFrom });
+          t.peer.send({ t: 'lobby', players, startsIn, at: this.scheduled ? l.startAt : undefined, size: this.seats, mode: l.mode, need, min: this.minPlayers, admin, botsIn, bots: l.filling || undefined, humansOnly: players.length >= this.noBotsFrom || undefined, noBotsFrom: this.noBotsFrom });
         }
       }
     }

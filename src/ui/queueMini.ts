@@ -6,6 +6,7 @@
  */
 import type { Connection } from '../net/connection';
 import type { ServerMsg } from '../net/protocol';
+import { timeOfDay } from './onlineScreens';
 
 type LobbyMsg = Extract<ServerMsg, { t: 'lobby' }>;
 
@@ -128,7 +129,7 @@ export class QueueMini {
     bar.style.width = `${Math.round((m.players.length / m.size) * 100)}%`;
     const starting = m.startsIn !== null;
     dot.classList.toggle('go', starting);
-    title.textContent = starting ? 'Match starting' : 'Finding a match';
+    title.textContent = m.at !== undefined && starting ? `Your match: ${timeOfDay(this.at + (m.startsIn ?? 0) * 1000 - performance.now() + Date.now())}` : starting ? 'Match starting' : 'Finding a match';
     if (starting) {
       const left = Math.max(0, (m.startsIn ?? 0) - gone);
       when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>${m.humansOnly ? ' · real players only' : ' · bots fill empty seats'}`;

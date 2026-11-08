@@ -550,6 +550,11 @@ export class FanGround implements GroundRenderer {
     return this.biomeAt(tx, ty) === 'water';
   }
 
+  /** The walkable cells (1 = walkable), row by row: the live array, for fast path searches (src/sim/nav.ts). */
+  walkCells(): Uint8Array {
+    return this.walk;
+  }
+
   block(tx: number, ty: number): void {
     if (this.inBounds(tx, ty)) this.walk[this.idx(tx, ty)] = 0;
   }

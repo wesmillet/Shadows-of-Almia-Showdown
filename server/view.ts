@@ -40,6 +40,16 @@ export class PlayerView {
     this.around = opts.around ?? null;
   }
 
+  /** What never changes during a match (each shop and its stock): sent once, then kept (sync.ts). */
+  get fixed(): ReadonlySet<object> {
+    if (!this.fixedSet) {
+      this.fixedSet = new Set<object>();
+      for (const s of this.match.shops) this.fixedSet.add(s);
+    }
+    return this.fixedSet;
+  }
+  private fixedSet: Set<object> | null = null;
+
   private list<T>(key: string, items: T[]): T[] {
     let l = this.lists.get(key) as T[] | undefined;
     if (!l) this.lists.set(key, (l = []));

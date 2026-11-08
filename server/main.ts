@@ -58,6 +58,12 @@ const WAIT = Number(process.env.LOBBY_WAIT ?? (KIND === 'live' ? 60 : 15));
  */
 const HALF = Math.ceil(SIZE / 2);
 const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAYERS ?? HALF)) : Number(process.env.MIN_PLAYERS ?? HALF);
+/**
+ * Seconds a lobby short of MIN_PLAYERS waits for more players before the 30-second computer-trainer
+ * countdown: two and a half minutes on the live server (three minutes in all), so the players online
+ * gather into fewer, fuller matches (each match is a share of the one CPU) instead of many small ones.
+ */
+const LONELY = Number(process.env.LONELY_SECONDS ?? (KIND === 'live' ? 150 : 60));
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -165,7 +171,7 @@ const pool: WorkerPool | null = WORKERS > 0
   : null;
 const hub: Hub = new Hub({
   makeRoom: pool?.factory(),
-  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, hooks: roomHooks,
+  world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, hooks: roomHooks,
   replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
   onMatchEnd: (_r, report) => {

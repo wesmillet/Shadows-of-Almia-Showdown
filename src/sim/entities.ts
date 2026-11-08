@@ -84,6 +84,8 @@ export interface Mon {
   roamTarget: { x: number; y: number } | null;
   /** Seconds it has been trying to move without getting anywhere (stuck on something). */
   stuckT?: number;
+  /** Seconds until an idle wild Pokémon next looks for something to fight (match.ts stepHostile). */
+  scanT?: number;
   /** A target it couldn't reach, left alone for `chaseBlockT` seconds. */
   chaseBlockId?: number;
   chaseBlockT?: number;

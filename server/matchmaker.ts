@@ -6,8 +6,8 @@
  * starts the moment it is full (after a short beat to see who is in), or `wait` seconds after it
  * opened, with computer trainers in the empty seats, but never with fewer than minPlayers real
  * players: neither the wait running out nor "Start now with bots" starts it before then, until a
- * lobby has waited `lonelySeconds` (a minute) below that: then a `fillSeconds` (30 s) countdown
- * starts and computer trainers fill every other seat, so nobody waits more than a minute and a half.
+ * lobby has waited `lonelySeconds` (a minute by default; two and a half on the live server) below that:
+ * then a `fillSeconds` (30 s) countdown starts and computer trainers fill every other seat.
  * The one
  * exception is an administrator (checked by the hub from their account's role, never their name):
  * they may start their lobby at once with whoever is in it, even alone, bots filling every other seat.

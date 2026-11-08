@@ -90,6 +90,8 @@ export interface HubOptions {
   wait: Record<QueueMode, number>;
   /** Real players a public lobby needs before computer trainers fill the rest (default half the lobby). */
   minPlayers?: number;
+  /** Seconds a lobby short of minPlayers waits before its computer-trainer countdown starts (default 60). */
+  lonelySeconds?: number;
   hooks: RoomHooks;
   /** Where replays go (null: not recorded). */
   replayDir: string | null;
@@ -139,6 +141,7 @@ export class Hub {
       wait: o.wait,
       fullSeconds: 3,
       minPlayers: o.minPlayers,
+      lonelySeconds: o.lonelySeconds,
       // 8 or more real players: no computer trainers (the matchmaker decides; private lobbies keep their own rule).
       start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? {} : { bots: false }),
       isAdmin: (peer) => this.isAdmin(peer as Client),

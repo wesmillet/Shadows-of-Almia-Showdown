@@ -88,7 +88,7 @@ export class SyncEncoder {
    * `visible`: the Pokémon and trainers this player may know about; a reference to any other
    * travels as null (so one far-off target does not pull half the map along).
    */
-  encode(view: object, visible?: Set<object>): SyncPatch {
+  encode(view: object, visible?: Set<object>, fixed?: ReadonlySet<object>): SyncPatch {
     this.visible = visible ?? null;
     const seen = new Set<number>();
     const set: SyncPatch['set'] = {};
@@ -98,29 +98,37 @@ export class SyncEncoder {
       const o = stack.pop() as object;
       const id = this.ids.id(o);
       if (seen.has(id)) continue;
+      // Data that never changes during a match (the shops' stock): once this player has it, it is
+      // only kept, not walked and compared again every update.
+      if (fixed?.has(o)) {
+        const below = this.fixedBelow.get(id);
+        if (below && this.sent.has(id)) {
+          seen.add(id);
+          for (const k of below) seen.add(k);
+          continue;
+        }
+        if (!below) this.fixedBelow.set(id, this.plainBelow(o));
+      }
       seen.add(id);
       const enc = this.encodeObject(o, stack);
       const prev = this.sent.get(id);
       if (prev) for (const k of ONCE) if (k in prev && k in enc) enc[k] = prev[k];
-      const diff: Record<string, unknown> = {};
-      let changed = false;
-      for (const k in enc) {
-        const v = enc[k];
-        if (!prev || !same(prev[k], v)) {
-          diff[k] = v;
-          changed = true;
+      if (!prev) set[id] = enc;
+      else {
+        let diff: Record<string, unknown> | null = null;
+        for (const k in enc) {
+          const v = enc[k];
+          if (!same(prev[k], v)) (diff ??= {})[k] = v;
         }
-      }
-      if (prev) {
         for (const k in prev) {
           if (!(k in enc)) {
+            diff ??= {};
             diff[k] = null;
             diff[`~${k}`] = 1;
-            changed = true;
           }
         }
+        if (diff) set[id] = diff;
       }
-      if (changed || !prev) set[id] = diff;
       this.sent.set(id, enc);
     }
     const drop: number[] = [];
@@ -134,6 +142,30 @@ export class SyncEncoder {
   }
 
   private visible: Set<object> | null = null;
+
+  /** For each fixed object (see encode), the ids of the plain objects below it. */
+  private readonly fixedBelow = new Map<number, number[]>();
+
+  /** Ids of every plain object and array under `o` (not Pokémon or trainers: those travel on their own). */
+  private plainBelow(o: object): number[] {
+    const out: number[] = [];
+    const seen = new Set<object>([o]);
+    const todo: object[] = [o];
+    while (todo.length) {
+      const x = todo.pop() as Record<string, unknown>;
+      for (const k of Object.keys(x)) {
+        const v = x[k];
+        if (!v || typeof v !== 'object' || seen.has(v)) continue;
+        const proto = Object.getPrototypeOf(v);
+        if (proto !== Object.prototype && proto !== Array.prototype && proto !== null) continue;
+        if (isMon(v) || isTrainer(v)) continue;
+        seen.add(v);
+        out.push(this.ids.id(v));
+        todo.push(v);
+      }
+    }
+    return out;
+  }
 
   /**
    * An event for this player, or null when it names a Pokémon, trainer or battle they cannot see
@@ -161,23 +193,25 @@ export class SyncEncoder {
     return ok ? out : null;
   }
 
+  /** One field's value as it travels: numbers rounded, plain objects and arrays as references
+   *  (pushed onto `stack` to be walked too), class instances and functions left out (undefined). */
+  private ref(v: unknown, stack: object[]): unknown {
+    if (v === null || v === undefined) return null;
+    const t = typeof v;
+    if (t === 'number') return Number.isFinite(v as number) ? Math.round((v as number) * this.precision) / this.precision : (v as number) > 0 ? 'Inf' : (v as number) < 0 ? '-Inf' : 'NaN';
+    if (t === 'string' || t === 'boolean') return v;
+    if (t !== 'object') return undefined;
+    const proto = Object.getPrototypeOf(v);
+    // Plain objects and arrays travel; class instances (sprites, maps of the ground...) do not.
+    if (proto !== Object.prototype && proto !== Array.prototype && proto !== null) return undefined;
+    if (this.visible && !this.visible.has(v as object) && (isMon(v as object) || isTrainer(v as object))) return null;
+    stack.push(v as object);
+    return { '#': this.ids.id(v as object) };
+  }
+
   private encodeObject(o: object, stack: object[]): Record<string, unknown> {
     const out: Record<string, unknown> = {};
-    const ref = (v: unknown): unknown => {
-      if (v === null || v === undefined) return v ?? null;
-      if (typeof v === 'number') return Number.isFinite(v) ? this.round(v) : v > 0 ? 'Inf' : v < 0 ? '-Inf' : 'NaN';
-      if (typeof v === 'string' || typeof v === 'boolean') return v;
-      if (typeof v === 'function') return undefined;
-      if (typeof v === 'object') {
-        const proto = Object.getPrototypeOf(v);
-        // Plain objects and arrays travel; class instances (sprites, maps of the ground...) do not.
-        if (proto !== Object.prototype && proto !== Array.prototype && proto !== null) return undefined;
-        if (this.visible && !this.visible.has(v as object) && (isMon(v as object) || isTrainer(v as object))) return null;
-        stack.push(v as object);
-        return { '#': this.ids.id(v as object) };
-      }
-      return undefined;
-    };
+    const ref = (v: unknown): unknown => this.ref(v, stack);
     if (Array.isArray(o)) {
       out.$k = 1;
       out.length = o.length;

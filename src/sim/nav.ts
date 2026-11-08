@@ -83,7 +83,9 @@ export class Nav {
     const whole = !Number.isFinite(r);
     const key = (gy * cols + gx) * 2 + (whole ? 1 : 0);
     const hit = this.cache.get(key);
-    if (hit && this.clock - hit.made < this.ttl) return hit;
+    // A whole-map field is for a far goal (an outpost, the crystal, a trainer far off): kept longer,
+    // since the way there hardly changes while it is still far.
+    if (hit && this.clock - hit.made < (whole ? this.ttl * 3 : this.ttl)) return hit;
     const x0 = whole ? 0 : Math.max(0, gx - r);
     const y0 = whole ? 0 : Math.max(0, gy - r);
     const w = (whole ? cols - 1 : Math.min(cols - 1, gx + r)) - x0 + 1;
@@ -96,6 +98,29 @@ export class Nav {
     const start = (gy - y0) * w + (gx - x0);
     dist[start] = 0;
     q[tail++] = start;
+    // Fast path: read the ground's walkable cells straight from its array (the same search, several
+    // times quicker than asking the ground tile by tile).
+    const cells = this.ground.walkCells?.();
+    if (cells && cells.length === cols * rows) {
+      while (head < tail) {
+        const i = q[head++] as number;
+        const lx = i % w;
+        const ly = (i - lx) / w;
+        const g = (ly + y0) * cols + lx + x0;
+        const d = (dist[i] as number) + 1;
+        const l = lx > 0, r2 = lx < w - 1, u = ly > 0, dn = ly < h - 1;
+        const oL = l && cells[g - 1] === 1, oR = r2 && cells[g + 1] === 1, oU = u && cells[g - cols] === 1, oD = dn && cells[g + cols] === 1;
+        if (oR && dist[i + 1] === UNSEEN) { dist[i + 1] = d; q[tail++] = i + 1; }
+        if (oL && dist[i - 1] === UNSEEN) { dist[i - 1] = d; q[tail++] = i - 1; }
+        if (oD && dist[i + w] === UNSEEN) { dist[i + w] = d; q[tail++] = i + w; }
+        if (oU && dist[i - w] === UNSEEN) { dist[i - w] = d; q[tail++] = i - w; }
+        // Diagonals: never squeezing past a blocked corner.
+        if (oR && oD && cells[g + cols + 1] === 1 && dist[i + w + 1] === UNSEEN) { dist[i + w + 1] = d; q[tail++] = i + w + 1; }
+        if (oR && oU && cells[g - cols + 1] === 1 && dist[i - w + 1] === UNSEEN) { dist[i - w + 1] = d; q[tail++] = i - w + 1; }
+        if (oL && oD && cells[g + cols - 1] === 1 && dist[i + w - 1] === UNSEEN) { dist[i + w - 1] = d; q[tail++] = i + w - 1; }
+        if (oL && oU && cells[g - cols - 1] === 1 && dist[i - w - 1] === UNSEEN) { dist[i - w - 1] = d; q[tail++] = i - w - 1; }
+      }
+    }
     while (head < tail) {
       const i = q[head++] as number;
       const lx = i % w;

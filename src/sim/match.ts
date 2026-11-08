@@ -2602,6 +2602,14 @@ export class Match {
   private stepHostile(m: Mon, dt: number, aggro: number): boolean {
     if (!BattleSystem.active(m) || m.casting || incapable(m)) return false;
     if (m.target && (!BattleSystem.active(m.target) || Math.hypot(m.target.x - m.x, m.target.y - m.y) > aggro + 1.5)) m.target = null;
+    // A wild Pokémon with nobody to fight looks round a few times a second, not every step (with a
+    // hundred-odd wilds on the map this was a large share of each step; the delay is under a fifth
+    // of a second, well inside any reaction a player sees).
+    if (!m.target && m.wild && !m.owner) {
+      m.scanT = (m.scanT ?? 0) - dt;
+      if (m.scanT > 0) return false;
+      m.scanT = 0.12 + ((m.x * 7.31 + m.y * 3.17) % 1 + 1) % 1 * 0.06; // spread out, without touching the match rng
+    }
     // Only Pokémon in the squares round it can be in range (the grid, rebuilt each step).
     if (!m.target) m.target = this.battle.pickTarget(m, this.grid.size ? this.nearMons(m.x, m.y, aggro) : m.boss || m.owner ? this.mons() : this.wildTargets(), aggro);
     const t = m.target;

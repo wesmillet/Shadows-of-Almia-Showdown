@@ -493,7 +493,7 @@ export class Room implements RoomHandle {
       // Eliminated players keep watching until they leave.
       if (!p.peer) continue;
       const root = p.view.build();
-      const patch = p.enc.encode(root, p.view.visible);
+      const patch = p.enc.encode(root, p.view.visible, p.view.fixed);
       const me = p.seat.trainer.id;
       const out: Array<Record<string, unknown>> = [];
       for (const ev of evs) {

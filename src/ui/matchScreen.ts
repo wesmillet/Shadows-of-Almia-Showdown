@@ -409,6 +409,8 @@ export class MatchScreen implements Screen {
     // Q and E: moves 1 and 2 again, next to WASD.
     if (input.pressed('KeyQ')) this.castFeedback(this.match.playerCast(0));
     if (input.pressed('KeyE')) this.castFeedback(this.match.playerCast(1));
+    // X: the next Pokémon takes the lead (Shift+X the one before), round the party in a fixed order.
+    if (input.pressed('KeyX')) this.cycleLead(input.down('ShiftLeft') || input.down('ShiftRight') ? -1 : 1);
     // M: Mega Evolve the Pokémon you are steering (or your lead) when it holds its Mega Stone.
     if (input.pressed('KeyM')) {
       const msg = this.match.megaEvolve(this.match.player);
@@ -723,6 +725,31 @@ export class MatchScreen implements Screen {
         this.gearTab = keep;
         return;
       }
+    }
+  }
+
+  /** The last lead X picked (online the party order catches up a moment later, so quick presses keep going round). */
+  private cycledTo: { id: number; at: number } | null = null;
+
+  /** X / Shift+X: the next (or previous) Pokémon that can lead, in a fixed order round the party. */
+  private cycleLead(step: 1 | -1): void {
+    const p = this.match.player;
+    if (p.duelId) return this.say('You choose who goes out in a battle when one faints', 1.4);
+    const can = (x: Mon) => !x.fainted && !x.captured && !isRoaming(x) && p.mount?.mon !== x;
+    const order = [...p.party].sort((a, b) => a.id - b.id);
+    if (order.filter(can).length < 2) return this.say('No other Pokémon to lead', 1.2);
+    const fresh = this.cycledTo && performance.now() - this.cycledTo.at < 1500 ? this.cycledTo.id : p.party[0]?.id;
+    let i = Math.max(0, order.findIndex((x) => x.id === fresh));
+    for (let k = 0; k < order.length; k++) {
+      i = (i + step + order.length) % order.length;
+      const next = order[i] as Mon;
+      if (!can(next)) continue;
+      const at = p.party.indexOf(next);
+      if (at > 0 && this.match.swapLead(at)) {
+        this.cycledTo = { id: next.id, at: performance.now() };
+        this.say(`${next.name} takes the lead`, 1);
+      }
+      return;
     }
   }
 

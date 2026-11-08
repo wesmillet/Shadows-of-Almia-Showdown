@@ -64,8 +64,15 @@ export type FromWorker =
   | { ev: 'error'; room: string; message: string; stack: string; time: number }
   | { ev: 'stats'; n: number; total: number; max: number };
 
-/** An idle worker beyond the spares is closed this long after its last match ends. */
-const RETIRE_AFTER_MS = 15_000;
+/**
+ * An idle worker beyond the spares is closed this long after its last match ends. Long: loading a
+ * worker (the whole world) takes seconds of CPU, which on a small machine slows every match running,
+ * so a worker is kept for the next match (one starts every few minutes) instead of made again.
+ */
+const RETIRE_AFTER_MS = 10 * 60_000;
+/** After a match takes the spare, the next spare is loaded this much later, not as the match starts
+ * (when its players are loading in and the new match is being built). */
+const SPARE_AFTER_MS = 20_000;
 
 /** The same id a Room gives itself (server/room.ts). */
 export const roomId = (seed: number) => `m${seed.toString(36)}`;
@@ -180,6 +187,8 @@ interface PoolWorker {
   ready: boolean;
   /** Being shut down on purpose (no longer needed): not replaced. */
   retiring: boolean;
+  /** When it was started (ms). */
+  born: number;
 }
 
 export interface PoolOptions {
@@ -238,7 +247,7 @@ export class WorkerPool {
     const n = this.next++;
     const worker = new Worker(this.file, { workerData: { assets: this.o.assets, n }, execArgv: ['--disable-warning=ExperimentalWarning'] });
     const born = Date.now();
-    const pw: PoolWorker = { worker, rooms: new Map(), n, ready: false, retiring: false };
+    const pw: PoolWorker = { worker, rooms: new Map(), n, ready: false, retiring: false, born };
     this.workers.add(pw);
     worker.on('message', (m: FromWorker) => this.onMessage(pw, m));
     worker.on('error', (e) => this.o.onError(`Match worker ${n} failed: ${e.message}`, e.stack ?? '', { worker: n }));
@@ -265,6 +274,7 @@ export class WorkerPool {
     switch (m.ev) {
       case 'ready':
         pw.ready = true;
+        if (process.env.LOG_WORKERS) this.o.log(`Match worker ${pw.n} ready in ${Date.now() - pw.born} ms`);
         return;
       case 'send':
         return this.o.deliver(m.key, m.data);
@@ -320,7 +330,7 @@ export class WorkerPool {
         spec: { ...spec, entries: spec.entries.map((e) => ({ ...info(e.peer), starter: e.starter, team: e.team })) },
       };
       pw.worker.postMessage(msg);
-      this.topUp();
+      setTimeout(() => this.topUp(), SPARE_AFTER_MS).unref();
       return room;
     };
   }

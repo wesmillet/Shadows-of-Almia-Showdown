@@ -72,6 +72,9 @@ const LONELY = Number(process.env.LONELY_SECONDS ?? (KIND === 'live' ? 150 : 60)
  */
 const SCHEDULE = Number(process.env.SCHEDULE_SECONDS ?? (KIND === 'live' ? 360 : 0));
 const SEATS = Number(process.env.SEATS ?? 12);
+/** Stutters worth a log line: a match step this slow, or the main thread this late (ms). */
+const SLOW_STEP_MS = Number(process.env.SLOW_STEP_MS ?? 30);
+const SLOW_LAG_MS = Number(process.env.SLOW_LAG_MS ?? 40);
 const BUILD = (process.env.BUILD_ID ?? 'local').slice(0, 7);
 /** Messages a browser may send per second before it is cut off (a normal player sends about 25). */
 const MSG_RATE = 120;
@@ -174,7 +177,11 @@ const pool: WorkerPool | null = WORKERS > 0
       errors.record('match', e, context);
       alerts.send(`crash:${String(context.match ?? message)}`, `Match ${String(context.match ?? '?')} crashed and was called off: ${message}`);
     },
-    onStats: (n, total, max) => metrics.addSteps(n, total, max),
+    onStats: (n, total, max) => {
+      metrics.addSteps(n, total, max);
+      // A slow step is a stutter players feel: logged (with the time) to line up with what else happened.
+      if (max >= SLOW_STEP_MS) log(`Slow match step: ${max.toFixed(1)} ms`);
+    },
   })
   : null;
 const hub: Hub = new Hub({
@@ -566,6 +573,7 @@ setInterval(() => {
   const now = performance.now();
   // A tick is due every 4 ms; how late this one is says whether the server keeps up.
   metrics.lag(now - last - 4);
+  if (now - last - 4 >= SLOW_LAG_MS) log(`Main thread late by ${(now - last - 4).toFixed(0)} ms`);
   acc += Math.min(0.25, (now - last) / 1000);
   last = now;
   while (acc >= STEP) {

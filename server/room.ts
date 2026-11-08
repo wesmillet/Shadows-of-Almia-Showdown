@@ -83,7 +83,10 @@ interface Player {
   flagScore: number;
   view: PlayerView;
   enc: SyncEncoder;
-  /** Events waiting for the next view update. */
+  /** Which of the SEND_EVERY steps this player's update goes out on (spreads the work evenly). */
+  phase: number;
+  /** Events waiting for this player's next update. */
+  pending: BattleEvent[];
   goneAt: number | null;
   commands: number;
   ended: boolean;
@@ -172,7 +175,7 @@ export class Room implements RoomHandle {
     this.match.seats.forEach((seat, i) => {
       const e = entries[i] as Human & { peer: Peer };
       const enc = new SyncEncoder(this.ids, seat.trainer);
-      this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, goneAt: null, commands: 0, ended: false, flags: new Map(), flagScore: 0 });
+      this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, phase: i % SEND_EVERY, pending: [], goneAt: null, commands: 0, ended: false, flags: new Map(), flagScore: 0 });
     });
     // Each player's saved chest is loaded now, so it reaches their screen with the first update. (Made
     // on first use instead, the chest looked empty to the player until they put something in it.)
@@ -363,6 +366,7 @@ export class Room implements RoomHandle {
     if (!p) return;
     p.peer = peer;
     p.goneAt = null;
+    p.pending = [];
     p.seat.trainer.away = false;
     // A reloaded page numbers its input frames from 1 again: the old count would make the server
     // drop every new frame as already seen (the trainer could not move after a reload).
@@ -471,10 +475,11 @@ export class Room implements RoomHandle {
     }
     ++this.steps;
     if (this.steps % RECORD_EVERY === 0) this.recorder?.frame();
-    if (this.steps % SEND_EVERY === 0) {
-      for (const p of this.players.values()) p.commands = Math.max(0, p.commands - COMMAND_RATE / 20);
-      this.broadcast();
-    }
+    // Each player gets an update every SEND_EVERY steps, but not all on the same step: a third of
+    // them on each, so the work (the costliest part of a step) is spread out instead of a spike.
+    const phase = this.steps % SEND_EVERY;
+    if (phase === 0) for (const p of this.players.values()) p.commands = Math.max(0, p.commands - COMMAND_RATE / 20);
+    this.broadcast(phase);
     // A room stays open while anyone is still playing OR inside their reconnect window, so a
     // dropped solo player (or the last human standing) is not instantly handed a loss.
     // With every human gone, only the bots are left playing: the window shrinks to EMPTY_SECONDS (time
@@ -491,13 +496,26 @@ export class Room implements RoomHandle {
     return Math.max(2, this.match.allTrainers.filter((t) => t.alive && !t.visitor && !t.challenger && !t.legendBout).length + 1);
   }
 
-  private broadcast(): void {
-    const evs = this.events;
+  /** Events since the last update for watchers (they all update together, every SEND_EVERY steps). */
+  private watcherEvents: BattleEvent[] = [];
+
+  private broadcast(phase: number): void {
+    const fresh = this.events;
     this.events = [];
-    if (this.watchers.size) this.stepWatchers(evs);
+    if (fresh.length) {
+      for (const p of this.players.values()) if (p.peer) for (const ev of fresh) p.pending.push(ev);
+      if (this.watchers.size) for (const ev of fresh) this.watcherEvents.push(ev);
+    }
+    if (phase === 0) {
+      const w = this.watcherEvents;
+      this.watcherEvents = [];
+      if (this.watchers.size) this.stepWatchers(w);
+    }
     for (const p of this.players.values()) {
       // Eliminated players keep watching until they leave.
-      if (!p.peer) continue;
+      if (!p.peer || p.phase !== phase) continue;
+      const evs = p.pending;
+      p.pending = [];
       const root = p.view.build();
       const patch = p.enc.encode(root, p.view.visible, p.view.fixed);
       const me = p.seat.trainer.id;

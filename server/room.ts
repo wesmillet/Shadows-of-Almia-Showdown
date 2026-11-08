@@ -24,6 +24,8 @@ export const STEP = 1 / 60;
 /** Simulation steps per view update (60 / 3 = 20 updates a second). */
 const SEND_EVERY = 3;
 const RECONNECT_SECONDS = 45;
+/** How long a match with no human connected (only bots playing) waits for one to come back. */
+const EMPTY_SECONDS = 15;
 /** Commands a player may send per second (beyond this they are dropped). */
 const COMMAND_RATE = 30;
 /** Spectators see the match this many seconds late (so watching can not be used to help a player). */
@@ -475,7 +477,11 @@ export class Room implements RoomHandle {
     }
     // A room stays open while anyone is still playing OR inside their reconnect window, so a
     // dropped solo player (or the last human standing) is not instantly handed a loss.
-    const anyone = [...this.players.values()].some((p) => !p.ended && (p.peer !== null || (p.goneAt !== null && m.time - p.goneAt <= RECONNECT_SECONDS)));
+    // With every human gone, only the bots are left playing: the window shrinks to EMPTY_SECONDS (time
+    // to reload a page), so a match nobody is in does not run on for the full reconnect window.
+    const connected = [...this.players.values()].some((p) => !p.ended && p.peer !== null);
+    const grace = connected ? RECONNECT_SECONDS : EMPTY_SECONDS;
+    const anyone = connected || [...this.players.values()].some((p) => !p.ended && p.goneAt !== null && m.time - p.goneAt <= grace);
     if (m.over || !anyone) this.close();
   }
 

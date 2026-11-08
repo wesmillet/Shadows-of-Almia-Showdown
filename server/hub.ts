@@ -227,7 +227,8 @@ export class Hub {
         // An administrator's start goes ahead with whoever is in the lobby (bots fill the rest);
         // anyone else's waits for the usual minimum. The role comes from the account, fresh from
         // the database, never from the display name.
-        this.matchmaker.startNow(c.key, Date.now(), this.isAdmin(c));
+        // Only administrators may start early (the button is theirs alone, for testing).
+        if (this.isAdmin(c)) this.matchmaker.startNow(c.key, Date.now(), true);
         return;
       case 'party':
         return this.partyMsg(c, msg);

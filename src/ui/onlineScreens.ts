@@ -539,11 +539,11 @@ export class LobbyScreen implements Screen {
     return { x: v.width / 2 - 228 * s, y: v.height / 2 + 232 * s, w: 220 * s, h: 50 * s };
   }
 
-  /** Casual queues only: done waiting, start with computer trainers filling the rest. */
+  /** Administrators only (for testing): start now, with computer trainers filling the rest. Players
+   *  wait for the lobby to fill or its countdown to run out. */
   private startNowRect(): Rect | null {
-    // An administrator may start at any time (even alone); everyone else once the countdown runs.
-    if (!this.admin && (this.startsIn === null || this.startsIn < 4)) return null;
-    if (this.admin && this.startsIn !== null && this.startsIn < 4) return null;
+    if (!this.admin) return null;
+    if (this.startsIn !== null && this.startsIn < 4) return null;
     const v = this.ctx.view;
     const s = v.baseScale;
     return { x: v.width / 2 - 110 * s, y: v.height / 2 + 176 * s, w: 220 * s, h: 50 * s };
@@ -599,7 +599,7 @@ export class LobbyScreen implements Screen {
     }
     const b = this.leaveRect();
     const sn = this.startNowRect();
-    if (sn) button(v, this.admin && this.need > 0 ? 'Start now (admin)' : this.humansOnly ? 'Start now' : 'Start now with bots', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
+    if (sn) button(v, 'Start now (admin)', sn.x, sn.y, sn.w, sn.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sn.x, sn.y, sn.w, sn.h));
     button(v, 'Leave queue', b.x, b.y, b.w, b.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h), '#f4e6c8');
     const br = this.browseRect();
     if (br) button(v, 'Browse menus (Esc)', br.x, br.y, br.w, br.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, br.x, br.y, br.w, br.h));

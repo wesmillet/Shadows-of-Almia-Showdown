@@ -59,6 +59,13 @@ export type { MatchOutcome } from './seat';
 /** The most of one item a storage chest stack holds. */
 export const CHEST_STACK_MAX = 9999;
 
+/** The most of one item a chest stack takes (rare items are capped, config items.chestCaps). */
+export function chestCap(id: string): number {
+  const caps = (CONFIG.items as { chestCaps?: Record<string, number> }).chestCaps ?? {};
+  const c = caps[id] ?? (ITEMS[id]?.effect === 'mega' ? caps.megaStone : undefined);
+  return c === undefined ? CHEST_STACK_MAX : c;
+}
+
 let nextId = 1;
 
 /** One side of a one-on-one trainer battle. */
@@ -462,19 +469,26 @@ export class Match {
     if (!entry) return '';
     const box = this.storageOf(t);
     const same = box.find((s) => s?.id === entry.id);
-    // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest).
-    if (same && same.count + entry.count > CHEST_STACK_MAX) return 'That stack in the chest is full';
-    if (same) same.count += entry.count;
+    const name = ITEMS[entry.id]?.name ?? entry.id;
+    // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest),
+    // and rare items less (config items.chestCaps): what does not fit stays in the bag.
+    const cap = chestCap(entry.id);
+    const room = Math.min(CHEST_STACK_MAX, cap) - (same?.count ?? 0);
+    if (room <= 0) return cap < CHEST_STACK_MAX ? `The chest holds at most ${cap} ${name}` : 'That stack in the chest is full';
+    const n = Math.min(entry.count, room);
+    if (n < entry.count && cap >= CHEST_STACK_MAX) return 'That stack in the chest is full';
+    if (same) same.count += n;
     else {
       const free = box.indexOf(null);
       if (free < 0) return 'The chest is full';
-      box[free] = { id: entry.id, count: entry.count };
+      box[free] = { id: entry.id, count: n };
     }
-    list[slot] = null;
-    this.noteChest(t, entry.id, -entry.count);
+    entry.count -= n;
+    if (entry.count <= 0) list[slot] = null;
+    this.noteChest(t, entry.id, -n);
     this.saveChest(t, box);
-    const name = ITEMS[entry.id]?.name ?? entry.id;
-    return `Stored ${name}${entry.count > 1 ? ` x${entry.count}` : ''}${this.chestKept(t) ? '' : ' (not kept after this match)'}`;
+    const left = entry.count > 0 ? ` (the chest holds at most ${cap}; ${entry.count} stay in your bag)` : '';
+    return `Stored ${name}${n > 1 ? ` x${n}` : ''}${left}${this.chestKept(t) ? '' : ' (not kept after this match)'}`;
   }
 
   /** Takes a whole chest stack back into the bag (or gear). Returns what happened. */

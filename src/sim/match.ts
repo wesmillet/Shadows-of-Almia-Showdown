@@ -3918,9 +3918,21 @@ export class Match {
     let vx = 0;
     let vy = 0;
     let pace = 1;
-    if (d > (o.rush ? bodies + 0.8 : far)) {
+    const closing = d > (o.rush ? bodies + 0.8 : far);
+    let pathing = false;
+    if (closing) {
       vx = dx / d;
       vy = dy / d;
+      // Something in the way (a tree, a rock, a building, a pond): follow the map's path round it
+      // instead of pushing straight at the foe, which left battlers wedged behind obstacles.
+      if (!this.nav.clearLine(m.x, m.y, foe.x, foe.y)) {
+        const step = this.nav.dir(m.x, m.y, foe.x, foe.y);
+        if (step) {
+          vx = step.x;
+          vy = step.y;
+          pathing = true;
+        }
+      }
       m.sidestep = null;
     } else if (d < near && !o.rush) {
       vx = -dx / d;
@@ -3940,11 +3952,46 @@ export class Match {
         m.sidestepIn = this.rng.range(o.stepEvery * 0.6, o.stepEvery * 1.4);
       }
     }
-    const moved = vx || vy ? moveAround(this.ground, m, vx * o.speed * pace * dt, vy * o.speed * pace * dt, 0.22, dt) : 0;
+    const want = o.speed * pace * dt;
+    // On a path: slide along walls toward the next tile (moveAround's own step-round would fight the path).
+    if (pathing) m.detourT = 0;
+    const moved = !(vx || vy) ? 0 : pathing ? tryMove(this.ground, m, vx * want, vy * want, 0.22) : moveAround(this.ground, m, vx * want, vy * want, 0.22, dt);
+    // Still wedged while trying to close in (a corner the path can't see at body size): after a
+    // moment it hops to open ground a step toward its foe, so a battle never stalls on a rock.
+    // Progress is getting nearer the foe (sliding to and fro along a wall moves it but gets nowhere).
+    const after = Math.hypot(foe.x - m.x, foe.y - m.y);
+    if (closing && after > d - want * 0.25) m.stuckT = (m.stuckT ?? 0) + dt;
+    else m.stuckT = 0;
+    if ((m.stuckT ?? 0) > 1.5) {
+      m.stuckT = 0;
+      m.detourT = 0;
+      this.hopToward(m, foe);
+    }
     this.setMonWalking(m, moved > 1e-4);
     m.dir = dirFromVector(dx, dy, m.dir);
     return d <= reach;
   }
+
+  /**
+   * Puts a wedged battler a couple of tiles further along the map's path to `to` (tile centres the
+   * path itself walks through, so never through a wall, across water or off a ledge).
+   */
+  private hopToward(m: Mon, to: { x: number; y: number }): void {
+    let at = { x: m.x, y: m.y };
+    let moved = false;
+    for (let k = 0; k < 2; k++) {
+      const next = this.nav.nextTile(at.x, at.y, to.x, to.y);
+      if (!next) break;
+      const c = { x: next.x + 0.5, y: next.y + 0.5 };
+      if (!canStand(this.ground, c.x, c.y, 0.25)) break;
+      at = c;
+      moved = true;
+    }
+    if (!moved) return;
+    m.x = m.px = at.x;
+    m.y = m.py = at.y;
+  }
+
 
   /** Walk or Idle for a battling Pokémon, without restarting the animation every frame. */
   private setMonWalking(m: Mon, walking: boolean): void {

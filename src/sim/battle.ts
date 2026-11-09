@@ -48,6 +48,8 @@ export type BattleEvent =
   | { type: 'text'; mon: Mon; text: string }
   | { type: 'notice'; text: string; seconds?: number; /** Online: the one player (trainer id) it is for; everyone when absent. */ to?: number }
   | { type: 'downed'; trainer: Trainer; seconds: number }
+  /** The last two trainers' battle has begun: brought to the crystal (the screen plays its intro). */
+  | { type: 'final-battle'; a: string; b: string }
   | { type: 'mega-start'; mon: Mon }
   | { type: 'fish'; stage: 'cast' | 'land' | 'bite'; x: number; y: number }
   | { type: 'respawned'; trainer: Trainer }

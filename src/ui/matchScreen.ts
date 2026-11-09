@@ -1732,6 +1732,9 @@ export class MatchScreen implements Screen {
       case 'notice':
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
+      case 'final-battle':
+        this.finalIntro = { a: ev.a, b: ev.b, t: 0 };
+        break;
       case 'learned':
         if (ev.mon.owner === this.match.player) {
           this.say(ev.forgot ? `${ev.mon.name} forgot ${ev.forgot} and learned ${move(ev.moveId).name}!` : `${ev.mon.name} learned ${move(ev.moveId).name}!`, 2);
@@ -2726,12 +2729,97 @@ export class MatchScreen implements Screen {
     this.floaters.draw(v, v.hud);
     if (!this.spectator && !Input.touch) this.drawReticleTop(v);
     this.drawDuelHud(v);
+    this.drawFinalIntro(v, frameDt);
     this.drawDowned(v);
     this.drawOverlay(v);
     this.spectator?.draw(v);
     this.drawTouch(v);
     v.camX -= ox;
     v.camY -= oy;
+  }
+
+  /** The last two trainers' battle: the Final Battle intro playing (seconds in), or null. */
+  private finalIntro: { a: string; b: string; t: number } | null = null;
+
+  /**
+   * The Final Battle intro (about 3.5 s, while both teams are still in their balls): a flash, two
+   * dark bands closing in, FINAL BATTLE punching in over a gold stripe, and the two names sliding
+   * in from either side to meet at VS. It clears before the Pokémon come out.
+   */
+  private drawFinalIntro(v: View, dt: number): void {
+    const f = this.finalIntro;
+    if (!f) return;
+    f.t += dt;
+    const T = 3.5;
+    if (f.t >= T) {
+      this.finalIntro = null;
+      return;
+    }
+    const h = v.hud;
+    const s = v.baseScale;
+    const W = v.width;
+    const H = v.height;
+    const ease = (x: number) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
+    const out = f.t > T - 0.5 ? 1 - (f.t - (T - 0.5)) / 0.5 : 1;
+    h.save();
+    // Dark bands close in from the top and bottom.
+    const band = H * 0.2 * ease(f.t / 0.35);
+    h.globalAlpha = 0.9 * out;
+    h.fillStyle = '#0b0614';
+    h.fillRect(0, 0, W, band);
+    h.fillRect(0, H - band, W, band);
+    // A slanted gold stripe across the middle.
+    const sw = ease((f.t - 0.15) / 0.3);
+    // Above the middle of the screen, clear of the two trainers (the camera is on you).
+    const cy = H * 0.3;
+    const sh = 74 * s;
+    h.globalAlpha = 0.92 * out;
+    const g = h.createLinearGradient(0, cy - sh / 2, 0, cy + sh / 2);
+    g.addColorStop(0, '#3a1460');
+    g.addColorStop(0.5, '#6a2bb0');
+    g.addColorStop(1, '#3a1460');
+    h.fillStyle = g;
+    h.beginPath();
+    h.moveTo(W / 2 - (W / 2 + 40 * s) * sw, cy - sh / 2 + 10 * s);
+    h.lineTo(W / 2 + (W / 2 + 40 * s) * sw, cy - sh / 2 - 10 * s);
+    h.lineTo(W / 2 + (W / 2 + 40 * s) * sw, cy + sh / 2 - 10 * s);
+    h.lineTo(W / 2 - (W / 2 + 40 * s) * sw, cy + sh / 2 + 10 * s);
+    h.closePath();
+    h.fill();
+    h.fillStyle = '#ffd34a';
+    h.fillRect(W / 2 - (W / 2) * sw, cy - sh / 2 - 2 * s, W * sw, 3 * s);
+    h.fillRect(W / 2 - (W / 2) * sw, cy + sh / 2 - 1 * s, W * sw, 3 * s);
+    h.restore();
+    // FINAL BATTLE punches in (big, then settles with a small overshoot).
+    if (f.t > 0.3) {
+      const k = (f.t - 0.3) / 0.28;
+      const scale = k < 1 ? 2.4 - 1.5 * ease(k) : 0.9 + 0.1 * Math.min(1, (k - 1) * 3);
+      h.save();
+      h.globalAlpha = out * Math.min(1, k * 2);
+      h.translate(W / 2, cy);
+      h.scale(scale, scale);
+      text(v, 'FINAL BATTLE', 0, 0, 40, { align: 'center', baseline: 'middle', color: '#ffe27a', shadowColor: 'rgba(40,0,60,0.9)', weight: '900' });
+      h.restore();
+    }
+    // The two names slide in from the sides and meet at VS.
+    if (f.t > 0.9) {
+      const k = ease((f.t - 0.9) / 0.4);
+      const ny = cy + sh / 2 + 44 * s;
+      h.save();
+      h.globalAlpha = out;
+      text(v, f.a, W / 2 - 40 * s - (1 - k) * W * 0.6, ny, 24, { align: 'right', baseline: 'middle', color: '#ffffff', weight: '900', maxWidth: W * 0.38 });
+      text(v, f.b, W / 2 + 40 * s + (1 - k) * W * 0.6, ny, 24, { align: 'left', baseline: 'middle', color: '#ffffff', weight: '900', maxWidth: W * 0.38 });
+      if (k > 0.85) text(v, 'VS', W / 2, ny, 28, { align: 'center', baseline: 'middle', color: '#ff5a4a', weight: '900' });
+      h.restore();
+    }
+    // The opening flash.
+    if (f.t < 0.35) {
+      h.save();
+      h.globalAlpha = 0.85 * (1 - f.t / 0.35);
+      h.fillStyle = '#ffffff';
+      h.fillRect(0, 0, W, H);
+      h.restore();
+    }
   }
 
   /** On a touch screen: the on-screen controls, the stick under the left thumb, and where a drag aims. */

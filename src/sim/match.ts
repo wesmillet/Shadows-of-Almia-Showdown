@@ -3089,6 +3089,8 @@ export class Match {
     this.checkElimination();
     // The last two are no longer pulled to the crystal's arena: they find each other on the map.
     if (CONFIG.duel.finalShowdown) this.stepFinalShowdown(dt);
+    // Once they do start battling, that battle moves to the crystal (stepFinalBattle).
+    else this.stepFinalBattle();
   }
 
   /** Party Pokémon past an evolution level start evolving; evolutions in progress tick on. */
@@ -3613,9 +3615,14 @@ export class Match {
 
   private stepDarkness(dt: number): void {
     const d = this.darkness;
+    // The final battle at the crystal: the darkness stands still (it still hurts outside, as before).
+    if (this.darknessHeld) {
+      d.pulsed = false;
+      d.collapsed = false;
+    }
     const mapRadius = Math.hypot(this.centerX, this.centerY) + 1;
     const wasPhase = d.phase;
-    stepDarkness(d, dt * this.stormSpeed, mapRadius);
+    if (!this.darknessHeld) stepDarkness(d, dt * this.stormSpeed, mapRadius);
     if (d.pulsed) {
       this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
       if (d.finale && !this.darkrai) {
@@ -4523,6 +4530,88 @@ export class Match {
     this.battle.events.push({ type: 'notice', text: `Final showdown: ${a.name} vs ${b.name}! Both teams are restored`, seconds: 4 });
   }
 
+  /** The darkness stands still (the last two are battling at the crystal): no pulses, no collapse, no Darkrai. */
+  darknessHeld = false;
+
+  /**
+   * The last two trainers have started battling each other: the battle moves to the crystal, so
+   * neither falls to the darkness mid-battle. Both are brought there with the Pokémon they have
+   * (no healing), their Pokémon go back in their balls and come out again after the screen's
+   * Final Battle intro. The darkness stops where it is (nothing is dark round the crystal), and
+   * if the crystal had not shattered yet it never does (no Darkrai, no Master Ball); a Darkrai
+   * already out fades away.
+   */
+  private stepFinalBattle(): void {
+    if (this.finalStarted || this.over) return;
+    const left = this.allTrainers.filter((t) => t.alive && !t.challenger && !t.visitor && !t.legendBout);
+    if (left.length !== 2 || sameTeam(left[0] as Trainer, left[1] as Trainer)) return;
+    const [a, b] = left as [Trainer, Trainer];
+    if (!a.duelId || a.duelId !== b.duelId) return;
+    const d = this.duels.find((x) => x.id === a.duelId);
+    if (!d || d.state === 'over') return;
+    this.finalStarted = true;
+    this.darknessHeld = true;
+    if (this.controlled) this.releaseControl();
+    const fb = (CONFIG.duel as typeof CONFIG.duel & { finalBattle?: { gap: number; introSeconds: number; clearRadius: number } }).finalBattle ?? { gap: 6, introSeconds: 3.5, clearRadius: 9 };
+    // Two spots either side of the crystal (east and west), on open ground.
+    const spotNear = (x: number, y: number) => (canStand(this.ground, x, y, CONFIG.player.radius) ? { x, y } : this.nearestStand(x, y));
+    const sa = spotNear(this.centerX - fb.gap / 2, this.centerY + 2.5);
+    const sb = spotNear(this.centerX + fb.gap / 2, this.centerY + 2.5);
+    for (const [side, spot, other] of [[d.a, sa, sb], [d.b, sb, sa]] as const) {
+      const t = side.trainer;
+      t.x = t.px = side.spotX = spot.x;
+      t.y = t.py = side.spotY = spot.y;
+      const n = Math.hypot(other.x - spot.x, other.y - spot.y) || 1;
+      side.fx = (other.x - spot.x) / n;
+      side.fy = (other.y - spot.y) / n;
+      t.dir = dirFromVector(side.fx, side.fy, t.dir);
+      t.aiTarget = null;
+      if (t.mount) this.dismount(t, true);
+      for (const m of t.party) {
+        if (m.captured) continue;
+        if (!m.fainted) {
+          m.stowed = true;
+          m.duelId = undefined;
+          this.battle.interrupt(m);
+          m.target = null;
+          m.moving = false;
+        }
+        m.x = m.px = spot.x;
+        m.y = m.py = spot.y;
+      }
+      side.mon = null;
+      side.awaitingPick = false;
+      side.nextAt = this.time + fb.introSeconds;
+    }
+    d.cx = (sa.x + sb.x) / 2;
+    d.cy = (sa.y + sb.y) / 2;
+    d.state = 'intro';
+    d.t = 0;
+    d.quietHp = undefined;
+    d.quietT = 0;
+    // Nothing else in the way: wild Pokémon round the crystal are moved off, and Darkrai leaves.
+    for (const w of this.wilds) {
+      if (w.npc || w.boss || Math.hypot(w.x - this.centerX, w.y - this.centerY) > fb.clearRadius) continue;
+      const out = this.nearestStand(this.centerX + (w.x >= this.centerX ? 1 : -1) * (fb.clearRadius + 3), w.y);
+      w.x = w.px = w.homeX = w.targetX = out.x;
+      w.y = w.py = w.homeY = w.targetY = out.y;
+      w.target = null;
+    }
+    if (this.darkrai && !this.darkrai.fainted) {
+      const dk = this.darkrai;
+      this.battle.interrupt(dk);
+      dk.visual.alpha = 0;
+      dk.fainted = true;
+      dk.hp = 0;
+      this.darkrai = null;
+    }
+    // The darkness holds where it is, and the crystal's surroundings are light.
+    const dn = this.darkness;
+    dn.radius = dn.targetRadius = Math.max(Number.isFinite(dn.radius) ? dn.radius : Infinity, fb.clearRadius + 4);
+    this.battle.events.push({ type: 'final-battle', a: a.name, b: b.name });
+    this.battle.events.push({ type: 'notice', text: `Final battle: ${a.name} vs ${b.name}! The Shadow Crystal holds back the darkness`, seconds: 4 });
+  }
+
   /**
    * Two Pokémon that can not hurt each other (two Ghosts with only Normal moves, a Ground move
    * against a Flying type...) would battle forever: after `stalemateSeconds` with neither losing
@@ -4560,6 +4649,19 @@ export class Match {
       this.withSeat(t, () => this.battle.events.push({ type: 'notice', text: swapped ? `Neither Pokémon can land a hit: ${names} send out another!` : 'Neither Pokémon can land a hit: the battle is called off', seconds: 3 }));
     }
     if (swapped) return false;
+    // The final battle can't just stop: the team with more of its HP left takes it.
+    if (this.darknessHeld) {
+      const left = (t: Trainer) => t.party.filter((m) => !m.captured && !m.fainted).reduce((n, m) => n + m.hp / Math.max(1, m.maxHp), 0);
+      const la = left(d.a.trainer);
+      const lb = left(d.b.trainer);
+      if (la !== lb) {
+        const w = la > lb ? d.a : d.b;
+        const l = w === d.a ? d.b : d.a;
+        for (const m of l.trainer.party) if (!m.captured) { m.hp = 0; m.fainted = true; }
+        this.endDuel(d, w.trainer);
+        return true;
+      }
+    }
     this.endDuel(d, null);
     return true;
   }

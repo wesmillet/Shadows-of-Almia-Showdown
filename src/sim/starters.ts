@@ -266,9 +266,11 @@ export interface StarterReel {
 /**
  * The three reels a seed rolls, exactly as the roll screen shows them (the game server uses the
  * same to know what a seed offered): the third slot first, from the player's nominations, then the
- * first two from the Common tier, three different Pokémon.
+ * first two from the player's whole PC (`pc`: every species it can start with, the rarer tiers
+ * less likely, with the same weights as the third slot), three different Pokémon. With no PC (a
+ * guest, or nothing caught yet) or too few species, the first two come from the Common tier.
  */
-export function starterReels(seed: number, nominations: readonly string[] = []): StarterReel[] {
+export function starterReels(seed: number, nominations: readonly string[] = [], pc: readonly string[] = []): StarterReel[] {
   const rng = new Rng(seed);
   const pool = slot3Pool(nominations, rng);
   const weighted = slot3Odds(pool);
@@ -280,13 +282,27 @@ export function starterReels(seed: number, nominations: readonly string[] = []):
   const common = commonTier();
   const taken = new Set([third.dex]);
   const drawCommon = (): { dex: string; tier: StarterTier } => ({ dex: rng.pick(common.dex), tier: common });
+  const box = [...new Set(pc)];
+  const boxOdds = slot3Odds(box);
+  const drawBox = (): { dex: string; tier: StarterTier } => {
+    const o = rng.weighted(boxOdds, (x) => x.chance);
+    return { dex: o.dex, tier: tierById(o.tier) };
+  };
   const reels: StarterReel[] = [];
   for (let r = 0; r < 2; r++) {
-    const fresh = common.dex.filter((d) => !taken.has(d));
-    const dex = fresh.length ? rng.pick(fresh) : rng.pick(common.dex);
-    taken.add(dex);
-    const cards = Array.from({ length: REEL_CARDS - 1 }, drawCommon);
-    const pick = { dex, tier: common };
+    const freshBox = boxOdds.filter((o) => !taken.has(o.dex));
+    let pick: { dex: string; tier: StarterTier };
+    let cards: Array<{ dex: string; tier: StarterTier }>;
+    if (freshBox.length) {
+      const o = rng.weighted(freshBox, (x) => x.chance);
+      pick = { dex: o.dex, tier: tierById(o.tier) };
+      cards = Array.from({ length: REEL_CARDS - 1 }, drawBox);
+    } else {
+      const fresh = common.dex.filter((d) => !taken.has(d));
+      pick = { dex: fresh.length ? rng.pick(fresh) : rng.pick(common.dex), tier: common };
+      cards = Array.from({ length: REEL_CARDS - 1 }, drawCommon);
+    }
+    taken.add(pick.dex);
     reels.push({ cards: [...cards, pick], pick });
   }
   const cards3 = Array.from({ length: REEL_CARDS - 1 }, draw3);
@@ -295,8 +311,8 @@ export function starterReels(seed: number, nominations: readonly string[] = []):
 }
 
 /** The three starters a seed offers (see starterReels). */
-export function starterChoices(seed: number, nominations: readonly string[] = []): string[] {
-  return starterReels(seed, nominations).map((r) => r.pick.dex);
+export function starterChoices(seed: number, nominations: readonly string[] = [], pc: readonly string[] = []): string[] {
+  return starterReels(seed, nominations, pc).map((r) => r.pick.dex);
 }
 
 /**

@@ -34,6 +34,8 @@ export interface Client extends Peer {
   rollSeed: number | null;
   /** The starters this player's roll was drawn from (their PC's unlocks). */
   rollPool: string[];
+  /** The PC species the first two slots of that roll came from. */
+  rollPc?: string[];
   /** The match they are playing in. */
   room: RoomHandle | null;
   /** The match they are watching. */
@@ -131,7 +133,7 @@ export class Hub {
    * reloading the page brings back the same three starters (no rerolling for a better one).
    * By player key (account or guest); rolls older than a day are dropped.
    */
-  private kept = new Map<string, { seed: number; pool: string[]; at: number; /** The starter chosen from it (index), reused on rejoining. */ pick?: number }>();
+  private kept = new Map<string, { seed: number; pool: string[]; pc?: string[]; at: number; /** The starter chosen from it (index), reused on rejoining. */ pick?: number }>();
   readonly matchmaker: Matchmaker;
   private lastPresence = 0;
   /** Getting ready to update: matches running finish, no new ones start. */
@@ -220,15 +222,22 @@ export class Hub {
           let k = this.kept.get(c.key);
           if (!k || now - k.at > 86400_000) {
             // The third slot rolls from a signed-in player's starred Pokémon; a guest's is all Common.
-            k = { seed: randomInt(1, 2 ** 31), pool: c.accountId === null ? [] : this.o.accounts.starters.forRoll(c.accountId), at: now };
+            k = {
+              seed: randomInt(1, 2 ** 31),
+              pool: c.accountId === null ? [] : this.o.accounts.starters.forRoll(c.accountId),
+              // The first two slots roll from the whole PC (src/sim/starters.ts starterReels).
+              pc: c.accountId === null ? [] : this.o.accounts.starters.eligible(c.accountId),
+              at: now,
+            };
             this.kept.set(c.key, k);
             if (this.kept.size > 5000) for (const [key, v] of this.kept) if (now - v.at > 86400_000) this.kept.delete(key);
           }
           c.rollSeed = k.seed;
           c.rollPool = k.pool;
+          c.rollPc = k.pc ?? [];
         }
         // Already picked from this roll (left the queue, came back): that starter again, no roll screen.
-        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null, picked: this.kept.get(c.key)?.pick ?? null });
+        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, pc: c.rollPc ?? [], daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null, picked: this.kept.get(c.key)?.pick ?? null });
         return;
       case 'queue':
         // Every public match is casual (ranked play has been retired; an old client asking for it plays casual).
@@ -292,7 +301,7 @@ export class Hub {
     if (c.room) return;
     if (c.rollSeed === null) return c.send({ t: 'unqueued', text: 'Your roll expired, roll again' });
     if (this.draining && !c.pick) return c.send({ t: 'notice', text: DRAIN_TEXT });
-    const choices = starterChoices(c.rollSeed, c.rollPool);
+    const choices = starterChoices(c.rollSeed, c.rollPool, c.rollPc ?? []);
     // A fourth choice: today's pick from their PC (checked again now, so it is theirs today).
     if (c.accountId !== null) {
       const daily = this.o.accounts.starters.daily(c.accountId);
@@ -825,7 +834,8 @@ export class Hub {
         if (s.picks.has(m.key)) continue;
         const seed = m.rollSeed ?? randomInt(1, 2 ** 31);
         const pool = m.rollSeed !== null ? m.rollPool : m.accountId === null ? [] : this.o.accounts.starters.forRoll(m.accountId);
-        s.picks.set(m.key, starterChoices(seed, pool)[0] as string);
+        const pc = m.rollSeed !== null ? (m.rollPc ?? []) : m.accountId === null ? [] : this.o.accounts.starters.eligible(m.accountId);
+        s.picks.set(m.key, starterChoices(seed, pool, pc)[0] as string);
       }
       this.finishPick(s);
     }

@@ -156,6 +156,9 @@ const roomHooks: RoomHooks = {
 
 const REPLAYS = process.env.REPLAYS !== '0';
 const REPLAY_DIR = REPLAYS ? replayDir(DATA) : null;
+/** New matches are recorded only with RECORD_REPLAYS=1: recording costs CPU every match (replays
+ * already saved can still be watched). */
+const RECORD = process.env.RECORD_REPLAYS === '1';
 const metrics: Metrics = new Metrics(() => {
   const st = hub.stats();
   return {
@@ -187,7 +190,7 @@ const pool: WorkerPool | null = WORKERS > 0
 const hub: Hub = new Hub({
   makeRoom: pool?.factory(),
   world, accounts, size: SIZE, wait: { casual: WAIT }, minPlayers: MIN_PLAYERS, lonelySeconds: LONELY, scheduleSeconds: SCHEDULE, seats: SEATS, hooks: roomHooks,
-  replayDir: REPLAY_DIR, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
+  replayDir: RECORD ? REPLAY_DIR : null, replayBytes: Number(process.env.REPLAY_MB ?? 400) * 1024 * 1024, log,
   onMatchStart: () => metrics.counters.matchesStarted++,
   onMatchEnd: (_r, report) => {
     if (report.aborted) metrics.counters.matchesAborted++;

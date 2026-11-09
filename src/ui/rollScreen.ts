@@ -88,12 +88,14 @@ export class RollScreen implements Screen {
     private readonly unlocked: readonly string[] = [],
     /** Today's pick from their PC: a fourth choice under the reels (press 4). */
     private readonly daily: string | null = null,
+    /** Every species in their PC they can start with: the first two reels roll from these. */
+    private readonly pc: readonly string[] = [],
   ) {
     if (daily) void this.sprites.preload([daily], undefined, true);
-    // The first two reels roll Commons; the third rolls from this player's nominations
+    // The first two reels roll from the PC (Commons without one); the third from the nominations
     // (src/sim/starters.ts starterReels, which the game server also uses to know what a seed offered).
     this.tiers = STARTER_TIERS;
-    starterReels(seed, unlocked).forEach((reel, r) => {
+    starterReels(seed, unlocked, pc).forEach((reel, r) => {
       const cards: Card[] = reel.cards.map((c) => ({ def: species(c.dex), tier: c.tier, anim: null }));
       const pick = cards[cards.length - 1] as Card;
       const spinFor = SPIN + r * STAGGER;
@@ -220,7 +222,8 @@ export class RollScreen implements Screen {
     const third = this.unlocked.length
       ? `Slot 3: your ${this.unlocked.length} nomination${this.unlocked.length === 1 ? '' : 's'}${this.unlocked.length < NOMINATION_SLOTS ? ' and Commons' : ''}`
       : 'Slot 3: Commons until you nominate Pokémon (Starters, in the hub)';
-    text(v, `Slots 1 and 2: Commons · ${third}`, v.width / 2, v.height - 40 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 30 * s });
+    const first = this.pc.length >= 2 ? `Slots 1 and 2: your PC (${this.pc.length} Pokémon)` : 'Slots 1 and 2: Commons until your PC has Pokémon';
+    text(v, `${first} · ${third}`, v.width / 2, v.height - 40 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 30 * s });
     if (this.daily) {
       const d = this.dailyRect();
       const name = SPECIES.get(this.daily)?.name ?? this.daily;

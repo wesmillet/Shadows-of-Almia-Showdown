@@ -5,14 +5,14 @@
  */
 import type { Input } from '../core/input';
 import { saveLook } from '../look';
-import { DEFAULT_LOOK, isShownLook } from '../net/progression';
+import { DEFAULT_LOOK, isShownLook, PERSONAL_LOOKS } from '../net/progression';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
 /** Names for the looks on offer. */
-const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger' };
+const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger', wes_00: 'Shadow Local (yours)' };
 
 export class CharacterScreen implements Screen {
   private readonly list: string[];
@@ -29,9 +29,10 @@ export class CharacterScreen implements Screen {
     /** Why a look can not be worn yet ("Level 10"), or null when it can. */
     private readonly lock: (look: string) => string | null = () => null,
   ) {
-    this.list = rangers.characters().filter(isShownLook);
+    // The looks on offer, plus a personal look this account owns (its lock says it may wear it).
+    this.list = rangers.characters().filter((c) => isShownLook(c) || (!!PERSONAL_LOOKS[c] && lock(c) === null));
     const worn = rangers.characterOf('player');
-    this.current = isShownLook(worn) ? worn : DEFAULT_LOOK;
+    this.current = this.list.includes(worn) ? worn : DEFAULT_LOOK;
     this.cursor = Math.max(0, this.list.indexOf(this.current));
     for (const c of this.list) rangers.preview(c);
   }

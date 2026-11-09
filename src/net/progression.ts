@@ -133,6 +133,22 @@ export function titlesFor(earned: Iterable<string>): string[] {
  */
 export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03'];
 
+/**
+ * Personal looks: worn only by the accounts listed (by account id), shown to everyone who sees them.
+ * wes_00: the game's creator, Local 9 in a black jacket and a white ski mask.
+ */
+export const PERSONAL_LOOKS: Readonly<Record<string, readonly number[]>> = { wes_00: [1] };
+
+/** Can this account wear this personal look? (false for any look that is not personal) */
+export function ownsPersonalLook(look: string, accountId: number | null | undefined): boolean {
+  return accountId !== null && accountId !== undefined && !!PERSONAL_LOOKS[look]?.includes(accountId);
+}
+
+/** Can this look be drawn on a trainer (a shown look, or someone's personal one)? */
+export function isDrawableLook(look: string): boolean {
+  return isShownLook(look) || !!PERSONAL_LOOKS[look];
+}
+
 /** The look a trainer wears when theirs is missing or hidden: the male Ranger. */
 export const DEFAULT_LOOK = 'union_00';
 

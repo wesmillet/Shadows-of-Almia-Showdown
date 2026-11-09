@@ -29,7 +29,7 @@ import { Feedback } from './feedback';
 import { STARTER_SQL, StarterUnlocks } from './starterUnlocks';
 import { COLLECTION_LOG_SQL } from './collectionLog';
 import { emailProblem, mailBody, maskEmail, messagePage, resendMailer, resetPage, type Mailer } from './mailer';
-import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
+import { ACHIEVEMENTS, ACHIEVEMENTS_ON, canWear, DEFAULT_LOOK, isFreeLook, isShownLook, levelOf, ownsPersonalLook, PERSONAL_LOOKS, matchXp, titlesFor, type Achievement, type MatchFacts } from '../src/net/progression';
 import type { RoomResult } from './room';
 
 const COOKIE = 'almia_session';
@@ -845,6 +845,8 @@ export class Accounts {
   }
 
   canWear(userId: number, look: string): boolean {
+    // A personal look (src/net/progression.ts PERSONAL_LOOKS): only its own account wears it.
+    if (PERSONAL_LOOKS[look]) return ownsPersonalLook(look, userId);
     // Hidden looks (src/net/progression.ts SHOWN_LOOKS) can not be worn, however they were earned.
     if (!isShownLook(look)) return false;
     // A look given by a Mystery Gift code is theirs to wear.

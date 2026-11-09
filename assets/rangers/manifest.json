@@ -99,6 +99,13 @@
    "frames": 15,
    "anchor": "bottom-center"
   },
+  "wes_00": {
+   "file": "wes_00.png",
+   "frame_w": 22,
+   "frame_h": 34,
+   "frames": 15,
+   "anchor": "bottom-center"
+  },
   "civ_09": {
    "file": "civ_09.png",
    "frame_w": 22,

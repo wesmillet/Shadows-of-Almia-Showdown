@@ -30,7 +30,7 @@ import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
-import { canWear, DEFAULT_LOOK, isFreeLook, isShownLook, lookRequirement } from './net/progression';
+import { canWear, DEFAULT_LOOK, isFreeLook, isShownLook, lookRequirement, ownsPersonalLook, PERSONAL_LOOKS } from './net/progression';
 import type { PcEntry } from './pc';
 import { MoveGallery } from './ui/moveGallery';
 import { PixelUi } from './ui/pixelUi';
@@ -161,6 +161,7 @@ async function boot(): Promise<void> {
   // The trainer look picked on the title screen (Trainer, C), kept in this browser.
   // A look that is locked or hidden now (anything outside SHOWN_LOOKS) is not worn.
   const look = loadLook();
+  // (A personal look is only worn once the server says who is signed in: see the look lock below.)
   if (look && isShownLook(look) && (isFreeLook(look) || (serverBase() && !lookRequirement(look)?.soon))) await rangers.setRole('player', look);
   const ui = new PixelUi(assets);
   await ui.load();
@@ -264,7 +265,8 @@ async function boot(): Promise<void> {
     void net.open().then(async () => {
       const me = await net.refreshMe();
       // Signed in: the account's look is the one to wear.
-      if (me.signedIn && typeof me.look === 'string' && me.look !== loadLook()) {
+      // (A personal look is not put on at startup, before anyone is signed in: it is put on here.)
+      if (me.signedIn && typeof me.look === 'string' && (me.look !== loadLook() || !!PERSONAL_LOOKS[me.look])) {
         lookHooks.saved = null;
         saveLook(me.look);
         void rangers.setRole('player', me.look);
@@ -331,6 +333,7 @@ async function boot(): Promise<void> {
 
   /** With a game server, looks are earned (src/net/progression.ts); why one is locked, or null. */
   const lookLock = (look: string): string | null => {
+    if (PERSONAL_LOOKS[look]) return ownsPersonalLook(look, net?.me.user?.id) ? null : 'Not available';
     if (!isShownLook(look)) return 'Not available';
     const req = lookRequirement(look);
     if (!req) return null;

@@ -53,8 +53,8 @@ export function ballModifier(ballId: string, ctx: CatchContext): number {
     case 'dusk':
       return base * (ctx.inDark ? 3 : 1);
     case 'quick':
-      // Thrown first, before anything has attacked it: x5, falling to x1 against a Pokémon far above
-      // the thrower's team (5 to 20 levels over its best), so it can not snatch high-level ones.
+      // Thrown first, before anything has attacked it: x5, easing to x2.5 against a Pokémon far above
+      // the thrower's team (10 to 30 levels over its best): still a good ball, not a free one.
       return base * (ctx.target.everHit ? 1 : quickBonus(ctx));
     case 'heal':
     default:
@@ -66,7 +66,7 @@ export function ballModifier(ballId: string, ctx: CatchContext): number {
 export function quickBonus(ctx: CatchContext): number {
   const top = Math.max(1, ...ctx.thrower.party.filter((m) => m !== ctx.target && !m.fainted).map((m) => m.level));
   const over = ctx.target.level - top;
-  return clamp(5 - (4 * (over - 5)) / 15, 1, 5);
+  return clamp(5 - (2.5 * (over - 10)) / 20, 2.5, 5);
 }
 
 export function catchChance(target: Mon, modifier: number): number {

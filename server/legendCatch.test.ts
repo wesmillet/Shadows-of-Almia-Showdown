@@ -40,6 +40,17 @@ describe('legendaries must be caught', async () => {
     expect(m.trainers.some((t) => t.legendBout)).toBe(false);
   }, 60_000);
 
+  it('caught, it joins as an ordinary level-60 team member', () => {
+    const { m, p, L } = setup();
+    expect(m.startLegendBout(L)).toBe(true);
+    run(m, 1);
+    (m as unknown as { catchBoutLegend(L: unknown, h: unknown, by: unknown): void }).catchBoutLegend(L, L.owner, p);
+    expect(p.party.includes(L)).toBe(true);
+    expect(L.level).toBe(60);
+    expect(L.legend).toBe(false);
+    expect(L.maxHp).toBe(L.stats.hp);
+  }, 60_000);
+
   it('is hard to catch even at its last HP', () => {
     const { L } = setup();
     L.hp = 1;

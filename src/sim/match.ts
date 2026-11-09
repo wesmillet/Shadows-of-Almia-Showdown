@@ -1256,6 +1256,8 @@ export class Match {
             this.battle.cureStatus(w);
           }
           w.lastStandUntil = undefined;
+          // A legendary caught out in the open: an ordinary team member at level 60 from now on.
+          if (w.legend) this.tameLegend(w);
           th.thrower.party.push(w);
           noteCatch(th.thrower, w);
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
@@ -3869,9 +3871,7 @@ export class Match {
     L.landBoss = false;
     L.wild = false;
     L.owner = by;
-    L.maxHp = L.stats.hp;
-    // At least 30% of its HP: it has just been caught, not knocked out.
-    L.hp = Math.max(1, Math.round(L.maxHp * Math.max(0.3, frac)));
+    this.tameLegend(L, frac);
     L.target = null;
     this.battle.interrupt(L);
     L.status = null;
@@ -3886,6 +3886,24 @@ export class Match {
     if (d) this.endDuel(d, by);
     this.endLegendBout(host);
     this.battle.events.push({ type: 'notice', text: `You caught ${L.name}!`, seconds: 3 });
+  }
+
+  /**
+   * A caught legendary becomes an ordinary team member at CAUGHT_LEGEND_LEVEL (60): its boss HP and
+   * flags go, its stats and moves are those of that level, with at least 30% of its HP (it was just
+   * caught, not knocked out).
+   */
+  private tameLegend(L: Mon, frac = L.maxHp > 0 ? L.hp / L.maxHp : 1): void {
+    const level = (CONFIG.catch as typeof CONFIG.catch & { caughtLegendLevel?: number }).caughtLegendLevel ?? 60;
+    L.legend = false;
+    L.landBoss = false;
+    L.level = level;
+    L.xp = 0;
+    L.stats = statsAtLevel(L.species.stats, level);
+    L.maxHp = L.stats.hp;
+    L.hp = Math.max(1, Math.round(L.maxHp * Math.max(0.3, frac)));
+    L.moves = movesAt(L.species, level);
+    L.cooldowns = L.moves.map(() => 0);
   }
 
   /** Shadow Lugia's foe in its bout (the player's Pokémon out), or null when it is not in one. */

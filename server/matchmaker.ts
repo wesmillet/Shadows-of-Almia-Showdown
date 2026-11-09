@@ -65,6 +65,14 @@ export interface MatchmakerOptions {
   seats?: number;
   /** Scheduled matches: a slot closer than this (seconds) is not offered to a new player (default 5). */
   graceSeconds?: number;
+  /**
+   * Scheduled matches: public matches running now. With it, the next match comes sooner while the
+   * server is quiet: every third of the interval with none running, every half with one (2 and 3
+   * minutes at 6), the full interval with two or more. A lobby already waiting is moved up (never
+   * back) when a match ends, with at least `moveUpNoticeSeconds` (30) of notice.
+   */
+  running?: () => number;
+  moveUpNoticeSeconds?: number;
 }
 
 interface Forming {
@@ -120,10 +128,29 @@ export class Matchmaker {
   }
 
   /** The next scheduled start a player joining now can make (epoch ms, on the clock). */
-  nextSlot(now: number, after = 0): number {
-    const every = (this.o.everySeconds ?? 60) * 1000;
-    const from = Math.max(now + (this.o.graceSeconds ?? 5) * 1000, after + 1);
+  nextSlot(now: number, after = 0, every = this.interval(), notice = this.o.graceSeconds ?? 5): number {
+    const from = Math.max(now + notice * 1000, after + 1);
     return Math.ceil(from / every) * every;
+  }
+
+  /** Time between starts right now (ms): shorter while few public matches are running. */
+  interval(): number {
+    const every = (this.o.everySeconds ?? 60) * 1000;
+    const r = this.o.running?.();
+    if (r === undefined || r >= 2) return every;
+    return r === 0 ? every / 3 : every / 2;
+  }
+
+  /** A quiet server brings the next match forward: the earliest lobby moves up to the next quick slot. */
+  private moveUp(now: number): void {
+    if (!this.o.running) return;
+    const first = this.lobbies.filter((l) => !l.forced).sort((a, b) => a.startAt - b.startAt)[0];
+    if (!first) return;
+    const sooner = this.nextSlot(now, 0, this.interval(), this.o.moveUpNoticeSeconds ?? 30);
+    if (sooner < first.startAt) {
+      first.startAt = sooner;
+      this.status(now, true);
+    }
   }
 
   private joinScheduled(group: Group, mode: QueueMode, now: number): void {
@@ -133,8 +160,11 @@ export class Matchmaker {
     const ahead = this.lobbies.filter((l) => l.mode === mode).sort((a, b) => a.startAt - b.startAt);
     let lobby = ahead.find((l) => count(l) + n <= this.seats && l.startAt >= now + (this.o.graceSeconds ?? 5) * 1000);
     if (!lobby) {
+      // The first lobby waiting gets the soonest slot the server's load allows; one after it the
+      // full interval later (it starts only once the one before has).
       const last = ahead.length ? (ahead[ahead.length - 1] as Forming).startAt : 0;
-      lobby = { mode, groups: [], openedAt: now, startAt: this.nextSlot(now, last) };
+      const full = (this.o.everySeconds ?? 60) * 1000;
+      lobby = { mode, groups: [], openedAt: now, startAt: last ? this.nextSlot(now, last, full) : this.nextSlot(now) };
       this.lobbies.push(lobby);
     }
     lobby.groups.push(group);
@@ -185,6 +215,7 @@ export class Matchmaker {
 
   /** Called often: starts lobbies whose time has come, and keeps the waiting players informed. */
   tick(now: number): void {
+    if (this.scheduled) this.moveUp(now);
     for (const l of [...this.lobbies]) {
       if (this.scheduled && !l.forced) {
         if (now >= l.startAt) this.launch(l, now);

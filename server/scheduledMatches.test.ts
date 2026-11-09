@@ -77,3 +77,49 @@ describe('scheduled matches', () => {
     expect(spots.size).toBe(12);
   }, 60_000);
 });
+
+describe('a quiet server brings the next match forward', () => {
+  const make = (running: { n: number }) => {
+    const started: Lineup[][] = [];
+    const mm = new Matchmaker({ size: 10, seats: 12, everySeconds: 360, wait: { casual: 60 }, fullSeconds: 3, running: () => running.n, start: (p) => { started.push(p); running.n++; } });
+    const add = (n: string, at: number) => mm.join({ tickets: [{ peer: peer(n), starter: '0001' }], party: false }, 'casual', at);
+    return { mm, started, add };
+  };
+
+  it('every 2 minutes with nothing running, every 3 with one, every 6 with two', () => {
+    const r = { n: 0 };
+    const { add } = make(r);
+    add('q0', T0 + 10_000);
+    expect(sent.get('q0')?.at(-1)?.at).toBe(T0 + 120_000);
+    r.n = 1;
+    const b = make(r); b.add('q1', T0 + 10_000);
+    expect(sent.get('q1')?.at(-1)?.at).toBe(T0 + 180_000);
+    r.n = 2;
+    const c = make(r); c.add('q2', T0 + 10_000);
+    expect(sent.get('q2')?.at(-1)?.at).toBe(T0 + 360_000);
+  });
+
+  it('does not move a start up with under 30 s of notice', () => {
+    const r = { n: 2 };
+    const { mm, add } = make(r);
+    add('v', T0 + 10_000);
+    r.n = 1;
+    mm.tick(T0 + 160_000); // 3:00 is only 20 s away: keeps 6:00
+    expect(sent.get('v')?.at(-1)?.at).toBe(T0 + 360_000);
+  });
+
+  it('moves a waiting lobby up when a match ends, with notice, never back', () => {
+    const r = { n: 2 };
+    const { mm, started, add } = make(r);
+    add('w', T0 + 10_000);
+    expect(sent.get('w')?.at(-1)?.at).toBe(T0 + 360_000);
+    r.n = 1; // a match ended at 2:20: the 3:00 mark is 40 s away, enough notice
+    mm.tick(T0 + 140_000);
+    expect(sent.get('w')?.at(-1)?.at).toBe(T0 + 180_000);
+    r.n = 2;
+    mm.tick(T0 + 160_000);
+    expect(sent.get('w')?.at(-1)?.at).toBe(T0 + 180_000);
+    mm.tick(T0 + 180_000);
+    expect(started.length).toBe(1);
+  });
+});

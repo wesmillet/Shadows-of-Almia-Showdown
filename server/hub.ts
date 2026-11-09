@@ -131,7 +131,7 @@ export class Hub {
    * reloading the page brings back the same three starters (no rerolling for a better one).
    * By player key (account or guest); rolls older than a day are dropped.
    */
-  private kept = new Map<string, { seed: number; pool: string[]; at: number }>();
+  private kept = new Map<string, { seed: number; pool: string[]; at: number; /** The starter chosen from it (index), reused on rejoining. */ pick?: number }>();
   readonly matchmaker: Matchmaker;
   private lastPresence = 0;
   /** Getting ready to update: matches running finish, no new ones start. */
@@ -149,6 +149,7 @@ export class Hub {
       // 8 or more real players: no computer trainers (the matchmaker decides; private lobbies keep their own rule).
       start: (players, mode, rules) => this.startRoom(players, mode, rules.bots ? { size: rules.size } : { bots: false, size: rules.size }),
       everySeconds: o.scheduleSeconds || undefined,
+      running: () => [...this.rooms].filter((r) => !r.closed && r.mode !== 'private').length,
       seats: o.seats,
       isAdmin: (peer) => this.isAdmin(peer as Client),
     });
@@ -226,7 +227,8 @@ export class Hub {
           c.rollSeed = k.seed;
           c.rollPool = k.pool;
         }
-        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null });
+        // Already picked from this roll (left the queue, came back): that starter again, no roll screen.
+        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null, picked: this.kept.get(c.key)?.pick ?? null });
         return;
       case 'queue':
         // Every public match is casual (ranked play has been retired; an old client asking for it plays casual).
@@ -297,7 +299,13 @@ export class Hub {
       if (daily) choices.push(daily.dex);
     }
     const starter = typeof pick === 'number' && Number.isInteger(pick) ? choices[pick] : undefined;
-    if (!starter) return c.send({ t: 'unqueued', text: 'Pick one of the starters you rolled' });
+    if (!starter) {
+      const k = this.kept.get(c.key);
+      if (k) delete k.pick;
+      return c.send({ t: 'unqueued', text: 'Pick one of the starters you rolled' });
+    }
+    const k = this.kept.get(c.key);
+    if (k && k.seed === c.rollSeed) k.pick = pick as number;
     // Part of a party or a private lobby that is picking: this is that pick.
     if (c.pick) {
       c.pick.picks.set(c.key, starter);

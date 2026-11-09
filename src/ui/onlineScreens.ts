@@ -227,7 +227,7 @@ export class OnlineScreen implements Screen {
       else if (signedIn && on(c, 'me') && this.net.me.user) this.actions.profile(this.net.me.user.username);
     }
     if (input.pressed('Escape')) this.actions.back();
-    if (input.pressed('Space') && this.net.connected) this.find();
+    if (input.pressed('Space') && this.net.connected && !this.chat?.typedRecently()) this.find();
   }
 
   private async account(mode: 'signin' | 'register'): Promise<void> {

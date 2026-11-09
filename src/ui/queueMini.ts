@@ -109,9 +109,24 @@ export class QueueMini {
     this.paint();
   }
 
+  /** Out of the chat's way: beside the side chat (menu screens) when there is room, else above it. */
+  private place(el: HTMLDivElement): void {
+    el.style.right = '';
+    el.style.bottom = '';
+    const chat = document.querySelector('.almia-chat') as HTMLElement | null;
+    if (!chat || chat.offsetParent === null) return;
+    const c = chat.getBoundingClientRect();
+    const q = el.getBoundingClientRect();
+    const overlaps = q.left < c.right && q.right > c.left && q.top < c.bottom && q.bottom > c.top;
+    if (!overlaps) return;
+    if (c.left - q.width - 24 >= 0) el.style.right = `${Math.round(window.innerWidth - c.left + 12)}px`;
+    else el.style.bottom = `${Math.round(window.innerHeight - c.top + 12)}px`;
+  }
+
   private paint(): void {
     const el = this.el;
     if (!el) return;
+    this.place(el);
     const m = this.last;
     const gone = (performance.now() - this.at) / 1000;
     const who = el.querySelector('.who') as HTMLElement;

@@ -125,8 +125,14 @@ export class ChatPanel {
   private menu: HTMLDivElement | null = null;
   private keyHandler: (e: KeyboardEvent) => void;
 
+  /** The side chat (menu screens) keeps the line after sending: the next words typed are still chat,
+   * not shortcuts (Space there finds a match). In a match, sending hands the keys back to the game. */
+  private readonly keepFocus: boolean;
+  private lastTyped = -Infinity;
+
   constructor(private readonly net: Connection, opts: { compact?: boolean; collapsed?: boolean; side?: boolean; onName?: (name: string) => void } = {}) {
     this.onName = opts.onName;
+    this.keepFocus = !!opts.side;
     this.el = el('div', `almia-panel almia-chat${opts.compact ? ' compact' : ''}${opts.side ? ' side' : ''}${opts.collapsed ? ' collapsed' : ''}`);
     const head = el('div', 'almia-chat-head');
     head.append(el('span', '', 'Global chat'), el('span', '', Input.touch ? 'Tap to open' : 'Enter to talk'));
@@ -139,6 +145,7 @@ export class ChatPanel {
     const send = el('button', '', 'Send');
     send.onclick = () => this.send();
     this.input.addEventListener('keydown', (e) => {
+      this.lastTyped = performance.now();
       if (e.key === 'Enter') this.send();
       if (e.key === 'Escape') this.input.blur();
       e.stopPropagation();
@@ -166,7 +173,7 @@ export class ChatPanel {
     const text = this.input.value.trim();
     if (text) this.net.send({ t: 'chat', text });
     this.input.value = '';
-    this.input.blur();
+    if (!this.keepFocus || !text) this.input.blur();
   }
 
   private add(m: Extract<ServerMsg, { t: 'chat' }>): void {
@@ -258,6 +265,11 @@ export class ChatPanel {
 
   focused(): boolean {
     return document.activeElement === this.input;
+  }
+
+  /** Typing in the chat line now or within the last 2 seconds: a Space just after is still words, not a shortcut. */
+  typedRecently(): boolean {
+    return this.focused() || performance.now() - this.lastTyped < 2000;
   }
 
   dispose(): void {

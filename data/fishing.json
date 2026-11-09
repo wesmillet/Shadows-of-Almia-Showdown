@@ -46,9 +46,9 @@
       "odds": {
         "common": 30,
         "uncommon": 35,
-        "rare": 22,
+        "rare": 24,
         "item": 10,
-        "legend": 3
+        "legend": 1
       },
       "wait": [
         2,

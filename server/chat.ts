@@ -45,8 +45,9 @@ export class Chat {
 
   constructor(private readonly broadcast: (msg: ServerMsg) => void, private readonly accounts: Accounts) {
     accounts.db.prepare(`DELETE FROM chat WHERE ${UPDATE_NOTICES.map(() => 'text LIKE ?').join(' OR ')}`).run(...UPDATE_NOTICES);
-    const rows = accounts.db.prepare('SELECT id, name, text, at FROM chat ORDER BY id DESC LIMIT ?').all(HISTORY) as Array<{ id: number; name: string; text: string; at: number }>;
-    this.recent = rows.reverse().map((r) => ({ t: 'chat', id: r.id, from: r.name, text: r.text, at: r.at }));
+    // With each line's badge (MOD, DEV) from its writer's role, so a restart does not drop them.
+    const rows = accounts.db.prepare('SELECT c.id, c.name, c.text, c.at, u.role FROM chat c LEFT JOIN users u ON u.id = c.user_id ORDER BY c.id DESC LIMIT ?').all(HISTORY) as Array<{ id: number; name: string; text: string; at: number; role: string | null }>;
+    this.recent = rows.reverse().map((r) => ({ t: 'chat', id: r.id, from: r.name, text: r.text, at: r.at, mod: r.role === 'mod' || undefined, dev: r.role === 'admin' || undefined }));
   }
 
   history(to: Speaker): void {
@@ -98,7 +99,7 @@ export class Chat {
     // That strike may just have muted them.
     if ((this.accounts.user(from.accountId)?.muted_until ?? 0) > Date.now()) return;
     const id = Number(this.accounts.db.prepare('INSERT INTO chat (user_id, name, text, at) VALUES (?, ?, ?, ?)').run(from.accountId, from.name, clean, now).lastInsertRowid);
-    const msg: Extract<ServerMsg, { t: 'chat' }> = { t: 'chat', id, from: from.name, text: clean, at: now, mod: user.role === 'mod' || user.role === 'admin' || undefined };
+    const msg: Extract<ServerMsg, { t: 'chat' }> = { t: 'chat', id, from: from.name, text: clean, at: now, mod: user.role === 'mod' || undefined, dev: user.role === 'admin' || undefined };
     this.recent.push(msg);
     if (this.recent.length > HISTORY) this.recent.shift();
     this.broadcast(msg);

@@ -128,7 +128,7 @@ export type ServerMsg =
   /** A command's reply (what the offline game shows as a message). */
   | { t: 'reply'; n?: number; text: string; seconds: number }
   | { t: 'end'; outcome: 'win' | 'loss'; place: number }
-  | { t: 'chat'; id?: number; from: string; text: string; at: number; system?: boolean; /** From a moderator. */ mod?: boolean; /** A server-wide announcement. */ announce?: boolean }
+  | { t: 'chat'; id?: number; from: string; text: string; at: number; system?: boolean; /** From a moderator. */ mod?: boolean; /** From the game's developer (an admin account): a purple DEV badge. */ dev?: boolean; /** A server-wide announcement. */ announce?: boolean }
   /** A moderator removed a chat message. */
   | { t: 'chatDelete'; id: number }
   | { t: 'error'; text: string }

@@ -23,6 +23,7 @@ const CSS = `
 .almia-chat-log .sys { color: #8a6a4a; font-style: italic; }
 .almia-chat-log .announce { display: block; color: #c2611a; font-style: normal; border: 2px solid #c2611a; padding: 3px 6px; margin: 3px 0; }
 .almia-chat-log .modbadge { color: #fff; background: #1f6aa0; font-size: 11px; padding: 0 4px; margin-right: 4px; }
+.almia-chat-log .devbadge { color: #fff; background: #7b3fc4; font-size: 11px; padding: 0 4px; margin-right: 4px; }
 .almia-chat-row { display: flex; border-top: 2px solid #4a3424; }
 .almia-chat-row input { flex: 1; min-width: 0; border: 0; padding: 7px 10px; font: inherit; background: #fffaf0; color: #4a3424; outline: none; }
 .almia-chat-row button, .almia-btn { font: inherit; border: 0; background: #c2611a; color: #fff; padding: 7px 12px; cursor: pointer; text-shadow: 0 1px 0 #8a3a0a; }
@@ -186,7 +187,8 @@ export class ChatPanel {
     if (m.announce) line.append(el('span', 'announce', `📣 ${m.text}`));
     else if (m.system) line.append(el('span', 'sys', m.text));
     else {
-      if (m.mod) line.append(el('span', 'modbadge', 'MOD'));
+      if (m.dev) line.append(el('span', 'devbadge', 'DEV'));
+      else if (m.mod) line.append(el('span', 'modbadge', 'MOD'));
       const who = el('span', 'who', m.from);
       who.onclick = (e) => this.openMenu(m, e.clientX, e.clientY);
       line.append(who, document.createTextNode(`: ${m.text}`));

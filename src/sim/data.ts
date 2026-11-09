@@ -399,6 +399,14 @@ export function combatLevel(level: number): number {
   return c.pivot * Math.pow(Math.max(0, level) / c.pivot, c.exponent);
 }
 
+/**
+ * The level a species' stats are worked out at: its own level, except a Legendary (species.json
+ * class), whose stats are always those of level 100 whatever level it shows.
+ */
+export function statLevel(sp: { class?: string }, level: number): number {
+  return sp.class === 'legendary' ? 100 : level;
+}
+
 /** Actual stats at a level from base stats (flat IV/EV-free formula, at the combat level). */
 export function statsAtLevel(base: StatBlock, realLevel: number): StatBlock {
   const level = combatLevel(realLevel);

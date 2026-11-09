@@ -12,7 +12,7 @@ import { decide, partyHpFraction, type AiWorld } from './ai';
 import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statsAtLevel, tmRefusal } from './data';
+import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statLevel, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead, partySize } from './entities';
@@ -1255,7 +1255,6 @@ export class Match {
             w.hp = w.maxHp;
             this.battle.cureStatus(w);
           }
-          w.lastStandUntil = undefined;
           // A legendary caught out in the open: an ordinary team member at level 60 from now on.
           if (w.legend) this.tameLegend(w);
           th.thrower.party.push(w);
@@ -1971,7 +1970,7 @@ export class Match {
 
   makeMon(dex: string, level: number, owner: Trainer | null, x: number, y: number, shiny = false): Mon {
     const sp = species(dex);
-    const stats = statsAtLevel(sp.stats, level);
+    const stats = statsAtLevel(sp.stats, statLevel(sp, level));
     const sprites = this.sprites.get(dex, shiny);
     const moves = movesAt(sp, level);
     return {
@@ -3046,7 +3045,6 @@ export class Match {
     const fresh = this.battle.events.filter((e) => !this.handledEvents.has(e));
     for (const e of fresh) this.handledEvents.add(e);
     this.handleKnockouts(fresh);
-    this.stepLastStands();
     this.stepEvolutions(dt);
     // A steered Pokémon hit Hoopa this step: it unbinds and fights (visitors.ts).
     this.visitors.hoopaStruck(fresh);
@@ -3438,15 +3436,7 @@ export class Match {
           }
           continue;
         }
-        // Worn down to its last HP, a legendary does not join for being beaten: it holds on for a few
-        // seconds (lastStandSeconds), and only a ball thrown in that time catches it; then it escapes.
-        if (ev.mon.lastStandUntil === undefined && !ev.mon.captured) {
-          ev.mon.lastStandUntil = this.time + ((CONFIG.catch as typeof CONFIG.catch & { lastStandSeconds?: number }).lastStandSeconds ?? 15);
-          const human = host ? (this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host))?.a.trainer ?? this.player) : (ev.by?.owner ?? null);
-          const text = `${ev.mon.name} is barely standing! Throw a ball now, before it escapes`;
-          if (human && human.isPlayer) this.noticeFor(human, text, 3.5);
-          else this.battle.events.push({ type: 'notice', text, seconds: 3.5 });
-        }
+        // (Only a shadow legendary yields; every other one can be knocked out.)
         continue;
       }
       if (ev.type === 'faint' && ev.mon.boss) {
@@ -3865,7 +3855,6 @@ export class Match {
     if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
     const frac = L.hp / L.maxHp;
     L.duelId = undefined;
-    L.lastStandUntil = undefined;
     L.captured = false;
     L.legend = false;
     L.landBoss = false;
@@ -3899,7 +3888,7 @@ export class Match {
     L.landBoss = false;
     L.level = level;
     L.xp = 0;
-    L.stats = statsAtLevel(L.species.stats, level);
+    L.stats = statsAtLevel(L.species.stats, statLevel(L.species, level));
     L.maxHp = L.stats.hp;
     L.hp = Math.max(1, Math.round(L.maxHp * Math.max(0.3, frac)));
     L.moves = movesAt(L.species, level);
@@ -3967,29 +3956,6 @@ export class Match {
     this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm...`, seconds: 4 });
     if (d) this.endDuel(d, this.player);
     this.endLegendBout(host);
-  }
-
-  /** A legendary whose last stand ran out without a catch escapes (out of its bout, off the map). */
-  private stepLastStands(): void {
-    const legends = [...this.wilds, ...this.trainers.filter((t) => t.legendBout).flatMap((t) => t.party)];
-    for (const L of legends) {
-      if (L.lastStandUntil === undefined || L.captured || this.time < L.lastStandUntil) continue;
-      L.captured = true;
-      this.battle.interrupt(L);
-      const host = L.owner?.legendBout ? L.owner : null;
-      if (host) {
-        const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
-        host.party = host.party.filter((x) => x !== L);
-        if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
-        L.duelId = undefined;
-        if (d) this.endDuel(d, null);
-        this.endLegendBout(host);
-      }
-      this.wilds = this.wilds.filter((w) => w !== L);
-      this.visitors.legendEscaped(L);
-      this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.4, tint: '#9fd8ff' });
-      this.battle.events.push({ type: 'notice', text: `${L.name} escaped!`, seconds: 3 });
-    }
   }
 
   /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */
@@ -4548,6 +4514,16 @@ export class Match {
       s.awaitingPick = false;
     }
     this.battle.events.push({ type: 'duel-end', duel: d, winner });
+    // A legend bout the legend did not win (knocked out, or called off): the legend and its stand-in host go.
+    for (const s of [d.a, d.b]) {
+      const host = s.trainer;
+      if (!host.legendBout || host === winner) continue;
+      for (const L of host.party) {
+        if (!L.fainted && !L.captured) L.captured = true;
+        this.visitors.legendGone(L);
+      }
+      this.endLegendBout(host);
+    }
     if (!winner) return;
     // Beat a trainer while carrying a Snag Machine: pick one of their Pokémon to take.
     const loser = d.a.trainer === winner ? d.b.trainer : d.a.trainer;

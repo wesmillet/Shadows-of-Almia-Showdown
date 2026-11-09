@@ -66,7 +66,9 @@ export function celestePrize(rng: Rng, top: number): string {
   return celesteEligible(grown) ? grown : picked;
 }
 /** What can come through Hoopa's portal. */
-const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384-shiny', '0243', '1007', '1008', '0888', '0889'];
+const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384', '0243', '1007', '1008', '0888', '0889'];
+/** Legendaries with a shiny set of their own (a separate folder) instead of shiny colours. */
+const SHINY_SETS: Record<string, string> = { '0384': '0384-shiny' };
 const LUGIA = '0249';
 /** Shadow Lugia: SpriteCollab's own Shadow form of Lugia (sprite/0249/0001). */
 const SHADOW_LUGIA = '0249-shadow';
@@ -364,7 +366,8 @@ export class Visitors {
       const v = CONFIG.visitors as { portalLevelOver?: number; portalLevelMin?: number };
       const lvl = Math.min(100, Math.max(v.portalLevelMin ?? 60, top + (v.portalLevelOver ?? 20)));
       const sl = CONFIG.shadowLugia;
-      const L = m.makeMon(po.dex, po.shadow ? sl.level : lvl, null, po.x, po.y);
+      const sh = po.shadow ? { dex: po.dex, shiny: false } : this.legendShiny(po.dex);
+      const L = m.makeMon(sh.dex, po.shadow ? sl.level : lvl, null, po.x, po.y, sh.shiny);
       this.makeLegend(L);
       if (po.shadow) this.makeShadow(L);
       L.visual.scale = 0.15;
@@ -449,6 +452,15 @@ export class Visitors {
   }
 
   /** A legendary boss: triple HP, angry at anyone near, and it yields instead of fainting. */
+  /** A legendary is shiny 1 in 100 (catch.legendShinyChance): its shiny set when it has one, else shiny colours. */
+  private legendShiny(dex: string): { dex: string; shiny: boolean } {
+    const chance = (CONFIG.catch as typeof CONFIG.catch & { legendShinyChance?: number }).legendShinyChance ?? 0.01;
+    if (!this.m.rng.chance(chance)) return { dex, shiny: false };
+    const set = SHINY_SETS[dex];
+    if (set && SPECIES.has(set)) return { dex: set, shiny: false };
+    return { dex, shiny: SpriteRegistry.hasShiny(dex) };
+  }
+
   private makeLegend(L: Mon): void {
     L.legend = true;
     L.landBoss = true;
@@ -524,7 +536,8 @@ export class Visitors {
     }
     const top = Math.max(1, ...p.party.map((x) => x.level));
     const sl = CONFIG.shadowLugia;
-    const L = m.makeMon(shadow ? SHADOW_LUGIA : LUGIA, shadow ? sl.level : Math.min(100, Math.max(70, top + 15)), null, from.x, from.y);
+    const sh = shadow ? { dex: SHADOW_LUGIA, shiny: false } : this.legendShiny(LUGIA);
+    const L = m.makeMon(sh.dex, shadow ? sl.level : Math.min(100, Math.max(70, top + 15)), null, from.x, from.y, sh.shiny);
     this.makeLegend(L);
     if (shadow) {
       L.shadow = true;
@@ -605,8 +618,8 @@ export class Visitors {
 
   // ---------------------------------------------------------------- outcomes
 
-  /** A legendary's last stand ran out without a catch (Match.stepLastStands): Lugia is gone for the match. */
-  legendEscaped(L: Mon): void {
+  /** A legendary was knocked out or left without being caught: Lugia is gone for the match. */
+  legendGone(L: Mon): void {
     if (L.dex === LUGIA) this.lugiaDone = true;
   }
 

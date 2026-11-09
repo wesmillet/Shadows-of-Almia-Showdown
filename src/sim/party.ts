@@ -16,7 +16,7 @@
 import { DIR_VECTORS, dirFromVector, type Dir8 } from '../core/math';
 import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
-import { CONFIG, hitPad, moveSpeed, statsAtLevel } from './data';
+import { CONFIG, hitPad, moveSpeed, statLevel, statsAtLevel } from './data';
 import { incapable, type Mon, type Trainer } from './entities';
 import { canStand, moveAround, setWalking as setWalkAnim, tryMove } from './movement';
 import type { Nav } from './nav';
@@ -396,7 +396,7 @@ export function gainXp(m: Mon, amount: number): number {
     m.level++;
     gained++;
     const before = m.maxHp;
-    m.stats = statsAtLevel(m.species.stats, m.level);
+    m.stats = statsAtLevel(m.species.stats, statLevel(m.species, m.level));
     m.maxHp = m.boss ? m.maxHp : m.stats.hp;
     m.hp = Math.min(m.maxHp, m.hp + Math.max(0, m.maxHp - before));
   }

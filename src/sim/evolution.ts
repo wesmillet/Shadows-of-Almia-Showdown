@@ -8,7 +8,7 @@
  */
 import type { Rng } from '../core/rng';
 import { AnimPlayer, type PokemonSprites } from '../sprites/pokemonSprite';
-import { SPECIES, statsAtLevel, type SpeciesDef } from './data';
+import { SPECIES, statLevel, statsAtLevel, type SpeciesDef } from './data';
 import type { Mon } from './entities';
 
 export const EVOLVE_SWAP = 1.1;
@@ -77,7 +77,7 @@ export function applyEvolution(m: Mon, to: SpeciesDef, sprites: PokemonSprites):
   m.species = to;
   if (m.name === from.name) m.name = to.name;
   m.types = [...to.types];
-  m.stats = statsAtLevel(to.stats, m.level);
+  m.stats = statsAtLevel(to.stats, statLevel(to, m.level));
   if (!m.boss) {
     m.maxHp = m.stats.hp;
     m.hp = m.fainted ? 0 : Math.max(1, Math.round(share * m.maxHp));

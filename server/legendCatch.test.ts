@@ -25,19 +25,23 @@ describe('legendaries must be caught', async () => {
   };
   const run = (m: Match, secs: number) => { for (let i = 0; i < secs * 60; i++) { m.darkness.nextPulseIn = 1e9; m.step(1 / 60); } };
 
-  it('worn down in its bout, it holds on, then escapes without joining', () => {
+  it('knocked out in its bout, it is gone: it never joins for being beaten', () => {
     const { m, p, L } = setup();
     expect(m.startLegendBout(L)).toBe(true);
     run(m, 2);
-    m.battle.applyDamage(L, 1e6, p.party[0]!);
-    run(m, 0.2);
-    expect(L.hp).toBe(1);
-    expect(L.lastStandUntil).toBeDefined();
-    expect(p.party.includes(L)).toBe(false);
-    run(m, CONFIG.catch.lastStandSeconds + 1);
-    expect(L.captured).toBe(true);
+    m.battle.applyDamage(L, 1e7, p.party[0]!);
+    expect(L.fainted || L.hp <= 0).toBe(true);
+    run(m, 4);
     expect(p.party.includes(L)).toBe(false);
     expect(m.trainers.some((t) => t.legendBout)).toBe(false);
+  }, 60_000);
+
+  it('has level-100 stats whatever level it shows', () => {
+    const { m } = setup();
+    const a = m.makeMon('0245', 40, null, 0, 0);
+    const b = m.makeMon('0245', 100, null, 0, 0);
+    expect(a.level).toBe(40);
+    expect(a.stats).toEqual(b.stats);
   }, 60_000);
 
   it('caught, it joins as an ordinary level-60 team member', () => {
@@ -49,6 +53,7 @@ describe('legendaries must be caught', async () => {
     expect(L.level).toBe(60);
     expect(L.legend).toBe(false);
     expect(L.maxHp).toBe(L.stats.hp);
+    expect(L.stats).toEqual(m.makeMon('0245', 100, null, 0, 0).stats);
   }, 60_000);
 
   it('is hard to catch even at its last HP', () => {

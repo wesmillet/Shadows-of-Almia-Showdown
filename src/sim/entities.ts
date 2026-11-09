@@ -109,8 +109,6 @@ export interface Mon {
   calm?: number;
   /** A legendary from Hoopa's portal or the lake: worn down to its last HP it joins whoever beat it. */
   legend?: boolean;
-  /** A legendary at its last HP: the match time its last stand ends (a ball before then catches it; after, it escapes). */
-  lastStandUntil?: number;
   /**
    * Shadow Lugia's darkness: drawn dark purple in a black aura, it never falls asleep in the storm,
    * balls bounce off it and only a Snag Machine takes it. It keeps the mark after joining (and in the PC).

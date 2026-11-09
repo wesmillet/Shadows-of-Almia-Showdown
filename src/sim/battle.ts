@@ -868,8 +868,9 @@ export class BattleSystem {
 
   applyDamage(target: Mon, damage: number, by: Mon | null): void {
     if (target.fainted) return;
-    // A legendary is never knocked out: at its last HP it yields to whoever wore it down.
-    if (target.legend && target.hp - damage <= 0) {
+    // A shadow legendary is never knocked out: at its last HP it yields (snag it, or it dissolves).
+    // Every other legendary can be knocked out: catch it with a ball before then.
+    if (target.legend && target.shadow && target.hp - damage <= 0) {
       target.hp = 1;
       this.events.push({ type: 'yield', mon: target, by });
       return;

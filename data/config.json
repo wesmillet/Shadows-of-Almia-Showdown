@@ -224,7 +224,7 @@
     "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",
     "finalShowdown": false,
     "_finalBattleComment": "When the last two trainers start battling each other, the battle moves to the Shadow Crystal (match.ts stepFinalBattle): trainers at the two ends of the crystal's field (frontOfCrystal tiles in front of its middle; gap tiles apart on a map without one), the field is the battle area, Pokemon come out again after introSeconds (the Final Battle intro), wild Pokemon within clearRadius moved off. The darkness stops where it is; if the crystal had not shattered it never does.",
-    "finalBattle": { "gap": 6, "introSeconds": 3.5, "clearRadius": 12, "frontOfCrystal": 3 },
+    "finalBattle": { "gap": 6, "introSeconds": 3.5, "clearRadius": 12, "frontOfCrystal": 0 },
     "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed and picks every move (auto-battle is off in battles). A rival picks its next Pokémon after aiPickSeconds. A player has playerPickSeconds to choose theirs; after that the first one able in party order comes out by itself, so a battle never waits on a pick. If both sides run out at once, the battle ends with no winner. zoom is the camera zoom while the player battles.",
     "startRange": 6,
     "standGap": 9,

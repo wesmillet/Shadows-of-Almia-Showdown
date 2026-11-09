@@ -4566,11 +4566,11 @@ export class Match {
     this.darknessHeld = true;
     if (this.controlled) this.releaseControl();
     const fb = (CONFIG.duel as typeof CONFIG.duel & { finalBattle?: { gap: number; introSeconds: number; clearRadius: number; frontOfCrystal: number } }).finalBattle ?? { gap: 6, introSeconds: 3.5, clearRadius: 9, frontOfCrystal: 3 };
-    // The trainers stand at the two ends of the crystal's field (west and east), a little in front
-    // of the crystal so the fight between them is not hidden behind it; the field is the battle area.
+    // The trainers stand at the two ends of the crystal's field (west and east), level with its
+    // middle (frontOfCrystal tiles lower or higher if set); the field is the battle area.
     const spotNear = (x: number, y: number) => (canStand(this.ground, x, y, CONFIG.player.radius) ? { x, y } : this.nearestStand(x, y));
     const field = this.ground.features?.finalArena;
-    const fy = field ? Math.min(field.y1 - 1.5, (field.y0 + field.y1 + 1) / 2 + fb.frontOfCrystal) : this.centerY + 2.5;
+    const fy = field ? (field.y0 + field.y1 + 1) / 2 + fb.frontOfCrystal : this.centerY + 2.5;
     const sa = field ? spotNear(field.x0 + 1.5, fy) : spotNear(this.centerX - fb.gap / 2, fy);
     const sb = field ? spotNear(field.x1 - 0.5, fy) : spotNear(this.centerX + fb.gap / 2, fy);
     if (field) d.bounds = { x0: field.x0, y0: field.y0, x1: field.x1 + 1, y1: field.y1 + 1 };
@@ -4625,7 +4625,7 @@ export class Match {
     // The darkness holds where it is, and the crystal's surroundings are light.
     const dn = this.darkness;
     dn.radius = dn.targetRadius = Math.max(Number.isFinite(dn.radius) ? dn.radius : Infinity, fb.clearRadius + 4);
-    this.battle.events.push({ type: 'final-battle', a: a.name, b: b.name });
+    this.battle.events.push({ type: 'final-battle', a: d.a.trainer.name, b: d.b.trainer.name, aId: d.a.trainer.id, bId: d.b.trainer.id });
     this.battle.events.push({ type: 'notice', text: `Final battle: ${a.name} vs ${b.name}! The Shadow Crystal holds back the darkness`, seconds: 4 });
   }
 

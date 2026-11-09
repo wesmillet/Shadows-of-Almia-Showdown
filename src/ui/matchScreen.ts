@@ -1737,7 +1737,7 @@ export class MatchScreen implements Screen {
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
       case 'final-battle':
-        this.finalIntro = { a: ev.a, b: ev.b, t: 0 };
+        this.finalIntro = { a: ev.a, b: ev.b, aId: ev.aId, bId: ev.bId, t: 0 };
         break;
       case 'learned':
         if (ev.mon.owner === this.match.player) {
@@ -2692,7 +2692,7 @@ export class MatchScreen implements Screen {
     } else if (duel && fighting && duel.bounds) {
       // The final battle: the field's middle.
       fx = (duel.bounds.x0 + duel.bounds.x1) / 2;
-      fy = (duel.bounds.y0 + duel.bounds.y1) / 2 + 1;
+      fy = (duel.bounds.y0 + duel.bounds.y1) / 2;
     } else if (duel && fighting) {
       const ma = duel.a.mon;
       const mb = duel.b.mon;
@@ -2755,7 +2755,7 @@ export class MatchScreen implements Screen {
   }
 
   /** The last two trainers' battle: the Final Battle intro playing (seconds in), or null. */
-  private finalIntro: { a: string; b: string; t: number } | null = null;
+  private finalIntro: { a: string; b: string; aId?: number; bId?: number; t: number } | null = null;
 
   /**
    * The Final Battle intro (about 3.5 s, while both teams are still in their balls): a flash, dark
@@ -2783,6 +2783,19 @@ export class MatchScreen implements Screen {
       return 1 + 2.7 * (c - 1) ** 3 + 1.7 * (c - 1) ** 2;
     };
     const out = t > T - 0.45 ? 1 - (t - (T - 0.45)) / 0.45 : 1;
+    // Laid out on the two trainers (they stand at the field's two ends, level with its middle):
+    // each name on its panel right above its trainer, the seam and VS between them, the banner on top.
+    const ph = 96 * s;
+    const slant = 50 * s;
+    const find = (id: number | undefined) => (id === undefined ? undefined : this.match.allTrainers.find((x) => x.id === id));
+    const ta = find(f.aId);
+    const tb = find(f.bId);
+    const ax = ta ? v.toScreenX(ta.x) : W * 0.25;
+    const bx = tb ? v.toScreenX(tb.x) : W * 0.75;
+    const head = (tr: typeof ta) => (tr ? v.toScreenY(tr.y) - 2.3 * v.pxPerTile : H / 2 - 80 * s);
+    const seam = (ax + bx) / 2;
+    const cy = Math.max(H * 0.2 + ph / 2, Math.min(head(ta), head(tb)) - ph / 2 - 12 * s);
+    const by = cy - ph / 2 - 52 * s;
     h.save();
     // Dark bands top and bottom, and the field dims a little.
     const band = H * 0.12 * ease(t / 0.35);
@@ -2795,7 +2808,6 @@ export class MatchScreen implements Screen {
     h.fillRect(0, 0, W, H);
     // The purple banner.
     const sw = ease((t - 0.1) / 0.3);
-    const by = H * 0.16;
     const bh = 64 * s;
     const reach = (W / 2 + 40 * s) * sw;
     h.globalAlpha = 0.95 * out;
@@ -2820,48 +2832,45 @@ export class MatchScreen implements Screen {
       const sc = k < 1 ? 2.4 - 1.5 * ease(k) : 0.9 + 0.1 * Math.min(1, (k - 1) * 3);
       h.save();
       h.globalAlpha = out * Math.min(1, k * 2);
-      h.translate(W / 2, by);
+      h.translate(seam, by);
       h.scale(sc, sc);
       text(v, 'FINAL BATTLE', 0, 0, 38, { align: 'center', baseline: 'middle', color: '#ffe27a', shadowColor: 'rgba(40,0,60,0.9)', weight: '900' });
       h.restore();
     }
     // The blue and red name panels slam together under it.
-    const cy = H * 0.31;
-    const ph = 96 * s;
-    const slant = 50 * s;
     if (t > 0.55) {
       const k = back((t - 0.55) / 0.45);
       h.save();
       h.globalAlpha = out;
       const lx = -W * 0.55 * (1 - k);
       const rx = W * 0.55 * (1 - k);
-      let gg = h.createLinearGradient(lx, 0, lx + W / 2, 0);
+      let gg = h.createLinearGradient(lx, 0, lx + seam, 0);
       gg.addColorStop(0, '#0d2a6b');
       gg.addColorStop(1, '#2f6fe0');
       h.fillStyle = gg;
       h.beginPath();
       h.moveTo(lx, cy - ph / 2);
-      h.lineTo(lx + W / 2 + slant / 2, cy - ph / 2);
-      h.lineTo(lx + W / 2 - slant / 2, cy + ph / 2);
+      h.lineTo(lx + seam + slant / 2, cy - ph / 2);
+      h.lineTo(lx + seam - slant / 2, cy + ph / 2);
       h.lineTo(lx, cy + ph / 2);
       h.closePath();
       h.fill();
-      gg = h.createLinearGradient(rx + W / 2, 0, rx + W, 0);
+      gg = h.createLinearGradient(rx + seam, 0, rx + W, 0);
       gg.addColorStop(0, '#e0402f');
       gg.addColorStop(1, '#6b0d16');
       h.fillStyle = gg;
       h.beginPath();
-      h.moveTo(rx + W / 2 + slant / 2, cy - ph / 2);
+      h.moveTo(rx + seam + slant / 2, cy - ph / 2);
       h.lineTo(rx + W, cy - ph / 2);
       h.lineTo(rx + W, cy + ph / 2);
-      h.lineTo(rx + W / 2 - slant / 2, cy + ph / 2);
+      h.lineTo(rx + seam - slant / 2, cy + ph / 2);
       h.closePath();
       h.fill();
       h.restore();
       h.save();
       h.globalAlpha = out;
-      text(v, f.a, lx + W / 2 - 66 * s, cy + 3 * s, 34, { align: 'right', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(0,10,40,0.8)', weight: '900', maxWidth: W / 2 - 90 * s });
-      text(v, f.b, rx + W / 2 + 66 * s, cy + 3 * s, 34, { align: 'left', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(40,0,0,0.8)', weight: '900', maxWidth: W / 2 - 90 * s });
+      text(v, f.a, lx + Math.min(ax, seam - 90 * s), cy + 3 * s, 34, { align: 'center', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(0,10,40,0.8)', weight: '900', maxWidth: Math.max(80 * s, 2 * Math.min(ax, seam - 70 * s - ax) - 10 * s) });
+      text(v, f.b, rx + Math.max(bx, seam + 90 * s), cy + 3 * s, 34, { align: 'center', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(40,0,0,0.8)', weight: '900', maxWidth: Math.max(80 * s, 2 * Math.min(W - bx, bx - seam - 70 * s) - 10 * s) });
       h.restore();
     }
     // A thick lightning seam where they meet.
@@ -2871,7 +2880,7 @@ export class MatchScreen implements Screen {
       for (let i = 0; i <= 7; i++) {
         const yy = cy - ph / 2 - 18 * s + ((ph + 36 * s) * i) / 7;
         const jag = i === 0 || i === 7 ? 0 : (i % 2 ? 1 : -1) * (12 + 6 * flick) * s;
-        pts.push([W / 2 + slant / 2 - (slant * i) / 7 + jag, yy]);
+        pts.push([seam + slant / 2 - (slant * i) / 7 + jag, yy]);
       }
       const path = () => {
         h.beginPath();
@@ -2900,7 +2909,7 @@ export class MatchScreen implements Screen {
       const sc = k < 1 ? 3 - 2 * ease(k) : 1;
       h.save();
       h.globalAlpha = out;
-      h.translate(W / 2, cy);
+      h.translate(seam, cy);
       h.scale(sc, sc);
       text(v, 'VS', 0, 3 * s, 52, { align: 'center', baseline: 'middle', color: '#ffd34a', shadowColor: 'rgba(26,6,48,0.95)', weight: '900' });
       h.restore();
@@ -2910,7 +2919,7 @@ export class MatchScreen implements Screen {
         h.strokeStyle = '#ffd34a';
         h.lineWidth = 5 * s;
         h.beginPath();
-        h.arc(W / 2, cy, (40 + (k - 1) * 110) * s, 0, Math.PI * 2);
+        h.arc(seam, cy, (40 + (k - 1) * 110) * s, 0, Math.PI * 2);
         h.stroke();
         h.restore();
       }

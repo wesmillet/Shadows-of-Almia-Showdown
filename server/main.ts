@@ -66,11 +66,11 @@ const MIN_PLAYERS = KIND === 'live' ? Math.max(HALF, Number(process.env.MIN_PLAY
 const LONELY = Number(process.env.LONELY_SECONDS ?? (KIND === 'live' ? 150 : 60));
 /**
  * Scheduled public matches (the live server): one starts every SCHEDULE_SECONDS on the clock, with
- * up to SEATS players (computer trainers fill a lobby to MATCH_SIZE). Six minutes: busy matches last
- * about 11 minutes on average (16 at the longest), so about two run at once, three only while a
- * long one finishes, never four. Twelve seats: room for a busy evening in those two or three.
+ * up to SEATS players (computer trainers fill a lobby to MATCH_SIZE). Five minutes (six before the
+ * move to two dedicated cores): busy matches last about 11 minutes on average (16 at the longest),
+ * so two or three run at once, four only while long ones finish. Twelve seats each.
  */
-const SCHEDULE = Number(process.env.SCHEDULE_SECONDS ?? (KIND === 'live' ? 360 : 0));
+const SCHEDULE = Number(process.env.SCHEDULE_SECONDS ?? (KIND === 'live' ? 300 : 0));
 const SEATS = Number(process.env.SEATS ?? 12);
 /** Stutters worth a log line: a match step this slow, or the main thread this late (ms). */
 const SLOW_STEP_MS = Number(process.env.SLOW_STEP_MS ?? 30);

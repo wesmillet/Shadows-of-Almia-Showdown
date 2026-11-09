@@ -138,6 +138,9 @@ function maskTime(secs: number): string {
   return secs % 60 ? `${secs}s` : `${secs / 60} min`;
 }
 
+/** Ordinary wild spawns of one species keep at least this far apart (tiles) when the land's table allows. */
+const SAME_SPECIES_GAP = 7;
+
 export class Match {
   readonly ground: GroundRenderer;
   readonly rng: Rng;
@@ -2109,7 +2112,11 @@ export class Match {
         // Habitat entries spawn in their habitat slots only.
         const open = t.table.filter((r) => !r.habitat);
         if (!open.length) continue;
-        plan.push({ row: this.rng.weighted(open, (r) => r.weight), t, spot, land });
+        // Spread each species out: a roll that repeats a species already planned close by (three
+        // Drapion in a row by the crystal) rolls again among the others.
+        const close = new Set(plan.filter((q) => Math.hypot(q.spot.x - spot.x, q.spot.y - spot.y) < SAME_SPECIES_GAP).map((q) => q.row.dex));
+        const fresh = open.filter((r) => !close.has(r.dex));
+        plan.push({ row: this.rng.weighted(fresh.length ? fresh : open, (r) => r.weight), t, spot, land });
       }
     }
     // Starters and pseudo-legendaries (spawns.json rare): each one is in a match with the same

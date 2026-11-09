@@ -29,6 +29,8 @@ const PC_SIZE_CLASSES = [
 
 const COLS = 6;
 const ROWS = 5;
+/** The strip's bottom row: what each rarity costs to star. */
+const LEGEND_H = 18;
 const PER_BOX = COLS * ROWS;
 const CREAM = '#f4e6c8';
 
@@ -330,7 +332,7 @@ export class PcScreen implements Screen {
     const by = tool.y + tool.h + 10 * s;
     const box = { x: x0, y: by, w: bw, h: bh };
     const title = { x: x0 + 56 * s, y: by + 12 * s, w: bw - 112 * s, h: 40 * s };
-    const strip = { x: x0, y: by + bh + 10 * s, w: bw, h: 82 * s };
+    const strip = { x: x0, y: by + bh + 10 * s, w: bw, h: (82 + LEGEND_H) * s };
     const sideH = (this.starters ? strip.y + strip.h : by + bh) - by;
     // The toolbar: Sort, the filter chips, then the search box filling the rest.
     let cx = x0;
@@ -424,7 +426,7 @@ export class PcScreen implements Screen {
     const right = 12 * s;
     const w = (strip.w - lead - right - gap * (NOMINATION_SLOTS - 1)) / NOMINATION_SLOTS;
     const top = strip.y + 9 * s;
-    const h = strip.h - 9 * s - 15 * s;
+    const h = strip.h - 9 * s - 15 * s - LEGEND_H * s;
     return Array.from({ length: NOMINATION_SLOTS }, (_, i) => ({ x: strip.x + lead + i * (w + gap), y: top, w, h }));
   }
 
@@ -725,6 +727,25 @@ export class PcScreen implements Screen {
       }
       text(v, `${(sp.chance * 100).toFixed(0)}%`, cx, c.y + c.h - 5 * s, 11, { align: 'center', color: INK.good, shadow: false, weight: '900' });
     });
+    // What each rarity costs to star (and how strongly it rolls), across the bottom.
+    const ly = first.y + first.h + 13 * s;
+    text(v, 'Pts per star', lx, ly, 10, { color: INK.dim, shadow: false, maxWidth: 80 * s });
+    const keyX = lx + 84 * s;
+    const keyEnd = (rects[NOMINATION_SLOTS - 1] as Rect).x + (rects[NOMINATION_SLOTS - 1] as Rect).w;
+    // Each key gets room in proportion to its label (Uncommon is the long one).
+    const labels = TIER_ORDER.map((id) => `${tierInfo(id).name} ${st.costs[id] ?? 1}`);
+    const chars = labels.reduce((n, l) => n + l.length + 3, 0);
+    let kx = keyX;
+    TIER_ORDER.forEach((id, i) => {
+      const t = tierInfo(id);
+      const keyW = ((keyEnd - keyX) * ((labels[i] as string).length + 3)) / chars;
+      h.fillStyle = t.color;
+      h.beginPath();
+      h.arc(kx + 6 * s, ly - 4 * s, 4 * s, 0, Math.PI * 2);
+      h.fill();
+      text(v, labels[i] as string, kx + 13 * s, ly, 10, { color: INK.text, shadow: false, weight: '700', maxWidth: keyW - 15 * s });
+      kx += keyW;
+    });
   }
 
   /** The side panel: the selected (or pointed-at) Pokémon, or the collection at a glance. */
@@ -913,12 +934,12 @@ export class PcScreen implements Screen {
     let line: string;
     if (on) {
       const k = st.nominations.indexOf(nd);
-      line = `Starred · ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance as your third starter`;
+      line = `Starred: ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
     } else if (can) {
       const w = (t: string): number => st.weights[t] ?? 1;
       const next = [...st.nominations, nd];
       const total = next.reduce((n, d) => n + w(st.eligible.find((x) => x.dex === d)?.tier ?? 'common'), 0) + (st.slots - next.length) * w('common');
-      line = `${SPECIES.get(nd)?.name ?? nd} · ${info?.cost ?? 1} pt · would be ${((w(info?.tier ?? 'common') / total) * 100).toFixed(0)}%`;
+      line = `Star for ${info?.cost ?? 1} pt${(info?.cost ?? 1) === 1 ? '' : 's'}: ${((w(info?.tier ?? 'common') / total) * 100).toFixed(0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
     } else line = st.nominations.length >= NOMINATION_SLOTS ? 'All five stars are used' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
     text(v, this.note || line, r.x + r.w / 2, b.y - 10 * s, 11, { align: 'center', color: can ? INK.text : INK.bad, shadow: false, maxWidth: r.w - 24 * s });
     const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);

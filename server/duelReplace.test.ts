@@ -150,4 +150,18 @@ describe('trainer battle replacements', async () => {
       expect(ended).toEqual([null]);
     });
   });
+
+  it('with three or fewer left, the winner recovers, is protected a while and takes the loser\'s bag', () => {
+    const { m, p, b, d, step, side, ended } = setup(7, [['0006', 40]], [['0004', 10]]);
+    b.items[0] = { id: 'ultra-ball', count: 3 };
+    step(3, () => !!d.a.mon && !!d.b.mon && d.state === 'fight');
+    const mine = side(p).mon!;
+    mine.hp = Math.round(mine.maxHp * 0.2);
+    knockOut(side(b).mon!);
+    step(3, () => ended.length > 0);
+    expect(ended).toEqual([p]);
+    expect(mine.hp).toBeGreaterThanOrEqual(Math.round(mine.maxHp * 0.7) - 1);
+    expect(p.duelReadyAt ?? 0).toBeGreaterThanOrEqual(m.time + 15);
+    expect(p.items.some((x) => x?.id === 'ultra-ball')).toBe(true);
+  });
 });

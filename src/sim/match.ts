@@ -3958,6 +3958,37 @@ export class Match {
     this.endLegendBout(host);
   }
 
+  /**
+   * Third-partying: with three or fewer trainers left, whoever kept out of a battle could pick off
+   * its tired winner. So winning a trainer battle then heals the winner's team by half (CONFIG.duel
+   * finalWin), keeps anyone from challenging them for a while, and hands them the loser's bag.
+   */
+  private finalWinBonus(winner: Trainer, loser: Trainer): void {
+    const fw = (CONFIG.duel as typeof CONFIG.duel & { finalWin?: { remaining: number; heal: number; protectSeconds: number } }).finalWin ?? { remaining: 3, heal: 0.5, protectSeconds: 20 };
+    const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
+    if (left > fw.remaining) return;
+    for (const m of winner.party) {
+      if (m.captured || m.fainted) continue;
+      m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * fw.heal));
+    }
+    winner.duelReadyAt = Math.max(winner.duelReadyAt ?? 0, this.time + fw.protectSeconds);
+    // The loser's bag, when they are out of Pokémon (their run is over).
+    let took = 0;
+    if (!this.canBattle(loser)) {
+      for (const list of [loser.items, loser.held]) {
+        for (let i = 0; i < list.length; i++) {
+          const it = list[i];
+          if (!it) continue;
+          if (this.giveItem(winner, it.id, it.count)) {
+            took += it.count;
+            list[i] = null;
+          }
+        }
+      }
+    }
+    this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: `Victory! Your team recovers, nobody can challenge you for ${fw.protectSeconds} s${took ? `, and you take ${loser.name}'s items` : ''}`, seconds: 3.5 }));
+  }
+
   /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */
   private endLegendBout(host: Trainer): void {
     host.alive = false;
@@ -4527,6 +4558,7 @@ export class Match {
     if (!winner) return;
     // Beat a trainer while carrying a Snag Machine: pick one of their Pokémon to take.
     const loser = d.a.trainer === winner ? d.b.trainer : d.a.trainer;
+    if (!winner.legendBout && !loser.legendBout && !loser.visitor) this.finalWinBonus(winner, loser);
     if (winner.isPlayer && !loser.legendBout && !loser.visitor && this.snagSlot(winner) >= 0 && loser.party.some((m) => !m.captured)) {
       this.withSeat(winner, () => {
         this.snagOffer = { from: loser };

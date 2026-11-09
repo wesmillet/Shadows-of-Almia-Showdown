@@ -11,6 +11,7 @@
  */
 import type { Mon } from './sim/entities';
 import { firstForm } from './sim/starters';
+import { SPECIES } from './sim/data';
 
 export interface PcEntry {
   /** Unique within the PC. */
@@ -34,6 +35,24 @@ export interface PcEntry {
   fav?: boolean;
   /** Online: the server's row id (favourites are saved by it). */
   pcId?: number;
+  /** The form it was in when kept (a Slaking kept as Slakoth): what the PC shows. */
+  evolvedFrom?: string;
+}
+
+/**
+ * The species the PC shows for an entry: the form it was caught or kept in. The entry itself is
+ * stored at the first stage of its line (`dex`), which is what a match starts it as.
+ */
+export function shownDex(e: PcEntry): string {
+  return e.evolvedFrom && SPECIES.has(e.evolvedFrom) ? e.evolvedFrom : e.dex;
+}
+
+/** Its name as shown: a plain species name follows the shown form, a nickname stays. */
+export function shownName(e: PcEntry): string {
+  const base = SPECIES.get(e.dex)?.name;
+  const shown = SPECIES.get(shownDex(e))?.name;
+  if (/^\d{4}/.test(e.name) || (shown && e.name === base)) return shown ?? e.name;
+  return e.name;
 }
 
 /** Stars or unstars a Pokémon in this browser's PC. */
@@ -82,6 +101,7 @@ export function extractToPc(m: Mon, via: PcEntry['via'], seed?: number): boolean
     via,
     at: new Date().toISOString(),
     seed,
+    evolvedFrom: base.from,
   };
   try {
     const list = loadPc();

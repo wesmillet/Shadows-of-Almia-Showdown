@@ -661,7 +661,9 @@ export class Accounts {
    * collection log). Nothing is removed.
    */
   private firstFormsOnce(): void {
-    if (this.db.prepare("SELECT 1 FROM meta WHERE key = 'pc_first_forms'").get()) return;
+    // Versioned: run again when new first stages join the game (v2: Slakoth, Vigoroth, Scyther,
+    // Tinkatink, Tinkatuff, Munna, Yamask), so older Slaking and the like go back too.
+    if (this.db.prepare("SELECT 1 FROM meta WHERE key = 'pc_first_forms_v2'").get()) return;
     const rows = this.db.prepare('SELECT id, user_id, entry FROM pc').all() as Array<{ id: number; user_id: number; entry: string }>;
     let changed = 0;
     this.atomically(() => {
@@ -680,7 +682,7 @@ export class Accounts {
         this.logCollection(r.user_id, 'first-form', { pcId: r.id, ref: 'migration', detail: { from: e.dex, to: b.dex } });
         changed++;
       }
-      this.db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('pc_first_forms', ?)").run(String(Date.now()));
+      this.db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('pc_first_forms_v2', ?)").run(String(Date.now()));
     });
     if (changed) console.log(`PC: ${changed} Pokémon put back to their first form`);
   }

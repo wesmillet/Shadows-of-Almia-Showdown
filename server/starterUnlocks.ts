@@ -9,7 +9,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { randomInt } from 'node:crypto';
 import { LAUNCH_WEEK_START, launchWeek, STARTER_ACHIEVEMENTS, starterDay, type StarterStat, type StartersInfo } from '../src/sim/starterAchievements';
 import { SPECIES } from '../src/sim/data';
-import { eligibleNominations, NOMINATION_BUDGET, NOMINATION_SLOTS, nominationProblem, SLOT3_WEIGHT, STARTER_TIERS, TIER_COST, tierOf, usableNominations } from '../src/sim/starters';
+import { eligibleNominations, NOMINATION_BUDGET, NOMINATION_SLOTS, nominationProblem, pcBase, SLOT3_WEIGHT, STARTER_TIERS, TIER_COST, tierOf, usableNominations } from '../src/sim/starters';
 
 export const STARTER_SQL = `
   CREATE TABLE IF NOT EXISTS starter_unlocks (
@@ -166,7 +166,9 @@ export class StarterUnlocks {
     if (!row) return null;
     const still = this.db.prepare('SELECT 1 FROM pc WHERE id = ? AND user_id = ?').get(row.pc_id, userId);
     if (!still) return null;
-    return { dex: row.dex, name: SPECIES.get(row.dex)?.name ?? row.dex, pcId: row.pc_id };
+    // Always the first stage of its line: a Pokémon kept before its first stages existed starts as one too.
+    const dex = pcBase(row.dex);
+    return { dex, name: SPECIES.get(dex)?.name ?? dex, pcId: row.pc_id };
   }
 
   /** Picks today's starter from the PC (once a day). Returns an error, or null. */

@@ -102,7 +102,7 @@ describe('starter achievements', () => {
     expect(c?.name).toBe('Charmander');
     // An entry stored before this rule changes on the next start.
     acc.db.prepare('INSERT INTO pc (user_id, entry, created_at) VALUES (?, ?, ?)').run(uid, JSON.stringify({ uid: 'old', dex: '0445', name: 'Garchomp', level: 60, moves: [], via: 'win' }), Date.now());
-    acc.db.prepare("DELETE FROM meta WHERE key = 'pc_first_forms'").run();
+    acc.db.prepare("DELETE FROM meta WHERE key = 'pc_first_forms_v2'").run();
     (acc as unknown as { firstFormsOnce(): void }).firstFormsOnce();
     expect(pcIds().find((e) => e.evolvedFrom === '0445')?.dex).toBe('0443');
     // Only the Pikachu caught in m1 counts: collected Pokémon (extracted Charizard and Garchomp,

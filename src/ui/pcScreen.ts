@@ -12,7 +12,7 @@ import type { Connection } from '../net/connection';
 import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES, typeColor } from '../sim/data';
 import { nominationBase, nominationCost, NOMINATION_SLOTS, pcBase, STARTER_TIERS, tierOf } from '../sim/starters';
-import { loadPc, setFavLocal, type PcEntry } from '../pc';
+import { loadPc, setFavLocal, shownDex, shownName, type PcEntry } from '../pc';
 import type { Assets } from '../sprites/assets';
 import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, textScale, uiFont, type GameContext, type Screen } from './screens';
@@ -122,7 +122,7 @@ export class PcScreen implements Screen {
   ) {
     this.list = list ?? loadPc();
     // Shiny ones load their recoloured set (key `dex*`), so they are ready when the box opens too.
-    void this.sprites.preload(this.list.map((e) => (e.shiny && SpriteRegistry.hasShiny(e.dex) ? `${e.dex}*` : e.dex)), undefined, true);
+    void this.sprites.preload(this.list.map((e) => (e.shiny && SpriteRegistry.hasShiny(shownDex(e)) ? `${shownDex(e)}*` : shownDex(e))), undefined, true);
     if (net) void this.loadStarters();
     this.refresh();
   }
@@ -164,7 +164,7 @@ export class PcScreen implements Screen {
       if (this.filter === 'shiny' && !e.shiny) return false;
       if (this.filter === 'nom' && !this.isNominated(e)) return false;
       if (this.tier && this.tierOf(e) !== this.tier) return false;
-      if (this.query && !e.name.toLowerCase().includes(this.query) && !(SPECIES.get(e.dex)?.name ?? '').toLowerCase().includes(this.query)) return false;
+      if (this.query && !shownName(e).toLowerCase().includes(this.query) && !(SPECIES.get(e.dex)?.name ?? '').toLowerCase().includes(this.query) && !(SPECIES.get(shownDex(e))?.name ?? '').toLowerCase().includes(this.query)) return false;
       return true;
     });
     const by: Record<SortKey, (a: PcEntry, b: PcEntry, ia: number, ib: number) => number> = {
@@ -210,7 +210,7 @@ export class PcScreen implements Screen {
     const now = performance.now();
     if (!this.releaseArmed || this.releaseArmed.pcId !== e.pcId || now > this.releaseArmed.until) {
       this.releaseArmed = { pcId: e.pcId, until: now + 4000 };
-      this.note = `Click Release again to let ${e.name} go for good`;
+      this.note = `Click Release again to let ${shownName(e)} go for good`;
       return;
     }
     this.releaseArmed = null;
@@ -226,7 +226,7 @@ export class PcScreen implements Screen {
       if (at >= 0) this.list.splice(at, 1);
       this.selected = -1;
       this.hover = -1;
-      this.note = `${e.name} was released. Bye, ${e.name}!`;
+      this.note = `${shownName(e)} was released. Bye, ${shownName(e)}!`;
       this.refresh();
     });
   }
@@ -547,7 +547,7 @@ export class PcScreen implements Screen {
   private anim(e: PcEntry): AnimPlayer {
     let a = this.anims.get(e.uid);
     if (!a) {
-      a = new AnimPlayer(this.sprites.get(e.dex, !!e.shiny));
+      a = new AnimPlayer(this.sprites.get(shownDex(e), !!e.shiny));
       a.dir = 0;
       this.anims.set(e.uid, a);
     }
@@ -757,14 +757,14 @@ export class PcScreen implements Screen {
     const i = this.selected >= 0 ? this.selected : this.hover;
     const e = this.list[i];
     if (!e) return this.drawSummary(r);
-    const sp = SPECIES.get(e.dex);
+    const sp = SPECIES.get(shownDex(e));
     const pad = 16 * s;
     // Portrait, top left.
     const ps = 92 * s;
     const px = r.x + pad;
     const py = r.y + pad;
     const pk = skinPx(v);
-    const f = this.sprites.get(e.dex, !!e.shiny).portraitSource();
+    const f = this.sprites.get(shownDex(e), !!e.shiny).portraitSource();
     if (!skinPiece(v, e.shadow ? 'grey' : e.shiny ? 'blue' : 'orange', px, py, ps + 12 * s, ps + 12 * s, pk)) {
       h.fillStyle = 'rgba(0,0,0,0.08)';
       h.fillRect(px, py, ps + 12 * s, ps + 12 * s);
@@ -780,7 +780,7 @@ export class PcScreen implements Screen {
     // Name, level, types and tier, right of the portrait.
     const tx = px + ps + 26 * s;
     const tw = r.x + r.w - pad - tx - 34 * s;
-    const name = /^\d{4}/.test(e.name) ? (sp?.name ?? e.name) : e.name;
+    const name = shownName(e);
     text(v, name, tx, py + 18 * s, 18, { color: e.shiny ? INK.blue : INK.text, shadow: false, maxWidth: tw });
     const tags = [`Lv ${e.level}`, e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.shadow ? 'Shadow' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
     text(v, tags, tx, py + 38 * s, 12, { color: INK.accent, shadow: false, maxWidth: r.x + r.w - pad - tx });
@@ -823,7 +823,7 @@ export class PcScreen implements Screen {
     // The value column starts after the widest label (LINE, FROM, MOVES) at the player's text size.
     h.save();
     h.font = uiFont(11 * s);
-    const kw = Math.max(44 * s, Math.max(...['LINE', 'FROM', 'MOVES'].map((t) => h.measureText(t).width)) + 8 * s);
+    const kw = Math.max(44 * s, Math.max(...['LINE', 'FROM', 'STARTS', 'MOVES'].map((t) => h.measureText(t).width)) + 8 * s);
     h.restore();
     text(v, 'LINE', r.x + pad, y, 11, { color: INK.dim, shadow: false });
     text(v, this.lineText(e.dex), r.x + pad + kw, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
@@ -836,6 +836,12 @@ export class PcScreen implements Screen {
     const traded = (e as PcEntry & { tradedFrom?: string }).tradedFrom;
     text(v, `${traded ? `Traded from ${traded}` : viaLabel(e.via)}${when}`, r.x + pad + kw, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     y += 20 * s;
+    // Shown as caught, but a match starts it at the first stage of its line.
+    if (shownDex(e) !== e.dex) {
+      text(v, 'STARTS', r.x + pad, y, 11, { color: INK.dim, shadow: false });
+      text(v, `as ${SPECIES.get(e.dex)?.name ?? e.dex} when picked as a starter`, r.x + pad + kw, y, 12, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
+      y += 20 * s;
+    }
     if (e.moves?.length) {
       text(v, 'MOVES', r.x + pad, y, 11, { color: INK.dim, shadow: false });
       text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + pad + kw, y, 11, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
@@ -984,7 +990,7 @@ export class PcScreen implements Screen {
 
   /** The union of every idle frame (for size), and `rest`: the first frame's bottom row (for the line). */
   private idleBounds(e: PcEntry, f: FrameRect): { x0: number; y0: number; x1: number; y1: number; rest: number; restTop: number } | null {
-    const key = `${e.dex}:${f.w}x${f.h}`;
+    const key = `${shownDex(e)}:${f.w}x${f.h}`;
     const known = PcScreen.bounds.get(key);
     if (known !== undefined) return known;
     const img = f.image as HTMLImageElement | HTMLCanvasElement;

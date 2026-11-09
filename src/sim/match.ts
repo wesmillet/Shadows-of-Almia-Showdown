@@ -115,6 +115,9 @@ export interface Duel {
   /** Seconds in the current state. */
   t: number;
   winner: Trainer | null;
+  /** Stalemate watch (stalemate()): the active pair's HP when it last changed, and seconds since. */
+  quietHp?: number;
+  quietT?: number;
 }
 
 /** A town's storage chest: its bottom-centre (tiles) and the town. */
@@ -4140,6 +4143,7 @@ export class Match {
       if (m && m.visual.scale < 1) m.visual.scale = Math.min(1, m.visual.scale + dt * 3.5);
       if (m && m.visual.flash > 0) m.visual.flash = Math.max(0, m.visual.flash - dt * 2.5);
     }
+    if (d.state === 'fight' && this.stalemate(d, dt)) return;
     if (d.state === 'intro' && d.a.mon && d.b.mon) {
       d.state = 'fight';
       d.t = 0;
@@ -4445,6 +4449,47 @@ export class Match {
     }
     this.startDuel(a, b, spots[0], spots[1]);
     this.battle.events.push({ type: 'notice', text: `Final showdown: ${a.name} vs ${b.name}! Both teams are restored`, seconds: 4 });
+  }
+
+  /**
+   * Two Pokémon that can not hurt each other (two Ghosts with only Normal moves, a Ground move
+   * against a Flying type...) would battle forever: after `stalemateSeconds` with neither losing
+   * HP, both trainers recall and send out their next Pokémon; a side with no one else keeps its
+   * own, and if neither has anyone else the battle is called off. True when the battle ended.
+   */
+  private stalemate(d: Duel, dt: number): boolean {
+    const a = d.a.mon;
+    const b = d.b.mon;
+    if (!a || !b) return false;
+    const hp = a.hp + b.hp + a.maxHp * 1e-6 * a.id + b.maxHp * 1e-6 * b.id;
+    if (d.quietHp === undefined || Math.abs(hp - d.quietHp) > 1e-9) {
+      d.quietHp = hp;
+      d.quietT = 0;
+      return false;
+    }
+    d.quietT = (d.quietT ?? 0) + dt;
+    if (d.quietT < ((CONFIG.duel as typeof CONFIG.duel & { stalemateSeconds?: number }).stalemateSeconds ?? 20)) return false;
+    d.quietT = 0;
+    d.quietHp = undefined;
+    let swapped = false;
+    for (const side of [d.a, d.b]) {
+      const out = side.mon;
+      const t = side.trainer;
+      const next = t.party.findIndex((m) => m !== out && !m.fainted && !m.captured);
+      if (!out || next < 0) continue;
+      out.stowed = true;
+      out.duelId = undefined;
+      this.battle.interrupt(out);
+      this.sendOut(d, side, next);
+      swapped = true;
+    }
+    const names = `${d.a.trainer.name} and ${d.b.trainer.name}`;
+    for (const t of [d.a.trainer, d.b.trainer]) {
+      this.withSeat(t, () => this.battle.events.push({ type: 'notice', text: swapped ? `Neither Pokémon can land a hit: ${names} send out another!` : 'Neither Pokémon can land a hit: the battle is called off', seconds: 3 }));
+    }
+    if (swapped) return false;
+    this.endDuel(d, null);
+    return true;
   }
 
   /** Ends a trainer battle. `winner` null: both sides ran out at once, nobody won. */

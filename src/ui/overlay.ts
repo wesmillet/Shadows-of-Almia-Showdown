@@ -178,6 +178,9 @@ export class ChatPanel {
 
   private add(m: Extract<ServerMsg, { t: 'chat' }>): void {
     if (!m.system && this.muted.has(m.from)) return;
+    // The server sends the recent lines again on every reconnect (leaving the tab can drop the
+    // connection): a line already shown is not added twice.
+    if (m.id !== undefined && this.log.querySelector(`[data-id="${m.id}"]`)) return;
     const line = el('div');
     if (m.id !== undefined) line.dataset.id = String(m.id);
     if (m.announce) line.append(el('span', 'announce', `📣 ${m.text}`));

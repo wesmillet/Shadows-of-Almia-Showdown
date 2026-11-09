@@ -216,6 +216,8 @@
     "aiChance": 0.35
   },
   "duel": {
+    "_stalemateComment": "Seconds with neither battling Pokémon losing HP before both trainers send out another (or, with no one else, the battle is called off).",
+    "stalemateSeconds": 20,
     "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",
     "finalShowdown": false,
     "_comment": "One-on-one trainer battles: two trainers within startRange (and in sight) recall their parties and send out one Pokémon each. Trainers step apart to standGap; leads come out sendOut tiles in front; the fight stays within arenaRadius of the middle. The player steers the lead at monSpeed and picks every move (auto-battle is off in battles). A rival picks its next Pokémon after aiPickSeconds. A player has playerPickSeconds to choose theirs; after that the first one able in party order comes out by itself, so a battle never waits on a pick. If both sides run out at once, the battle ends with no winner. zoom is the camera zoom while the player battles.",

@@ -129,4 +129,25 @@ describe('trainer battle replacements', async () => {
     expect(sent.filter((x) => x.owner === p)).toEqual(order);
     expect(p.party.every((x) => x.fainted)).toBe(true);
   });
+
+  describe('stalemates', () => {
+    const freeze = (d: Duel) => { for (const s of [d.a, d.b]) if (s.mon) { s.mon.busy = 99; s.mon.cooldowns = s.mon.cooldowns.map(() => 99); } };
+    it('swaps in the next Pokémon when neither side can land a hit, and calls it off with no one else', () => {
+      const { p, b, d, step, side, ended } = setup(5, [['0092', 30], ['0093', 30]], [['0092', 30]]);
+      step(3, () => !!d.a.mon && !!d.b.mon && d.state === 'fight');
+      const first = side(p).mon;
+      step(CONFIG.duel.stalemateSeconds + 2, () => { freeze(d); return side(p).mon !== first; });
+      expect(side(p).mon).not.toBe(first);
+      expect(side(p).mon?.species.dex ?? side(p).mon?.dex).toBeDefined();
+      expect(ended.length).toBe(0);
+      expect(side(b).mon).toBeTruthy();
+      void b;
+    });
+    it('calls the battle off when neither side has anyone else', () => {
+      const { d, step, ended } = setup(6, [['0092', 30]], [['0092', 30]]);
+      step(3, () => !!d.a.mon && !!d.b.mon && d.state === 'fight');
+      step(CONFIG.duel.stalemateSeconds + 3, () => { freeze(d); return ended.length > 0; });
+      expect(ended).toEqual([null]);
+    });
+  });
 });

@@ -23,6 +23,8 @@ describe('trainer battle replacements', async () => {
     m.items = [];
     const hold = () => { m.darkness.radius = m.darkness.targetRadius = 999; m.darkness.nextPulseIn = 1e9; };
     hold();
+    // Two trainers in all: keep this battle where it is (the final battle at the crystal is tested in finalBattle.test.ts).
+    m.finalStarted = true;
     // an open spot
     let spot = { x: p.x, y: p.y };
     find: for (let r = 0; r < 160; r += 2) for (let a = 0; a < 6.28; a += 0.2) {

@@ -775,7 +775,20 @@ export class PcScreen implements Screen {
       h.fillRect(px + 2 * pk, py + 2 * pk, ps + 12 * s - 4 * pk, ps + 12 * s - 4 * pk);
     }
     h.imageSmoothingEnabled = false;
+    if (e.alpha && !e.shadow) {
+      // An Alpha's portrait sits in a red glow.
+      h.fillStyle = 'rgba(200,30,20,0.35)';
+      h.fillRect(px + 2 * pk, py + 2 * pk, ps + 12 * s - 4 * pk, ps + 12 * s - 4 * pk);
+      h.shadowColor = 'rgba(255,40,30,0.95)';
+      h.shadowBlur = 14 * s;
+    }
     h.drawImage(f.image, f.sx, f.sy, f.w, f.h, px + 6 * s, py + 6 * s, ps, ps);
+    if (e.alpha && !e.shadow) {
+      h.strokeStyle = '#ff3b2e';
+      h.lineWidth = 3 * s;
+      h.shadowBlur = 18 * s;
+      h.strokeRect(px + 4.5 * s, py + 4.5 * s, ps + 3 * s, ps + 3 * s);
+    }
     h.restore();
     // Name, level, types and tier, right of the portrait.
     const tx = px + ps + 26 * s;
@@ -980,8 +993,13 @@ export class PcScreen implements Screen {
     if (e.shadow) {
       h.shadowColor = 'rgba(150,60,255,0.9)';
       h.shadowBlur = 8 * this.ctx.view.baseScale;
+    } else if (e.alpha) {
+      // Alphas glow red, as their embers do in a match.
+      h.shadowColor = 'rgba(255,40,30,0.95)';
+      h.shadowBlur = 9 * this.ctx.view.baseScale;
     }
     h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
+    if (e.alpha && !e.shadow) h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     h.restore();
   }
 

@@ -17,7 +17,7 @@ describe('catchChance', () => {
   it('applies each ball\'s rule where it lands', () => {
     const target = { hp: 50, maxHp: 100, status: null, level: 15, dex: '0403', types: ['electric'] } as unknown as Mon;
     const ctx = (over: Partial<CatchContext> = {}): CatchContext => ({
-      target, thrower: { party: [] } as unknown as Trainer, matchTime: 200, inWater: false, inDark: false, ...over,
+      target, thrower: { party: [{ level: 15, fainted: false }] } as unknown as Trainer, matchTime: 200, inWater: false, inDark: false, ...over,
     });
     expect(ballModifier('poke-ball', ctx())).toBe(1);
     expect(ballModifier('great-ball', ctx())).toBe(1.5);

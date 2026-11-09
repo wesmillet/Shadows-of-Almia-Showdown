@@ -65,7 +65,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x5 if thrown before it has been attacked",
+      "desc": "x5 if thrown before it has been attacked (less against Pokémon far above your team)",
       "special": "quick"
     },
     {

@@ -1259,11 +1259,13 @@ export class Match {
           noteCatch(th.thrower, w);
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
           if (w.alpha) this.alphaReward(th.thrower.x, th.thrower.y, th.thrower, w);
-          // The lead that wore it down learns from the catch too.
+          // The lead that wore it down learns from the catch too: only when something did wear it down
+          // (a catch at full HP, a Quick Ball's first throw, teaches nothing), and at most one level.
           const leadMon = lead(th.thrower);
           const share = (CONFIG.party as typeof CONFIG.party & { catchXpShare?: number }).catchXpShare ?? 0;
-          if (leadMon && leadMon !== w && share > 0) {
-            const xp = Math.round(xpForKnockout(w, leadMon.level) * share * (leadMon.heldItem === 'lucky-egg' ? 1.5 : 1));
+          if (leadMon && leadMon !== w && share > 0 && w.everHit) {
+            const cap = Math.max(0, xpToNext(leadMon.level) - leadMon.xp);
+            const xp = Math.min(cap, Math.round(xpForKnockout(w, leadMon.level) * share * (leadMon.heldItem === 'lucky-egg' ? 1.5 : 1)));
             const levels = gainXp(leadMon, xp);
             this.battle.events.push({ type: 'xp', mon: leadMon, xp, levels });
             if (levels > 0) this.learnOnLevelUp(leadMon, leadMon.level - levels);

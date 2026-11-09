@@ -180,8 +180,11 @@ export class Nav {
     let bx = 0;
     let by = 0;
     let bestAlign = -Infinity;
-    const gx = tx - x;
-    const gy = ty - y;
+    // Ties (two ways round of the same length) are broken by the goal's direction from this tile's
+    // centre, not from the exact spot: from the spot, a step one way could flip which side wins and
+    // send the walker back, over and over (a merchant stuck jittering at a mountain ledge).
+    const gx = tx - (cx + 0.5);
+    const gy = ty - (cy + 0.5);
     const gl = Math.hypot(gx, gy) || 1;
     for (const [dx, dy] of DIRS) {
       const nx = cx + dx;

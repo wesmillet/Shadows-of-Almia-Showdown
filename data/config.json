@@ -167,9 +167,9 @@
       3,
       6
     ],
-    "bossDamageScale": 0.55,
+    "bossDamageScale": 0.7,
     "bossLevel": 11,
-    "bossHpMultiplier": 6
+    "bossHpMultiplier": 9
   },
   "items": {
     "inventorySize": 6,

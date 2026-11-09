@@ -145,13 +145,16 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
       const i = int(a[1], 0, bag - 1);
       if (!t || i === null) return '';
       if (m.nearService()?.kind !== 'chest') return 'Walk up to a storage chest first';
-      return m.deposit(p, t, i);
+      // An optional count splits the stack (the rest stays in the bag).
+      const n = a[2] === undefined ? undefined : int(a[2], 1, 999) ?? undefined;
+      return m.deposit(p, t, i, n);
     }
     case 'withdraw': {
       const i = int(a[0], 0, 200);
       if (i === null) return '';
       if (m.nearService()?.kind !== 'chest') return 'Walk up to a storage chest first';
-      return m.withdraw(p, i);
+      const n = a[1] === undefined ? undefined : int(a[1], 1, 999) ?? undefined;
+      return m.withdraw(p, i, n);
     }
     case 'interact':
       return interact(m);

@@ -620,8 +620,8 @@ export class MirrorMatch {
     m.toggleRide = () => say('ride');
     m.sell = (_t: Trainer, tab: 'items' | 'held', i: number) => say('sell', tab, i);
     m.buy = (_shop: unknown, i: number) => say('buy', i);
-    m.deposit = (_t: Trainer, tab: 'items' | 'held', i: number) => say('deposit', tab, i);
-    m.withdraw = (_t: Trainer, i: number) => say('withdraw', i);
+    m.deposit = (_t: Trainer, tab: 'items' | 'held', i: number, n?: number) => (n === undefined ? say('deposit', tab, i) : say('deposit', tab, i, n));
+    m.withdraw = (_t: Trainer, i: number, n?: number) => (n === undefined ? say('withdraw', i) : say('withdraw', i, n));
     m.pickUp = () => (net.cmd('pickUp'), true);
     m.duelPick = (i: number) => say('duelPick', i);
     m.stylerLoop = (mon: Mon) => net.cmd('stylerLoop', mon.id);

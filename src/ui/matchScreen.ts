@@ -506,13 +506,18 @@ export class MatchScreen implements Screen {
     const p = this.match.player;
     if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
     const tab = this.gearTab ? 'held' : 'items';
+    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
+    const ctrl = input.down('ControlLeft') || input.down('ControlRight') || input.down('AltLeft') || input.down('AltRight');
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
-      if (h?.kind === 'item') this.say(this.match.deposit(p, tab, h.index), 1.4);
-      else if (h?.kind === 'chest') this.say(this.match.withdraw(p, h.index), 1.4);
+      // Splitting a stack: right-click (or Ctrl/Alt-click) moves one; Shift-click moves half.
+      const one = c.button === 2 || ctrl;
+      const stack = h?.kind === 'item' ? p[tab][h.index] : h?.kind === 'chest' ? (p.storage?.[h.index] ?? null) : null;
+      const n = !stack ? undefined : one ? 1 : shift && stack.count > 1 ? Math.ceil(stack.count / 2) : undefined;
+      if (h?.kind === 'item') this.say(this.match.deposit(p, tab, h.index, n), 1.4);
+      else if (h?.kind === 'chest') this.say(this.match.withdraw(p, h.index, n), 1.4);
       else if (h?.kind === 'tab') this.gearTab = h.index === 1;
     }
-    const shift = input.down('ShiftLeft') || input.down('ShiftRight');
     // 1-9 and 0 (the tenth chest slot; Shift+0 takes it, a bag has no tenth slot to store).
     for (let i = 0; i < 10; i++) {
       if (!input.pressed(`Digit${(i + 1) % 10}`)) continue;

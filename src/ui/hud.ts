@@ -229,7 +229,7 @@ export class Hud {
     const title = `Storage Chest${chest.town ? ` · ${chest.town}` : ''}`;
     // The window is as wide as the slots (or the title) and the help wraps to that width.
     const w = this.fitWidth(ctx, [[title, 15]], Math.max(gridW + 48 * s, 330 * s));
-    const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-0) to take it'), 9.5, w - 40 * s);
+    const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-0) to take it · right-click moves one, Shift-click half'), 9.5, w - 40 * s);
     const keep = this.wrapLines(ctx, `Every town's chest holds the same thing, kept between games and safe if you're wiped out${chest.slots.length > 1 ? ' · old slots can only be emptied now' : ''} · E to close`, 9.5, w - 40 * s);
     const lineH = 14 * s;
     const textH = (help.length + keep.length) * lineH;

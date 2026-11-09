@@ -75,7 +75,9 @@ export function catchChance(target: Mon, modifier: number): number {
   const base = 0.12 + 0.78 * (1 - hpFrac);
   const statusBonus = target.status ? (CONFIG.catch.statusBonus as Record<string, number>)[target.status] ?? 1 : 1;
   // A few legends (Lugia) are far harder: a fraction of the usual chance, and a low ceiling.
-  const hard = (CONFIG.catch as { hardCatch?: Record<string, { mult: number; max: number }> }).hardCatch?.[(target.dex ?? '').slice(0, 4)];
+  // Every legendary is hard to catch (legendCatch); a few (Lugia) harder still (hardCatch).
+  const c = CONFIG.catch as { hardCatch?: Record<string, { mult: number; max: number }>; legendCatch?: { mult: number; max: number } };
+  const hard = c.hardCatch?.[(target.dex ?? '').slice(0, 4)] ?? (target.legend ? c.legendCatch : undefined);
   if (hard) return clamp(base * modifier * statusBonus * hard.mult, 0.01, hard.max);
   return clamp(base * modifier * statusBonus, 0.03, 0.98);
 }

@@ -377,7 +377,7 @@ export class Visitors {
       if (po.shadow) {
         m.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: L.x, y: L.y, scale: 3.6, ground: true, fps: 12, tint: '#3a1458', shake: 0.6, epic: true });
         m.battle.events.push({ type: 'notice', text: bout ? `${L.name} tears out of the dark portal and attacks!` : `${L.name} tears out of the dark portal!`, seconds: 3.5 });
-      } else m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down to its last HP and it joins you` : `${L.name} came through the portal! Wear it down and it will join you`, seconds: 3.5 });
+      } else m.battle.events.push({ type: 'notice', text: bout ? `${L.name} came through the portal and challenges you! Wear it down, then catch it with a ball` : `${L.name} came through the portal! Wear it down, then catch it with a ball`, seconds: 3.5 });
     }
     if (po.out && po.out.visual.scale < 1) po.out.visual.scale = Math.min(1, po.out.visual.scale + dt * 1.5);
     if (po.out && po.out.visual.flash > 0) po.out.visual.flash = Math.max(0, po.out.visual.flash - dt * 1.5);
@@ -604,6 +604,11 @@ export class Visitors {
 
 
   // ---------------------------------------------------------------- outcomes
+
+  /** A legendary's last stand ran out without a catch (Match.stepLastStands): Lugia is gone for the match. */
+  legendEscaped(L: Mon): void {
+    if (L.dex === LUGIA) this.lugiaDone = true;
+  }
 
   /** A legendary worn down to its last HP joins whoever's Pokémon did it (not Lugia: it escapes, and only a ball catches it). */
   legendYields(L: Mon, by: Mon | null): void {

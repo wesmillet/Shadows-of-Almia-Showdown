@@ -240,6 +240,9 @@
     "wobbleSeconds": 0.55,
     "_hardCatchComment": "Pokemon far harder to catch than the rest (by Pokedex number, forms included): their chance is multiplied by mult and never above max per ball, however weak, asleep or well-balled. A Master Ball still always works.",
     "hardCatch": { "0249": { "mult": 0.1, "max": 0.08 } },
+    "_legendCatchComment": "Every other legendary (Hoopa's portal, a legend bout): chance times mult, never above max per ball. Worn down to its last HP a legendary holds on lastStandSeconds for a ball, then escapes; it never joins just for being beaten.",
+    "legendCatch": { "mult": 0.3, "max": 0.22 },
+    "lastStandSeconds": 15,
     "statusBonus": {
       "sleep": 2,
       "paralysis": 1.5,

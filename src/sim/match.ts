@@ -1255,6 +1255,7 @@ export class Match {
             w.hp = w.maxHp;
             this.battle.cureStatus(w);
           }
+          w.lastStandUntil = undefined;
           th.thrower.party.push(w);
           noteCatch(th.thrower, w);
           this.battle.events.push({ type: 'caught', mon: w, by: th.thrower });
@@ -3043,6 +3044,7 @@ export class Match {
     const fresh = this.battle.events.filter((e) => !this.handledEvents.has(e));
     for (const e of fresh) this.handledEvents.add(e);
     this.handleKnockouts(fresh);
+    this.stepLastStands();
     this.stepEvolutions(dt);
     // A steered Pokémon hit Hoopa this step: it unbinds and fights (visitors.ts).
     this.visitors.hoopaStruck(fresh);
@@ -3434,24 +3436,15 @@ export class Match {
           }
           continue;
         }
-        if (host) {
-          // Won a legend bout: the legend joins the player and the battle ends.
-          const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
-          host.party = host.party.filter((x) => x !== ev.mon);
-          if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
-          ev.mon.duelId = undefined;
-          const human = d ? (d.a.trainer === host ? d.b.trainer : d.a.trainer) : this.player;
-          this.withSeat(human, () => {
-            const by = ev.by?.owner === this.player ? ev.by : lead(this.player) ?? this.player.party.find((x) => !x.fainted) ?? null;
-            ev.mon.owner = null;
-            ev.mon.wild = true;
-            this.visitors.legendYields(ev.mon, by);
-            if (d) this.endDuel(d, this.player);
-            this.endLegendBout(host);
-          });
-          continue;
+        // Worn down to its last HP, a legendary does not join for being beaten: it holds on for a few
+        // seconds (lastStandSeconds), and only a ball thrown in that time catches it; then it escapes.
+        if (ev.mon.lastStandUntil === undefined && !ev.mon.captured) {
+          ev.mon.lastStandUntil = this.time + ((CONFIG.catch as typeof CONFIG.catch & { lastStandSeconds?: number }).lastStandSeconds ?? 15);
+          const human = host ? (this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host))?.a.trainer ?? this.player) : (ev.by?.owner ?? null);
+          const text = `${ev.mon.name} is barely standing! Throw a ball now, before it escapes`;
+          if (human && human.isPlayer) this.noticeFor(human, text, 3.5);
+          else this.battle.events.push({ type: 'notice', text, seconds: 3.5 });
         }
-        this.visitors.legendYields(ev.mon, ev.by);
         continue;
       }
       if (ev.type === 'faint' && ev.mon.boss) {
@@ -3870,6 +3863,7 @@ export class Match {
     if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
     const frac = L.hp / L.maxHp;
     L.duelId = undefined;
+    L.lastStandUntil = undefined;
     L.captured = false;
     L.legend = false;
     L.landBoss = false;
@@ -3955,6 +3949,29 @@ export class Match {
     this.battle.events.push({ type: 'notice', text: `${L.name} dissolved into the storm...`, seconds: 4 });
     if (d) this.endDuel(d, this.player);
     this.endLegendBout(host);
+  }
+
+  /** A legendary whose last stand ran out without a catch escapes (out of its bout, off the map). */
+  private stepLastStands(): void {
+    const legends = [...this.wilds, ...this.trainers.filter((t) => t.legendBout).flatMap((t) => t.party)];
+    for (const L of legends) {
+      if (L.lastStandUntil === undefined || L.captured || this.time < L.lastStandUntil) continue;
+      L.captured = true;
+      this.battle.interrupt(L);
+      const host = L.owner?.legendBout ? L.owner : null;
+      if (host) {
+        const d = this.duels.find((x) => x.state !== 'over' && (x.a.trainer === host || x.b.trainer === host));
+        host.party = host.party.filter((x) => x !== L);
+        if (d) (d.a.trainer === host ? d.a : d.b).mon = null;
+        L.duelId = undefined;
+        if (d) this.endDuel(d, null);
+        this.endLegendBout(host);
+      }
+      this.wilds = this.wilds.filter((w) => w !== L);
+      this.visitors.legendEscaped(L);
+      this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: L.x, y: L.y, scale: 2.4, ground: true, shake: 0.4, tint: '#9fd8ff' });
+      this.battle.events.push({ type: 'notice', text: `${L.name} escaped!`, seconds: 3 });
+    }
   }
 
   /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */

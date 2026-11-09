@@ -19,7 +19,7 @@ import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { DEV_CHEST } from '../src/dev';
 import { CONFIG, SPECIES, movesAt } from '../src/sim/data';
-import { firstForm, rollEgg, STARTER_TIERS } from '../src/sim/starters';
+import { firstForm, nominationBase, rollEgg, STARTER_TIERS } from '../src/sim/starters';
 import { Rng } from '../src/core/rng';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
@@ -631,8 +631,10 @@ export class Accounts {
   }
 
   /** Whether a player's PC holds a shiny of this species (their starter comes out shiny then). */
+  /** Whether a player's PC has a shiny of this starter's line (any stage: a shiny Gengar counts for Gastly). */
   ownsShiny(userId: number, dex: string): boolean {
-    return !!this.db.prepare("SELECT 1 FROM pc WHERE user_id = ? AND json_extract(entry, '$.dex') = ? AND json_extract(entry, '$.shiny') IN (1, 'true') LIMIT 1").get(userId, dex);
+    const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex FROM pc WHERE user_id = ? AND json_extract(entry, '$.shiny') IN (1, 'true')").all(userId) as Array<{ dex: string }>;
+    return rows.some((r) => typeof r.dex === 'string' && (r.dex === dex || nominationBase(r.dex) === dex));
   }
 
   /** The species in a player's PC (for their starter pool). */

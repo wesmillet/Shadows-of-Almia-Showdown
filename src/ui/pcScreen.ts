@@ -659,7 +659,9 @@ export class PcScreen implements Screen {
       const cx = c.x + c.w / 2;
       const ps = 24 * s;
       if (sp.dex) {
-        const f = this.sprites.get(sp.dex, false).portraitSource();
+        // Shiny when they own a shiny of that line: the start is shiny then too (server/hub.ts shinyStarter).
+        const shiny = this.list.some((e) => e.shiny && (nominationBase(e.dex) ?? e.dex) === sp.dex);
+        const f = this.sprites.get(sp.dex, shiny).portraitSource();
         h.save();
         h.imageSmoothingEnabled = false;
         h.drawImage(f.image, f.sx, f.sy, f.w, f.h, cx - ps / 2, c.y + 5 * s, ps, ps);

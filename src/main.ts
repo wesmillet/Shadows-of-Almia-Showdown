@@ -513,6 +513,11 @@ async function boot(): Promise<void> {
       playingId = null;
       showOnline(why);
     };
+    // Options · Leave match: out for good (the server counts it as a loss), back to the hub.
+    screen.leaveMatch = () => {
+      net.send({ t: 'leave' });
+      bail('You left the match');
+    };
     // Called off (the server is updating): back to the hub, nothing lost.
     const offAbort = net.on((m) => {
       if (m.t !== 'aborted' || playingId !== start.matchId) return;

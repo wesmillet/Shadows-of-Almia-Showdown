@@ -3,7 +3,9 @@
  * shrinks and darkness sweeps inward from the edges. Pokémon left in it
  * grow drowsy, fall asleep, and take Bad Dreams damage; wild Pokémon gain
  * a purple aura and cannot be caught. Three seconds back in the light
- * wakes a sleeper. In the final phase Darkrai appears.
+ * wakes a sleeper. In the final phase Darkrai appears; `collapseSeconds` after it, the last light
+ * goes out (the safe circle closes to nothing), so a match can not stall forever between two who
+ * can not hurt each other: everyone left sleeps and takes Bad Dreams until one trainer remains.
  */
 import { CONFIG } from './data';
 
@@ -19,6 +21,12 @@ export interface DarknessState {
   pulsed: boolean;
   /** Final phase: Darkrai is loose. */
   finale: boolean;
+  /** Seconds since the final phase began. */
+  sinceFinale?: number;
+  /** The last light is going out (set once, on the step it starts). */
+  collapsing?: boolean;
+  /** Set on the step the collapse starts. */
+  collapsed?: boolean;
 }
 
 export function newDarkness(): DarknessState {
@@ -38,6 +46,16 @@ export function stepDarkness(d: DarknessState, dt: number, mapRadius: number): v
       if (!Number.isFinite(d.radius)) d.radius = mapRadius;
       d.finale = d.phase >= radii.length;
       d.nextPulseIn = d.phase >= radii.length ? -1 : CONFIG.darkness.pulseSeconds;
+    }
+  }
+  d.collapsed = false;
+  if (d.finale && !d.collapsing) {
+    d.sinceFinale = (d.sinceFinale ?? 0) + dt;
+    const after = (CONFIG.darkness as typeof CONFIG.darkness & { collapseSeconds?: number }).collapseSeconds ?? 180;
+    if (d.sinceFinale >= after) {
+      d.collapsing = true;
+      d.collapsed = true;
+      d.targetRadius = 0;
     }
   }
   if (Number.isFinite(d.targetRadius) && d.radius > d.targetRadius) {

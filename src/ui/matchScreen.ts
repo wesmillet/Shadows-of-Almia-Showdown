@@ -129,6 +129,8 @@ export class MatchScreen implements Screen {
    * there as commands, and extractions are saved by the server, not this browser.
    */
   online: { cmd: Connection['cmd'] } | null = null;
+  /** Online: leave the match for good (Options shows a Leave match button when set). */
+  leaveMatch?: () => void;
   /**
    * Watching (a spectator or a replay): the player's controls are off; `step` gets the keys instead
    * (switch whom to follow, leave, the replay's controls) and `draw` adds its bar on top.
@@ -143,6 +145,7 @@ export class MatchScreen implements Screen {
     protected readonly ui: PixelUi,
     private readonly onEnd?: () => void,
   ) {
+
     this.lighting = new Lighting(ctx.view);
     this.icons = new ItemIcons(assets);
     this.hud = new Hud(ctx.view, this.icons, ui);
@@ -403,7 +406,7 @@ export class MatchScreen implements Screen {
         this.say('Trainer mode', 1);
       } else if (!document.querySelector('.almia-modal-wrap')) {
         // Options in a match (music, camera shake, graphics, keys). Offline the match waits.
-        void openOptions();
+        void openOptions({ leaveMatch: this.leaveMatch });
       }
     }
     // A bag slot under the mouse button: dragged far enough it follows the cursor, and let go over a

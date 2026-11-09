@@ -3590,6 +3590,7 @@ export class Match {
         this.battle.events.push({ type: 'notice', text: 'A Master Ball glints beside the crystal', seconds: 3 });
       }
     }
+    if (d.collapsed) this.battle.events.push({ type: 'notice', text: "The crystal's last light is fading. Nowhere is safe now!", seconds: 4 });
     void wasPhase;
     if (!Number.isFinite(d.radius)) return;
     const c = CONFIG.darkness;

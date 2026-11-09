@@ -346,7 +346,9 @@
     "stormMaskChance": 0.05,
     "stormMaskPrice": 20000,
     "badDreamsFraction": 0.0625,
-    "wakeAfterSecondsOutside": 3
+    "wakeAfterSecondsOutside": 3,
+    "_collapseComment": "Seconds after the final pulse (Darkrai) until the last light goes out: the safe circle closes to nothing, so a final between two who can not hurt each other still ends.",
+    "collapseSeconds": 180
   },
   "lighting": {
     "dayToColdSeconds": 780

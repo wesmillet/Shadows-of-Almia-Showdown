@@ -25,8 +25,8 @@ const CSS = `
 
 let styled = false;
 
-/** Opens the Options dialog; resolves when it closes. */
-export function openOptions(): Promise<void> {
+/** Opens the Options dialog; resolves when it closes. `leaveMatch` (in an online match) adds Leave match. */
+export function openOptions(opts: { leaveMatch?: () => void } = {}): Promise<void> {
   const root = overlayRoot();
   if (!styled) {
     const st = document.createElement('style');
@@ -73,6 +73,23 @@ export function openOptions(): Promise<void> {
         top.append(fb);
       }
       box.appendChild(top);
+      if (opts.leaveMatch) {
+        // Out of the match for good (it counts as a loss): a second click confirms.
+        const leave = el('button', 'almia-btn alt', 'Leave match');
+        let armed = false;
+        leave.addEventListener('click', () => {
+          if (!armed) {
+            armed = true;
+            leave.textContent = 'Click again to leave (counts as a loss)';
+            return;
+          }
+          close();
+          opts.leaveMatch?.();
+        });
+        const row = el('div', 'row');
+        row.append(leave);
+        box.appendChild(row);
+      }
       box.appendChild(el('div', 'hint', 'Saved in this browser as you change them.'));
 
       // Sound.

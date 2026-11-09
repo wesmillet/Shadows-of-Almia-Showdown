@@ -196,8 +196,10 @@ export class PcScreen implements Screen {
 
   private releaseRect(side: Rect): Rect {
     const s = this.ctx.view.baseScale;
-    const st = this.starRect(side);
-    return { x: st.x + st.w - 84 * s, y: st.y + st.h + 8 * s, w: 84 * s, h: 26 * s };
+    // Its own row above the Star / Today's starter buttons and their note, right-aligned, clear of
+    // the name, tags and type pills (it used to sit under the heart, on top of the second type pill).
+    const n = this.nomRect(side);
+    return { x: side.x + side.w - 18 * s - 96 * s, y: n.y - 60 * s, w: 96 * s, h: 26 * s };
   }
 
   private release(i: number): void {

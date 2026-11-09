@@ -290,6 +290,7 @@
     "rideSpeed": 1.7,
     "flySpeed": 2.1,
     "flyLift": 1.2,
+    "groundAtTrainers": 3,
     "_mountsComment": "Mounts and their saddle points. seat: rider height as a fraction of body height (side views); seatDown/seatUp override it facing the camera and away; back: toward the tail in side views; scale: the mount draws this much bigger while ridden. Latios, Raikou, Flygon and Torterra carry trainers.",
     "mounts": {
       "0381": {

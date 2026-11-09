@@ -1222,6 +1222,17 @@ export class Match {
       }
       if (!th.target) return;
       const w = th.target;
+      // Knocked out between the hit and the ball closing (a teammate's attack still landing): a
+      // fainted Pokémon can't be caught. Catching it anyway put a fainted, 0 HP Pokémon on the team
+      // that the faint animation still held, which jammed swapping, healing and items.
+      if (w.fainted) {
+        w.captured = false;
+        w.visual = { scale: 1, alpha: 1, flash: 0 };
+        th.target = null;
+        th.phase = 'done';
+        this.battle.events.push({ type: 'notice', text: `${w.name} fainted before the ball could catch it`, seconds: 2 });
+        return;
+      }
       if (ev === 'absorb') {
         w.captured = true; // inside the ball: no acting, no targeting, AI suspended
         this.battle.events.push({ type: 'ball-absorb', mon: w, x: th.x, y: th.y });
@@ -1249,6 +1260,9 @@ export class Match {
           w.owner = th.thrower;
           w.wild = false;
           w.aura = false;
+          // A strong wild keeps no boss traits once it's yours (its patch, temper and boss XP for
+          // whoever knocks it out).
+          w.landBoss = false;
           w.behavior = joinBehavior(th.thrower);
           w.target = null;
           if (ITEMS[th.ballId]?.special === 'heal') {
@@ -2800,6 +2814,7 @@ export class Match {
     if (this.controlled) this.releaseControl();
     this.fishing = null;
     const fly = Match.mountOf(mon.dex)?.kind === 'fly';
+    if (fly && this.skiesClosed()) return 'The skies have closed! No flying in the endgame';
     p.mount = { mon, fly };
     mon.stowed = true;
     this.battle.interrupt(mon);
@@ -2809,6 +2824,22 @@ export class Match {
     mon.visual = { scale: 1, alpha: 1, flash: 0 };
     return fly ? `You take off on ${mon.name}! It can fly over water (V to land)` : `You ride ${mon.name}! (V to get off)`;
   }
+
+  /**
+   * Flying keeps a trainer out of battles, which let a flyer sit out the endgame while the darkness
+   * or a boss finished everyone else. Once the final showdown starts, the darkness collapses, or
+   * three or fewer trainers are left, flyers are set down and can't take off again.
+   */
+  skiesClosed(): boolean {
+    if (this.finalStarted || this.darkness.collapsing) return true;
+    const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
+    if (left <= CONFIG.riding.groundAtTrainers && !this.skiesNoticed) {
+      this.skiesNoticed = true;
+      this.battle.events.push({ type: 'notice', text: 'The skies have closed! Flyers must land and battle', seconds: 3 });
+    }
+    return left <= CONFIG.riding.groundAtTrainers;
+  }
+  private skiesNoticed = false;
 
   /** Off the mount, where the trainer can stand (not over water). */
   dismount(t: Trainer, force = false): string {
@@ -3097,7 +3128,17 @@ export class Match {
     }
     // A mount that can no longer carry the trainer (fainted, released, caught by a rival) drops them.
     const mt = p.mount;
-    if (mt && (mt.mon.fainted || mt.mon.captured || mt.mon.owner !== p || !p.party.includes(mt.mon))) {
+    // In the endgame the skies close: a flyer is set down so it can be challenged like anyone else.
+    if (mt?.fly && this.skiesClosed()) {
+      p.mount = null;
+      mt.mon.stowed = true;
+      if (!canStand(this.ground, p.x, p.y, CONFIG.player.radius)) {
+        const spot = this.nearestStand(p.x, p.y);
+        p.x = p.px = spot.x;
+        p.y = p.py = spot.y;
+      }
+      this.fieldParty(p);
+    } else if (mt && (mt.mon.fainted || mt.mon.captured || mt.mon.owner !== p || !p.party.includes(mt.mon))) {
       p.mount = null;
       if (!canStand(this.ground, p.x, p.y, CONFIG.player.radius)) {
         const spot = this.nearestStand(p.x, p.y);

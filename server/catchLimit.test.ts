@@ -16,7 +16,7 @@ describe('party limit while balls are in the air', async () => {
     m.darkness.radius = m.darkness.targetRadius = 999; m.darkness.nextPulseIn = 1e9;
     p.party = ['0004', '0007', '0001', '0025', '0133'].map((d) => m.makeMon(d, 10, p, p.x, p.y));
     for (const x of p.party) x.stowed = true;
-    const wild = (dx: number) => { const w = m.makeMon('0399', 3, null, p.x + dx, p.y + 1.5); w.wild = true; w.hp = 1; m.wilds = [...m.wilds, w]; return w; };
+    const wild = (dx: number) => { const w = m.makeMon('0399', 3, null, p.x + dx, p.y + 1.5); w.wild = true; m.wilds = [...m.wilds, w]; return w; };
     m.wilds = [];
     const a = wild(-1), b = wild(1);
     p.items = p.items.map(() => null);

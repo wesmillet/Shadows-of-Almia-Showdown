@@ -1434,7 +1434,11 @@ export class MatchScreen implements Screen {
     ctx.lineWidth = Math.max(2, 3 * v.baseScale);
     ctx.setLineDash([10 * v.baseScale, 8 * v.baseScale]);
     ctx.beginPath();
-    ctx.ellipse(v.toScreenX(d.cx), v.toScreenY(d.cy), CONFIG.duel.arenaRadius * v.pxPerTile, CONFIG.duel.arenaRadius * v.pxPerTile, 0, 0, Math.PI * 2);
+    if (d.bounds) {
+      // The final battle: the crystal's field.
+      const b = d.bounds;
+      ctx.rect(v.toScreenX(b.x0), v.toScreenY(b.y0), (b.x1 - b.x0) * v.pxPerTile, (b.y1 - b.y0) * v.pxPerTile);
+    } else ctx.ellipse(v.toScreenX(d.cx), v.toScreenY(d.cy), CONFIG.duel.arenaRadius * v.pxPerTile, CONFIG.duel.arenaRadius * v.pxPerTile, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -2663,7 +2667,15 @@ export class MatchScreen implements Screen {
     // In a one-on-one battle the camera closes in on the two Pokémon.
     const duel = this.match.playerDuel;
     const fighting = !!duel && duel.state !== 'over';
-    const targetZoom = fighting ? CONFIG.duel.zoom : this.debugZoom ?? 1;
+    let targetZoom = fighting ? CONFIG.duel.zoom : this.debugZoom ?? 1;
+    // The final battle on the crystal's field: zoomed so the whole field (both trainers at its
+    // ends) is on screen, never closer than a normal battle.
+    if (fighting && duel.bounds) {
+      const b = duel.bounds;
+      const perTile = v.pxPerTile / v.zoom;
+      const fit = Math.min(v.width / ((b.x1 - b.x0 + 3) * perTile), v.height / ((b.y1 - b.y0 + 5) * perTile));
+      targetZoom = Math.max(0.55, Math.min(CONFIG.duel.zoom, fit));
+    }
     v.zoom += (targetZoom - v.zoom) * (1 - Math.exp(-frameDt * 3.5));
     if (Math.abs(targetZoom - v.zoom) < 0.003) v.zoom = targetZoom;
     let fx = p.px + (p.x - p.px) * alpha;
@@ -2677,6 +2689,10 @@ export class MatchScreen implements Screen {
       // Pokémon mode: the camera rides with the steered Pokémon.
       fx = steered.px + (steered.x - steered.px) * alpha;
       fy = steered.py + (steered.y - steered.py) * alpha;
+    } else if (duel && fighting && duel.bounds) {
+      // The final battle: the field's middle.
+      fx = (duel.bounds.x0 + duel.bounds.x1) / 2;
+      fy = (duel.bounds.y0 + duel.bounds.y1) / 2 + 1;
     } else if (duel && fighting) {
       const ma = duel.a.mon;
       const mb = duel.b.mon;
@@ -2742,9 +2758,10 @@ export class MatchScreen implements Screen {
   private finalIntro: { a: string; b: string; t: number } | null = null;
 
   /**
-   * The Final Battle intro (about 3.5 s, while both teams are still in their balls): a flash, two
-   * dark bands closing in, FINAL BATTLE punching in over a gold stripe, and the two names sliding
-   * in from either side to meet at VS. It clears before the Pokémon come out.
+   * The Final Battle intro (about 3.5 s, while both teams are still in their balls): a flash, dark
+   * bands at the edges, the purple FINAL BATTLE banner sweeping in, then the two names on a blue and
+   * a red panel slamming together under it, a thick lightning seam where they meet and VS. Kept to
+   * the top of the screen, clear of the trainers.
    */
   private drawFinalIntro(v: View, dt: number): void {
     const f = this.finalIntro;
@@ -2755,67 +2772,153 @@ export class MatchScreen implements Screen {
       this.finalIntro = null;
       return;
     }
+    const t = f.t;
     const h = v.hud;
     const s = v.baseScale;
     const W = v.width;
     const H = v.height;
     const ease = (x: number) => 1 - (1 - Math.min(1, Math.max(0, x))) ** 3;
-    const out = f.t > T - 0.5 ? 1 - (f.t - (T - 0.5)) / 0.5 : 1;
+    const back = (x: number) => {
+      const c = Math.min(1, Math.max(0, x));
+      return 1 + 2.7 * (c - 1) ** 3 + 1.7 * (c - 1) ** 2;
+    };
+    const out = t > T - 0.45 ? 1 - (t - (T - 0.45)) / 0.45 : 1;
     h.save();
-    // Dark bands close in from the top and bottom.
-    const band = H * 0.2 * ease(f.t / 0.35);
+    // Dark bands top and bottom, and the field dims a little.
+    const band = H * 0.12 * ease(t / 0.35);
     h.globalAlpha = 0.9 * out;
     h.fillStyle = '#0b0614';
     h.fillRect(0, 0, W, band);
     h.fillRect(0, H - band, W, band);
-    // A slanted gold stripe across the middle.
-    const sw = ease((f.t - 0.15) / 0.3);
-    // Above the middle of the screen, clear of the two trainers (the camera is on you).
-    const cy = H * 0.3;
-    const sh = 74 * s;
-    h.globalAlpha = 0.92 * out;
-    const g = h.createLinearGradient(0, cy - sh / 2, 0, cy + sh / 2);
+    h.globalAlpha = 0.35 * out * Math.min(1, t / 0.25);
+    h.fillStyle = '#05020c';
+    h.fillRect(0, 0, W, H);
+    // The purple banner.
+    const sw = ease((t - 0.1) / 0.3);
+    const by = H * 0.16;
+    const bh = 64 * s;
+    const reach = (W / 2 + 40 * s) * sw;
+    h.globalAlpha = 0.95 * out;
+    const g = h.createLinearGradient(0, by - bh / 2, 0, by + bh / 2);
     g.addColorStop(0, '#3a1460');
     g.addColorStop(0.5, '#6a2bb0');
     g.addColorStop(1, '#3a1460');
     h.fillStyle = g;
     h.beginPath();
-    h.moveTo(W / 2 - (W / 2 + 40 * s) * sw, cy - sh / 2 + 10 * s);
-    h.lineTo(W / 2 + (W / 2 + 40 * s) * sw, cy - sh / 2 - 10 * s);
-    h.lineTo(W / 2 + (W / 2 + 40 * s) * sw, cy + sh / 2 - 10 * s);
-    h.lineTo(W / 2 - (W / 2 + 40 * s) * sw, cy + sh / 2 + 10 * s);
+    h.moveTo(W / 2 - reach, by - bh / 2 + 8 * s);
+    h.lineTo(W / 2 + reach, by - bh / 2 - 8 * s);
+    h.lineTo(W / 2 + reach, by + bh / 2 - 8 * s);
+    h.lineTo(W / 2 - reach, by + bh / 2 + 8 * s);
     h.closePath();
     h.fill();
     h.fillStyle = '#ffd34a';
-    h.fillRect(W / 2 - (W / 2) * sw, cy - sh / 2 - 2 * s, W * sw, 3 * s);
-    h.fillRect(W / 2 - (W / 2) * sw, cy + sh / 2 - 1 * s, W * sw, 3 * s);
+    h.fillRect(W / 2 - (W / 2) * sw, by - bh / 2 - 2 * s, W * sw, 3 * s);
+    h.fillRect(W / 2 - (W / 2) * sw, by + bh / 2 - 1 * s, W * sw, 3 * s);
     h.restore();
-    // FINAL BATTLE punches in (big, then settles with a small overshoot).
-    if (f.t > 0.3) {
-      const k = (f.t - 0.3) / 0.28;
-      const scale = k < 1 ? 2.4 - 1.5 * ease(k) : 0.9 + 0.1 * Math.min(1, (k - 1) * 3);
+    if (t > 0.25) {
+      const k = (t - 0.25) / 0.28;
+      const sc = k < 1 ? 2.4 - 1.5 * ease(k) : 0.9 + 0.1 * Math.min(1, (k - 1) * 3);
       h.save();
       h.globalAlpha = out * Math.min(1, k * 2);
-      h.translate(W / 2, cy);
-      h.scale(scale, scale);
-      text(v, 'FINAL BATTLE', 0, 0, 40, { align: 'center', baseline: 'middle', color: '#ffe27a', shadowColor: 'rgba(40,0,60,0.9)', weight: '900' });
+      h.translate(W / 2, by);
+      h.scale(sc, sc);
+      text(v, 'FINAL BATTLE', 0, 0, 38, { align: 'center', baseline: 'middle', color: '#ffe27a', shadowColor: 'rgba(40,0,60,0.9)', weight: '900' });
       h.restore();
     }
-    // The two names slide in from the sides and meet at VS.
-    if (f.t > 0.9) {
-      const k = ease((f.t - 0.9) / 0.4);
-      const ny = cy + sh / 2 + 44 * s;
+    // The blue and red name panels slam together under it.
+    const cy = H * 0.31;
+    const ph = 96 * s;
+    const slant = 50 * s;
+    if (t > 0.55) {
+      const k = back((t - 0.55) / 0.45);
       h.save();
       h.globalAlpha = out;
-      text(v, f.a, W / 2 - 40 * s - (1 - k) * W * 0.6, ny, 24, { align: 'right', baseline: 'middle', color: '#ffffff', weight: '900', maxWidth: W * 0.38 });
-      text(v, f.b, W / 2 + 40 * s + (1 - k) * W * 0.6, ny, 24, { align: 'left', baseline: 'middle', color: '#ffffff', weight: '900', maxWidth: W * 0.38 });
-      if (k > 0.85) text(v, 'VS', W / 2, ny, 28, { align: 'center', baseline: 'middle', color: '#ff5a4a', weight: '900' });
+      const lx = -W * 0.55 * (1 - k);
+      const rx = W * 0.55 * (1 - k);
+      let gg = h.createLinearGradient(lx, 0, lx + W / 2, 0);
+      gg.addColorStop(0, '#0d2a6b');
+      gg.addColorStop(1, '#2f6fe0');
+      h.fillStyle = gg;
+      h.beginPath();
+      h.moveTo(lx, cy - ph / 2);
+      h.lineTo(lx + W / 2 + slant / 2, cy - ph / 2);
+      h.lineTo(lx + W / 2 - slant / 2, cy + ph / 2);
+      h.lineTo(lx, cy + ph / 2);
+      h.closePath();
+      h.fill();
+      gg = h.createLinearGradient(rx + W / 2, 0, rx + W, 0);
+      gg.addColorStop(0, '#e0402f');
+      gg.addColorStop(1, '#6b0d16');
+      h.fillStyle = gg;
+      h.beginPath();
+      h.moveTo(rx + W / 2 + slant / 2, cy - ph / 2);
+      h.lineTo(rx + W, cy - ph / 2);
+      h.lineTo(rx + W, cy + ph / 2);
+      h.lineTo(rx + W / 2 - slant / 2, cy + ph / 2);
+      h.closePath();
+      h.fill();
+      h.restore();
+      h.save();
+      h.globalAlpha = out;
+      text(v, f.a, lx + W / 2 - 66 * s, cy + 3 * s, 34, { align: 'right', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(0,10,40,0.8)', weight: '900', maxWidth: W / 2 - 90 * s });
+      text(v, f.b, rx + W / 2 + 66 * s, cy + 3 * s, 34, { align: 'left', baseline: 'middle', color: '#ffffff', shadowColor: 'rgba(40,0,0,0.8)', weight: '900', maxWidth: W / 2 - 90 * s });
       h.restore();
     }
-    // The opening flash.
-    if (f.t < 0.35) {
+    // A thick lightning seam where they meet.
+    if (t > 0.95) {
+      const flick = (Math.sin(t * 55) + 1) / 2;
+      const pts: Array<[number, number]> = [];
+      for (let i = 0; i <= 7; i++) {
+        const yy = cy - ph / 2 - 18 * s + ((ph + 36 * s) * i) / 7;
+        const jag = i === 0 || i === 7 ? 0 : (i % 2 ? 1 : -1) * (12 + 6 * flick) * s;
+        pts.push([W / 2 + slant / 2 - (slant * i) / 7 + jag, yy]);
+      }
+      const path = () => {
+        h.beginPath();
+        h.moveTo(pts[0]![0], pts[0]![1]);
+        for (const [px, py] of pts.slice(1)) h.lineTo(px, py);
+      };
       h.save();
-      h.globalAlpha = 0.85 * (1 - f.t / 0.35);
+      h.globalAlpha = out;
+      h.lineCap = 'round';
+      h.shadowColor = 'rgba(255,220,90,1)';
+      h.shadowBlur = 24 * s;
+      h.strokeStyle = `rgba(255,190,40,${0.8 + 0.2 * flick})`;
+      h.lineWidth = 16 * s;
+      path();
+      h.stroke();
+      h.shadowBlur = 0;
+      h.strokeStyle = '#fffbe0';
+      h.lineWidth = 7 * s;
+      path();
+      h.stroke();
+      h.restore();
+    }
+    // VS slams down with a ring.
+    if (t > 1.0) {
+      const k = (t - 1.0) / 0.22;
+      const sc = k < 1 ? 3 - 2 * ease(k) : 1;
+      h.save();
+      h.globalAlpha = out;
+      h.translate(W / 2, cy);
+      h.scale(sc, sc);
+      text(v, 'VS', 0, 3 * s, 52, { align: 'center', baseline: 'middle', color: '#ffd34a', shadowColor: 'rgba(26,6,48,0.95)', weight: '900' });
+      h.restore();
+      if (k > 1 && k < 3) {
+        h.save();
+        h.globalAlpha = out * (1 - (k - 1) / 2);
+        h.strokeStyle = '#ffd34a';
+        h.lineWidth = 5 * s;
+        h.beginPath();
+        h.arc(W / 2, cy, (40 + (k - 1) * 110) * s, 0, Math.PI * 2);
+        h.stroke();
+        h.restore();
+      }
+    }
+    // The opening flash.
+    if (t < 0.3) {
+      h.save();
+      h.globalAlpha = 0.85 * (1 - t / 0.3);
       h.fillStyle = '#ffffff';
       h.fillRect(0, 0, W, H);
       h.restore();

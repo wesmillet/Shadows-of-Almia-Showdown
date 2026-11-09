@@ -22,8 +22,14 @@ describe('final battle at the crystal', async () => {
     m.step(1 / 60);
     expect(m.finalStarted).toBe(true);
     expect(m.darknessHeld).toBe(true);
-    expect(Math.hypot(p.x - m.centerX, p.y - m.centerY)).toBeLessThan(8);
-    expect(Math.hypot(r.x - m.centerX, r.y - m.centerY)).toBeLessThan(8);
+    // At the two ends of the crystal's field, which is the battle area.
+    const f = m.ground.features!.finalArena!;
+    const d = m.duels.find((x) => x.id === p.duelId)!;
+    expect(d.bounds).toBeTruthy();
+    expect(Math.abs(p.x - (f.x0 + 1.5))).toBeLessThan(1.5);
+    expect(Math.abs(r.x - (f.x1 - 0.5))).toBeLessThan(1.5);
+    expect(p.y).toBeGreaterThan(f.y0);
+    expect(p.y).toBeLessThan(f.y1 + 1);
     expect(m.battle.events.some((e) => e.type === 'final-battle')).toBe(true);
     // Time passes well past every pulse: no shatter, no Darkrai.
     m.darkness.nextPulseIn = 0.01;

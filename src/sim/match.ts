@@ -115,6 +115,8 @@ export interface Duel {
   /** Seconds in the current state. */
   t: number;
   winner: Trainer | null;
+  /** The final battle: the crystal's field is the battle area (a rectangle) instead of the usual ring. */
+  bounds?: { x0: number; y0: number; x1: number; y1: number };
   /** Stalemate watch (stalemate()): the active pair's HP when it last changed, and seconds since. */
   quietHp?: number;
   quietT?: number;
@@ -4245,7 +4247,18 @@ export class Match {
         this.stepDuelAiMon(m, foe, dt);
         if (!s.trainer.challenger && !s.trainer.visitor) duelHands(this, s.trainer, m, dt);
       }
-      // The battle stays in its ring.
+      // The battle stays in its ring (the final battle: on the crystal's field).
+      if (d.bounds) {
+        const b = d.bounds;
+        const pad = 0.4;
+        const nx = Math.min(b.x1 - pad, Math.max(b.x0 + pad, m.x));
+        const ny = Math.min(b.y1 - pad, Math.max(b.y0 + pad, m.y));
+        if ((nx !== m.x || ny !== m.y) && canStand(this.ground, nx, ny, 0.22)) {
+          m.x = nx;
+          m.y = ny;
+        }
+        continue;
+      }
       const r = Math.hypot(m.x - d.cx, m.y - d.cy);
       if (r > c.arenaRadius) {
         const k = c.arenaRadius / r;
@@ -4552,11 +4565,15 @@ export class Match {
     this.finalStarted = true;
     this.darknessHeld = true;
     if (this.controlled) this.releaseControl();
-    const fb = (CONFIG.duel as typeof CONFIG.duel & { finalBattle?: { gap: number; introSeconds: number; clearRadius: number } }).finalBattle ?? { gap: 6, introSeconds: 3.5, clearRadius: 9 };
-    // Two spots either side of the crystal (east and west), on open ground.
+    const fb = (CONFIG.duel as typeof CONFIG.duel & { finalBattle?: { gap: number; introSeconds: number; clearRadius: number; frontOfCrystal: number } }).finalBattle ?? { gap: 6, introSeconds: 3.5, clearRadius: 9, frontOfCrystal: 3 };
+    // The trainers stand at the two ends of the crystal's field (west and east), a little in front
+    // of the crystal so the fight between them is not hidden behind it; the field is the battle area.
     const spotNear = (x: number, y: number) => (canStand(this.ground, x, y, CONFIG.player.radius) ? { x, y } : this.nearestStand(x, y));
-    const sa = spotNear(this.centerX - fb.gap / 2, this.centerY + 2.5);
-    const sb = spotNear(this.centerX + fb.gap / 2, this.centerY + 2.5);
+    const field = this.ground.features?.finalArena;
+    const fy = field ? Math.min(field.y1 - 1.5, (field.y0 + field.y1 + 1) / 2 + fb.frontOfCrystal) : this.centerY + 2.5;
+    const sa = field ? spotNear(field.x0 + 1.5, fy) : spotNear(this.centerX - fb.gap / 2, fy);
+    const sb = field ? spotNear(field.x1 - 0.5, fy) : spotNear(this.centerX + fb.gap / 2, fy);
+    if (field) d.bounds = { x0: field.x0, y0: field.y0, x1: field.x1 + 1, y1: field.y1 + 1 };
     for (const [side, spot, other] of [[d.a, sa, sb], [d.b, sb, sa]] as const) {
       const t = side.trainer;
       t.x = t.px = side.spotX = spot.x;

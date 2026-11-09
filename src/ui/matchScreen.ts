@@ -37,7 +37,7 @@ import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
 import { bestRod, canFish, FISHING, hookOrReel, startFishing } from '../sim/fishing';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
-import { drawSoftShadow } from '../render/world';
+import { drawSoftShadow, trainerPos } from '../render/world';
 import { INK, panel, rgba, text, touchWording, uiFont, wrapText, type GameContext, type Screen } from './screens';
 
 /** Effects that sim events ask for by id (scene-fx), loaded with the rest. */
@@ -2959,8 +2959,10 @@ export class MatchScreen implements Screen {
       if (n.role !== 'merchant' && n.role !== 'ace') continue;
       const dist = Math.hypot(n.x - p.x, n.y - p.y);
       if (dist > 16) continue;
-      const sx = Math.round(v.toScreenX(n.x));
-      const top = Math.round(v.toScreenY(n.y)) - 2.4 * v.pxPerTile;
+      // Where the sprite is drawn (between the last two positions), so the name and bubble stay on it.
+      const at = trainerPos(n, alpha);
+      const sx = Math.round(v.toScreenX(at.x));
+      const top = Math.round(v.toScreenY(at.y)) - 2.4 * v.pxPerTile;
       const h = v.hud;
       // A bubble over their head that bobs: a coin for the merchant, "!" for Celeste when she is ready.
       const vis = this.match.visitors;

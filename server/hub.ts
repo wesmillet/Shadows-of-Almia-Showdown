@@ -237,7 +237,7 @@ export class Hub {
           c.rollPc = k.pc ?? [];
         }
         // Already picked from this roll (left the queue, came back): that starter again, no roll screen.
-        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, pc: c.rollPc ?? [], daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null, picked: this.kept.get(c.key)?.pick ?? null });
+        c.send({ t: 'roll', seed: c.rollSeed, pool: c.rollPool, pc: c.rollPc ?? [], shiny: c.accountId === null || c.guest ? [] : this.o.accounts.shinyLines(c.accountId), daily: c.accountId === null ? null : this.o.accounts.starters.daily(c.accountId)?.dex ?? null, picked: this.kept.get(c.key)?.pick ?? null });
         return;
       case 'queue':
         // Every public match is casual (ranked play has been retired; an old client asking for it plays casual).

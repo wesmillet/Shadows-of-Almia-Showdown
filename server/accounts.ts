@@ -633,8 +633,20 @@ export class Accounts {
   /** Whether a player's PC holds a shiny of this species (their starter comes out shiny then). */
   /** Whether a player's PC has a shiny of this starter's line (any stage: a shiny Gengar counts for Gastly). */
   ownsShiny(userId: number, dex: string): boolean {
+    return this.shinyLines(userId).includes(dex);
+  }
+
+  /** The starters a player starts shiny: each species they have a shiny of, and its line's first form. */
+  shinyLines(userId: number): string[] {
     const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex FROM pc WHERE user_id = ? AND json_extract(entry, '$.shiny') IN (1, 'true')").all(userId) as Array<{ dex: string }>;
-    return rows.some((r) => typeof r.dex === 'string' && (r.dex === dex || nominationBase(r.dex) === dex));
+    const out = new Set<string>();
+    for (const r of rows) {
+      if (typeof r.dex !== 'string') continue;
+      out.add(r.dex);
+      const b = nominationBase(r.dex);
+      if (b) out.add(b);
+    }
+    return [...out];
   }
 
   /** The species in a player's PC (for their starter pool). */

@@ -90,6 +90,8 @@ export class RollScreen implements Screen {
     private readonly daily: string | null = null,
     /** Every species in their PC they can start with: the first two reels roll from these. */
     private readonly pc: readonly string[] = [],
+    /** Starters they would start shiny (they own a shiny of the line): drawn shiny. */
+    private readonly shinies: ReadonlySet<string> = new Set(),
   ) {
     if (daily) void this.sprites.preload([daily], undefined, true);
     // The first two reels roll from the PC (Commons without one); the third from the nominations
@@ -106,7 +108,7 @@ export class RollScreen implements Screen {
     const picks = this.reels.map((r) => r.pick.def.dex);
     void this.sprites.preload(picks, undefined, true);
     void this.sprites.preload(this.reels.flatMap((r) => r.cards.map((c) => c.def.dex)), undefined, true);
-    for (const c of this.reels.flatMap((r) => r.cards)) c.anim = new AnimPlayer(this.sprites.get(c.def.dex));
+    for (const c of this.reels.flatMap((r) => r.cards)) c.anim = new AnimPlayer(this.sprites.get(c.def.dex, this.shinies.has(c.def.dex)));
   }
 
   private get done(): boolean {

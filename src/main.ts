@@ -389,7 +389,7 @@ async function boot(): Promise<void> {
       const choices = [...starterChoices(rollSeed, pool, pc), ...(daily ? [daily] : [])];
       // Picked from this same roll before (left the queue and came back): that starter again.
       if (typeof m.picked === 'number' && choices[m.picked] !== undefined) return onPicked(m.picked);
-      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => onPicked(choices.indexOf(dex)), null, pool, daily, pc));
+      game.setScreen(new RollScreen(game, sprites, rollSeed, (dex) => onPicked(choices.indexOf(dex)), null, pool, daily, pc, new Set(m.shiny ?? [])));
     });
     net.send({ t: 'roll' });
   };

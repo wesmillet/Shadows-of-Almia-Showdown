@@ -103,6 +103,14 @@ jobs:
           if [ "$SIZE" = "launch" ]; then VM="--vm-size performance-1x --vm-memory 2048"
           elif [ "$SIZE" = "surge" ]; then VM="--vm-size performance-2x --vm-memory 4096"
           else VM="--vm-size shared-cpu-2x --vm-memory 1024"; fi
+          # fly.toml's [[vm]] block wins over the flags on an existing machine: write the size there too.
+          case "$SIZE" in
+            launch) VS=performance-1x; VMEM=2gb ;;
+            surge) VS=performance-2x; VMEM=4gb ;;
+            *) VS=shared-cpu-2x; VMEM=1gb ;;
+          esac
+          sed -i "s/^  size = .*/  size = \"$VS\"/; s/^  memory = .*/  memory = \"$VMEM\"/" fly.toml
+          grep -n -A3 "^\[\[vm\]\]" fly.toml
           : > deploy.log
           # Fly can be out of room on the host that holds an (empty) save disk. Then: replace the
           # unattached disk with a fresh one and try again; the last try moves to a second region.

@@ -99,7 +99,7 @@ export function openStarters(net: Connection): Promise<void> {
     const draw = (): void => {
       box.replaceChildren();
       box.appendChild(el('h2', '', 'Starters'));
-      box.appendChild(el('p', 'sub', 'Your first two starter slots roll Common Pokémon. The third rolls from five Pokémon you nominate below.'));
+      box.appendChild(el('p', 'sub', 'Your first two starter slots roll from every Pokémon in your PC (Commons until it has some). The third rolls from the Pokémon you star below.'));
       if (!info) {
         box.appendChild(el('p', 'sub', message || 'Loading...'));
         return;

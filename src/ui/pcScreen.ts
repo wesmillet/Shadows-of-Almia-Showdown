@@ -191,6 +191,51 @@ export class PcScreen implements Screen {
     return Math.max(1, Math.ceil(this.view.length / PER_BOX));
   }
 
+  /** Release: the first click arms it (for this Pokémon), a second click within 4 s releases it. */
+  private releaseArmed: { pcId: number; until: number } | null = null;
+
+  private releaseRect(side: Rect): Rect {
+    const s = this.ctx.view.baseScale;
+    const st = this.starRect(side);
+    return { x: st.x + st.w - 84 * s, y: st.y + st.h + 8 * s, w: 84 * s, h: 26 * s };
+  }
+
+  private release(i: number): void {
+    const e = this.list[i];
+    if (!this.net || !e || e.pcId === undefined || this.saving) return;
+    const now = performance.now();
+    if (!this.releaseArmed || this.releaseArmed.pcId !== e.pcId || now > this.releaseArmed.until) {
+      this.releaseArmed = { pcId: e.pcId, until: now + 4000 };
+      this.note = `Click Release again to let ${e.name} go for good`;
+      return;
+    }
+    this.releaseArmed = null;
+    this.saving = true;
+    const pcId = e.pcId;
+    void this.net.api('/api/pc/release', { pcId }).then((r: { error?: string }) => {
+      this.saving = false;
+      if (r.error) {
+        this.note = r.error;
+        return;
+      }
+      const at = this.list.findIndex((x) => x.pcId === pcId);
+      if (at >= 0) this.list.splice(at, 1);
+      this.selected = -1;
+      this.hover = -1;
+      this.note = `${e.name} was released. Bye, ${e.name}!`;
+      this.refresh();
+    });
+  }
+
+  /** The side panel's Release button (online only). */
+  private drawRelease(r: Rect, e: PcEntry): void {
+    if (!this.net || e.pcId === undefined) return;
+    const b = this.releaseRect(r);
+    const armed = this.releaseArmed?.pcId === e.pcId && performance.now() <= this.releaseArmed.until;
+    const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
+    button(this.ctx.view, armed ? 'Sure?' : 'Release', b.x, b.y, b.w, b.h, over, armed ? '#e8a090' : '#ead9c0');
+  }
+
   private toggleFav(i: number): void {
     const e = this.list[i];
     if (!e) return;
@@ -426,6 +471,11 @@ export class PcScreen implements Screen {
         const sr = this.starRect(L.side);
         if (hit(c.x, c.y, sr.x, sr.y, sr.w, sr.h)) {
           this.toggleFav(shownI);
+          continue;
+        }
+        const rr = this.releaseRect(L.side);
+        if (this.net && shown.pcId !== undefined && hit(c.x, c.y, rr.x, rr.y, rr.w, rr.h)) {
+          this.release(shownI);
           continue;
         }
         const dr = this.dailyRect(L.side);
@@ -769,6 +819,7 @@ export class PcScreen implements Screen {
     }
     this.drawNominate(r, e);
     this.drawDaily(r, e);
+    this.drawRelease(r, e);
   }
 
   /** "Charmander → Charmeleon → Charizard" (branches: "Eevee → Vaporeon / Jolteon +6"). */

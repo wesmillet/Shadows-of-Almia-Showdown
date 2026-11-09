@@ -1055,7 +1055,7 @@ export class TitleScreen implements Screen {
       text(v, 'SHADOWS OF ALMIA', v.width / 2, v.height * 0.22, 72, { align: 'center', weight: '900', color: '#e9ddff', maxWidth: v.width - 40 * s });
       text(v, 'SHOWDOWN', v.width / 2, v.height * 0.22 + 70 * s, 64, { align: 'center', weight: '900', color: '#b48cff' });
     }
-    text(v, 'A Pokémon battle royale on the Ranger Union training grounds', v.width / 2, subY, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
+    text(v, 'A Pokémon battle royale', v.width / 2, subY, 15, { align: 'center', weight: '500', color: '#cfc6ea', maxWidth: v.width - 40 * s });
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
     const b = this.buttonRect();

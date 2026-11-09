@@ -1192,6 +1192,20 @@ export class Accounts {
         const pooled = this.pooledIds(me.id);
         return send(200, { pc: rows.map((r) => ({ ...JSON.parse(r.entry), pcId: r.id, ...(pooled.has(r.id) ? { wonder: true } : {}) })) });
       }
+      if (req.method === 'POST' && path === '/api/pc/release') {
+        // Releasing a Pokémon: gone from this PC for good (the collection log keeps what it was).
+        const b = await readJson(req);
+        const id = Number(b.pcId);
+        const row = Number.isInteger(id) ? (this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(id, me.id) as { entry: string } | undefined) : undefined;
+        if (!row) return send(404, { error: 'Not in your PC' });
+        if (this.isPooled(id)) return send(400, { error: 'That Pokémon is out on Wonder Trade' });
+        const count = (this.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE user_id = ?').get(me.id) as { n: number }).n;
+        if (count <= 1) return send(400, { error: 'Keep at least one Pokémon in your PC' });
+        this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc = ? OR want_pc = ?)").run(Date.now(), id, id);
+        this.logCollection(me.id, 'release', { pcId: id, detail: JSON.parse(row.entry) });
+        this.db.prepare('DELETE FROM pc WHERE id = ? AND user_id = ?').run(id, me.id);
+        return send(200, { ok: true });
+      }
       if (req.method === 'POST' && path === '/api/pc/fav') {
         // A star on a Pokémon in this account's PC (sorting only; nothing else reads it).
         const b = await readJson(req);

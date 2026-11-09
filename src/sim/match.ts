@@ -17,7 +17,7 @@ import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './dar
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead, partySize } from './entities';
 import { ballOfTier, isGear, ITEMS, rollLoot, rollTier, TM_LIST, type BallKind, type LootTier } from './items';
-import { canStand, moveAround, tryMove } from './movement';
+import { canStand, moveAround, setWalking, tryMove } from './movement';
 import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
@@ -3150,10 +3150,7 @@ export class Match {
       mon.dir = p.dir;
       mon.anim.dir = p.dir;
       const walking = moved > 1e-4 || p.mount.fly;
-      if (walking !== mon.moving) {
-        mon.moving = walking;
-        mon.anim.play(walking ? 'Walk' : 'Idle');
-      }
+      setWalking(mon, walking);
       mon.anim.update(dt);
     }
     this.separate(p);
@@ -4230,11 +4227,7 @@ export class Match {
       return;
     }
     const moved = this.walkSteered(m, mx, my, dt);
-    const walking = moved > 1e-4;
-    if (walking !== m.moving) {
-      m.moving = walking;
-      m.anim.play(walking ? 'Walk' : 'Idle');
-    }
+    setWalking(m, moved > 1e-4);
   }
 
   /**
@@ -4385,10 +4378,7 @@ export class Match {
 
   /** Walk or Idle for a battling Pokémon, without restarting the animation every frame. */
   private setMonWalking(m: Mon, walking: boolean): void {
-    if (walking !== m.moving) {
-      m.moving = walking;
-      m.anim.play(walking ? 'Walk' : 'Idle');
-    }
+    setWalking(m, walking);
   }
 
   /** The battle is over: the winner's party comes back out round its trainer. */

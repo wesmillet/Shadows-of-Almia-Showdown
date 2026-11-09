@@ -24,6 +24,7 @@ import type { MirrorNet } from './connection';
 import type { RosterEntry, ServerMsg } from './protocol';
 import { isMon, isTrainer, SyncDecoder } from './sync';
 import { isShownLook, SHOWN_LOOKS } from './progression';
+import { setWalking } from '../sim/movement';
 
 type Obj = Record<string, unknown>;
 
@@ -494,11 +495,7 @@ export class MirrorMatch {
       const mon = o as unknown as Mon;
       const moved = mx || my ? m.walkSteered(mon, mx, my, dt) : 0;
       if (animate) {
-        const walking = moved > 1e-4;
-        if (walking !== mon.moving || (walking && mon.anim.action !== 'Walk')) {
-          mon.moving = walking;
-          mon.anim.play(walking ? 'Walk' : 'Idle');
-        }
+        setWalking(mon, moved > 1e-4);
       }
       return;
     }

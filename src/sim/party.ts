@@ -18,7 +18,7 @@ import type { Rng } from '../core/rng';
 import type { GroundRenderer } from '../ground/types';
 import { CONFIG, hitPad, moveSpeed, statsAtLevel } from './data';
 import { incapable, type Mon, type Trainer } from './entities';
-import { canStand, moveAround, tryMove } from './movement';
+import { canStand, moveAround, setWalking as setWalkAnim, tryMove } from './movement';
 import type { Nav } from './nav';
 
 export type Behavior = 'aggressive' | 'guard' | 'catch' | 'passive' | 'hold' | 'roam' | 'roam-aggressive';
@@ -213,10 +213,7 @@ function setWalking(m: Mon, walking: boolean): void {
     m.stillSteps = still ? (m.stillSteps ?? 0) + 1 : 0;
     if (m.stillSteps >= 8) walking = false;
   } else m.stillSteps = 0;
-  if (walking !== m.moving) {
-    m.moving = walking;
-    m.anim.play(walking ? 'Walk' : 'Idle');
-  }
+  setWalkAnim(m, walking);
 }
 
 /** Advances every active member of a trainer's party for one step. */

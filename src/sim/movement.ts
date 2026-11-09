@@ -101,3 +101,16 @@ export function moveAround(ground: GroundRenderer, m: Detouring, dx: number, dy:
   m.detourT = 0;
   return tryMove(ground, m, dx, dy, r);
 }
+
+/**
+ * Walk or Idle for a Pokémon, without restarting the animation every frame. Also catches up when
+ * something else left it standing while it moves: an attack's end plays Idle, or the Walk sheet was
+ * still loading when it set off (Idle stood in for it); otherwise it would glide along standing still.
+ */
+export function setWalking(m: { moving: boolean; anim: { action: string; play(a: string): void } }, walking: boolean): void {
+  if (walking !== m.moving) {
+    m.moving = walking;
+    m.anim.play(walking ? 'Walk' : 'Idle');
+  } else if (walking && m.anim.action === 'Idle') m.anim.play('Walk');
+  else if (!walking && m.anim.action === 'Walk') m.anim.play('Idle');
+}

@@ -387,7 +387,7 @@ export class PrivateLobbyScreen implements Screen {
     head.append(title, codeBox);
     box.append(head);
     // Who is in.
-    box.append(el('h3', '', `Trainers · ${l.members.length}/${l.rules.size}${l.rules.bots && l.members.length < l.rules.size ? ' (computer trainers fill the rest)' : ''}`));
+    box.append(el('h3', '', `Trainers · ${l.members.length}/${l.rules.size}${l.rules.bots && l.members.length < l.rules.size ? ' (the rest of the seats fill up)' : ''}`));
     for (const m of l.members) {
       const row = el('div', 'almia-row');
       const nm = el('span', 'nm', `${m.name === l.host ? '♛ ' : ''}${m.name}${m.name === l.you ? ' (you)' : ''}`);
@@ -439,7 +439,7 @@ export class PrivateLobbyScreen implements Screen {
       grid.append(el('label', '', label), wrap);
     };
     select('Trainers', String(l.rules.size), [2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => [String(n), String(n)]), (v) => send({ size: Number(v) }));
-    check('Computer trainers', l.rules.bots, (v) => send({ bots: v }));
+    check('Fill empty seats', l.rules.bots, (v) => send({ bots: v }));
     select('Teams', l.rules.teams, Object.entries(TEAM_LABEL) as Array<[string, string]>, (v) => send({ teams: v as PrivateRules['teams'] }));
     select('Starter level', String(l.rules.level), [5, 10, 15, 20, 30, 40, 50].map((n) => [String(n), `Level ${n}`]), (v) => send({ level: Number(v) }));
     select('Storm', String(l.rules.storm), [['0.5', 'Slow (half speed)'], ['0.75', 'Slower'], ['1', 'Normal'], ['1.5', 'Fast'], ['2', 'Very fast (double)']], (v) => send({ storm: Number(v) }));
@@ -590,13 +590,13 @@ export class LobbyScreen implements Screen {
       ? `Your party is picking starters (${picked}/${party.members.length})`
       : this.need > 0
         ? this.botsIn !== null
-          ? `Waiting for players · computer trainers fill in ${Math.ceil(this.botsIn)}s`
+          ? `Waiting for players · starting in ${Math.ceil(this.botsIn)}s`
           : `Waiting for ${this.need} more player${this.need === 1 ? '' : 's'}`
         : this.startsIn === null
           ? 'Joining the queue'
           : this.at !== null
-            ? `Starts in ${clockOf(this.startsIn)}${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'} · browse the menus meanwhile`
-            : `Starting in ${Math.ceil(this.startsIn)}s${this.humansOnly ? ' · real players only' : ' · computer trainers fill empty seats'}`;
+            ? `Starts in ${clockOf(this.startsIn)} · browse the menus meanwhile`
+            : `Starting in ${Math.ceil(this.startsIn)}s`;
     heading(v, this.at !== null && !waitingParty ? `Your match: ${timeOfDay(this.at)}` : `Finding trainers${dots}`, sub, 80 * s);
     const pw = 460 * s;
     const px = v.width / 2 - pw / 2;

@@ -29,6 +29,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts } from './accounts';
 import { ITEMS } from '../src/sim/items';
+import { SPECIES } from '../src/sim/data';
 
 /** A connected player as the dashboard shows them (hub.ts builds these). */
 export interface OnlineEntry {
@@ -211,6 +212,48 @@ export class AdminApi {
         const rows = (db.prepare(`SELECT id, mode, started_at, ended_at, seconds, winner, trainers_n, humans, bots, aborted FROM match_log ${where} ORDER BY ${sortSql(url, { ended_at: 'ended_at', mode: 'mode', seconds: 'seconds', winner: 'winner COLLATE NOCASE', trainers_n: 'trainers_n', humans: 'humans', bots: 'bots' }, 'ended_at DESC')} LIMIT ? OFFSET ?`).all(...args, PAGE, page * PAGE));
         const legacy = (db.prepare('SELECT COUNT(*) AS n FROM matches WHERE id NOT IN (SELECT id FROM match_log)').get() as { n: number }).n;
         return send(200, { total, page, pageSize: PAGE, matches: rows, since: this.acc.historySince(), legacy });
+      }
+      if (path === '/api/admin/records') {
+        // Winning teams (the match log keeps each winner's team since this was added), and every
+        // legendary and shiny that has gone into a PC (the collection log keeps each one, even if it
+        // was traded or released since).
+        const won = db.prepare('SELECT id, ended_at, mode, trainers FROM match_log WHERE aborted IS NULL ORDER BY ended_at DESC LIMIT 400').all() as Array<{ id: string; ended_at: number; mode: string; trainers: string }>;
+        const teams: Array<{ id: string; at: number; mode: string; name: string; human: boolean; team: Array<{ dex: string; name: string; level: number; shiny?: boolean }> }> = [];
+        const used = new Map<string, number>();
+        for (const m of won) {
+          const list = safeJson(m.trainers) as unknown as Array<{ name: string; human: boolean; outcome: string; team?: Array<{ dex: string; name: string; level: number; shiny?: boolean }> }> | null;
+          for (const t of list ?? []) {
+            if (t.outcome !== 'win' || !t.team) continue;
+            teams.push({ id: m.id, at: m.ended_at, mode: m.mode, name: t.name, human: t.human, team: t.team });
+            for (const p of t.team) {
+              const n = SPECIES.get(p.dex.replace(/-mega.*$/, ''))?.name ?? p.name;
+              used.set(n, (used.get(n) ?? 0) + 1);
+            }
+          }
+        }
+        const adds = db.prepare("SELECT user_id, username, action, detail, at FROM collection_log WHERE action LIKE 'add:%' ORDER BY at DESC").all() as Array<{ user_id: number; username: string | null; action: string; detail: string; at: number }>;
+        const legends: Array<{ who: string; userId: number; name: string; dex: string; shiny: boolean; via: string; at: number }> = [];
+        const shinies: Array<{ who: string; userId: number; name: string; dex: string; legend: boolean; via: string; at: number }> = [];
+        const people = new Map<number, { who: string; legends: number; shinies: number; total: number }>();
+        for (const r of adds) {
+          const e = safeJson(r.detail) as unknown as { dex?: string; name?: string; shiny?: boolean; legend?: boolean; evolvedFrom?: string } | null;
+          if (!e?.dex) continue;
+          const dex = e.evolvedFrom ?? e.dex;
+          const sp = SPECIES.get(dex.replace(/-(shadow|shiny|unbound|final|mega.*)$/, '')) as { name: string; class?: string } | undefined;
+          const legend = !!e.legend || sp?.class === 'legendary' || sp?.class === 'mythical';
+          const who = r.username ?? '#' + r.user_id;
+          const name = sp?.name ?? e.name ?? dex;
+          const via = r.action.slice(4);
+          const p = people.get(r.user_id) ?? { who, legends: 0, shinies: 0, total: 0 };
+          p.total++;
+          if (legend) { p.legends++; legends.push({ who, userId: r.user_id, name, dex, shiny: !!e.shiny, via, at: r.at }); }
+          if (e.shiny) { p.shinies++; shinies.push({ who, userId: r.user_id, name, dex, legend, via, at: r.at }); }
+          people.set(r.user_id, p);
+        }
+        return send(200, {
+          teams: teams.slice(0, 100), winningSpecies: [...used].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([name, n]) => ({ name, n })), teamsCounted: teams.length,
+          legends, shinies, people: [...people].map(([id, p]) => ({ id, ...p })).filter((p) => p.legends || p.shinies).sort((a, b) => b.legends - a.legends || b.shinies - a.shinies),
+        });
       }
       if (path === '/api/admin/match') {
         const id = String(url.searchParams.get('id') ?? '');

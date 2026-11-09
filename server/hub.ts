@@ -584,9 +584,9 @@ export class Hub {
         if (this.draining) return c.send({ t: 'notice', text: DRAIN_TEXT });
         const members = [...lobby.members.keys()].map((k) => this.clients.get(k)).filter((x): x is Client => !!x);
         if (members.some((m) => m.room)) return c.send({ t: 'notice', text: 'Someone is still in a match' });
-        if (!lobby.rules.bots && members.length < 2) return c.send({ t: 'notice', text: 'Two trainers at least, or turn computer trainers on' });
+        if (!lobby.rules.bots && members.length < 2) return c.send({ t: 'notice', text: 'Two trainers at least, or turn on Fill empty seats' });
         const sides = new Set(lobby.lineup(new Map()).map((x, i) => (x.team === undefined ? `solo${i}` : `team${x.team}`)));
-        if (sides.size < 2 && !(lobby.rules.bots && members.length < lobby.rules.size)) return c.send({ t: 'notice', text: 'Everyone is on one team: split up, or add computer trainers' });
+        if (sides.size < 2 && !(lobby.rules.bots && members.length < lobby.rules.size)) return c.send({ t: 'notice', text: 'Everyone is on one team: split up, or turn on Fill empty seats' });
         lobby.state = 'picking';
         for (const m of members) {
           m.watching?.unspectate(m.key);

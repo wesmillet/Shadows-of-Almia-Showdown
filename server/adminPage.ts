@@ -62,7 +62,7 @@ th[data-dir="asc"]::after { content: " \\25B2"; } th[data-dir="desc"]::after { c
 <header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a class="modlink" href="/mod">Moderation page &rarr;</a></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
-const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['feedback', 'Feedback'], ['gifts', 'Mystery Gift']];
+const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['records', 'Records'], ['accounts', 'Accounts'], ['feedback', 'Feedback'], ['gifts', 'Mystery Gift']];
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // Times and durations carry their raw value (data-v) so a column of them sorts by time, not text.
@@ -121,7 +121,24 @@ async function show(t, arg) {
   if (t === 'history') return arg ? match(arg) : history(0);
   if (t === 'accounts') return arg ? account(Number(arg)) : accounts('', 0);
   if (t === 'gifts') return gifts();
+  if (t === 'records') return records();
   if (t === 'feedback') return feedback();
+}
+
+// ---------------------------------------------------------------- Records
+async function records() {
+  $('#main').innerHTML = '<div class="panel">Loading records...</div>';
+  const j = await api('/api/admin/records');
+  if (j.error) return fail(j.error);
+  const acct = (id, who) => '<a href="#accounts/' + id + '">' + esc(who) + '</a>';
+  const mon = (p) => (p.shiny ? '★ ' : '') + esc(p.name) + ' <span class="dim">Lv ' + esc(p.level) + '</span>';
+  $('#main').innerHTML =
+    '<div class="panel"><h2>Legendaries and shinies by player</h2><p class="dim">Every one that went into a PC (won, Extraction Voucher, egg, gift or reward), even if traded or released since.</p>' +
+    (j.people.length ? '<table><tr><th>Player</th><th>Legendaries</th><th>Shinies</th><th>Pokémon kept</th></tr>' + j.people.map((p) => '<tr><td>' + acct(p.id, p.who) + '</td><td data-v="' + p.legends + '">' + p.legends + '</td><td data-v="' + p.shinies + '">' + p.shinies + '</td><td data-v="' + p.total + '">' + p.total + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
+    '<div class="panel"><h2>Legendaries (' + j.legends.length + ')</h2>' + (j.legends.length ? '<table><tr><th>When</th><th>Player</th><th>Pokémon</th><th>How</th></tr>' + j.legends.map((l) => '<tr><td>' + when(l.at) + '</td><td>' + acct(l.userId, l.who) + '</td><td>' + (l.shiny ? '★ ' : '') + esc(l.name) + '</td><td>' + esc(l.via) + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
+    '<div class="panel"><h2>Shinies (' + j.shinies.length + ')</h2>' + (j.shinies.length ? '<table><tr><th>When</th><th>Player</th><th>Pokémon</th><th>How</th></tr>' + j.shinies.map((l) => '<tr><td>' + when(l.at) + '</td><td>' + acct(l.userId, l.who) + '</td><td>★ ' + esc(l.name) + (l.legend ? ' <span class="dim">(legendary)</span>' : '') + '</td><td>' + esc(l.via) + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
+    '<div class="panel"><h2>Most common on winning teams</h2><p class="dim">From the last ' + j.teamsCounted + ' winning teams recorded.</p>' + (j.winningSpecies.length ? '<table><tr><th>Pokémon</th><th>Winning teams</th></tr>' + j.winningSpecies.map((w) => '<tr><td>' + esc(w.name) + '</td><td data-v="' + w.n + '">' + w.n + '</td></tr>').join('') + '</table>' : '<p class="dim">No winning teams recorded yet (recording starts with this update).</p>') + '</div>' +
+    '<div class="panel"><h2>Winning teams</h2>' + (j.teams.length ? '<table><tr><th>When</th><th>Winner</th><th>Team</th><th></th></tr>' + j.teams.map((t) => '<tr><td>' + when(t.at) + '</td><td>' + esc(t.name) + (t.human ? '' : ' <span class="dim">(computer)</span>') + '</td><td>' + t.team.map(mon).join(', ') + '</td><td><a href="#history/' + esc(t.id) + '">match</a></td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>';
 }
 
 // ---------------------------------------------------------------- Mystery Gift

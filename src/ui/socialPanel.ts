@@ -296,7 +296,7 @@ export function replaysDialog(net: Connection, onWatch: (r: ReplayInfo) => void)
         const row = el('div', 'almia-row');
         const humans = x.players.filter((p) => p.human).map((p) => p.name);
         const when = new Date(x.endedAt);
-        const nm = el('span', 'nm', `${x.mode === 'private' ? 'Private · ' : ''}${humans.join(', ') || 'Computer trainers'}`);
+        const nm = el('span', 'nm', `${x.mode === 'private' ? 'Private · ' : ''}${humans.join(', ') || 'A match'}`);
         nm.append(el('span', 'sub', `${x.winner ? `${x.winner} won` : 'No winner'} · ${Math.floor(x.seconds / 60)}:${String(Math.floor(x.seconds % 60)).padStart(2, '0')} · ${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`));
         const w = el('button', 'almia-small', 'Watch');
         w.onclick = () => {

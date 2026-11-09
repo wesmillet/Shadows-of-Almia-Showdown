@@ -8,7 +8,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "Catch rate x1"
+      "desc": "A standard ball for catching Pokémon"
     },
     {
       "id": "great-ball",
@@ -17,7 +17,7 @@
       "kind": "ball",
       "tier": 1.5,
       "stack": 1,
-      "desc": "Catch rate x1.5"
+      "desc": "Catches better than a Poké Ball"
     },
     {
       "id": "ultra-ball",
@@ -26,7 +26,7 @@
       "kind": "ball",
       "tier": 2,
       "stack": 1,
-      "desc": "Catch rate x2"
+      "desc": "Catches better than a Great Ball"
     },
     {
       "id": "master-ball",
@@ -45,7 +45,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x3 on Bug and Water Pokémon",
+      "desc": "Works especially well on Bug and Water Pokémon",
       "special": "net"
     },
     {
@@ -55,7 +55,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x3 inside the darkness",
+      "desc": "Works especially well inside the darkness",
       "special": "dusk"
     },
     {
@@ -65,7 +65,7 @@
       "kind": "ball",
       "tier": 1,
       "stack": 1,
-      "desc": "x5 if thrown before it has been attacked (x2.5 against Pokémon far above your team)",
+      "desc": "Works especially well if thrown before the Pokémon has been attacked",
       "special": "quick"
     },
     {

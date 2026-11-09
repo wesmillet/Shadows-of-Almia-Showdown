@@ -584,21 +584,27 @@ export class Room implements RoomHandle {
     // Every trainer in it for the admin's match history: players with their results, computer
     // trainers with their places and the stats the match kept for them.
     const byName = new Map(results.map((r) => [r.name, r]));
+    // The winners' teams, for the admin's records (who wins with what).
+    const teamOf = (id: number) => {
+      const t = this.match.allTrainers.find((x) => x.id === id);
+      return t ? t.party.filter((m) => !m.captured || m.owner === t).map((m) => ({ dex: m.dex, name: m.name, level: m.level, ...(m.shiny ? { shiny: true } : {}) })) : undefined;
+    };
+    const withTeam = <T extends { outcome: 'win' | 'loss' }>(row: T, id: number): T & { team?: ReturnType<typeof teamOf> } => (row.outcome === 'win' && !this.aborted ? { ...row, team: teamOf(id) } : row);
     const trainers: EndReport['trainers'] = this.roster.map((e) => {
       const r = e.human ? byName.get(e.name) : undefined;
       if (e.human) {
         const key = r?.key ?? '';
-        return {
+        return withTeam({
           name: e.name, human: true, guest: !key.startsWith('u'), accountId: key.startsWith('u') ? Number(key.slice(1)) : null,
-          place: r?.place ?? 0, outcome: r?.outcome ?? 'loss', stats: r ? { ...r.stats } : null,
-        };
+          place: r?.place ?? 0, outcome: r?.outcome ?? ('loss' as const), stats: r ? { ...r.stats } : null,
+        }, e.trainerId);
       }
       const bot = this.match.trainers.find((t) => t.id === e.trainerId);
       const place = bot ? (this.botPlaces.get(bot) ?? 0) : 0;
-      return {
-        name: e.name, human: false, guest: false, accountId: null, place, outcome: place === 1 && this.match.over && !this.aborted ? 'win' : 'loss',
+      return withTeam({
+        name: e.name, human: false, guest: false, accountId: null, place, outcome: place === 1 && this.match.over && !this.aborted ? ('win' as const) : ('loss' as const),
         stats: bot ? { catches: bot.stats.catches, knockouts: bot.stats.knockouts, eliminations: bot.stats.eliminations ?? 0, damage: bot.stats.damage, timeSurvived: bot.stats.timeSurvived } : null,
-      };
+      }, e.trainerId);
     });
     this.onEnd(this, {
       results,

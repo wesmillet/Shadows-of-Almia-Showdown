@@ -147,10 +147,10 @@ export class QueueMini {
     title.textContent = m.at !== undefined && starting ? `Your match: ${timeOfDay(this.at + (m.startsIn ?? 0) * 1000 - performance.now() + Date.now())}` : starting ? 'Match starting' : 'Finding a match';
     if (starting) {
       const left = Math.max(0, (m.startsIn ?? 0) - gone);
-      when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>${m.humansOnly ? ' · real players only' : ' · bots fill empty seats'}`;
+      when.innerHTML = `Starts in <span class="time">${clock(Math.ceil(left))}</span>`;
     } else if (m.botsIn !== undefined) {
       const left = Math.max(0, m.botsIn - gone);
-      when.innerHTML = `Computer trainers fill in <span class="time">${clock(Math.ceil(left))}</span>`;
+      when.innerHTML = `Starting in <span class="time">${clock(Math.ceil(left))}</span>`;
     } else when.textContent = m.need ? `Waiting for ${m.need} more` : '';
   }
 }

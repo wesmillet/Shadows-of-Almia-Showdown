@@ -335,7 +335,7 @@
     "_comment": "A trainer whose last Pokémon falls to a wild Pokémon comes back after baseSeconds + perMinute for each minute played (up to maxSeconds), at an outpost, with the party healed and every item lost (dropped where they fell). No respawns once the final showdown starts.",
     "baseSeconds": 8,
     "perMinute": 4,
-    "maxSeconds": 90
+    "maxSeconds": 25
   },
   "darkness": {
     "_comment": "Every pulseSeconds the safe circle shrinks to the next radius; the darkness creeps in at sweepTilesPerSecond (a trainer walks about 4.8).",

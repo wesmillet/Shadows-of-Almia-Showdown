@@ -132,6 +132,7 @@ export interface MatchLogEntry {
   trainers: Array<{
     name: string; human: boolean; guest: boolean; accountId: number | null; place: number; outcome: 'win' | 'loss';
     stats: { catches: number; knockouts: number; eliminations?: number; damage: number; timeSurvived: number } | null;
+    team?: Array<{ dex: string; name: string; level: number; shiny?: boolean }>;
   }>;
 }
 

@@ -1,4 +1,5 @@
 /** The daily Egg: ready again 24 hours after it hatched, into the PC, rolled by the starter tiers' weights. */
+import spawnsJson from '../data/spawns.json';
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -87,8 +88,9 @@ describe('daily Egg', () => {
       const t = rollEgg(rng).tier.id;
       count.set(t, (count.get(t) ?? 0) + 1);
     }
-    // Uncommon or better: never a Common, the rest by their weights.
-    const tiers = STARTER_TIERS.filter((t) => t.id !== 'common');
+    // Uncommon or better: never a Common, the rest by the Egg's weights (data/spawns.json eggWeights).
+    const eggW = (spawnsJson as unknown as { eggWeights?: Record<string, number> }).eggWeights ?? {};
+    const tiers = STARTER_TIERS.filter((t) => t.id !== 'common').map((t) => ({ ...t, weight: eggW[t.id] ?? t.weight }));
     const total = tiers.reduce((s, t) => s + t.weight, 0);
     expect(count.get('common') ?? 0).toBe(0);
     for (const t of tiers) expect(Math.abs((count.get(t.id) ?? 0) / n - t.weight / total)).toBeLessThan(0.015);

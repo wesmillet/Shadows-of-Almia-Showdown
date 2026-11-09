@@ -46,6 +46,22 @@
           "weight": 1.2
         },
         {
+          "dex": "0287",
+          "weight": 4,
+          "levels": [
+            4,
+            7
+          ]
+        },
+        {
+          "dex": "0123",
+          "weight": 1.5,
+          "levels": [
+            6,
+            9
+          ]
+        },
+        {
           "dex": "0447",
           "weight": 1.5,
           "levels": [
@@ -83,11 +99,19 @@
           "weight": 10
         },
         {
-          "dex": "0518",
+          "dex": "0517",
           "weight": 4,
           "levels": [
-            8,
-            11
+            5,
+            8
+          ]
+        },
+        {
+          "dex": "0957",
+          "weight": 3,
+          "levels": [
+            5,
+            8
           ]
         },
         {
@@ -250,6 +274,14 @@
           "habitat": "rocky"
         },
         {
+          "dex": "0562",
+          "weight": 4,
+          "levels": [
+            5,
+            8
+          ]
+        },
+        {
           "dex": "0095",
           "weight": 3,
           "levels": [
@@ -357,6 +389,13 @@
   "starterBaseTiers": [
     "common"
   ],
+  "_eggWeightsComment": "The daily Egg's tier odds (relative weights; Commons never hatch). Mythic 0.96 against 27 + 13 + 7 is 2%.",
+  "eggWeights": {
+    "uncommon": 27,
+    "rare": 13,
+    "epic": 7,
+    "mythic": 0.96
+  },
   "starterTiers": [
     {
       "id": "common",
@@ -385,7 +424,15 @@
         "0238",
         "0236",
         "0446",
-        "0133"
+        "0133",
+        "0280",
+        "0092",
+        "0570",
+        "0037",
+        "0349",
+        "0679",
+        "0123",
+        "0215"
       ]
     },
     {

@@ -126,8 +126,9 @@ describe('computer trainers', async () => {
     m.placeParty(b);
     m.step(1 / 60);
     expect(m.isDark(b.x, b.y)).toBe(true);
-    for (let i = 0; i < 60 * 4; i++) m.step(1 / 60);
+    for (let i = 0; i < 60; i++) m.step(1 / 60);
     expect(b.stormT ?? 0).toBeGreaterThan(0);
+    for (let i = 0; i < 60 * 3; i++) m.step(1 / 60);
     expect(Math.hypot(b.x - m.centerX, b.y - m.centerY)).toBeLessThan(66);
     // A bot and a human far out in the storm, with no way back in time: both pass out at the same exposure.
     freeze(5);

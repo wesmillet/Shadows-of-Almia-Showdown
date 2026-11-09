@@ -117,8 +117,13 @@ export function poolSize(unlocked: readonly string[] = []): number {
  * Epic 7, Mythic 3: about 54%, 26%, 14% and 6%), every tier in full whatever the player's pool, then
  * a Pokémon in it.
  */
+/** The daily Egg's tier weights (data/spawns.json eggWeights; the starter tiers' own weights otherwise). */
+const EGG_WEIGHTS = (SPAWNS as unknown as { eggWeights?: Record<string, number> }).eggWeights ?? {};
+
 export function rollEgg(rng: Rng): { tier: StarterTier; dex: string } {
-  return rollStarter(rng, STARTER_TIERS.filter((t) => t.dex.length && t.id !== 'common'));
+  const tiers = STARTER_TIERS.filter((t) => t.dex.length && t.id !== 'common').map((t) => ({ ...t, weight: EGG_WEIGHTS[t.id] ?? t.weight }));
+  const r = rollStarter(rng, tiers);
+  return { tier: STARTER_TIERS.find((t) => t.id === r.tier.id) ?? r.tier, dex: r.dex };
 }
 
 /** Rolls a tier by weight, then a Pokémon in it. */

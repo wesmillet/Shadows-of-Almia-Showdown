@@ -428,15 +428,16 @@ export function shareKnockoutXp(dealer: Mon, target: Mon, party: Mon[], shareRan
       out.push({ mon: m, xp, levels: gainXp(m, xp) });
       continue;
     }
-    // Waiting in a ball: a small share. Out on the field nearby: half.
+    // Waiting in a ball: benchShare. Out on the field nearby: fieldShare.
     if (m.stowed) {
       const part = egg(m, Math.floor(total * bench));
       if (part > 0) out.push({ mon: m, xp: part, levels: gainXp(m, part) });
       continue;
     }
     if (Math.hypot(m.x - target.x, m.y - target.y) > shareRange) continue;
-    const half = egg(m, Math.floor(total / 2));
-    out.push({ mon: m, xp: half, levels: gainXp(m, half) });
+    const field = (CONFIG.party as typeof CONFIG.party & { fieldShare?: number }).fieldShare ?? 0.5;
+    const part = egg(m, Math.floor(total * field));
+    out.push({ mon: m, xp: part, levels: gainXp(m, part) });
   }
   return out;
 }

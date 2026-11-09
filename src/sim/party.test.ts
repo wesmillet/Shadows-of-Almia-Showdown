@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formationOffset, gainXp, joinBehavior, nextBehavior, shareKnockoutXp, xpForKnockout, xpToNext } from './party';
-import { species, statsAtLevel } from './data';
+import { CONFIG, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 
 function mon(dex: string, x: number, y: number, behavior: Mon['behavior'] = 'guard'): Mon {
@@ -32,7 +32,7 @@ describe('xp', () => {
     expect(m.xp).toBe(5);
   });
 
-  it('shares half to nearby non-roaming members, nothing from a roamer', () => {
+  it('shares fieldShare to nearby non-roaming members, nothing from a roamer', () => {
     const target = mon('0129', 5, 5);
     const dealer = mon('0025', 5, 6);
     const near = mon('0387', 6, 6);
@@ -42,7 +42,7 @@ describe('xp', () => {
     const out = shareKnockoutXp(dealer, target, [dealer, near, far, roamer], 8);
     expect(out.map((o) => [o.mon.dex, o.xp])).toEqual([
       ['0025', total],
-      ['0387', Math.floor(total / 2)],
+      ['0387', Math.floor(total * CONFIG.party.fieldShare)],
     ]);
     const solo = shareKnockoutXp(roamer, target, [dealer, near, roamer], 8);
     expect(solo).toHaveLength(1);

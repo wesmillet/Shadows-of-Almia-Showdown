@@ -218,7 +218,7 @@ export class MirrorMatch {
 
   private applyUpdate(p: Extract<ServerMsg, { t: 's' }>['p'], events: Array<Record<string, unknown>>, ack: number): void {
     const now = performance.now() / 1000;
-    if (this.lastUpdateAt) this.interval = Math.max(0.03, Math.min(0.15, this.interval * 0.8 + (now - this.lastUpdateAt) * 0.2));
+    if (this.lastUpdateAt) this.interval = Math.max(0.03, Math.min(0.25, this.interval * 0.8 + (now - this.lastUpdateAt) * 0.2));
     this.lastUpdateAt = now;
     // Where everything is drawn now: the glide to the new spots starts from here.
     const before = new Map<Obj, Record<string, number>>();

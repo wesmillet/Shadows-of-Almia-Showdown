@@ -514,6 +514,8 @@ export class Room implements RoomHandle {
     for (const p of this.players.values()) {
       // Eliminated players keep watching until they leave.
       if (!p.peer || p.phase !== phase) continue;
+      // Knocked out and watching: 10 updates a second is plenty (half the CPU, half the bandwidth).
+      if (p.ended && Math.floor(this.steps / SEND_EVERY) % 2 === 1) continue;
       const evs = p.pending;
       p.pending = [];
       const root = p.view.build();

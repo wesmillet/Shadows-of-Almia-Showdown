@@ -1,6 +1,6 @@
 /**
  * Replays: every match is recorded as the stream a spectator who sees what every trainer sees
- * would get (nobody's bag), 10 updates a second, gzipped to DATA_DIR/replays/<match>.jsonl.gz. Every
+ * would get (nobody's bag), 5 updates a second (the player glides between them), gzipped to DATA_DIR/replays/<match>.jsonl.gz. Every
  * KEYFRAME_SECONDS the stream starts over with everything in full, so a viewer can jump anywhere by
  * starting from the keyframe before it.
  *
@@ -19,7 +19,7 @@ import { PlayerView } from './view';
 
 export const REPLAY_VERSION = 1;
 /** Simulation steps per recorded update (60 / 6 = 10 a second). */
-export const RECORD_EVERY = 6;
+export const RECORD_EVERY = 12;
 export const KEYFRAME_SECONDS = 30;
 
 export function replayDir(dataDir: string): string {
@@ -52,7 +52,7 @@ export class ReplayRecorder {
 
   constructor(dir: string, readonly matchId: string, seed: number, mode: string, roster: RosterEntry[], private readonly match: Match, private readonly ids: IdTable) {
     this.file = join(dir, `${matchId}.jsonl.gz`);
-    this.gz = createGzip({ level: 6 });
+    this.gz = createGzip({ level: 3 });
     this.out = createWriteStream(this.file);
     this.gz.pipe(this.out);
     // What any trainer can see (a replay follows a trainer), nobody's bag (the first trainer only anchors the view).

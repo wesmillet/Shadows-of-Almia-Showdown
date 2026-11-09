@@ -42,16 +42,17 @@ export class Input {
   constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
-      // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys; nor
-      // while a dialog (Options, a profile) is open over the game.
-      if (Input.typing(e.target) || document.querySelector('.almia-modal-wrap')) return;
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
-      // While the Options screen listens for a new key, the game sees nothing.
+      // While the Options screen listens for a new key, it gets the key and the game sees nothing.
+      // (First: Options is itself a dialog, and dialogs otherwise hide every key from the game.)
       if (Input.capture) {
         e.preventDefault();
         Input.capture(e.code);
         return;
       }
+      // Typing in a text box (chat, sign-in) is not playing: the game does not see those keys; nor
+      // while a dialog (Options, a profile) is open over the game.
+      if (Input.typing(e.target) || document.querySelector('.almia-modal-wrap')) return;
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
       // Rebound keys (Options) arrive as the default code the game listens for.
       const code = logicalKey(e.code);
       if (!code) return;

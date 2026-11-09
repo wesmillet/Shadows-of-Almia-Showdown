@@ -18,6 +18,8 @@ header button { font: inherit; background: transparent; color: var(--cream); bor
 header button.on { border-color: var(--cream); }
 header .who { margin-left: auto; opacity: 0.8; }
 header a { color: var(--cream); opacity: 0.8; }
+header a.modlink { opacity: 1; border: 2px solid var(--cream); padding: 3px 10px; text-decoration: none; }
+.drainrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; }
 main { max-width: 1100px; margin: 16px auto; padding: 0 16px; }
 .panel { background: var(--cream); border: 3px solid var(--ink); box-shadow: 0 4px 0 #2a1d14; padding: 14px 16px; margin-bottom: 14px; overflow-x: auto; }
 h2 { font-family: BoldPixels, system-ui; font-weight: normal; margin: 0 0 10px; font-size: 18px; }
@@ -57,7 +59,7 @@ th[data-dir="asc"]::after { content: " \\25B2"; } th[data-dir="desc"]::after { c
 .fb { white-space: pre-wrap; max-width: 420px; }
 .badge { background: var(--bad); color: #fff; padding: 0 5px; margin-left: 4px; font-size: 11px; }
 </style></head><body>
-<header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a href="/mod">Moderation</a></header>
+<header><h1>Admin</h1><span id="tabs"></span><span class="who" id="who"></span><a class="modlink" href="/mod">Moderation page &rarr;</a></header>
 <main id="main"><div class="panel">Loading...</div></main>
 <script>
 const TABS = [['online', 'Online'], ['server', 'Server'], ['live', 'Live matches'], ['history', 'Match history'], ['accounts', 'Accounts'], ['feedback', 'Feedback'], ['gifts', 'Mystery Gift']];
@@ -87,9 +89,10 @@ document.addEventListener('click', (e) => {
 const sortHead = (cols, cur) => '<tr>' + cols.map(([k, l]) => k ? '<th data-sort="' + k + '"' + (cur.sort === k ? ' data-dir="' + cur.dir + '"' : '') + '>' + l + '</th>' : '<th>' + l + '</th>').join('') + '</tr>';
 const sortClicks = (cur, redo) => { for (const th of document.querySelectorAll('th[data-sort]')) th.onclick = () => { cur.dir = cur.sort === th.dataset.sort && cur.dir === 'asc' ? 'desc' : 'asc'; cur.sort = th.dataset.sort; redo(); }; };
 const who = (p) => p.guest ? '<span class="tag guest">guest</span>' : p.human === false || p.bot ? '<span class="tag bot">bot</span>' : '<span class="tag human">account</span>';
-const api = async (path) => {
+const api = async (path, body) => {
   let r;
-  try { r = await fetch(path, { credentials: 'include' }); } catch { return { error: 'Could not reach the server' }; }
+  const opts = body === undefined ? { credentials: 'include' } : { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Almia': '1' }, body: JSON.stringify(body) };
+  try { r = await fetch(path, opts); } catch { return { error: 'Could not reach the server' }; }
   const j = await r.json().catch(() => ({ error: 'Bad reply (HTTP ' + r.status + ')' }));
   if (!r.ok && !j.error) j.error = 'HTTP ' + r.status;
   return j;
@@ -225,7 +228,12 @@ async function server() {
     const up = Math.round((Date.now() - j.startedAt) / 1000);
     const upText = up < 3600 ? Math.round(up / 60) + ' min' : up < 86400 ? (up / 3600).toFixed(1) + ' h' : (up / 86400).toFixed(1) + ' days';
     const col = (k) => ss.map((x) => x[k] || 0);
-    $('#main').innerHTML = '<div class="panel"><h2>Server health</h2>' +
+    // Drain: no new matches start (the ones running finish); for a deploy. Same switch as /mod#server.
+    const drain = '<div class="drainrow">' + (j.draining
+      ? '<b class="bad">DRAINING: no new matches</b><button class="act" data-drain="0">Let matches start</button>'
+      : '<button class="act alt" data-drain="1">Drain (no new matches)</button>') +
+      '<span class="dim">' + s.rooms + ' match' + (s.rooms === 1 ? '' : 'es') + ' running</span><a href="/mod#server">Moderation: Server &rarr;</a></div>';
+    $('#main').innerHTML = '<div class="panel"><h2>Server health</h2>' + drain +
       '<div class="health ' + verdict[0] + '"><span class="dot"></span><span>' + verdict[1] + '</span></div>' +
       '<div class="grid">' +
         st(s.cpuPct + '%', 'CPU in use', j.cores + ' core' + (j.cores === 1 ? '' : 's') + '; trouble above 85%') +
@@ -245,8 +253,19 @@ async function server() {
       '</div>' +
       '<p class="dim">Samples every 10 s, kept for an hour (they start over when the server restarts). Updated ' + new Date(j.at).toLocaleTimeString() + '; refreshes every 10 s while this tab is open.</p></div>';
   };
+  // The drain buttons are drawn again on every refresh: wire them each time.
+  const wireDrain = () => {
+    for (const x of document.querySelectorAll('[data-drain]')) x.onclick = async () => {
+      x.disabled = true;
+      const res = await api('/api/mod/drain', { on: x.dataset.drain === '1' });
+      if (res.error) alert(res.error);
+      await draw();
+      wireDrain();
+    };
+  };
   await draw();
-  timer = setInterval(() => { if (document.visibilityState === 'visible' && tab === 'server') draw(); }, 10000);
+  wireDrain();
+  timer = setInterval(async () => { if (document.visibilityState === 'visible' && tab === 'server') { await draw(); wireDrain(); } }, 10000);
 }
 
 // ---------------------------------------------------------------- live matches

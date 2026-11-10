@@ -3636,9 +3636,6 @@ export class Match {
       this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
       if (d.finale && !this.darkrai) {
         this.spawnDarkrai();
-        // The one Master Ball of the match appears at the crystal's foot.
-        this.placeBall('master', [{ id: 'master-ball', count: 1 }], this.centerX + 1.5, this.centerY + 1.2);
-        this.battle.events.push({ type: 'notice', text: 'A Master Ball glints beside the crystal', seconds: 3 });
       }
     }
     if (d.collapsed) this.battle.events.push({ type: 'notice', text: "The crystal's last light is fading. Nowhere is safe now!", seconds: 4 });

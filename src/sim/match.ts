@@ -1980,8 +1980,12 @@ export class Match {
    * starting with a Pokémon they own as a shiny).
    */
   makeStarter(dex: string, level: number, owner: Trainer, x: number, y: number): Mon {
+    // Marks after the dex: '^' an Alpha, '*' a shiny (online: a line they own as one).
     const shiny = dex.endsWith('*');
-    const m = this.makeMon(shiny ? dex.slice(0, -1) : dex, level, owner, x, y, shiny);
+    const base = shiny ? dex.slice(0, -1) : dex;
+    const alpha = base.endsWith('^');
+    const m = this.makeMon(alpha ? base.slice(0, -1) : base, level, owner, x, y, shiny);
+    if (alpha) m.alpha = true;
     m.moves = starterMoves(m.species, level);
     m.cooldowns = m.moves.map(() => 0);
     return m;
@@ -2184,7 +2188,10 @@ export class Match {
     let level = this.rng.int(lv[0] ?? 3, lv[1] ?? 6) + Math.round(this.centerBonus(spot.x, spot.y) * calm * spread);
     // Close to the crystal, now and then an Alpha: huge, fully evolved, level 75.
     const toCenter = Math.hypot(spot.x - this.centerX, spot.y - this.centerY);
-    const alpha = nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
+    // At most alphaPerMatch Alphas a match (one): rare enough to be an event.
+    const cap = (w as typeof w & { alphaPerMatch?: number }).alphaPerMatch ?? 1;
+    const alpha = this.alphasSpawned < cap && nearStart > 30 && toCenter <= w.alphaRadius && this.rng.chance(w.alphaChance);
+    if (alpha) this.alphasSpawned++;
     // Now and then an elite: a few levels higher (often evolved), worth more XP. None right by the starts.
     const elite = !alpha && nearStart > 35 && this.rng.chance(w.eliteChance ?? 0);
     if (elite) level += this.rng.int(w.eliteLevels?.[0] ?? 5, w.eliteLevels?.[1] ?? 9);
@@ -3699,7 +3706,9 @@ export class Match {
 
   private spawnDarkrai(): void {
     // When the darkness has closed on the crystal, Darkrai comes out at level 100.
-    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY + 1.6);
+    // Shiny one time in darkraiShinyOdds (500).
+    const odds = (CONFIG.catch as { darkraiShinyOdds?: number }).darkraiShinyOdds ?? 500;
+    const d = this.makeMon('0491', 100, null, this.centerX, this.centerY + 1.6, this.rng.chance(1 / odds));
     d.boss = true;
     d.wild = false;
     // Its boss kit: slot 0 Dark Void (sleep ring), slot 1 Dark Pulse (stepDarkrai relies on the order).
@@ -4542,6 +4551,9 @@ export class Match {
     this.startDuel(a, b, spots[0], spots[1]);
     this.battle.events.push({ type: 'notice', text: `Final showdown: ${a.name} vs ${b.name}! Both teams are restored`, seconds: 4 });
   }
+
+  /** Alphas spawned so far this match (CONFIG.wild.alphaPerMatch caps them). */
+  alphasSpawned = 0;
 
   /** The darkness stands still (the last two are battling at the crystal): no pulses, no collapse, no Darkrai. */
   darknessHeld = false;

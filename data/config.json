@@ -69,11 +69,12 @@
       5,
       9
     ],
-    "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
+    "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas, at most alphaPerMatch in a whole match: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
     "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 1 in 2048 (twice the 1 in 4096 of the latest main games) gives a shiny somewhere among a match's 310 or so wild Pokemon and fishing bites about every 7 matches; a trainer who meets 40-60 wilds sees one about every 40 matches. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
     "shinyChance": 0.00048828125,
     "alphaShinyMultiplier": 4,
     "alphaChance": 0.07,
+    "alphaPerMatch": 1,
     "alphaRadius": 55,
     "alphaLevelBonus": 10,
     "alphaLevelMax": 65,
@@ -249,6 +250,7 @@
     "legendCatch": { "mult": 0.3, "max": 0.22 },
     "caughtLegendLevel": 60,
     "legendShinyChance": 0.01,
+    "darkraiShinyOdds": 500,
     "statusBonus": {
       "sleep": 2,
       "paralysis": 1.5,

@@ -637,6 +637,21 @@ export class Accounts {
     return this.shinyLines(userId).includes(dex);
   }
 
+  /** The starters a player starts as Alphas: each line they have an Alpha of in their PC (first form included). */
+  alphaLines(userId: number): string[] {
+    const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex, json_extract(entry, '$.evolvedFrom') AS evo FROM pc WHERE user_id = ? AND json_extract(entry, '$.alpha') IN (1, 'true')").all(userId) as Array<{ dex: string; evo: string | null }>;
+    const out = new Set<string>();
+    for (const r of rows) {
+      for (const d of [r.dex, r.evo]) {
+        if (typeof d !== 'string') continue;
+        out.add(d);
+        const b = nominationBase(d);
+        if (b) out.add(b);
+      }
+    }
+    return [...out];
+  }
+
   /** The starters a player starts shiny: each species they have a shiny of, and its line's first form. */
   shinyLines(userId: number): string[] {
     const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex FROM pc WHERE user_id = ? AND json_extract(entry, '$.shiny') IN (1, 'true')").all(userId) as Array<{ dex: string }>;

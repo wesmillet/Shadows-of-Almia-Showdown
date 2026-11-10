@@ -3158,7 +3158,7 @@ export class MatchScreen implements Screen {
         continue;
       }
       // Land bosses and the stronger wilds go by their plain names (their level tells the story).
-      const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.alpha ? `Alpha ${m.name}` : m.name;
+      const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.name;
       const label = m.shiny ? `Shiny ${base}` : base;
       drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : '#fff', m.alpha ? this.alphaBadge : null);
     }

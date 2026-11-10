@@ -13,6 +13,7 @@ import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES, typeColor } from '../sim/data';
 import { nominationBase, nominationCost, NOMINATION_SLOTS, pcBase, STARTER_TIERS, tierOf } from '../sim/starters';
 import { loadPc, setFavLocal, shownDex, shownName, type PcEntry } from '../pc';
+import { drawAlphaBadge } from './alphaBadge';
 import type { Assets } from '../sprites/assets';
 import { AnimPlayer, SpriteRegistry, type FrameRect } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, textScale, uiFont, type GameContext, type Screen } from './screens';
@@ -794,8 +795,10 @@ export class PcScreen implements Screen {
     const tx = px + ps + 26 * s;
     const tw = r.x + r.w - pad - tx - 34 * s;
     const name = shownName(e);
-    text(v, name, tx, py + 18 * s, 18, { color: e.shiny ? INK.blue : INK.text, shadow: false, maxWidth: tw });
-    const tags = [`Lv ${e.level}`, e.shiny ? 'Shiny' : '', e.alpha ? 'Alpha' : '', e.shadow ? 'Shadow' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
+    // An Alpha's name follows the Alpha mark.
+    const mark = e.alpha ? drawAlphaBadge(v.hud, tx, py + 4 * s, 20 * s) : 0;
+    text(v, name, tx + (mark ? mark + 5 * s : 0), py + 18 * s, 18, { color: e.shiny ? INK.blue : INK.text, shadow: false, maxWidth: tw - (mark ? mark + 5 * s : 0) });
+    const tags = [`Lv ${e.level}`, e.shiny ? 'Shiny' : '', e.shadow ? 'Shadow' : '', e.legend ? 'Legend' : ''].filter(Boolean).join(' · ');
     text(v, tags, tx, py + 38 * s, 12, { color: INK.accent, shadow: false, maxWidth: r.x + r.w - pad - tx });
     let cx = tx;
     for (const ty of sp?.types ?? []) {
@@ -1001,6 +1004,8 @@ export class PcScreen implements Screen {
     h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     if (e.alpha && !e.shadow) h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     h.restore();
+    // The Alpha mark in the slot's top-left corner.
+    if (e.alpha) drawAlphaBadge(h, cx - room / 2, cy - room / 2, room * 0.32);
   }
 
   /** Per species: the opaque area of all its front-facing idle frames, in frame pixels. */

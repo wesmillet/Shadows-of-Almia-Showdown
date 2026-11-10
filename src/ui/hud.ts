@@ -3,6 +3,7 @@
  * minimap with the darkness (top right), party strip with portraits and HP
  * (bottom), move wheel (bottom right) and the item bar (bottom centre).
  */
+import { drawAlphaBadge } from './alphaBadge';
 import { Input } from '../core/input';
 import { canMega } from '../sim/mega';
 import { DIR_VECTORS, clamp } from '../core/math';
@@ -1015,6 +1016,8 @@ export class Hud {
       const tabW = Math.min(right - chipW - 6 * s, Math.round(ctx.measureText(tabText).width + 6 * k2 + 10 * s));
       if (!this.ui.flat(ctx, 'tab', rx, y0, tabW, tabH, k2)) this.panel(ctx, rx, y0, tabW, tabH, 6);
       this.ink(ctx, tabText, rx + 4 * k2 + 3 * s, y0 + 2 * k2 + (tabH - 6 * k2) / 2 + 4.5 * s, 10, m.fainted ? '#8a7a6a' : m.shiny ? '#1f7a9a' : FLAT_INK.text, 'left', tabW - 6 * k2 - 6 * s);
+      // An Alpha: its mark on the portrait's corner.
+      if (m.alpha) drawAlphaBadge(ctx, px + 1 * s, py + 1 * s, ps * 0.36);
       // HP: the gold-rimmed bar along the bottom of the row; the numbers (or where it roams) beside the tab.
       const bk = k2;
       const by = y0 + ps - 10 * bk - 2 * s;

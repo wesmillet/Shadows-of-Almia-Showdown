@@ -11,6 +11,7 @@ import { CONFIG, movesAt, move, species, SPECIES, type SpeciesDef } from '../sim
 import { AnimPlayer, type SpriteRegistry } from '../sprites/pokemonSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPx, text, wrapText, type GameContext, type Screen } from './screens';
 import { typeColor } from '../sim/data';
+import { drawAlphaBadge } from './alphaBadge';
 
 import { NOMINATION_SLOTS, REEL_CARDS, rollStarter, STARTER_CHOICES, STARTER_TIERS, starterReels, type StarterTier } from '../sim/starters';
 
@@ -92,6 +93,8 @@ export class RollScreen implements Screen {
     private readonly pc: readonly string[] = [],
     /** Starters they would start shiny (they own a shiny of the line): drawn shiny. */
     private readonly shinies: ReadonlySet<string> = new Set(),
+    /** Starters they would start as Alphas (they own an Alpha of the line): the Alpha mark on the card. */
+    private readonly alphas: ReadonlySet<string> = new Set(),
   ) {
     if (daily) void this.sprites.preload([daily], undefined, true);
     // The first two reels roll from the PC (Commons without one); the third from the nominations
@@ -301,6 +304,7 @@ export class RollScreen implements Screen {
       ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, Math.round(cx - ((bb.x0 + bb.x1) / 2) * sc), Math.round(feet - bb.y1 * sc), f.w * sc, f.h * sc);
       ctx.restore();
     }
+    if (this.alphas.has(card.def.dex)) drawAlphaBadge(ctx, x + 8 * s, y + 50 * s, 30 * s);
     text(v, card.def.name, cx, y + 200 * s, 24, { align: 'center', color: INK.text, shadow: false, maxWidth: inner });
     // Type chips, centred.
     const chipW = Math.min(76 * s, (inner - 8 * s) / 2);

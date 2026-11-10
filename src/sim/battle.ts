@@ -319,7 +319,7 @@ export class BattleSystem {
   /** Each beam's leftover fractions of a point, per target (see landHit); gone with the beam. */
   private readonly beamCarry = new WeakMap<object, Map<Mon, number>>();
   /** Hits on their way to their targets (see impactDelay). */
-  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number }> = [];
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; home?: boolean }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
   shotLine: ShotLine | null = null;
   /** Seconds of hit-stop left; the match skips simulation while positive. */
@@ -406,7 +406,9 @@ export class BattleSystem {
     // Aimed at a Pokémon (auto-battle): a single-target move follows it, a contact move lunges after it.
     const id = attacker.moves[slot];
     if (target && id && move(id).shape === 'single') return this.tryCast(attacker, slot, target.x, target.y, target.id, target);
-    return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, null);
+    // A line or a cone aimed at a Pokémon remembers it (a trainer battle turns it onto the foe as it goes off).
+    const aimed = target && id && (move(id).shape === 'line' || move(id).shape === 'cone') ? target.id : null;
+    return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, aimed);
   }
 
   /**
@@ -590,6 +592,24 @@ export class BattleSystem {
           this.stepChannel(mon, 0, candidates);
           return;
         }
+        // In a trainer battle a single-target move cast at the foe follows it to where it is now
+        // (a side-step does not make it miss; a dodge still does). Elsewhere `single` keeps its locked point.
+        if ((m.shape === 'single' || m.shape === 'line' || m.shape === 'cone') && mon.casting.targetId != null && mon.duelId) {
+          for (const c of candidates()) {
+            if (c.id !== mon.casting.targetId || c.duelId !== mon.duelId || !BattleSystem.active(c)) continue;
+            if (m.shape === 'single') {
+              mon.casting.targetX = c.x;
+              mon.casting.targetY = c.y;
+            } else {
+              // A line or cone keeps its length and turns onto the foe.
+              const len = Math.hypot(mon.casting.targetX - mon.x, mon.casting.targetY - mon.y) || 1;
+              const dl = Math.hypot(c.x - mon.x, c.y - mon.y) || 1;
+              mon.casting.targetX = mon.x + ((c.x - mon.x) / dl) * len;
+              mon.casting.targetY = mon.y + ((c.y - mon.y) / dl) * len;
+            }
+            break;
+          }
+        }
         const area = makeArea(m, { ...mon, x: mon.x, y: mon.y } as Mon, mon.casting.targetX, mon.casting.targetY);
         // Line, cone and ring areas follow the caster's position at cast start; `single` keeps its locked point.
         this.resolve(mon, m, area, candidates());
@@ -640,7 +660,9 @@ export class BattleSystem {
         continue;
       }
       const wait = impactDelay(attacker, target, m);
-      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y });
+      // A trainer battle's shot finds its foe (a dodge in the meantime still slips it).
+      const home = !!attacker.duelId && attacker.duelId === target.duelId;
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, home });
       else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
@@ -735,7 +757,11 @@ export class BattleSystem {
     // target that has since moved well clear of that spot is missed, not chased.
     for (const f of due) {
       if (!BattleSystem.active(f.target) || !this.isEnemy(f.attacker, f.target)) continue;
-      if (Math.hypot(f.target.x - f.x, f.target.y - f.y) > 0.8 * R() + hitPad(f.target.species)) {
+      if (f.home && f.target.dodge && f.target.dodge.safe > 0) {
+        this.events.push({ type: 'dodged', mon: f.target });
+        continue;
+      }
+      if (!f.home && Math.hypot(f.target.x - f.x, f.target.y - f.y) > 0.8 * R() + hitPad(f.target.species)) {
         this.events.push({ type: 'text', mon: f.target, text: 'Missed!' });
         continue;
       }

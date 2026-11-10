@@ -2518,7 +2518,16 @@ export class Match {
       a = this.aim ?? { x: m.x + f.x * 3, y: m.y + f.y * 3 };
       const side = duel.a.trainer === p ? duel.b : duel.a;
       const foe = side.mon;
-      if (foe && !foe.fainted && this.aim && Math.hypot(foe.x - this.aim.x, foe.y - this.aim.y) < 1.6) a = { x: foe.x, y: foe.y };
+      // Aimed anywhere near the foe (or not aimed at all): the move is cast at the foe and a
+      // single-target move follows it, as a rival's moves do (a side-step no longer makes it miss;
+      // a dodge still does).
+      if (foe && !foe.fainted && (!this.aim || Math.hypot(foe.x - this.aim.x, foe.y - this.aim.y) < CONFIG.duel.aimAssist)) {
+        m.dir = dirFromVector(foe.x - m.x, foe.y - m.y, m.dir);
+        m.anim.dir = m.dir;
+        if (!this.battle.castToward(m, slot, foe.x, foe.y, undefined, foe)) return 'cooldown';
+        m.manualCast = true;
+        return 'cast';
+      }
     } else {
       const f = DIR_VECTORS[p.dir] as { x: number; y: number };
       const snap = this.aimSnap();
@@ -2614,8 +2623,12 @@ export class Match {
       const ch = m.channel;
       if (!ch) continue;
       if (m === mine && this.aim && ch.manual) {
-        ch.aimX = this.aim.x;
-        ch.aimY = this.aim.y;
+        // In a trainer battle, a cursor anywhere near the foe keeps the beam on the foe (aimAssist).
+        const d = this.playerDuel;
+        const foe = d ? (d.a.mon === m ? d.b.mon : d.a.mon) : null;
+        const onFoe = foe && BattleSystem.active(foe) && Math.hypot(foe.x - this.aim.x, foe.y - this.aim.y) < CONFIG.duel.aimAssist;
+        ch.aimX = onFoe ? foe.x : this.aim.x;
+        ch.aimY = onFoe ? foe.y : this.aim.y;
       } else if (m.target && BattleSystem.active(m.target)) {
         ch.aimX = m.target.x;
         ch.aimY = m.target.y;

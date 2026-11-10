@@ -35,19 +35,17 @@ export interface CatchContext {
  */
 export function ballModifier(ballId: string, ctx: CatchContext): number {
   const m = ballBase(ballId, ctx);
-  // The Quick Ball already eases off against much higher levels (quickBonus) once it counts.
-  const quick = ITEMS[ballId]?.special === 'quick' && !ctx.target.everHit;
-  return Number.isFinite(m) && !quick ? m * overLevelFactor(ctx) : m;
+  return Number.isFinite(m) ? m * levelFactor(ctx.target.level) : m;
 }
 
 /**
- * Every ball but the Master Ball works less well on a Pokémon above the thrower's team: from
- * CONFIG.catch.overLevel.from levels over their best, perLevel less a level, down to min.
+ * Every ball but the Master Ball works less well on higher-level Pokémon, by the Pokémon's own
+ * level (not the thrower's team): full strength up to CONFIG.catch.levelFalloff.from, perLevel
+ * less a level above it, down to min.
  */
-export function overLevelFactor(ctx: CatchContext): number {
-  const o = (CONFIG.catch as { overLevel?: { from: number; perLevel: number; min: number } }).overLevel ?? { from: 3, perLevel: 0.04, min: 0.2 };
-  const top = Math.max(1, ...ctx.thrower.party.filter((m) => m !== ctx.target && !m.fainted).map((m) => m.level));
-  const over = ctx.target.level - top - o.from;
+export function levelFactor(level: number): number {
+  const o = (CONFIG.catch as { levelFalloff?: { from: number; perLevel: number; min: number } }).levelFalloff ?? { from: 20, perLevel: 0.02, min: 0.25 };
+  const over = level - o.from;
   return over > 0 ? clamp(1 - o.perLevel * over, o.min, 1) : 1;
 }
 
@@ -71,9 +69,8 @@ function ballBase(ballId: string, ctx: CatchContext): number {
     case 'dusk':
       return base * (ctx.inDark ? 3 : 1);
     case 'quick':
-      // Thrown first, before anything has attacked it: x5, easing to x2.5 against a Pokémon far above
-      // the thrower's team (10 to 30 levels over its best): still a good ball, not a free one.
-      return base * (ctx.target.everHit ? 1 : quickBonus(ctx));
+      // Thrown first, before anything has attacked it: x5 (higher levels ease it like every ball).
+      return base * (ctx.target.everHit ? 1 : 5);
     case 'heal':
     default:
       return base;
@@ -81,11 +78,6 @@ function ballBase(ballId: string, ctx: CatchContext): number {
 }
 
 /** The Quick Ball's first-throw bonus against this target (see ballModifier). */
-export function quickBonus(ctx: CatchContext): number {
-  const top = Math.max(1, ...ctx.thrower.party.filter((m) => m !== ctx.target && !m.fainted).map((m) => m.level));
-  const over = ctx.target.level - top;
-  return clamp(5 - (2.5 * (over - 10)) / 20, 2.5, 5);
-}
 
 export function catchChance(target: Mon, modifier: number): number {
   if (!Number.isFinite(modifier)) return 1;

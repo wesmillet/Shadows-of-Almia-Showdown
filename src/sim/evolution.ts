@@ -8,7 +8,7 @@
  */
 import type { Rng } from '../core/rng';
 import { AnimPlayer, type PokemonSprites } from '../sprites/pokemonSprite';
-import { SPECIES, statLevel, statsAtLevel, type SpeciesDef } from './data';
+import { CONFIG, SPECIES, statLevel, statsAtLevel, type SpeciesDef } from './data';
 import type { Mon } from './entities';
 
 export const EVOLVE_SWAP = 1.1;
@@ -50,6 +50,10 @@ export function formAtLevel(dex: string, level: number, rng: Rng, wild = false):
       // Just past the evolution level a wild one is often still unevolved; ten levels past it, never.
       const at = Math.min(...(sp.evolves ?? []).map((e) => e.level));
       if (level - at < 10 && !rng.chance(0.2 + 0.08 * (level - at))) break;
+      // A few evolved forms are kept rare in the wild (CONFIG.wild.rareWildForms: the chance one
+      // appears where it otherwise would; Armarouge and Ceruledge).
+      const rare = (CONFIG.wild as { rareWildForms?: Record<string, number> }).rareWildForms?.[next];
+      if (rare !== undefined && !rng.chance(rare)) break;
     }
     cur = next;
   }

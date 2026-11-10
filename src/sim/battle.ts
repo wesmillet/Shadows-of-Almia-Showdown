@@ -333,7 +333,7 @@ export class BattleSystem {
 
   /** Can `m` act and be hit right now? */
   static active(m: Mon): boolean {
-    return !m.fainted && !m.captured && !m.stowed;
+    return !m.fainted && !m.captured && !m.stowed && !m.ballHit;
   }
 
   /** Nearest hostile to `m` within `range` tiles; with `coneDeg` only those inside the facing cone. */

@@ -37,7 +37,7 @@ describe('endgame flying and fainted catches', async () => {
     expect(p.mount?.fly).toBe(true);
   });
 
-  it('a wild knocked out while the ball closes is not caught', () => {
+  it('a 1 HP wild struck by a ball cannot be knocked out before it closes (and is caught healthy)', () => {
     const m = make(0);
     const p = m.seats[0]!.trainer;
     p.party = [m.makeMon('0004', 30, p, p.x, p.y)];
@@ -48,6 +48,9 @@ describe('endgame flying and fainted catches', async () => {
     p.items[0] = { id: 'master-ball', count: 1 };
     expect(m.throwBall(p, 0, { x: w.x, y: w.y }, w)).toBe(true);
     for (let i = 0; i < 60 * 8; i++) m.step(1 / 60);
-    expect(p.party.some((x) => x.dex === '0208')).toBe(false);
+    const caught = p.party.find((x) => x.dex === '0208');
+    expect(caught).toBeTruthy();
+    expect(caught!.fainted).toBe(false);
+    expect(caught!.hp).toBeGreaterThan(0);
   });
 });

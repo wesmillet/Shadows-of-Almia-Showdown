@@ -1223,6 +1223,9 @@ export class Match {
         this.battle.interrupt(best);
         best.moving = false;
         best.target = null;
+        // From the hit until the ball closes nothing can strike it (a teammate's attack used to knock
+        // out a 1 HP Pokémon in that moment, wasting the ball).
+        best.ballHit = true;
         this.battle.events.push({ type: 'ball-hit', mon: best, x: th.x, y: th.y });
         return;
       }
@@ -1231,7 +1234,9 @@ export class Match {
       // Knocked out between the hit and the ball closing (a teammate's attack still landing): a
       // fainted Pokémon can't be caught. Catching it anyway put a fainted, 0 HP Pokémon on the team
       // that the faint animation still held, which jammed swapping, healing and items.
+      if (ev === 'absorb' || ev === 'done') w.ballHit = false;
       if (w.fainted) {
+        w.ballHit = false;
         w.captured = false;
         w.visual = { scale: 1, alpha: 1, flash: 0 };
         th.target = null;

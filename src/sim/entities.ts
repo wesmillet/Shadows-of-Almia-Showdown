@@ -74,6 +74,8 @@ export interface Mon {
   target: Mon | null;
   /** True while shut inside a Poké Ball: cannot act or be targeted. */
   captured: boolean;
+  /** Struck by a ball that has not closed yet: nothing can hit or target it in that moment. */
+  ballHit?: boolean;
   /** Party behaviour (see sim/party.ts). */
   behavior: Behavior;
   xp: number;

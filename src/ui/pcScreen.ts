@@ -176,12 +176,8 @@ export class PcScreen implements Screen {
       Level: (a, b, ia, ib) => b.level - a.level || ia - ib,
       Name: (a, b, ia, ib) => a.name.localeCompare(b.name) || ia - ib,
     };
-    // Favourites first, then the chosen order.
-    order.sort((ia, ib) => {
-      const a = this.list[ia] as PcEntry;
-      const b = this.list[ib] as PcEntry;
-      return Number(!!b.fav) - Number(!!a.fav) || by[this.sort](a, b, ia, ib);
-    });
+    // The chosen order (favourites are hidden for now: no hearts in the PC).
+    order.sort((ia, ib) => by[this.sort](this.list[ia] as PcEntry, this.list[ib] as PcEntry, ia, ib));
     this.view = order;
     this.box = Math.min(this.box, this.boxes - 1);
   }
@@ -345,7 +341,6 @@ export class PcScreen implements Screen {
     const sortR = at(150);
     const chips = [
       { r: at(52), id: 'all' },
-      { r: at(64), id: 'fav' },
       { r: at(70), id: 'shiny' },
       { r: at(92), id: 'nom' },
       { r: at(112), id: 'tier' },
@@ -473,11 +468,6 @@ export class PcScreen implements Screen {
       }
       // Side panel: star and nominate.
       if (shown) {
-        const sr = this.starRect(L.side);
-        if (hit(c.x, c.y, sr.x, sr.y, sr.w, sr.h)) {
-          this.toggleFav(shownI);
-          continue;
-        }
         const rr = this.releaseRect(L.side);
         if (this.net && shown.pcId !== undefined && hit(c.x, c.y, rr.x, rr.y, rr.w, rr.h)) {
           this.release(shownI);
@@ -527,7 +517,6 @@ export class PcScreen implements Screen {
       if (input.pressed('Escape') || input.pressed('KeyP')) return this.onBack();
       if (input.pressed('ArrowLeft') || input.pressed('KeyA') || input.pressed('KeyQ')) this.turn(-1);
       if (input.pressed('ArrowRight') || input.pressed('KeyD') || input.pressed('KeyE')) this.turn(1);
-      if (input.pressed('KeyF') && shown) this.toggleFav(shownI);
     }
     const mx = this.ctx.input.mouseX;
     const my = this.ctx.input.mouseY;
@@ -614,8 +603,13 @@ export class PcScreen implements Screen {
       h.clip();
       this.drawIcon(e, x + L.slot / 2, y + 5 * s + (L.slot - 16 * s) / 2 - up, L.slot - 22 * s);
       h.restore();
-      if (e.fav) glyph(h, 'heart', x + 14 * s, y + 14 * s - up, 5.5 * s, '#e2574c', 'rgba(255,255,255,0.9)');
       if (e.shiny) glyph(h, 'sparkle', x + L.slot - 14 * s, y + 14 * s - up, 6.5 * s, '#e8a400', 'rgba(255,255,255,0.9)');
+      // The Alpha mark on the same side as the shiny sparkle (under it on a shiny Alpha).
+      if (e.alpha) {
+        const bh = 15 * s;
+        const bw = (bh * 57) / 64;
+        drawAlphaBadge(h, x + L.slot - 14 * s - bw / 2, y + (e.shiny ? 22 : 7) * s - up, bh);
+      }
       if (e.shadow) text(v, '◆', x + L.slot - 12 * s, y + L.slot - 14 * s - up, 11, { align: 'center', weight: '900', color: '#c48bff' });
       if (this.isNominated(e)) {
         h.fillStyle = INK.accent;
@@ -672,7 +666,6 @@ export class PcScreen implements Screen {
       const on = c.id === 'tier' ? !!this.tier : this.filter === c.id;
       const mode = c.id === 'nom' && !this.starters ? 'off' : on ? 'on' : 'cream';
       if (c.id === 'all') chip(c.r, 'All', mode);
-      else if (c.id === 'fav') chip(c.r, 'Favs', mode, 'heart', '#e2574c');
       else if (c.id === 'shiny') chip(c.r, 'Shiny', mode, 'sparkle', '#e8a400');
       else if (c.id === 'nom') chip(c.r, 'Starred', mode, 'star', INK.accent);
       else chip(c.r, this.tier ? tierInfo(this.tier).name : 'Any tier', mode);
@@ -808,11 +801,6 @@ export class PcScreen implements Screen {
     }
     const tier = tierInfo(this.tierOf(e));
     this.pill(tx, py + 74 * s, 74 * s, 18 * s, tier.color, tier.name.toUpperCase());
-    // The favourite heart, top right.
-    const sr = this.starRect(r);
-    const overStar = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, sr.x, sr.y, sr.w, sr.h);
-    button(v, '', sr.x, sr.y, sr.w, sr.h, overStar, CREAM);
-    glyph(h, e.fav ? 'heart' : 'heartOutline', sr.x + sr.w / 2, sr.y + (sr.h - 3 * skinPx(v)) / 2 - (overStar ? skinPx(v) : 0), 8 * s, e.fav ? '#e2574c' : INK.dim);
     // Base stats.
     let y = py + ps + 34 * s;
     text(v, 'BASE STATS', r.x + pad, y, 11, { color: INK.dim, shadow: false });
@@ -927,13 +915,10 @@ export class PcScreen implements Screen {
     }
     y += 10 * s;
     const shiny = this.list.filter((e) => e.shiny).length;
-    const favs = this.list.filter((e) => e.fav).length;
     glyph(h, 'sparkle', r.x + pad + 5 * s, y + 6 * s, 6 * s, '#e8a400');
     text(v, `${shiny} shiny`, r.x + pad + 16 * s, y + 10 * s, 12, { color: INK.text, shadow: false });
-    glyph(h, 'heart', r.x + pad + 105 * s, y + 6 * s, 5.5 * s, '#e2574c');
-    text(v, `${favs} favourite${favs === 1 ? '' : 's'}`, r.x + pad + 116 * s, y + 10 * s, 12, { color: INK.text, shadow: false });
     y += 34 * s;
-    const tips = this.starters ? ['Tap a Pokémon to see it, favourite it', 'or star it to make it a likelier third starter.'] : ['Tap a Pokémon to see it', 'or favourite it.'];
+    const tips = this.starters ? ['Tap a Pokémon to see it,', 'or star it to make it a likelier third starter.'] : ['Tap a Pokémon to see it.'];
     tips.forEach((t, k) => text(v, t, r.x + r.w / 2, y + 10 * s + k * 18 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - pad * 2 }));
   }
 
@@ -1004,8 +989,6 @@ export class PcScreen implements Screen {
     h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     if (e.alpha && !e.shadow) h.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * k, f.h * k);
     h.restore();
-    // The Alpha mark in the slot's top-left corner.
-    if (e.alpha) drawAlphaBadge(h, cx - room / 2, cy - room / 2, room * 0.32);
   }
 
   /** Per species: the opaque area of all its front-facing idle frames, in frame pixels. */

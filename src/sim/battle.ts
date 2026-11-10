@@ -319,7 +319,7 @@ export class BattleSystem {
   /** Each beam's leftover fractions of a point, per target (see landHit); gone with the beam. */
   private readonly beamCarry = new WeakMap<object, Map<Mon, number>>();
   /** Hits on their way to their targets (see impactDelay). */
-  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; home?: boolean }> = [];
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
   shotLine: ShotLine | null = null;
   /** Seconds of hit-stop left; the match skips simulation while positive. */
@@ -406,9 +406,7 @@ export class BattleSystem {
     // Aimed at a Pokémon (auto-battle): a single-target move follows it, a contact move lunges after it.
     const id = attacker.moves[slot];
     if (target && id && move(id).shape === 'single') return this.tryCast(attacker, slot, target.x, target.y, target.id, target);
-    // A line or a cone aimed at a Pokémon remembers it (a trainer battle turns it onto the foe as it goes off).
-    const aimed = target && id && (move(id).shape === 'line' || move(id).shape === 'cone') ? target.id : null;
-    return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, aimed);
+    return this.tryCast(attacker, slot, attacker.x + dx * k, attacker.y + dy * k, null);
   }
 
   /**
@@ -592,24 +590,6 @@ export class BattleSystem {
           this.stepChannel(mon, 0, candidates);
           return;
         }
-        // In a trainer battle a single-target move cast at the foe follows it to where it is now
-        // (a side-step does not make it miss; a dodge still does). Elsewhere `single` keeps its locked point.
-        if ((m.shape === 'single' || m.shape === 'line' || m.shape === 'cone') && mon.casting.targetId != null && mon.duelId) {
-          for (const c of candidates()) {
-            if (c.id !== mon.casting.targetId || c.duelId !== mon.duelId || !BattleSystem.active(c)) continue;
-            if (m.shape === 'single') {
-              mon.casting.targetX = c.x;
-              mon.casting.targetY = c.y;
-            } else {
-              // A line or cone keeps its length and turns onto the foe.
-              const len = Math.hypot(mon.casting.targetX - mon.x, mon.casting.targetY - mon.y) || 1;
-              const dl = Math.hypot(c.x - mon.x, c.y - mon.y) || 1;
-              mon.casting.targetX = mon.x + ((c.x - mon.x) / dl) * len;
-              mon.casting.targetY = mon.y + ((c.y - mon.y) / dl) * len;
-            }
-            break;
-          }
-        }
         const area = makeArea(m, { ...mon, x: mon.x, y: mon.y } as Mon, mon.casting.targetX, mon.casting.targetY);
         // Line, cone and ring areas follow the caster's position at cast start; `single` keeps its locked point.
         this.resolve(mon, m, area, candidates());
@@ -660,9 +640,7 @@ export class BattleSystem {
         continue;
       }
       const wait = impactDelay(attacker, target, m);
-      // A trainer battle's shot finds its foe (a dodge in the meantime still slips it).
-      const home = !!attacker.duelId && attacker.duelId === target.duelId;
-      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, home });
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, fromX: attacker.x, fromY: attacker.y });
       else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
@@ -697,7 +675,9 @@ export class BattleSystem {
       let want = Math.atan2(ay, ax) - cur;
       while (want > Math.PI) want -= Math.PI * 2;
       while (want < -Math.PI) want += Math.PI * 2;
-      const maxTurn = (c.turnDegPerSec * Math.PI / 180) * dt * (mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamTurnScale : 1);
+      // The player's own beam follows the cursor briskly; everyone else's sweeps at the slower rate.
+      const deg = ch.manual ? ((c as typeof c & { playerTurnDegPerSec?: number }).playerTurnDegPerSec ?? c.turnDegPerSec) : c.turnDegPerSec;
+      const maxTurn = (deg * Math.PI / 180) * dt * (mon.shadow && mon.owner?.legendBout ? CONFIG.shadowLugia.beamTurnScale : 1);
       const a = cur + Math.max(-maxTurn, Math.min(maxTurn, want));
       ch.dirX = Math.cos(a);
       ch.dirY = Math.sin(a);
@@ -757,11 +737,17 @@ export class BattleSystem {
     // target that has since moved well clear of that spot is missed, not chased.
     for (const f of due) {
       if (!BattleSystem.active(f.target) || !this.isEnemy(f.attacker, f.target)) continue;
-      if (f.home && f.target.dodge && f.target.dodge.safe > 0) {
+      if (f.target.dodge && f.target.dodge.safe > 0) {
         this.events.push({ type: 'dodged', mon: f.target });
         continue;
       }
-      if (!f.home && Math.hypot(f.target.x - f.x, f.target.y - f.y) > 0.8 * R() + hitPad(f.target.species)) {
+      // Missed only by stepping out of the shot's path: how far the target got sideways from the
+      // line it was shot along (walking toward or away from the shooter keeps it in the path).
+      const lx = f.x - f.fromX;
+      const ly = f.y - f.fromY;
+      const ll = Math.hypot(lx, ly) || 1;
+      const side = Math.abs(((f.target.x - f.x) * ly - (f.target.y - f.y) * lx) / ll);
+      if (side > CONFIG.battle.shotDodgeTiles + hitPad(f.target.species)) {
         this.events.push({ type: 'text', mon: f.target, text: 'Missed!' });
         continue;
       }

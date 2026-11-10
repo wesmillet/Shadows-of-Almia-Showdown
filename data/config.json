@@ -119,8 +119,12 @@
       "seconds": 2,
       "tick": 0.25,
       "powerMult": 1.3,
-      "turnDegPerSec": 140
+      "turnDegPerSec": 140,
+      "_playerTurnComment": "How fast the player's own beam follows the cursor (degrees a second); everyone else's turns at turnDegPerSec.",
+      "playerTurnDegPerSec": 540
     },
+    "_shotDodgeComment": "A shot in flight misses only if its target got more than shotDodgeTiles sideways out of the line it was shot along (plus its body); moving toward or away from the shooter does not dodge it.",
+    "shotDodgeTiles": 1.3,
     "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at speed tiles a second (times its Speed multiplier and the move's dash), covering at most maxTiles (times dash) in at most maxSeconds, following a target that moves, and strikes on arrival. It lands only if the two bodies are then touching (data.contactReach: their radii plus reachSlack): a lunge stopped by a wall, or a target that got away, is a miss. A contact hit or a slam's landing shoves the target knockTiles (times power / 80 within knockScale, times the move's knock) unless it is a boss, a legend, an Alpha, a Shadow Pokémon, mid-leap or much bigger than the attacker; walls stop the shove.",
     "lunge": {
       "speed": 16,
@@ -220,8 +224,8 @@
   "duel": {
     "_stalemateComment": "Seconds with neither battling Pokémon losing HP before both trainers send out another (or, with no one else, the battle is called off).",
     "stalemateSeconds": 20,
-    "_aimAssistComment": "In a trainer battle, a move aimed within aimAssist tiles of the foe is cast at the foe, and a single-target move follows it like a rival's do (a dodge still avoids it).",
-    "aimAssist": 4,
+    "_aimAssistComment": "In a trainer battle, a single-target move aimed within aimAssist tiles of the foe is cast at the foe's spot (a side-step can still make it miss).",
+    "aimAssist": 2.5,
     "_finalWinComment": "Against third-partying: with remaining or fewer trainers left, the winner of a trainer battle heals each standing Pokemon by heal of its max HP, can not be challenged for protectSeconds, and takes the loser's bag.",
     "finalWin": { "remaining": 3, "heal": 0.5, "protectSeconds": 20 },
     "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",

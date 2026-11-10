@@ -1177,7 +1177,7 @@ export class Accounts {
       // ratings table stays in the database untouched.)
       if (req.method === 'GET' && path === '/api/replays' && !url.searchParams.get('mine')) return send(200, { replays: this.replayList(null) });
       if (req.method === 'GET' && path === '/api/leaderboard') {
-        const rows = this.db.prepare("SELECT u.username, p.stats FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.banned = 0 AND json_extract(p.stats, '$.wins') > 0 ORDER BY json_extract(p.stats, '$.wins') DESC LIMIT 50").all() as Array<{ username: string; stats: string }>;
+        const rows = this.db.prepare("SELECT u.username, p.stats FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.banned = 0 AND json_extract(p.stats, '$.wins') > 0 ORDER BY json_extract(p.stats, '$.wins') DESC, json_extract(p.stats, '$.matches') ASC LIMIT 10").all() as Array<{ username: string; stats: string }>;
         return send(200, { players: rows.map((r) => ({ name: r.username, ...JSON.parse(r.stats) })) });
       }
       if (req.method === 'GET' && path.startsWith('/api/profile/')) {

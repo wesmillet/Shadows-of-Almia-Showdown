@@ -32,7 +32,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'starters' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'starters' | 'board' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -158,10 +158,12 @@ export class OnlineScreen implements Screen {
       register: signedIn ? { x: -999, y: -999, w: 0, h: 0 } : { x: L.cx + 8 * s, y: y + 92 * s, w: 220 * s, h: 42 * s },
       signout: signedIn ? { x: L.cx + 36 * s, y: y + 98 * s, w: 160 * s, h: 36 * s } : { x: -999, y: -999, w: 0, h: 0 },
       find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
-      // Signed in: Trade, Starters (achievements and third-slot nominations) and Options in a row.
-      trade: signedIn ? { x: L.cx - 196 * s, y: y + L.cardH + 132 * s, w: 124 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      starters: signedIn ? { x: L.cx - 62 * s, y: y + L.cardH + 132 * s, w: 124 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      options: signedIn ? { x: L.cx + 72 * s, y: y + L.cardH + 132 * s, w: 124 * s, h: 44 * s } : { x: L.cx - 84 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      // Signed in: Trade, Starters (achievements and third-slot nominations), Leaderboard and Options
+      // in a row; signed out, Leaderboard and Options.
+      trade: signedIn ? { x: L.cx - 255 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      starters: signedIn ? { x: L.cx - 125 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      board: signedIn ? { x: L.cx + 5 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: L.cx - 174 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      options: signedIn ? { x: L.cx + 135 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: L.cx + 6 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
       // The admin dashboard (only for an account the server made an administrator; the server checks again).
@@ -201,6 +203,7 @@ export class OnlineScreen implements Screen {
     for (const c of input.takeClicks()) {
       if (on(c, 'find')) return this.find();
       if (on(c, 'back')) return this.actions.back();
+      if (on(c, 'board')) return this.actions.leaderboards();
       if (signedIn && on(c, 'trade')) {
         this.busy = true;
         void openTrades(this.net).then(() => {
@@ -316,6 +319,7 @@ export class OnlineScreen implements Screen {
     text(v, 'Ten trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
     if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
     if (me.signedIn) button(v, 'Starters', r.starters.x, r.starters.y, r.starters.w, r.starters.h, over('starters'), '#f4e6c8');
+    button(v, 'Leaderboard', r.board.x, r.board.y, r.board.w, r.board.h, over('board'), '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');
     const sy = r.options.y + r.options.h + 34 * s;
     text(v, this.net.connected ? `Connected${this.net.ping ? ` · ${this.net.ping} ms` : ''}` : 'Connecting...', cx, sy, 12, { align: 'center', color: this.net.connected ? '#9fe8b8' : '#ffe2a0' });

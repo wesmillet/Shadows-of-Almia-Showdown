@@ -241,7 +241,7 @@ export function modal(build: (box: HTMLDivElement, close: () => void) => void, w
 /** All-time wins (ranked play has been retired, and with it the ranked board). */
 export function leaderboardDialog(net: Connection, onProfile: (name: string) => void): Promise<void> {
   return modal((box, close) => {
-    box.append(el('h2', '', 'Leaderboard'));
+    box.append(el('h2', '', 'Leaderboard · Top 10'));
     const list = el('div', 'list');
     list.append(el('div', 'almia-note', 'Loading...'));
     void net.api<{ players: Array<{ name: string; wins: number; matches: number }> }>('/api/leaderboard').then((r) => {

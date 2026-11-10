@@ -401,7 +401,7 @@
       "kind": "voucher",
       "tier": 3,
       "stack": 1,
-      "desc": "Sends one Pokémon from your party to your PC for keeps (it leaves the match)"
+      "desc": "Use it during the match to send one Pokémon from your party to your PC for keeps (it leaves the match)"
     },
     {
       "id": "charizardite-x",

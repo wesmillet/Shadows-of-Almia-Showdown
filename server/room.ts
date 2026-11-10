@@ -576,7 +576,9 @@ export class Room implements RoomHandle {
       results.push({
         key, name: t.name, outcome, place, team: t.team, stats: { ...t.stats },
         party: t.party.filter((x) => !x.captured).map((x) => pcFields(x)),
-        vouchers: t.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0),
+        // Vouchers left in the bag count only for a winner (an extra keep each); anyone else has to
+        // use one during the match to save a Pokémon.
+        vouchers: outcome === 'win' ? t.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0) : 0,
       });
     }
     const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';

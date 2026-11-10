@@ -2854,7 +2854,8 @@ export class Match {
     if (this.controlled) this.releaseControl();
     this.fishing = null;
     const fly = Match.mountOf(mon.dex)?.kind === 'fly';
-    if (fly && this.skiesClosed()) return 'The skies have closed! No flying in the endgame';
+    const fc = Match.flyConfig();
+    if (fly && (p.flyLeft ?? fc.seconds) < fc.seconds * fc.takeOffAt) return `${mon.name} is tired: let it rest before flying again`;
     p.mount = { mon, fly };
     mon.stowed = true;
     this.battle.interrupt(mon);
@@ -2866,20 +2867,14 @@ export class Match {
   }
 
   /**
-   * Flying keeps a trainer out of battles, which let a flyer sit out the endgame while the darkness
-   * or a boss finished everyone else. Once the final showdown starts, the darkness collapses, or
-   * three or fewer trainers are left, flyers are set down and can't take off again.
+   * Flying keeps a trainer out of battles, so it can't last: a flyer has flySeconds in the air (a
+   * bar shows it), refilling over rechargeSeconds on the ground; at empty the mount lands, and it
+   * takes off again only once the bar is back to takeOffAt.
    */
-  skiesClosed(): boolean {
-    if (this.finalStarted || this.darkness.collapsing) return true;
-    const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
-    if (left <= CONFIG.riding.groundAtTrainers && !this.skiesNoticed) {
-      this.skiesNoticed = true;
-      this.battle.events.push({ type: 'notice', text: 'The skies have closed! Flyers must land and battle', seconds: 3 });
-    }
-    return left <= CONFIG.riding.groundAtTrainers;
+  static flyConfig(): { seconds: number; rechargeSeconds: number; takeOffAt: number } {
+    const r = CONFIG.riding as typeof CONFIG.riding & { flySeconds?: number; flyRechargeSeconds?: number; flyTakeOffAt?: number };
+    return { seconds: r.flySeconds ?? 25, rechargeSeconds: r.flyRechargeSeconds ?? 50, takeOffAt: r.flyTakeOffAt ?? 0.3 };
   }
-  private skiesNoticed = false;
 
   /** Off the mount, where the trainer can stand (not over water). */
   dismount(t: Trainer, force = false): string {
@@ -3170,8 +3165,12 @@ export class Match {
     }
     // A mount that can no longer carry the trainer (fainted, released, caught by a rival) drops them.
     const mt = p.mount;
-    // In the endgame the skies close: a flyer is set down so it can be challenged like anyone else.
-    if (mt?.fly && this.skiesClosed()) {
+    // The fly bar: drains in the air, refills on the ground; empty, the flyer lands.
+    const fc = Match.flyConfig();
+    if (mt?.fly) p.flyLeft = (p.flyLeft ?? fc.seconds) - dt;
+    else if ((p.flyLeft ?? fc.seconds) < fc.seconds) p.flyLeft = Math.min(fc.seconds, (p.flyLeft ?? fc.seconds) + (dt * fc.seconds) / fc.rechargeSeconds);
+    if (mt?.fly && (p.flyLeft ?? 1) <= 0) {
+      p.flyLeft = 0;
       p.mount = null;
       mt.mon.stowed = true;
       if (!canStand(this.ground, p.x, p.y, CONFIG.player.radius)) {
@@ -3180,6 +3179,7 @@ export class Match {
         p.y = p.py = spot.y;
       }
       this.fieldParty(p);
+      this.noticeFor(p, `${mt.mon.name} is worn out and lands`, 2);
     } else if (mt && (mt.mon.fainted || mt.mon.captured || mt.mon.owner !== p || !p.party.includes(mt.mon))) {
       p.mount = null;
       if (!canStand(this.ground, p.x, p.y, CONFIG.player.radius)) {

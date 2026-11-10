@@ -2744,6 +2744,7 @@ export class MatchScreen implements Screen {
     if (this.showHud) {
       this.hud.draw(this.match, this.hudState(v));
       this.drawInfoBars(v, alpha);
+      this.drawFlyBar(v, alpha);
     } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
     if (!this.spectator && !Input.touch) this.drawReticleTop(v);
@@ -2755,6 +2756,35 @@ export class MatchScreen implements Screen {
     this.drawTouch(v);
     v.camX -= ox;
     v.camY -= oy;
+  }
+
+  /**
+   * The fly bar over your trainer: how much flying is left (Match.flyConfig). Shown while flying
+   * and while it refills; red near empty, grey until it is full enough to take off again.
+   */
+  private drawFlyBar(v: View, alpha: number): void {
+    const p = this.match.player;
+    const fc = Match.flyConfig();
+    const left = p.flyLeft ?? fc.seconds;
+    const flying = !!p.mount?.fly;
+    if (!flying && left >= fc.seconds) return;
+    const at = trainerPos(p, alpha);
+    const s = v.baseScale;
+    const w = 54 * s;
+    const h = 7 * s;
+    const x = Math.round(v.toScreenX(at.x) - w / 2);
+    const y = Math.round(v.toScreenY(at.y) - (flying ? 4.1 : 2.7) * v.pxPerTile - 12 * s);
+    const frac = Math.max(0, Math.min(1, left / fc.seconds));
+    const ctx = v.hud;
+    ctx.save();
+    ctx.fillStyle = 'rgba(14,10,28,0.8)';
+    ctx.fillRect(x - 2 * s, y - 2 * s, w + 4 * s, h + 4 * s);
+    ctx.fillStyle = !flying && frac < fc.takeOffAt ? '#8a86a0' : frac < 0.25 ? '#ff5a4a' : '#7fd3ff';
+    ctx.fillRect(x, y, Math.round(w * frac), h);
+    // The take-off mark.
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillRect(x + Math.round(w * fc.takeOffAt), y, Math.max(1, s), h);
+    ctx.restore();
   }
 
   /** The light over a trainer battle the darkness has closed on: where, and its radius in tiles (eased). */

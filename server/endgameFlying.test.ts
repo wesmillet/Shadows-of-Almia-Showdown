@@ -17,24 +17,24 @@ describe('endgame flying and fainted catches', async () => {
     return m;
   };
 
-  it('flyers are grounded once the final showdown starts and cannot take off again', () => {
+  it('a flyer lands when its fly bar runs out and takes off again only after a rest', () => {
     const m = make(11);
     const p = m.seats[0]!.trainer;
     p.party = [m.makeMon('0330', 45, p, p.x, p.y)];
     for (const x of p.party) x.stowed = true;
-    expect(m.skiesClosed()).toBe(false);
+    const fc = Match.flyConfig();
     m.toggleRide();
     expect(p.mount?.fly).toBe(true);
-    m.finalStarted = true;
     m.step(1 / 60);
+    expect(p.flyLeft!).toBeLessThan(fc.seconds);
+    p.flyLeft = 0.05;
+    for (let i = 0; i < 10; i++) m.step(1 / 60);
     expect(p.mount).toBeNull();
-    expect(m.toggleRide()).toMatch(/skies have closed/);
-    expect(p.mount).toBeNull();
-  });
-
-  it('with three or fewer trainers left the skies are closed', () => {
-    const m = make(2);
-    expect(m.skiesClosed()).toBe(true);
+    expect(m.toggleRide()).toMatch(/tired/);
+    p.flyLeft = fc.seconds * fc.takeOffAt - 0.05;
+    for (let i = 0; i < 10; i++) m.step(1 / 60);
+    m.toggleRide();
+    expect(p.mount?.fly).toBe(true);
   });
 
   it('a wild knocked out while the ball closes is not caught', () => {

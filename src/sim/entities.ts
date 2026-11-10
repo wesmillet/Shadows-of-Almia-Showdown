@@ -256,6 +256,8 @@ export interface Trainer {
   megaUsed?: boolean;
   /** Riding or flying on a party Pokémon (Match.toggleRide); it is out of the fight meanwhile. */
   mount?: { mon: Mon; fly: boolean } | null;
+  /** Seconds of flying left (CONFIG.riding.flySeconds full); drains in the air, refills on the ground. */
+  flyLeft?: number;
   /** Not drawn (the stand-in "trainer" that holds a legendary in a legend bout). */
   hidden?: boolean;
   /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */

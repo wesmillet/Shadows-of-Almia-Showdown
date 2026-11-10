@@ -42,6 +42,7 @@
     "xpEliteMultiplier": 1.6,
     "xpBossMultiplier": 3,
     "xpAlphaMultiplier": 2.5,
+    "xpTrainerMultiplier": 2,
     "benchShare": 0.5,
     "fieldShare": 0.6,
     "catchXpShare": 0.75,
@@ -255,6 +256,8 @@
     "_legendCatchComment": "Every other legendary (Hoopa's portal, a legend bout): chance times mult, never above max per ball; it can be knocked out (then it is gone), and never joins just for being beaten. Caught, it joins at caughtLegendLevel (with level-100 stats, as every Legendary has). shinyChance: a portal legendary or Lugia is shiny 1 in 100.",
     "legendCatch": { "mult": 0.3, "max": 0.22 },
     "caughtLegendLevel": 60,
+    "_overLevelComment": "Every ball but the Master Ball works less well on a Pokemon above the thrower's team: from levels over their best Pokemon, perLevel less for each level beyond, down to min of its usual effect.",
+    "overLevel": { "from": 3, "perLevel": 0.04, "min": 0.2 },
     "legendShinyChance": 0.01,
     "darkraiShinyOdds": 500,
     "statusBonus": {

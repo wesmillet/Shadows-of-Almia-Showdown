@@ -95,3 +95,14 @@ describe('throw sequence', () => {
     expect(seen).toEqual(['absorb', 'drop', 'wobble', 'burst', 'done']);
   });
 });
+
+describe('balls against much higher levels', () => {
+  it('a Great Ball loses most of its pull on a Pokémon far above the team', async () => {
+    const { ballModifier: bm } = await import('./catching');
+    const team = [{ level: 20, fainted: false }] as unknown as Mon[];
+    const make = (level: number) => ({ target: { level, types: ['normal'], everHit: true } as unknown as Mon, thrower: { party: team } as unknown as Trainer, matchTime: 0, inWater: false, inDark: false });
+    expect(bm('great-ball', make(22))).toBe(1.5);
+    expect(bm('great-ball', make(33))).toBeCloseTo(1.5 * 0.6);
+    expect(bm('great-ball', make(60))).toBeCloseTo(1.5 * 0.2);
+  });
+});

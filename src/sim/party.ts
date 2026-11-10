@@ -382,7 +382,9 @@ export function xpForKnockout(target: Mon, dealerLevel = target.level): number {
   const p = CONFIG.party;
   const base = p.xpKoBase + target.level * p.xpKoPerLevel;
   const gap = Math.max(0, target.level - dealerLevel);
-  const bonus = target.landBoss ? p.xpBossMultiplier : target.alpha ? p.xpAlphaMultiplier : target.elite ? p.xpEliteMultiplier : 1;
+  // Another trainer's Pokémon pays xpTrainerMultiplier (beating trainers is worth more than wilds).
+  const trainer = target.owner && !target.wild ? ((p as typeof p & { xpTrainerMultiplier?: number }).xpTrainerMultiplier ?? 1) : 1;
+  const bonus = target.landBoss ? p.xpBossMultiplier : target.alpha ? p.xpAlphaMultiplier : target.elite ? p.xpEliteMultiplier : trainer;
   return Math.round(base * Math.min(2, 1 + 0.1 * gap) * bonus);
 }
 

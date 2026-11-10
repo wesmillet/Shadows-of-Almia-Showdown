@@ -34,6 +34,24 @@ export interface CatchContext {
  * Master Ball returns Infinity (a guaranteed catch).
  */
 export function ballModifier(ballId: string, ctx: CatchContext): number {
+  const m = ballBase(ballId, ctx);
+  // The Quick Ball already eases off against much higher levels (quickBonus) once it counts.
+  const quick = ITEMS[ballId]?.special === 'quick' && !ctx.target.everHit;
+  return Number.isFinite(m) && !quick ? m * overLevelFactor(ctx) : m;
+}
+
+/**
+ * Every ball but the Master Ball works less well on a Pokémon above the thrower's team: from
+ * CONFIG.catch.overLevel.from levels over their best, perLevel less a level, down to min.
+ */
+export function overLevelFactor(ctx: CatchContext): number {
+  const o = (CONFIG.catch as { overLevel?: { from: number; perLevel: number; min: number } }).overLevel ?? { from: 3, perLevel: 0.04, min: 0.2 };
+  const top = Math.max(1, ...ctx.thrower.party.filter((m) => m !== ctx.target && !m.fainted).map((m) => m.level));
+  const over = ctx.target.level - top - o.from;
+  return over > 0 ? clamp(1 - o.perLevel * over, o.min, 1) : 1;
+}
+
+function ballBase(ballId: string, ctx: CatchContext): number {
   const def = ITEMS[ballId];
   const base = def?.tier ?? 1;
   const types = ctx.target.types;

@@ -1648,9 +1648,10 @@ export class MatchScreen implements Screen {
         break;
       }
       case 'channel-end':
-        // No damage comes after the beam's last pulse, so the beam goes with it.
+        // No damage comes after the beam's last pulse, so the beam goes with it: it fades out over
+        // a moment (it used to snap off in 0.12 s, which read as its ending being cut).
         for (const [key, beam] of this.channelBeams) if (key.startsWith(`${ev.mon.id}:`)) {
-          beam.release(0.12);
+          beam.release(0.4);
           this.channelBeams.delete(key);
         }
         break;

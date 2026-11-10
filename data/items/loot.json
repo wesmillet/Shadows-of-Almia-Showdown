@@ -61,7 +61,7 @@
         },
         {
           "id": "capture-styler",
-          "weight": 2
+          "weight": 0.5
         },
         {
           "id": "max-revive",
@@ -91,7 +91,7 @@
         },
         {
           "id": "capture-styler",
-          "weight": 2
+          "weight": 0.7
         },
         {
           "id": "leftovers",

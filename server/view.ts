@@ -132,6 +132,8 @@ export class PlayerView {
     r.wilds = this.list('wilds', wilds);
     r.darkrai = m.darkrai;
     r.darkraiPortal = m.darkraiPortal;
+    // Only whether the crystal has cracked: its strength stays on the server (a secret).
+    r.crystalCracked = m.crystalCracked;
     r.items = this.list('items', m.items.filter((it) => near(it.x, it.y)));
     r.throws = this.list('throws', m.throws.filter((th) => near(th.x, th.y)));
     r.duels = this.list('duels', m.duels.filter((d) => near(d.cx, d.cy) || d.a.trainer === me || d.b.trainer === me));

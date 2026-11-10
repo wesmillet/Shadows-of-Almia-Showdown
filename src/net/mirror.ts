@@ -360,6 +360,7 @@ export class MirrorMatch {
     m.wilds = ((r.wilds as Mon[]) ?? []).filter(Boolean);
     m.darkrai = (r.darkrai as Mon | null) ?? null;
     m.darkraiPortal = (r.darkraiPortal as Match['darkraiPortal']) ?? null;
+    m.crystalCracked = !!r.crystalCracked;
     m.items = (r.items as Match['items']) ?? [];
     m.throws = (r.throws as Match['throws']) ?? [];
     m.duels = ((r.duels as Match['duels']) ?? []).filter(Boolean);

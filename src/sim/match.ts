@@ -12,7 +12,7 @@ import { decide, partyHpFraction, type AiWorld } from './ai';
 import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem, type BattleEvent } from './battle';
 import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
-import { CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statLevel, statsAtLevel, tmRefusal } from './data';
+import { type MoveDef, CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statLevel, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
 import { activeParty, incapable, lead, partySize } from './entities';
@@ -21,7 +21,7 @@ import { canStand, moveAround, setWalking, tryMove } from './movement';
 import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
-import { areaContains, makeArea, moveReach } from './battle';
+import { areaContains, makeArea, moveReach, type Area } from './battle';
 import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
@@ -249,6 +249,7 @@ export class Match {
     this.battle = new BattleSystem(this.rng);
     // Shots and blasts stop at walls, rocks, trees and buildings (water and the user's own footing don't count).
     this.battle.shotLine = (ax, ay, bx, by) => shotClear(this.ground, ax, ay, bx, by);
+    this.battle.onResolve = (a, mv, area, scale) => this.strikeCrystal(a, mv, area, scale);
     // The crystal stands in the middle of its tile (the map says where); older grounds use the map's middle.
     const centre = (this.ground as { center?: { x: number; y: number } }).center;
     this.centerX = centre?.x ?? this.ground.cols / 2;
@@ -1260,7 +1261,14 @@ export class Match {
           return;
         }
         if (th.roll?.caught) {
-          this.wilds.splice(this.wilds.indexOf(w), 1);
+          if (this.wilds.includes(w)) this.wilds.splice(this.wilds.indexOf(w), 1);
+          // Darkrai caught: no longer the storm's boss, a team member at the caught-legend level.
+          if (w === this.darkrai) {
+            this.darkrai = null;
+            w.boss = false;
+            w.casting = null;
+            w.legend = true;
+          }
           w.captured = false;
           w.owner = th.thrower;
           w.wild = false;
@@ -1368,7 +1376,7 @@ export class Match {
     if (this.time < t.outpostReady) return `The healer needs a moment (${Math.ceil(t.outpostReady - this.time)}s)`;
     const needs = t.party.some((m) => !isRoaming(m) && (m.fainted || m.hp < m.maxHp || m.status));
     if (!needs) return 'Your party is already in top shape';
-    if (cost > 0 && this.finalStarted) return 'Crystal Healer: "Not during the final showdown!"';
+    if (cost > 0 && this.finalStarted) return 'Crystal Healer: "Not during the final battle!"';
     if (cost > 0 && t.money < cost) return `Crystal Healer: "A full heal is ₽${cost}." You have ₽${t.money}`;
     t.money -= cost;
     t.outpostReady = this.time + 20;
@@ -2454,12 +2462,19 @@ export class Match {
 
   private lockable(c: Mon, range = Match.LOCK_RANGE): boolean {
     const p = this.player;
-    return !c.fainted && !c.captured && !c.npc && !c.leap && this.wilds.includes(c) && Math.hypot(c.x - p.x, c.y - p.y) <= range;
+    return !c.fainted && !c.captured && !c.npc && !c.leap && (this.wilds.includes(c) || this.darkraiCatchable(c)) && Math.hypot(c.x - p.x, c.y - p.y) <= range;
+  }
+
+  /** Darkrai can be caught (with a very low chance, CONFIG.catch.hardCatch) only below CONFIG.crystal.catchBelow of its HP. */
+  darkraiCatchable(c: Mon): boolean {
+    const below = (CONFIG as typeof CONFIG & { crystal?: { catchBelow: number } }).crystal?.catchBelow ?? 0.05;
+    return c === this.darkrai && !c.fainted && c.hp / c.maxHp < below;
   }
 
   /** Catchable wilds in lock range, best first. */
   lockCandidates(): Mon[] {
-    return this.wilds.filter((c) => this.lockable(c)).sort((a, b) => this.lockScore(a) - this.lockScore(b));
+    const pool = this.darkrai ? [...this.wilds, this.darkrai] : this.wilds;
+    return pool.filter((c) => this.lockable(c)).sort((a, b) => this.lockScore(a) - this.lockScore(b));
   }
 
   private stepLock(): void {
@@ -3642,10 +3657,7 @@ export class Match {
     const wasPhase = d.phase;
     if (!this.darknessHeld) stepDarkness(d, dt * this.stormSpeed, mapRadius);
     if (d.pulsed) {
-      this.battle.events.push({ type: 'notice', text: d.finale ? 'The crystal shatters. Darkrai awakens!' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
-      if (d.finale && !this.darkrai) {
-        this.spawnDarkrai();
-      }
+      this.battle.events.push({ type: 'notice', text: d.finale ? 'The last pulse: the light shrinks to the crystal' : `Darkness pulse ${d.phase}: the night closes in`, seconds: 3 });
     }
     if (d.collapsed) this.battle.events.push({ type: 'notice', text: "The crystal's last light is fading. Nowhere is safe now!", seconds: 4 });
     void wasPhase;
@@ -3718,6 +3730,32 @@ export class Match {
     return inDarkness(this.darkness, x, y, this.centerX, this.centerY);
   }
 
+  /**
+   * A secret: in the last two storms (from the second-to-last pulse on) the Shadow Crystal can be
+   * struck. Attacks by trainers' Pokémon that reach it wear down its hidden strength
+   * (CONFIG.crystal.hp, shown to no one); when it cracks, Darkrai comes out. Not in the final battle.
+   */
+  crystalHp: number = (CONFIG as typeof CONFIG & { crystal?: { hp: number } }).crystal?.hp ?? 60000;
+  crystalCracked = false;
+
+  private crystalOpen(): boolean {
+    const d = this.darkness;
+    return !this.crystalCracked && !this.darknessHeld && !this.darkrai && !this.over && d.phase >= CONFIG.darkness.radiiTiles.length - 1;
+  }
+
+  private strikeCrystal(a: Mon, mv: MoveDef, area: Area, scale: number): void {
+    if (!a.owner || a.wild || a.owner.visitor || a.owner.challenger || a.owner.legendBout || !this.crystalOpen()) return;
+    const c = (CONFIG as typeof CONFIG & { crystal?: { radius: number } }).crystal;
+    if (!areaContains(area, this.centerX, this.centerY, c?.radius ?? 1.1)) return;
+    const atk = mv.category === 'physical' ? a.stats.atk : a.stats.spa;
+    const dmg = Math.max(1, Math.round((mv.power ?? 40) * (0.4 + atk / 100) * scale));
+    this.crystalHp -= dmg;
+    if (this.crystalHp > 0) return;
+    this.crystalCracked = true;
+    this.battle.events.push({ type: 'notice', text: 'The Shadow Crystal cracks... Darkrai awakens!', seconds: 3.5 });
+    this.spawnDarkrai();
+  }
+
   private spawnDarkrai(): void {
     // When the darkness has closed on the crystal, Darkrai comes out at level 100.
     // Shiny one time in darkraiShinyOdds (500).
@@ -3754,7 +3792,7 @@ export class Match {
 
   /** Darkrai hovers by the crystal and punishes whoever is closest: Dark Void rings, Dark Pulse lines. */
   private stepDarkrai(d: Mon, dt: number): void {
-    if (d.fainted) return;
+    if (d.fainted || d.captured) return;
     let target: Mon | null = null;
     let bd = 10;
     for (const t of this.allTrainers) {

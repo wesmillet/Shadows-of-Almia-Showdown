@@ -254,7 +254,7 @@
     "aimSeconds": 1.2,
     "wobbleSeconds": 0.55,
     "_hardCatchComment": "Pokemon far harder to catch than the rest (by Pokedex number, forms included): their chance is multiplied by mult and never above max per ball, however weak, asleep or well-balled. A Master Ball still always works.",
-    "hardCatch": { "0249": { "mult": 0.1, "max": 0.08 } },
+    "hardCatch": { "0249": { "mult": 0.1, "max": 0.08 }, "0491": { "mult": 0.05, "max": 0.03 } },
     "_legendCatchComment": "Every other legendary (Hoopa's portal, a legend bout): chance times mult, never above max per ball; it can be knocked out (then it is gone), and never joins just for being beaten. Caught, it joins at caughtLegendLevel (with level-100 stats, as every Legendary has). shinyChance: a portal legendary or Lugia is shiny 1 in 100.",
     "legendCatch": { "mult": 0.3, "max": 0.22 },
     "caughtLegendLevel": 60,
@@ -351,6 +351,12 @@
     "baseSeconds": 8,
     "perMinute": 4,
     "maxSeconds": 25
+  },
+  "crystal": {
+    "_comment": "Secret: from the second-to-last darkness pulse on, attacks by trainers' Pokemon that reach the Shadow Crystal (within radius tiles of its middle) wear down its hidden hp (move power x (0.4 + attacking stat / 100) a hit; shown to no one). At 0 it cracks and Darkrai comes out. Darkrai can be caught only below catchBelow of its HP (catch.hardCatch 0491), or knocked out.",
+    "hp": 50000,
+    "radius": 1.1,
+    "catchBelow": 0.05
   },
   "darkness": {
     "_comment": "Every pulseSeconds the safe circle shrinks to the next radius; the darkness creeps in at sweepTilesPerSecond (a trainer walks about 4.8).",

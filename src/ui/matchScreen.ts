@@ -2433,12 +2433,13 @@ export class MatchScreen implements Screen {
   /**
    * The Shadow Crystal (scripts/shadow_crystal.py draws the art): a violet cluster with a dark heart,
    * hovering over an obsidian pedestal with a slow bob, a soft glow behind it, the heart pulsing and
-   * a few motes circling. Once Darkrai is out it is a broken stump sitting on the pedestal.
+   * a few motes circling. Once it has been cracked (Darkrai is out) it is a broken stump on the pedestal.
    */
   private drawCrystal(v: View): void {
     const ctx = v.ctx;
     const base = this.crystalBase;
-    const finale = this.match.darkness.finale;
+    // Broken once it has been cracked open (Darkrai's way out), whatever the storm is doing.
+    const finale = this.match.crystalCracked;
     // The moment it breaks: shards flung out and a ring of violet light.
     if (finale && this.crystalWhole === true) {
       this.vfx.add(new ShardBurst(this.match.centerX, this.match.centerY, 2.4, ['#e8ceff', '#b080ff', '#7a3ad6', '#ff7ae6']));

@@ -48,7 +48,7 @@ export const FOLK_POOL: Folk[] = [
   },
   {
     name: 'Instructor Hale', role: 'villager_h', lines: [
-      'A worn-down Pokémon goes calm sooner or later. That calm moment is when a ball truly counts.',
+      'Draw loops round a wild Pokémon with a Capture Styler and it calms right down. That calm moment is when a ball truly counts.',
       'Auto-battle is fine for walking. For a real fight, take the controls yourself. R, trainer. R.',
       'Your party heals free at any outpost. Dying because you were too proud to walk there is a choice.',
     ],
@@ -74,7 +74,7 @@ export const FOLK_POOL: Folk[] = [
   {
     name: 'Gambler Dice', role: 'villager_a', lines: [
       'Every storage chest on this island remembers one stack of yours between matches. Choose it wisely. I chose my losses.',
-      "One in five hundred. Those are shiny odds. I've beaten worse, friend. I've also lost to better.",
+      "One in two thousand. Those are shiny odds out here. I've beaten worse, friend. I've also lost to better.",
     ],
   },
   {
@@ -103,7 +103,7 @@ export const FOLK_POOL: Folk[] = [
   {
     name: 'Mystic Vela', role: 'villager_f', lines: [
       "I read fortunes. Yours says 'beware the final two'. That will be 200 Poké Dollars.",
-      'The darkness does not close in to kill you, dear. It closes in to WAKE something.',
+      'The darkness does not close in to kill you, dear. In the last storms the crystal grows brittle... strike it enough and something WAKES.',
     ],
   },
   {

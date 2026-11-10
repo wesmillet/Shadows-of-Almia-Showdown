@@ -322,6 +322,8 @@ export class BattleSystem {
   inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
   shotLine: ShotLine | null = null;
+  /** Called with every attack that goes off (the match uses it for the Shadow Crystal; `scale`: a beam pulse's share). */
+  onResolve: ((attacker: Mon, m: MoveDef, area: Area, scale: number) => void) | null = null;
   /** Seconds of hit-stop left; the match skips simulation while positive. */
   hitStop = 0;
   /** Pokémon whose Faint animation is still playing. */
@@ -633,6 +635,7 @@ export class BattleSystem {
       }
     }
     this.events.push({ type: 'resolve', attacker, move: m, area, hits, ...(pulse ? { pulse: true } : {}) });
+    if (m.category !== 'status' && m.shape !== 'self') this.onResolve?.(attacker, m, area, pulse?.scale ?? 1);
     for (const target of hits) {
       if (target === attacker) continue;
       if (pulse) {

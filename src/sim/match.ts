@@ -707,7 +707,7 @@ export class Match {
     if (r < 0.4 && tmPool.length) contents.push({ id: this.rng.pick(tmPool).id, count: 1 });
     else if (r < 0.75) contents.push({ id: 'rare-candy', count: 3 });
     else contents.push(rollLoot(this.rng, 'rare'));
-    const voucher = this.rng.chance(0.12);
+    const voucher = this.rng.chance(0.06);
     if (voucher) contents.push({ id: 'extraction-voucher', count: 1 });
     // An Alpha of a line that can Mega Evolve sometimes carries its Mega Stone (alphaMegaStoneChance).
     const stoneChance = (CONFIG.items as { alphaMegaStoneChance?: number }).alphaMegaStoneChance ?? 0.3;

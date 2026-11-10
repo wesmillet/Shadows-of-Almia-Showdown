@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { loadWorld } from './world';
 import { Match } from '../src/sim/match';
 import { Rng } from '../src/core/rng';
+import { CONFIG } from '../src/sim/data';
 
 describe('trainer battle shots', async () => {
   const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
@@ -49,5 +50,26 @@ describe('trainer battle shots', async () => {
   });
   it('a shot misses a foe that stepped well out to the side', () => {
     expect(fire(0, 3).hit).toBe(false);
+  });
+});
+
+describe('battle rings', async () => {
+  const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
+  it('another trainer and their Pokémon are held outside a trainer battle', () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(4), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 4 });
+    m.finalStarted = true;
+    const p = m.seats[0]!.trainer;
+    const [r, other] = m.trainers.filter((t) => !t.visitor && !t.challenger);
+    p.party = [m.makeMon('0006', 40, p, p.x, p.y)];
+    r!.party = [m.makeMon('0009', 40, r!, r!.x, r!.y)];
+    r!.x = p.x + 4; r!.y = p.y;
+    m.startDuel(p, r!);
+    const d = m.duels.find((x) => x.id === p.duelId)!;
+    other!.x = other!.px = d.cx + 1; other!.y = other!.py = d.cy;
+    const om = other!.party.find((x) => !x.fainted)!;
+    om.stowed = false; om.x = d.cx - 1; om.y = d.cy;
+    m.step(1 / 60);
+    expect(Math.hypot(other!.x - d.cx, other!.y - d.cy)).toBeGreaterThanOrEqual(CONFIG.duel.arenaRadius);
+    expect(Math.hypot(om.x - d.cx, om.y - d.cy)).toBeGreaterThanOrEqual(CONFIG.duel.arenaRadius);
   });
 });

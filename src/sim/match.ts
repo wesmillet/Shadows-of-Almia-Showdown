@@ -3124,6 +3124,7 @@ export class Match {
     if (CONFIG.duel.finalShowdown) this.stepFinalShowdown(dt);
     // Once they do start battling, that battle moves to the crystal (stepFinalBattle).
     else this.stepFinalBattle();
+    this.keepOutOfBattles();
   }
 
   /** Party Pokémon past an evolution level start evolving; evolutions in progress tick on. */
@@ -4611,6 +4612,35 @@ export class Match {
 
   /** Alphas spawned so far this match (CONFIG.wild.alphaPerMatch caps them). */
   alphasSpawned = 0;
+
+  /**
+   * A trainer battle's ring is closed to everyone else: other trainers and their Pokémon that walk
+   * into it are held at its edge (wild Pokémon still wander as they like).
+   */
+  private keepOutOfBattles(): void {
+    const R = CONFIG.duel.arenaRadius;
+    for (const d of this.duels) {
+      if (d.state === 'over' || d.bounds) continue;
+      const inside = (t: Trainer | null | undefined) => !!t && t.duelId === d.id;
+      const push = (o: { x: number; y: number; px?: number; py?: number }, pad: number) => {
+        const dx = o.x - d.cx;
+        const dy = o.y - d.cy;
+        const r = Math.hypot(dx, dy);
+        if (r >= R + pad) return;
+        const k = r > 0.001 ? (R + pad) / r : 0;
+        const nx = r > 0.001 ? d.cx + dx * k : d.cx + R + pad;
+        const ny = r > 0.001 ? d.cy + dy * k : d.cy;
+        if (!canStand(this.ground, nx, ny, 0.22)) return;
+        o.x = nx;
+        o.y = ny;
+      };
+      for (const t of this.allTrainers) {
+        if (!t.alive || inside(t) || t.visitor || t.mount?.fly) continue;
+        push(t, CONFIG.player.radius);
+        for (const m of t.party) if (!m.stowed && !m.fainted && !m.captured && !m.duelId) push(m, 0.3);
+      }
+    }
+  }
 
   /** The darkness stands still (the last two are battling at the crystal): no pulses, no collapse, no Darkrai. */
   darknessHeld = false;

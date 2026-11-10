@@ -2728,6 +2728,7 @@ export class MatchScreen implements Screen {
     this.groundVfx.drawLights(v);
     this.drawLights(v);
     const lp = this.lightingParams(v);
+    const clear = this.battleClearing(v, frameDt);
     this.lighting.render({
       cold: lp.cold,
       darkCx: v.toScreenX(this.match.centerX),
@@ -2735,9 +2736,9 @@ export class MatchScreen implements Screen {
       darkRadius: lp.darkRadius,
       darkFeather: lp.darkFeather,
       darkAmount: lp.darkAmount,
-      clearCx: 0,
-      clearCy: 0,
-      clearRadius: 0,
+      clearCx: clear ? v.toScreenX(clear.x) : 0,
+      clearCy: clear ? v.toScreenY(clear.y) : 0,
+      clearRadius: clear ? clear.r * v.pxPerTile : 0,
       time: this.match.time,
     });
     if (this.showHud) {
@@ -2754,6 +2755,45 @@ export class MatchScreen implements Screen {
     this.drawTouch(v);
     v.camX -= ox;
     v.camY -= oy;
+  }
+
+  /** The light over a trainer battle the darkness has closed on: where, and its radius in tiles (eased). */
+  private clearing: { x: number; y: number; r: number } | null = null;
+
+  /**
+   * A trainer battle the darkness has closed over is fought out unharmed (the darkness can not
+   * touch it), so it is lit too: a clearing the size of its ring over yours, or the nearest one on
+   * screen, opening and closing over about half a second.
+   */
+  private battleClearing(v: View, dt: number): { x: number; y: number; r: number } | null {
+    const m = this.match;
+    const R = CONFIG.duel.arenaRadius;
+    const viewR = Math.hypot(v.width, v.height) / v.pxPerTile / 2 + R;
+    let best: { x: number; y: number } | null = null;
+    let bd = Infinity;
+    const mine = m.playerDuel;
+    for (const d of m.duels) {
+      if (d.state === 'over' || !m.isDark(d.cx, d.cy)) continue;
+      const cx = d.bounds ? (d.bounds.x0 + d.bounds.x1) / 2 : d.cx;
+      const cy = d.bounds ? (d.bounds.y0 + d.bounds.y1) / 2 : d.cy;
+      const dist = d === mine ? -1 : Math.hypot(cx - v.camX, cy - v.camY);
+      if (d !== mine && Math.hypot(cx - m.player.x, cy - m.player.y) > viewR) continue;
+      if (dist < bd) {
+        bd = dist;
+        best = { x: cx, y: cy };
+      }
+    }
+    const k = 1 - Math.exp(-dt * 5);
+    if (best) {
+      if (!this.clearing || this.clearing.r < 0.5) this.clearing = { x: best.x, y: best.y, r: this.clearing?.r ?? 0 };
+      this.clearing.x = best.x;
+      this.clearing.y = best.y;
+      this.clearing.r += (R - this.clearing.r) * k;
+    } else if (this.clearing) {
+      this.clearing.r -= this.clearing.r * k;
+      if (this.clearing.r < 0.2) this.clearing = null;
+    }
+    return this.clearing;
   }
 
   /** The last two trainers' battle: the Final Battle intro playing (seconds in), or null. */
@@ -3218,7 +3258,10 @@ export class MatchScreen implements Screen {
     const ctx = v.ctx;
     const s = v.spriteScale;
     ctx.save();
+    const cl = this.clearing;
     for (const mo of this.match.motes) {
+      // None inside a lit battle (battleClearing).
+      if (cl && Math.hypot(mo.x - cl.x, mo.y - cl.y) < cl.r) continue;
       const a = 0.7 * Math.min(1, mo.life);
       ctx.fillStyle = `rgba(210,170,255,${a})`;
       const size = mo.size > 0.06 ? 2 * s : s;

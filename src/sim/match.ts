@@ -3109,18 +3109,9 @@ export class Match {
       for (const m of t.party) {
         const e = m.evolving;
         if (!e) {
-          if (m.fainted || m.captured || m.mega || m.visual.scale < 1) continue;
+          if (m.fainted || m.captured || m.stowed || m.mega || m.visual.scale < 1) continue;
           const to = pickEvolution(m.species, m.level, this.rng);
           if (!to) continue;
-          // In its ball (levelled up on shared XP): it evolves there at once, no glow to show.
-          if (m.stowed) {
-            const spr = this.sprites.get(to, !!m.shiny);
-            if (!spr.loaded) continue;
-            const from = m.name;
-            applyEvolution(m, species(to), spr);
-            this.battle.events.push({ type: 'evolved', mon: m, from });
-            continue;
-          }
           m.evolving = { to, t: 0, swapped: false };
           this.battle.events.push({ type: 'evolve-start', mon: m });
           continue;

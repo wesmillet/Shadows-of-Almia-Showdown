@@ -1832,6 +1832,8 @@ export class MatchScreen implements Screen {
         break;
       case 'downed':
         if (!ev.trainer.isPlayer) this.say(`${ev.trainer.name} was wiped out by wild Pokémon`, 2);
+        // Yours: marked on the minimap until you go down again.
+        else this.deathAt = { x: ev.trainer.x, y: ev.trainer.y };
         break;
       case 'respawned':
         if (ev.trainer.isPlayer) this.say('Back in the fight! Your party is healed, but your items are gone', 3);
@@ -2510,6 +2512,7 @@ export class MatchScreen implements Screen {
 
   protected hudState(v: View): HudState {
     return {
+      deathAt: this.spectator ? null : this.deathAt,
       touch: Input.touch && !this.spectator,
       watching: !!this.spectator,
       mouseX: this.ctx.input.mouseX,
@@ -2786,6 +2789,9 @@ export class MatchScreen implements Screen {
     ctx.fillRect(x + Math.round(w * fc.takeOffAt), y, Math.max(1, s), h);
     ctx.restore();
   }
+
+  /** Where you last went down (wiped out, before respawning): the minimap's red X. */
+  private deathAt: { x: number; y: number } | null = null;
 
   /** The light over a trainer battle the darkness has closed on: where, and its radius in tiles (eased). */
   private clearing: { x: number; y: number; r: number } | null = null;

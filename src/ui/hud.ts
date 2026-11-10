@@ -38,6 +38,8 @@ export interface Rect {
 }
 
 export interface HudState {
+  /** Where you last went down this match (a red X on the minimap), if you have. */
+  deathAt?: { x: number; y: number } | null;
   /** Played by touch: the on-screen controls stand in for the party, moves and bag. */
   touch?: boolean;
   mouseX: number;
@@ -851,6 +853,24 @@ export class Hud {
       ctx.arc(px - r * 0.35 * s, py - r * 0.35 * s, r * 0.4 * s, 0, Math.PI * 2);
       ctx.fill();
     };
+    // Where you last went down: a red X.
+    if (st.deathAt) {
+      const dx = X(st.deathAt.x);
+      const dy = Y(st.deathAt.y);
+      const r = 3.6 * s;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(20,14,30,0.95)';
+      ctx.lineWidth = 4 * s;
+      ctx.beginPath();
+      ctx.moveTo(dx - r, dy - r); ctx.lineTo(dx + r, dy + r);
+      ctx.moveTo(dx + r, dy - r); ctx.lineTo(dx - r, dy + r);
+      ctx.stroke();
+      ctx.strokeStyle = '#ff4a3d';
+      ctx.lineWidth = 2 * s;
+      ctx.stroke();
+      ctx.restore();
+    }
     // Roaming party members and the ping.
     for (const m of match.player.party) {
       if (m.fainted || !isRoaming(m)) continue;

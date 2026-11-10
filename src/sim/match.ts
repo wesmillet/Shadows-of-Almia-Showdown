@@ -3109,9 +3109,18 @@ export class Match {
       for (const m of t.party) {
         const e = m.evolving;
         if (!e) {
-          if (m.fainted || m.captured || m.stowed || m.mega || m.visual.scale < 1) continue;
+          if (m.fainted || m.captured || m.mega || m.visual.scale < 1) continue;
           const to = pickEvolution(m.species, m.level, this.rng);
           if (!to) continue;
+          // In its ball (levelled up on shared XP): it evolves there at once, no glow to show.
+          if (m.stowed) {
+            const spr = this.sprites.get(to, !!m.shiny);
+            if (!spr.loaded) continue;
+            const from = m.name;
+            applyEvolution(m, species(to), spr);
+            this.battle.events.push({ type: 'evolved', mon: m, from });
+            continue;
+          }
           m.evolving = { to, t: 0, swapped: false };
           this.battle.events.push({ type: 'evolve-start', mon: m });
           continue;
@@ -3645,6 +3654,14 @@ export class Match {
     for (const m of this.mons()) {
       // Darkrai, and Shadow Lugia (even after it joins someone), are the storm's own.
       if (m.boss || m.shadow || m.npc) continue;
+      // A trainer battle the darkness closes over is fought out as it was: its Pokémon are not
+      // lulled to sleep or hurt by bad dreams (one already asleep from the dark wakes for it).
+      if (m.duelId) {
+        m.inDark = false;
+        m.drowsy = 0;
+        if (m.status === 'sleep' && m.statusTimer > 1e8) this.battle.cureStatus(m);
+        continue;
+      }
       const dark = this.isDark(m.x, m.y);
       m.inDark = dark;
       if (m.wild) m.aura = dark;
@@ -4702,6 +4719,8 @@ export class Match {
       const t = s.trainer;
       t.duelId = undefined;
       t.duelReadyAt = this.time + CONFIG.duel.cooldownSeconds;
+      // Out of a battle the darkness closed over: the full time to get back to the light.
+      t.stormT = 0;
       for (const m of t.party) {
         m.duelId = undefined;
         m.stowed = false;

@@ -483,9 +483,14 @@ async function boot(): Promise<void> {
         net.send({ t: 'leave' });
         playingId = null;
       };
-      // Knocked out while the match goes on: the rest of it can be watched.
-      // Watching the rest is off for now (barebones online).
-      const watch = null;
+      // Knocked out while the match goes on: the rest of it can be watched (out of the match for
+      // good, then in as a spectator, following your squad first; the hub's spectate by match id).
+      const watch = end.outcome === 'loss' && !mirror.match.over
+        ? () => {
+            leave();
+            net.send({ t: 'spectate', matchId: start.matchId });
+          }
+        : null;
       game.setScreen(new OnlineEndScreen(game, net, screen, end.outcome, end.place, () => {
         leave();
         showOnline();

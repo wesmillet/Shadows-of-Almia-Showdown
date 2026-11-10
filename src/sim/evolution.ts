@@ -40,12 +40,16 @@ export function formAtLevel(dex: string, level: number, rng: Rng, wild = false):
   let cur = dex;
   for (let guard = 0; guard < 4; guard++) {
     const sp = SPECIES.get(cur);
-    const next = sp ? pickEvolution(sp, level, rng) : null;
-    if (!next || !sp) break;
+    if (!sp) break;
+    // A wild one also follows the evolutions a stone or trade brings, at the level listed for them
+    // (a level-56 Charjabug in the wild is a Vikavolt).
+    const due = wild ? (sp.evolves ?? []).filter((e) => level >= e.level && SPECIES.has(e.to)).map((e) => e.to) : evolutionsAt(sp, level);
+    const next = due.length ? rng.pick(due) : null;
+    if (!next) break;
     if (wild) {
-      // Just past the evolution level a wild one is often still unevolved; well past it, almost never.
-      const at = Math.min(...(sp.evolves ?? []).filter((e) => !e.item).map((e) => e.level));
-      if (!rng.chance(Math.min(0.92, 0.2 + 0.06 * (level - at)))) break;
+      // Just past the evolution level a wild one is often still unevolved; ten levels past it, never.
+      const at = Math.min(...(sp.evolves ?? []).map((e) => e.level));
+      if (level - at < 10 && !rng.chance(0.2 + 0.08 * (level - at))) break;
     }
     cur = next;
   }

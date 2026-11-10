@@ -4089,11 +4089,21 @@ export class Match {
    */
   private finalWinBonus(winner: Trainer, loser: Trainer): void {
     const fw = (CONFIG.duel as typeof CONFIG.duel & { finalWin?: { remaining: number; heal: number; protectSeconds: number } }).finalWin ?? { remaining: 3, heal: 0.5, protectSeconds: 20 };
-    const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
-    if (left > fw.remaining) return;
+    // Every win: the winner's standing Pokémon recover winHeal of their HP.
+    const winHeal = (CONFIG.duel as typeof CONFIG.duel & { winHeal?: number }).winHeal ?? 0.5;
     for (const m of winner.party) {
       if (m.captured || m.fainted) continue;
-      m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * fw.heal));
+      m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * winHeal));
+    }
+    const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
+    if (left > fw.remaining) {
+      this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: 'Victory! Your team recovers', seconds: 2.5 }));
+      return;
+    }
+    // The last few: on top of that, a while nobody can challenge you, and the loser's bag.
+    for (const m of winner.party) {
+      if (m.captured || m.fainted) continue;
+      m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * Math.max(0, fw.heal - winHeal)));
     }
     winner.duelReadyAt = Math.max(winner.duelReadyAt ?? 0, this.time + fw.protectSeconds);
     // The loser's bag, when they are out of Pokémon (their run is over).

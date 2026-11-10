@@ -230,6 +230,8 @@
     "_aimAssistComment": "In a trainer battle, a single-target move aimed within aimAssist tiles of the foe is cast at the foe's spot (a side-step can still make it miss).",
     "aimAssist": 2.5,
     "_finalWinComment": "Against third-partying: with remaining or fewer trainers left, the winner of a trainer battle heals each standing Pokemon by heal of its max HP, can not be challenged for protectSeconds, and takes the loser's bag.",
+    "_winHealComment": "After any trainer battle win, the winner's standing Pokemon recover winHeal of their max HP (1 = full heal). With finalWin.remaining or fewer trainers left they also get finalWin.heal if it is higher, protectSeconds unchallengeable, and the loser's bag.",
+    "winHeal": 0.5,
     "finalWin": { "remaining": 3, "heal": 0.5, "protectSeconds": 20 },
     "_finalShowdownComment": "true pulls the last two trainers to the Shadow Crystal's arena for a one-on-one final; false lets them find each other.",
     "finalShowdown": false,

@@ -33,7 +33,7 @@ import { Accounts, clientIp } from './accounts';
 import { Alerts, ErrorLog, Metrics } from './telemetry';
 import { Backups } from './backup';
 import { s3FromEnv } from './s3';
-import { Events } from './events';
+import { CONTEST_PRIZE, Events } from './events';
 import { WorkerPool } from './remoteRoom';
 import { timingSafeEqual } from 'node:crypto';
 
@@ -214,8 +214,25 @@ const events = new Events(
     for (const c of hub.clients.values()) c.send(msg);
   },
   (text) => chat.announce(text),
+  (e, places) => {
+    const top = places.slice(0, CONTEST_PRIZE.places);
+    top.forEach((p, i) => {
+      const r = accounts.gifts.send('Events', p.userId, {
+        kind: 'pokemon', dex: CONTEST_PRIZE.dex, level: CONTEST_PRIZE.level, shiny: i === 0,
+        message: `${e.name}: you finished #${i + 1} with ${p.wins} win${p.wins === 1 ? '' : 's'}! Here is your ${i === 0 ? 'shiny ' : ''}${CONTEST_PRIZE.name}.`,
+      });
+      if ('error' in r) log(`Contest ${e.id}: prize for ${p.name} not sent (${r.error})`);
+      else accounts.logMod({ id: null, name: 'Events' }, 'gift', p.name, JSON.stringify({ kind: 'pokemon', message: `${e.name} #${i + 1}` }));
+    });
+    if (top.length) chat.announce(`${e.name} is over! Winner: ${top[0]?.name} with ${top[0]?.wins} wins. ${top.length > 1 ? `Top ${top.length}: ${top.map((p) => p.name).join(', ')}. ` : ''}Prizes are waiting on the online menu.`);
+  },
 );
 hub.events = events;
+accounts.contestBoard = () => {
+  const c = events.contest();
+  if (!c) return null;
+  return { name: c.name, endsAt: c.endsAt, prize: `1st: shiny ${CONTEST_PRIZE.name} · 2nd to ${CONTEST_PRIZE.places}th: ${CONTEST_PRIZE.name}`, places: events.standings(c, 10).map((p) => ({ name: p.name, wins: p.wins })) };
+};
 const s3 = s3FromEnv();
 const backups = new Backups(accounts.db, DATA, KIND, s3, (text) => alerts.send('backup', text), log);
 if (KIND !== 'dev' || process.env.BACKUP_MINUTES) backups.start(Number(process.env.BACKUP_MINUTES ?? 15));

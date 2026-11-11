@@ -192,7 +192,7 @@ export class ModApi {
         this.hooks.clearError(String(b.key ?? ''));
         return send(200, { ok: true });
       }
-      if (req.method === 'GET' && path === '/api/mod/events') return send(200, { events: this.hooks.events.list(), now: Date.now() });
+      if (req.method === 'GET' && path === '/api/mod/events') return send(200, { events: this.hooks.events.list().map((e) => (e.kind === 'wins' ? { ...e, top: this.hooks.events.standings(e, 5) } : e)), now: Date.now() });
       if (req.method === 'POST' && path === '/api/mod/events') {
         const b = await readJson(req);
         const err = this.hooks.events.create({ kind: b.kind, name: b.name, startsAt: b.startsAt, hours: b.hours, value: b.value }, me.username);

@@ -241,10 +241,35 @@ export function modal(build: (box: HTMLDivElement, close: () => void) => void, w
 /** All-time wins (ranked play has been retired, and with it the ranked board). */
 export function leaderboardDialog(net: Connection, onProfile: (name: string) => void): Promise<void> {
   return modal((box, close) => {
-    box.append(el('h2', '', 'Leaderboard · Top 10'));
+    const title = el('h2', '', 'Leaderboard · Top 10');
+    box.append(title);
     const list = el('div', 'list');
     list.append(el('div', 'almia-note', 'Loading...'));
-    void net.api<{ players: Array<{ name: string; wins: number; matches: number }> }>('/api/leaderboard').then((r) => {
+    void net.api<{ players: Array<{ name: string; wins: number; matches: number }>; contest?: { name: string; endsAt: number; prize: string; places: Array<{ name: string; wins: number }> } | null }>('/api/leaderboard').then((r) => {
+      const contest = el('div');
+      if (r.contest) {
+        title.textContent = 'Leaderboard';
+        const c = r.contest;
+        const hrs = Math.max(0, (c.endsAt - Date.now()) / 3600_000);
+        const left = hrs >= 48 ? `${Math.round(hrs / 24)} days left` : hrs >= 2 ? `${Math.round(hrs)} h left` : `${Math.max(0, Math.round(hrs * 60))} min left`;
+        contest.append(el('h3', '', `★ ${c.name} · ${left}`), el('div', 'almia-note', `Most wins in public matches while it runs. ${c.prize}`));
+        const ct = el('table', 'almia-board');
+        ct.innerHTML = '<tr><th>#</th><th>Trainer</th><th class="r">Wins</th></tr>';
+        c.places.forEach((p, i) => {
+          const tr = el('tr');
+          const nm = el('td', '', p.name);
+          nm.style.cursor = 'pointer';
+          nm.onclick = () => {
+            close();
+            onProfile(p.name);
+          };
+          tr.append(el('td', '', i < 5 ? `${i + 1} ★` : String(i + 1)), nm, el('td', 'r', String(p.wins)));
+          ct.appendChild(tr);
+        });
+        contest.append(ct);
+        if (!c.places.length) contest.append(el('div', 'almia-note', 'No wins yet. Be the first!'));
+        contest.append(el('h3', '', 'All time · Top 10'));
+      }
       const t = el('table', 'almia-board');
       t.innerHTML = '<tr><th>#</th><th>Trainer</th><th class="r">Wins</th><th class="r">Matches</th></tr>';
       (r.players ?? []).forEach((p, i) => {
@@ -258,7 +283,7 @@ export function leaderboardDialog(net: Connection, onProfile: (name: string) => 
         tr.append(el('td', '', String(i + 1)), nm, el('td', 'r', String(p.wins)), el('td', 'r', String(p.matches)));
         t.appendChild(tr);
       });
-      list.replaceChildren(t);
+      list.replaceChildren(contest, t);
       if (!r.players?.length) list.append(el('div', 'almia-note', 'No wins yet. Be the first!'));
     });
     const done = el('button', 'almia-btn alt', 'Close');

@@ -142,6 +142,8 @@ export class Accounts {
   readonly gifts: Gifts;
   /** Players' bug reports and suggestions (server/feedback.ts). */
   readonly feedback: Feedback;
+  /** The running wins contest's board for /api/leaderboard (set by server/main.ts), or null. */
+  contestBoard: (() => { name: string; endsAt: number; prize: string; places: Array<{ name: string; wins: number }> } | null) | null = null;
   /** Failed sign-ins per IP and per username: [count, window start]. */
   private failures = new Map<string, [number, number]>();
   private readonly google: { id: string; secret: string } | null;
@@ -1178,7 +1180,7 @@ export class Accounts {
       if (req.method === 'GET' && path === '/api/replays' && !url.searchParams.get('mine')) return send(200, { replays: this.replayList(null) });
       if (req.method === 'GET' && path === '/api/leaderboard') {
         const rows = this.db.prepare("SELECT u.username, p.stats FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.banned = 0 AND json_extract(p.stats, '$.wins') > 0 ORDER BY json_extract(p.stats, '$.wins') DESC, json_extract(p.stats, '$.matches') ASC LIMIT 10").all() as Array<{ username: string; stats: string }>;
-        return send(200, { players: rows.map((r) => ({ name: r.username, ...JSON.parse(r.stats) })) });
+        return send(200, { players: rows.map((r) => ({ name: r.username, ...JSON.parse(r.stats) })), contest: this.contestBoard?.() ?? null });
       }
       if (req.method === 'GET' && path.startsWith('/api/profile/')) {
         const name = decodeURIComponent(path.slice('/api/profile/'.length));

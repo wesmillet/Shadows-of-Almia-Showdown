@@ -30,7 +30,7 @@ spec = importlib.util.spec_from_file_location('fetch_sprites', os.path.join(ROOT
 fs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fs)
 OUT = os.path.join(ROOT, 'data', 'shiny.json')
-REGIONAL = {'alola', 'galar', 'hisui', 'paldea'}
+REGIONAL = {'alola', 'galar', 'hisui', 'paldea', 'libre', 'beta'}  # forms with their own shiny set
 
 
 def blob(path):

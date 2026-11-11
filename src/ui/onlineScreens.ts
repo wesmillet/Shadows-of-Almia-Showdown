@@ -282,7 +282,7 @@ export class OnlineScreen implements Screen {
     if (ev.length) {
       const left = (t: number) => {
         const m = Math.max(0, Math.round((t - Date.now()) / 60000));
-        return m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
+        return m >= 2880 ? `${Math.round(m / 1440)} days left` : m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
       };
       text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
     }

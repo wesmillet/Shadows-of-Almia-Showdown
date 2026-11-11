@@ -274,6 +274,11 @@ export class MatchScreen implements Screen {
       this.popup.t -= dt;
       if (this.popup.t <= 0) this.popup = null;
     }
+    // Challenged while a chest or a stall was open: it closes for the battle.
+    if (this.match.playerDuel && (this.chestOpen !== null || this.shopOpen)) {
+      this.chestOpen = null;
+      this.shopOpen = null;
+    }
     // A prompt owns the input: the on-screen buttons are hidden, and nothing they queued is kept.
     if (this.touch && (this.teach || this.extractPick || this.match.snagOffer || this.shopOpen || this.chestOpen !== null)) this.touch.takeActions();
     if (this.teach) {
@@ -366,7 +371,8 @@ export class MatchScreen implements Screen {
         if (m && isRoaming(m)) {
           this.hud.ping = { mon: m, t: 3 };
           this.say(`${m.name} is ${Math.hypot(m.x - this.match.player.x, m.y - this.match.player.y).toFixed(0)} tiles away (see minimap)`, 1.5);
-        } else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
+        } else if (this.match.playerDuel) this.pickNext(h.index);
+        else if (this.match.swapLead(h.index)) this.say(`${lead(this.match.player)?.name} takes the lead`);
       } else if (h?.kind === 'item') this.drag = { index: h.index, gear: this.gearTab, x: c.x, y: c.y, moved: false };
       else if (h?.kind === 'discard') this.discardSlot(h.index);
       else if (h?.kind === 'held') this.say(this.match.unequip(this.match.player, h.index), 1.6);
@@ -544,6 +550,8 @@ export class MatchScreen implements Screen {
 
   /** Space (or E): a vendor opens the stall, a healer heals, the champion battles; else the nearest ball is picked up. */
   private interact(): boolean {
+    // In a trainer battle Space only dodges (standing on a chest or by a stall used to open it instead).
+    if (this.match.playerDuel) return false;
     if (this.online) {
       // Shops and chests open here; anything else in reach is the server's to do. Nothing in reach: a dodge.
       const svc = this.match.nearService();
@@ -773,7 +781,8 @@ export class MatchScreen implements Screen {
   /** Shift+1-6: the Pokémon in that slot of the party strip takes the lead (not in a trainer battle). */
   private leadSlot(i: number): void {
     const p = this.match.player;
-    if (p.duelId) return this.say('You choose who goes out in a battle when one faints', 1.4);
+    // In a trainer battle: switch to it (duel.switchCooldown between switches).
+    if (p.duelId) return this.pickNext(i);
     const m = p.party[i];
     if (!m) return;
     if (i === 0) return this.say(`${m.name} is already in the lead`, 1);
@@ -786,6 +795,8 @@ export class MatchScreen implements Screen {
   private touchParty(i: number, act: PartyAct): void {
     const m = this.match;
     const p = m.player;
+    // In a trainer battle any party action on another Pokémon switches to it.
+    if (m.playerDuel && p.party[i] && p.party[i] !== this.playerDuelSide()?.mon) return this.pickNext(i);
     const mon = p.party[i];
     if (!mon) return;
     switch (act) {
@@ -1752,6 +1763,15 @@ export class MatchScreen implements Screen {
         const mine = ev.trainer === this.match.player;
         if (!ev.trainer.legendBout && (mine || ev.duel.a.trainer === this.match.player || ev.duel.b.trainer === this.match.player)) {
           this.say(mine ? `Go, ${ev.mon.name}!` : `${ev.trainer.name} sent out ${ev.mon.name}!`, 1.6);
+        }
+        break;
+      }
+      case 'duel-recall': {
+        // Back into its ball: a red flash where it stood.
+        this.playFx(EXTRA_FX.flash, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 2, fps: 20 });
+        const mine = ev.trainer === this.match.player;
+        if (mine || ev.duel.a.trainer === this.match.player || ev.duel.b.trainer === this.match.player) {
+          this.say(mine ? `${ev.mon.name}, come back!` : `${ev.trainer.name} called back ${ev.mon.name}!`, 1.4);
         }
         break;
       }

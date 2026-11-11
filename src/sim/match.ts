@@ -96,6 +96,8 @@ export interface DuelSide {
   nextAt: number;
   /** The player has to choose the next Pokémon. */
   awaitingPick: boolean;
+  /** Match time the trainer can switch Pokémon again mid-battle (duel.switchCooldown). */
+  switchReadyAt?: number;
   /** Which way the opponent is (unit vector). */
   fx: number;
   fy: number;
@@ -4105,7 +4107,7 @@ export class Match {
       if (m.captured || m.fainted) continue;
       m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * Math.max(0, fw.heal - winHeal)));
     }
-    winner.duelReadyAt = Math.max(winner.duelReadyAt ?? 0, this.time + fw.protectSeconds);
+    if (fw.protectSeconds > 0) winner.duelReadyAt = Math.max(winner.duelReadyAt ?? 0, this.time + fw.protectSeconds);
     // The loser's bag, when they are out of Pokémon (their run is over).
     let took = 0;
     if (!this.canBattle(loser)) {
@@ -4120,7 +4122,7 @@ export class Match {
         }
       }
     }
-    this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: `Victory! Your team recovers, nobody can challenge you for ${fw.protectSeconds} s${took ? `, and you take ${loser.name}'s items` : ''}`, seconds: 3.5 }));
+    this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: `Victory! Your team recovers${fw.protectSeconds > 0 ? `, nobody can challenge you for ${fw.protectSeconds} s` : ''}${took ? `, and you take ${loser.name}'s items` : ''}`, seconds: 3.5 }));
   }
 
   /** A legend bout is over: the legend joined the player (won) or left (lost). The stand-in host goes. */
@@ -4228,6 +4230,7 @@ export class Match {
     m.busy = 0.6;
     m.visual.scale = 0.15;
     m.visual.flash = 1;
+    m.outAt = this.time;
     side.mon = m;
     side.awaitingPick = false;
     side.nextAt = Infinity;
@@ -4240,11 +4243,40 @@ export class Match {
     const duel = this.playerDuel;
     if (!duel || duel.state === 'over') return '';
     const side = duel.a.trainer === this.player ? duel.a : duel.b;
-    if (!side.awaitingPick) return '';
+    if (!side.awaitingPick) return this.duelSwitch(duel, side, index);
     const m = this.player.party[index];
     if (!m || m.fainted || m.captured) return m ? `${m.name} can't battle` : '';
     this.sendOut(duel, side, index);
     return `Go, ${m.name}!`;
+  }
+
+  /**
+   * Switching mid-battle, as in the games: the Pokémon out comes back, and after a short gap with
+   * nobody out (duel.switchGap) the chosen one goes out. Once every duel.switchCooldown seconds.
+   */
+  private duelSwitch(duel: Duel, side: DuelSide, index: number): string {
+    const c = CONFIG.duel as typeof CONFIG.duel & { switchCooldown?: number; switchGap?: number };
+    const out = side.mon;
+    const t = side.trainer;
+    const m = t.party[index];
+    if (!out || duel.state !== 'fight' || !m || m === out) return '';
+    if (m.fainted || m.captured) return `${m.name} can't battle`;
+    const ready = side.switchReadyAt ?? 0;
+    if (this.time < ready) return `You can switch again in ${Math.ceil(ready - this.time)} s`;
+    this.battle.interrupt(out);
+    out.stowed = true;
+    out.duelId = undefined;
+    out.target = null;
+    out.moving = false;
+    side.mon = null;
+    side.awaitingPick = false;
+    // The chosen one first in the party: it is who comes out when the gap is up.
+    t.party.splice(index, 1);
+    t.party.unshift(m);
+    side.nextAt = this.time + (c.switchGap ?? 1.2);
+    side.switchReadyAt = this.time + (c.switchCooldown ?? 15);
+    this.battle.events.push({ type: 'duel-recall', duel, mon: out, trainer: t });
+    return `${out.name}, come back! Go, ${m.name}!`;
   }
 
   private stepDuels(dt: number): void {
@@ -4438,6 +4470,9 @@ export class Match {
     // a player's reaction time. The challenger and visitors keep their own pace.
     const trainer = m.owner && !m.owner.challenger && !m.owner.visitor && !m.owner.isPlayer;
     if (trainer) {
+      // Not on a Pokémon that has only just come out (it gets a moment to land and move first).
+      const grace = (CONFIG.duel as typeof CONFIG.duel & { sendOutGrace?: number }).sendOutGrace ?? 1.5;
+      if (foe.outAt !== undefined && this.time - foe.outAt < grace) return;
       // The best ready move that lands from here, fired as soon as it is ready (it keeps closing in
       // on the move it is working towards meanwhile).
       const now = m.busy <= 0 ? this.battle.chooseMove(m, foe, true) : -1;

@@ -74,6 +74,10 @@ export interface Mon {
   target: Mon | null;
   /** True while shut inside a Poké Ball: cannot act or be targeted. */
   captured: boolean;
+  /** The cast its 'Struggle!' was shown for (once per move). */
+  struggleSeq?: number;
+  /** Match time it was last sent out in a trainer battle (rivals hold fire for duel.sendOutGrace). */
+  outAt?: number;
   /** Struck by a ball that has not closed yet: nothing can hit or target it in that moment. */
   ballHit?: boolean;
   /** Party behaviour (see sim/party.ts). */

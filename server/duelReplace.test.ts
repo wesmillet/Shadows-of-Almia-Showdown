@@ -162,8 +162,8 @@ describe('trainer battle replacements', async () => {
     knockOut(side(b).mon!);
     step(3, () => ended.length > 0);
     expect(ended).toEqual([p]);
-    expect(mine.hp).toBeGreaterThanOrEqual(Math.round(mine.maxHp * 0.7) - 1);
-    expect(p.duelReadyAt ?? 0).toBeGreaterThanOrEqual(m.time + 15);
+    expect(mine.hp).toBe(mine.maxHp);
+    expect(p.duelReadyAt ?? 0).toBeLessThanOrEqual(m.time + 13);
     expect(p.items.some((x) => x?.id === 'ultra-ball')).toBe(true);
   });
 });

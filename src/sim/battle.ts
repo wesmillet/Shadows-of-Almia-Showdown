@@ -48,6 +48,8 @@ export type BattleEvent =
   | { type: 'text'; mon: Mon; text: string }
   | { type: 'notice'; text: string; seconds?: number; /** Online: the one player (trainer id) it is for; everyone when absent. */ to?: number }
   | { type: 'downed'; trainer: Trainer; seconds: number }
+  /** A trainer pulled their Pokémon back mid-battle (another goes out after a moment). */
+  | { type: 'duel-recall'; duel: Duel; mon: Mon; trainer: Trainer }
   /** The last two trainers' battle has begun: brought to the crystal (the screen plays its intro). */
   | { type: 'final-battle'; a: string; b: string; /** Their trainer ids (the intro puts each name over its trainer). */ aId?: number; bId?: number }
   | { type: 'mega-start'; mon: Mon }
@@ -204,8 +206,19 @@ export function damageRate(attacker: Mon, defender: Mon, actEvery = 1.1, seen = 
 }
 
 /** Score a move for AI selection: expected damage with a bonus for applying a fresh status. */
+/** In a trainer battle, none of the attacker's damaging moves can affect the target: its hits land as Struggle. */
+export function wouldStruggle(attacker: Mon, target: Mon): boolean {
+  if (!attacker.duelId || attacker.duelId !== target.duelId) return false;
+  return !attacker.moves.some((id) => {
+    const mv = MOVES.get(id);
+    return !!mv && mv.category !== 'status' && mv.power > 0 && effectiveness(mv.type, target.types) !== 0;
+  });
+}
+
 export function moveScore(attacker: Mon, target: Mon, m: MoveDef): number {
   const eff = effectiveness(m.type, target.types);
+  // Nothing it has can touch the foe: any damaging move will do, as Struggle.
+  if (eff === 0 && m.category !== 'status' && m.power > 0 && wouldStruggle(attacker, target)) return 30;
   // What it would actually hit with: the attack stat the move uses against the target's matching
   // defence, as computeDamage reckons it (an Infernape with Fire Punch and Flamethrower punches
   // when its Attack is the better stat, or the target's Sp. Def is the higher wall).
@@ -760,6 +773,7 @@ export class BattleSystem {
 
   /** One Pokémon struck by a move: damage, the hit event, status and stat changes. */
   private landHit(attacker: Mon, target: Mon, m: MoveDef, pulse?: Pulse): void {
+    m = this.struggleFor(attacker, target, m);
     const r = computeDamage(this.rng, attacker, target, m, pulse?.scale);
     if (pulse && r.raw !== undefined) {
       // A beam's pulse deals the whole points of what it has built up on this target and keeps the rest.
@@ -821,6 +835,22 @@ export class BattleSystem {
     if (m.stages?.target && this.rng.chance(m.stages.chance)) {
       for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
     }
+  }
+
+  /**
+   * Struggle: in a trainer battle, a Pokémon none of whose damaging moves can affect its foe (Normal
+   * moves against a Ghost) does not just fail. The hit lands as Struggle instead: typeless, weak,
+   * and it costs the user a share of the damage (CONFIG.battle.struggle). Ghosts used to be stuck.
+   */
+  private struggleFor(attacker: Mon, target: Mon, m: MoveDef): MoveDef {
+    if (m.category === 'status' || m.power <= 0 || !attacker.duelId || attacker.duelId !== target.duelId) return m;
+    if (effectiveness(m.type, target.types) !== 0 || !wouldStruggle(attacker, target)) return m;
+    const st = (CONFIG.battle as typeof CONFIG.battle & { struggle?: { power: number; recoil: number } }).struggle ?? { power: 50, recoil: 0.25 };
+    if (attacker.struggleSeq !== attacker.castSeq) {
+      attacker.struggleSeq = attacker.castSeq;
+      this.events.push({ type: 'text', mon: attacker, text: 'Struggle!' });
+    }
+    return { ...m, id: 'struggle', name: 'Struggle', type: 'typeless', power: Math.round(st.power * (m.power >= 60 ? 1 : m.power / 60)), recoil: st.recoil, status: undefined, stages: undefined, drain: undefined };
   }
 
   isEnemy(a: Mon, b: Mon): boolean {

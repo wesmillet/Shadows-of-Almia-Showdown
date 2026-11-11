@@ -14,12 +14,20 @@ import type { RosterEntry, ServerMsg } from '../net/protocol';
 import type { SyncPatch } from '../net/sync';
 import type { View } from '../render/view';
 import type { MatchScreen } from './matchScreen';
-import { INK, panel, text } from './screens';
+import { INK, panel, text, uiFont } from './screens';
 
 /** The bar along the bottom of a watched match. */
 function bar(v: View, title: string, hint: string, color = INK.accent): void {
   const s = v.baseScale;
-  const w = Math.min(v.width - 40 * s, 620 * s);
+  // Wide enough for its text (it used to be a fixed 620 and cut the hint), never past the screen.
+  const h = v.hud;
+  h.save();
+  h.font = uiFont(Math.round(15 * s));
+  const tw = h.measureText(title).width;
+  h.font = uiFont(Math.round(11 * s));
+  const hw = h.measureText(hint).width;
+  h.restore();
+  const w = Math.min(v.width - 24 * s, Math.max(360 * s, tw + 48 * s, hw + 48 * s));
   const x = v.width / 2 - w / 2;
   const y = v.height - 64 * s;
   panel(v, x, y, w, 50 * s, 14, 'rgba(18,14,34,0.88)');
@@ -49,7 +57,7 @@ export function setupSpectate(screen: MatchScreen, mirror: MirrorMatch, net: Mir
     },
     draw(v: View) {
       const mode = header.mode === 'private' ? 'Private · ' : '';
-      bar(v, `${mode}Watching ${nameOf(mirror.roster, follow)} · ${header.delay} s behind`, '← → switch trainer   ·   Esc leave');
+      bar(v, `${mode}Watching ${nameOf(mirror.roster, follow)}`, '← → switch trainer   ·   Esc leave');
     },
   };
 }

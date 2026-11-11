@@ -145,6 +145,8 @@
     "castSeconds": 0.3,
     "rangeScale": 1.6,
     "hitStopMs": 60,
+    "_shotLaneComment": "A single-target shot (not a lunge or slam) lands on the first foe within shotLane tiles (plus its body) of its aim line, out to its reach.",
+    "shotLane": 0.55,
     "_struggleComment": "In a trainer battle a Pokemon none of whose damaging moves can affect its foe hits as Struggle instead: typeless, power (scaled down for weaker moves), and the user takes recoil of the damage it dealt.",
     "struggle": { "power": 50, "recoil": 0.25 },
     "stab": 1.5,

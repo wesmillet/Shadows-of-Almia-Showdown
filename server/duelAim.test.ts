@@ -133,3 +133,31 @@ describe('switching mid-battle', async () => {
     expect(m.duelPick(p.party.indexOf(first))).toMatch(/switch again/);
   });
 });
+
+describe('shots along the aim line', async () => {
+  const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
+  const fire = (aimX: number, aimY: number) => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(4), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 3 });
+    m.finalStarted = true;
+    const p = m.seats[0]!.trainer;
+    const r = m.trainers.find((t) => !t.visitor && !t.challenger)!;
+    p.party = [m.makeMon('0006', 40, p, p.x, p.y)];
+    r.party = [m.makeMon('0009', 40, r, r.x, r.y)];
+    r.x = p.x + 4; r.y = p.y;
+    m.startDuel(p, r);
+    const d = m.duels.find((x) => x.id === p.duelId)!;
+    for (let i = 0; i < 600 && !(d.a.mon && d.b.mon); i++) m.step(1 / 60);
+    const mine = (d.a.trainer === p ? d.a : d.b).mon!;
+    const foe = (d.a.trainer === p ? d.b : d.a).mon!;
+    mine.moves = ['ember'];
+    mine.cooldowns = [0];
+    foe.x = mine.x + 3; foe.y = mine.y;
+    const hp = foe.hp;
+    m.battle.castToward(mine, 0, mine.x + aimX, mine.y + aimY);
+    for (let i = 0; i < 150 && foe.hp === hp; i++) { foe.moving = false; foe.casting = null; foe.x = mine.x + 3; foe.y = mine.y; m.step(1 / 60); }
+    return foe.hp < hp;
+  };
+  it('aimed short of the foe on the line, it still lands', () => expect(fire(1.5, 0)).toBe(true));
+  it('aimed past the foe on the line, it still lands', () => expect(fire(5, 0.3)).toBe(true));
+  it('aimed well to the side, it misses', () => expect(fire(1, 3)).toBe(false));
+});

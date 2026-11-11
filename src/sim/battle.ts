@@ -605,6 +605,16 @@ export class BattleSystem {
           this.stepChannel(mon, 0, candidates);
           return;
         }
+        // A single-target shot (not a lunge or a slam) flies along its aim line: it lands on the first
+        // foe it passes close to, out to its reach, so aiming a little long or short still connects
+        // (stepping sideways out of the line still dodges it).
+        if (m.shape === 'single' && m.category !== 'status' && !isContact(m) && !m.leap) {
+          const hitFoe = this.alongLine(mon, m, mon.casting.targetX, mon.casting.targetY, candidates());
+          if (hitFoe) {
+            mon.casting.targetX = hitFoe.x;
+            mon.casting.targetY = hitFoe.y;
+          }
+        }
         const area = makeArea(m, { ...mon, x: mon.x, y: mon.y } as Mon, mon.casting.targetX, mon.casting.targetY);
         // Line, cone and ring areas follow the caster's position at cast start; `single` keeps its locked point.
         this.resolve(mon, m, area, candidates());
@@ -835,6 +845,36 @@ export class BattleSystem {
     if (m.stages?.target && this.rng.chance(m.stages.chance)) {
       for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
     }
+  }
+
+  /** The first foe a shot from `mon` towards (tx, ty) passes close to, out to the move's reach (walls stop it). */
+  private alongLine(mon: Mon, m: MoveDef, tx: number, ty: number, pool: Iterable<Mon>): Mon | null {
+    const dx = tx - mon.x;
+    const dy = ty - mon.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.01) return null;
+    const ux = dx / len;
+    const uy = dy / len;
+    const reach = moveReach(m);
+    const lane = (CONFIG.battle as typeof CONFIG.battle & { shotLane?: number }).shotLane ?? 0.55;
+    let best: Mon | null = null;
+    let bestT = Infinity;
+    for (const c of pool) {
+      if (c === mon || !BattleSystem.active(c) || !this.isEnemy(mon, c)) continue;
+      const rx = c.x - mon.x;
+      const ry = c.y - mon.y;
+      const t = rx * ux + ry * uy;
+      const pad = hitPad(c.species);
+      if (t <= 0 || t > reach + pad) continue;
+      const side = Math.abs(rx * uy - ry * ux);
+      if (side > lane + pad) continue;
+      if (this.shotLine && !this.shotLine(mon.x, mon.y, c.x, c.y)) continue;
+      if (t < bestT) {
+        bestT = t;
+        best = c;
+      }
+    }
+    return best;
   }
 
   /**

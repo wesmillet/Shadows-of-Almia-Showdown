@@ -1218,7 +1218,6 @@ export class Hud {
     // On a touch screen the on-screen buttons say these themselves.
     const keys = !Input.touch;
     if (!match.controlled && keys) chip('Options · Esc', FLAT_INK.dim);
-    if (keys) chip(match.playerDuel ? 'Auto off in battles' : match.auto ? 'Auto on · R' : 'Auto off · R', match.auto && !match.playerDuel ? '#2e7d32' : FLAT_INK.dim);
     // Dodging is for steering a Pokémon (Pokémon mode or a battle), not walking the trainer.
     const dcd = m.dodgeCd ?? 0;
     if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);

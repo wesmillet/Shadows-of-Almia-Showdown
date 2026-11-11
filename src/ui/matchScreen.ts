@@ -401,11 +401,6 @@ export class MatchScreen implements Screen {
       const r = this.match.playerDodge();
       if (r === 'cooldown') this.say('Dodge not ready', 0.5);
     }
-    // R: auto-battle on or off (the lead picks its own moves while you steer).
-    if (input.pressed('KeyR')) {
-      this.match.auto = !this.match.auto;
-      this.say(this.match.auto ? 'Auto-battle on: your lead picks its own moves' : 'Auto-battle off: you pick the moves', 1.6);
-    }
     if (input.pressed('Escape')) {
       if (this.match.controlled) {
         this.match.releaseControl();
@@ -756,9 +751,7 @@ export class MatchScreen implements Screen {
         this.interact();
         return;
       case 'auto':
-        if (m.playerDuel) return this.say('Auto-battle is off in trainer battles', 1.2);
-        m.auto = !m.auto;
-        this.say(m.auto ? 'Auto-battle on: your lead picks its own moves' : 'Auto-battle off: you pick the moves', 1.6);
+        // The auto-battle switch is gone (out on the field your lead always picks its own moves).
         return;
       case 'pick':
         if (side?.awaitingPick) this.pickNext(a.index);
@@ -906,7 +899,7 @@ export class MatchScreen implements Screen {
         kinds: ballSlots.map(({ e, i }) => ({ slot: i, name: ITEMS[e!.id]?.name ?? e!.id, count: e!.count, armed: i === armed })),
       } : null,
       interact: prompt ? prompt.replace(/^Space · /, '').replace(/ \(move or Space to reel in\)/, '') : null,
-      auto: side ? null : m.auto,
+      auto: null,
       styler: m.hasStyler(p),
       pick: side?.awaitingPick ? Math.max(0, side.nextAt - m.time) : null,
       minimap: ((r) => {

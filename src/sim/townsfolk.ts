@@ -49,7 +49,7 @@ export const FOLK_POOL: Folk[] = [
   {
     name: 'Instructor Hale', role: 'villager_h', lines: [
       'Draw loops round a wild Pokémon with a Capture Styler and it calms right down. That calm moment is when a ball truly counts.',
-      'Auto-battle is fine for walking. For a real fight, take the controls yourself. R, trainer. R.',
+      'Your Pokémon fight fine on their own for walking. For a real fight, take the controls yourself: aim and fire.',
       'Your party heals free at any outpost. Dying because you were too proud to walk there is a choice.',
     ],
   },

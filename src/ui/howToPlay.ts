@@ -54,7 +54,7 @@ export function openHowToPlay(): Promise<void> {
   ];
   const keySections: Array<[string, string]> = [
     ['The goal', 'Ten trainers on one island. Be the last trainer standing.'],
-    ['Moving and fighting', `Walk with ${move} or the arrow keys. Your Pokémon follow you and fight wild Pokémon nearby on their own (auto-battle, ${k('KeyR')}). To use a move yourself, aim with the mouse: left click for the first move, right click for the second (or ${k('KeyQ')} and ${k('KeyE')}). Click one of your Pokémon to steer it, Esc to stop.`],
+    ['Moving and fighting', `Walk with ${move} or the arrow keys. Your Pokémon follow you and fight wild Pokémon nearby on their own. To use a move yourself, aim with the mouse: left click for the first move, right click for the second (or ${k('KeyQ')} and ${k('KeyE')}). Click one of your Pokémon to steer it, Esc to stop.`],
     ['Catching', `Wear a wild Pokémon down, target it (${k('Tab')} or click it) and throw a ball (${k('KeyF')}). You can carry six. Items and balls are in your bag (1-6).`],
     ['Healing', 'Stand at an outpost to heal your team. If a wild Pokémon knocks out your whole team, you lose your bag and come back at an outpost a little later.'],
     ['Trainer battles', `Come close to another trainer and you battle one on one: steer your Pokémon with ${move}, aim and use moves with the mouse, dodge with ${k('Space')}. When one of yours is knocked out, pick the next (click or 1-6) within 4 seconds, or the first able one in your party goes out. Lose every Pokémon in a trainer battle and you are out of the match.`],

@@ -1217,11 +1217,11 @@ export class Hud {
     };
     // On a touch screen the on-screen buttons say these themselves.
     const keys = !Input.touch;
-    if (!match.controlled && keys) chip('Options · Esc', FLAT_INK.dim);
+    if (!match.controlled && keys) chip(Input.pad ? 'Options · Start' : 'Options · Esc', FLAT_INK.dim);
     // Dodging is for steering a Pokémon (Pokémon mode or a battle), not walking the trainer.
     const dcd = m.dodgeCd ?? 0;
     if (match.canDodge) chip(dcd > 0 ? `Dodge ${dcd.toFixed(1)}s` : 'Dodge · Space', dcd > 0 ? FLAT_INK.dim : FLAT_INK.text);
-    if (!match.playerDuel && (keys || match.controlled)) chip(match.controlled ? `Steering ${m.name} · Esc` : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
+    if (!match.playerDuel && (keys || match.controlled)) chip(match.controlled ? `Steering ${m.name} · ${Input.pad ? 'B' : 'Esc'}` : Input.pad ? 'Trainer' : 'Trainer · click a Pokémon', match.controlled ? '#1f6aa0' : FLAT_INK.text);
     if (canMega(match.player, m)) chip('Mega Evolve · M', FLAT_INK.storm, 'rgba(190,120,255,0.95)');
     // A legendary in its bout can be caught: say so, with the balls left.
     if (match.legendBoutFoe()) {
@@ -1264,7 +1264,7 @@ export class Hud {
         ctx.fillRect(fx, fy, fw, Math.round(fh * frac));
       }
       const midY = fy + fh / 2;
-      this.label(ctx, MOVE_KEYS[i] ?? String(i + 1), x + bw / 2, midY - 5 * s, 9, ready ? '#ffffff' : '#c9c2d8', 'center', '800');
+      this.label(ctx, (Input.pad ? ['RT', 'LT'] : MOVE_KEYS)[i] ?? String(i + 1), x + bw / 2, midY - 5 * s, 9, ready ? '#ffffff' : '#c9c2d8', 'center', '800');
       this.label(ctx, def.name, x + bw / 2, midY + 10 * s, 12, ready ? '#ffffff' : '#c9c2d8', 'center', '800', bw - 4 * k);
       if (!ready && cd > 0) this.label(ctx, `${cd.toFixed(1)}s`, x + bw - 2 * k - 2 * s, fy + 11 * s, 8, '#ffe9a8', 'right', '800');
       this.moveRects.push({ x, y, w: bw, h: bh });
@@ -1431,7 +1431,7 @@ export class Hud {
     const fresh = move(L.moveId);
     this.ink(ctx, fresh.name, x + w / 2, y + 46 * s, 16, FLAT_INK.accent, 'center', w - 2 * pad);
     if (L.queued > 0) this.ink(ctx, `+${L.queued} more`, x + w - pad, y + 18 * s, 9, FLAT_INK.dim, 'right');
-    const row = (def: MoveDef, rx: number, ry: number, rw: number, state: 'new' | 'hover' | 'idle' | 'locked') => {
+    const row = (def: MoveDef, rx: number, ry: number, rw: number, state: 'new' | 'hover' | 'idle' | 'locked', slot = -1) => {
       const col = typeColor(def.type);
       ctx.fillStyle = state === 'locked' ? 'rgba(138,106,74,0.12)' : state === 'hover' ? 'rgba(194,97,26,0.16)' : state === 'new' ? 'rgba(106,63,200,0.1)' : 'rgba(138,106,74,0.08)';
       ctx.fillRect(rx, ry, rw, rowH);
@@ -1451,7 +1451,7 @@ export class Hud {
       this.ink(ctx, kind, tx, ry + 32 * s, 9, darken(col, 0.3), 'left', rw * 0.6);
       const nums = `${def.power > 0 ? `Pow ${def.power}` : 'No damage'} · ${def.cooldown}s`;
       this.ink(ctx, nums, rx + rw - 8 * s, ry + 17 * s, 10, FLAT_INK.text, 'right');
-      const tag = state === 'new' ? 'NEW' : state === 'locked' ? 'Signature: kept' : state === 'hover' ? 'Forget this' : T('Click to forget', 'Tap to forget');
+      const tag = state === 'new' ? 'NEW' : state === 'locked' ? 'Signature: kept' : state === 'hover' ? 'Forget this' : Input.pad && slot >= 0 ? `D-pad ${slot === 0 ? 'left' : 'right'} to forget` : T('Click to forget', 'Tap to forget');
       this.ink(ctx, tag, rx + rw - 8 * s, ry + 32 * s, 9, state === 'new' ? FLAT_INK.storm : state === 'hover' ? FLAT_INK.bad : FLAT_INK.dim, 'right');
     };
     const rx = x + pad;
@@ -1464,7 +1464,7 @@ export class Hud {
       const def = move(id);
       const locked = !!def.signature;
       const over = !locked && hit(st.mouseX, st.mouseY, rx, ry, rw, rowH);
-      row(def, rx, ry, rw, locked ? 'locked' : over ? 'hover' : 'idle');
+      row(def, rx, ry, rw, locked ? 'locked' : over ? 'hover' : 'idle', i);
       if (!locked) this.learnRects.push({ x: rx, y: ry, w: rw, h: rowH, index: i });
       ry += rowH + gap;
     });
@@ -1478,7 +1478,7 @@ export class Hud {
     const over = hit(st.mouseX, st.mouseY, bx, by, bw, bh);
     const lift = over ? k : 0;
     if (!this.ui.flat(ctx, 'button', bx, by - 4 * k - lift, bw, bh + 4 * k, k)) this.panel(ctx, bx, by, bw, bh, 8);
-    this.ink(ctx, `Don't learn ${fresh.name}`, bx + bw / 2, by - lift + (bh - 3 * k) / 2 + 4 * s, 10, over ? FLAT_INK.accent : FLAT_INK.text, 'center', bw - 12 * s);
+    this.ink(ctx, Input.pad ? `Don't learn ${fresh.name} (D-pad down)` : `Don't learn ${fresh.name}`, bx + bw / 2, by - lift + (bh - 3 * k) / 2 + 4 * s, 10, over ? FLAT_INK.accent : FLAT_INK.text, 'center', bw - 12 * s);
     this.learnRects.push({ x: bx, y: by - k, w: bw, h: bh + k, index: 2 });
   }
 

@@ -179,6 +179,22 @@ export function openOptions(opts: { leaveMatch?: () => void } = {}): Promise<voi
         box.appendChild(line);
       }
 
+      // A controller (src/core/gamepad.ts): fixed buttons, Xbox names (PlayStation: A = Cross, B = Circle, X = Square, Y = Triangle).
+      box.appendChild(el('h3', '', 'Controller'));
+      box.appendChild(el('div', 'hint', 'Plug in or pair a controller and press any button. PlayStation: A is Cross, B Circle, X Square, Y Triangle.'));
+      const pad: Array<[string, string]> = [
+        ['Move', 'Left stick'], ['Aim', 'Right stick'], ['Use move 1 / move 2 (hold)', 'RT / LT'],
+        ['Talk / pick up / dodge', 'A'], ['Back / Trainer mode', 'B'], ['Throw a ball', 'X'], ['Capture Styler (hold)', 'Y'],
+        ['Target next wild', 'LB'], ['Ride / land', 'RB'], ['Switch lead Pokémon', 'D-pad left / right'],
+        ['Mega Evolve', 'D-pad up'], ['Held items & TMs tab', 'D-pad down'], ['Cursor (bag, party, menus)', 'View / Select, then right stick and A'],
+        ['Options', 'Start'], ['Menus', 'Stick moves the cursor, A clicks, B goes back'],
+      ];
+      for (const [what, how] of pad) {
+        const line = el('div', 'line');
+        line.append(el('span', '', what), el('span', 'fixed', how));
+        box.appendChild(line);
+      }
+
       const foot = el('div', 'row');
       const reset = el('button', 'almia-btn alt', 'Reset controls');
       reset.addEventListener('click', () => {

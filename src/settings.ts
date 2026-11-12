@@ -26,7 +26,6 @@ export const KEY_ACTIONS: KeyAction[] = [
   { code: 'KeyC', label: 'Capture Styler (hold)' },
   { code: 'KeyV', label: 'Ride / land' },
   { code: 'KeyM', label: 'Mega Evolve' },
-  { code: 'KeyR', label: 'Auto-battle on / off' },
   { code: 'KeyG', label: 'Held items & TMs' },
   { code: 'KeyN', label: 'Music on / off' },
 ];

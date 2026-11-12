@@ -30,6 +30,18 @@ export class Input {
   /** Keys held by on-screen buttons (kept apart from the keyboard's). */
   private virtualHeld = new Set<string>();
 
+  /** A controller has been used (src/core/gamepad.ts). */
+  static pad = false;
+  /**
+   * Set by the match each step while you play (not in the shop, chest or a pick): where you are on
+   * the screen and how far out the controller's aim sits (canvas pixels). Null: the right stick is a cursor.
+   */
+  static padAimFrom: (() => { x: number; y: number; r: number }) | null = null;
+  /** Set by the match each step: a match is on screen (the left stick moves you, not the cursor). */
+  static padInMatch = false;
+  /** The controller's left stick, when it moves you (-1..1 each way), else null. */
+  padMove: { x: number; y: number } | null = null;
+
   /** Set by the Options screen while it waits for a key to bind. */
   static capture: ((code: string) => void) | null = null;
 
@@ -153,6 +165,13 @@ export class Input {
     this.releasedThisStep.add(code);
   }
 
+  /** The controller's A (button 0) or X (button 2) as a mouse click where the cursor is. */
+  padClick(button: 0 | 2): void {
+    this.clicks.push({ x: this.mouseX, y: this.mouseY, button });
+    if (button === 2) this.rightDown = true;
+    else this.mouseDown = true;
+  }
+
   /** A tap on an on-screen button: that key pressed once. */
   virtualTap(code: string): void {
     this.pressedThisStep.add(code);
@@ -192,6 +211,7 @@ export class Input {
         return { x: dx * k, y: dy * k };
       }
     }
+    if (this.padMove) return { ...this.padMove };
     let x = 0;
     let y = 0;
     if (this.down('KeyA') || this.down('ArrowLeft')) x -= 1;

@@ -279,6 +279,8 @@ export class MatchScreen implements Screen {
       this.chestOpen = null;
       this.shopOpen = null;
     }
+    // A controller: the left stick moves you here, not a cursor (src/core/gamepad.ts).
+    Input.padInMatch = true;
     // A prompt owns the input: the on-screen buttons are hidden, and nothing they queued is kept.
     if (this.touch && (this.teach || this.extractPick || this.match.snagOffer || this.shopOpen || this.chestOpen !== null)) this.touch.takeActions();
     if (this.teach) {
@@ -319,6 +321,15 @@ export class MatchScreen implements Screen {
     }
     if (Input.touch) return this.handleTouch(input);
     const duelSide = this.playerDuelSide();
+    // A controller aims with the right stick, a few tiles out from you (or whoever you steer); while
+    // you choose who goes out next it is a cursor instead.
+    if (!duelSide?.awaitingPick) {
+      Input.padAimFrom = () => {
+        const f = this.touchFrom();
+        const x = v.toScreenX(f.x);
+        return { x, y: v.toScreenY(f.y), r: (v.toScreenX(f.x + 1) - x) * 4 };
+      };
+    }
     // Moves aim at the cursor; over the HUD the last point on the field is kept.
     const overHud = !!this.hud.hitTest(input.mouseX, input.mouseY);
     if (!overHud) this.match.aim = v.toWorld(input.mouseX, input.mouseY);
@@ -396,6 +407,14 @@ export class MatchScreen implements Screen {
       this.say(t ? `Ball target: ${t.name}` : 'No wild Pokémon in range', 0.8);
     }
     if (input.pressed('KeyG')) this.gearTab = !this.gearTab;
+    // Controller D-pad: a move to learn is answered with it (left: over move 1, right: over move 2,
+    // down: skip); otherwise left/right switch the lead and down flips the bag's tab.
+    if (this.match.learnOffer && (input.pressed('PadPrev') || input.pressed('PadNext') || input.pressed('PadDown'))) {
+      this.say(this.match.answerLearn(input.pressed('PadPrev') ? 0 : input.pressed('PadNext') ? 1 : -1), 2.2);
+    } else {
+      if (input.pressed('PadDown')) this.gearTab = !this.gearTab;
+      if (input.pressed('PadPrev') || input.pressed('PadNext')) this.cycleLead(input.pressed('PadNext') ? 1 : -1);
+    }
     // Space talks to whoever is in reach, else picks up a ball in reach, else dodges (only while steering a Pokémon).
     if (input.pressed('Space') && !this.interact()) {
       const r = this.match.playerDodge();
@@ -772,6 +791,18 @@ export class MatchScreen implements Screen {
   }
 
   /** Shift+1-6: the Pokémon in that slot of the party strip takes the lead (not in a trainer battle). */
+  /** Controller D-pad: the next (or, going back, the last) Pokémon in the party that can lead takes the lead. */
+  private cycleLead(dir: 1 | -1): void {
+    const party = this.match.player.party;
+    const order = dir > 0 ? party.map((_, i) => i).slice(1) : party.map((_, i) => i).slice(1).reverse();
+    const next = order.find((i) => {
+      const m = party[i];
+      return !!m && !m.fainted && !m.captured && !isRoaming(m) && this.match.player.mount?.mon !== m;
+    });
+    if (next === undefined) return this.say('No one else can lead right now', 1);
+    this.leadSlot(next);
+  }
+
   private leadSlot(i: number): void {
     const p = this.match.player;
     // In a trainer battle: switch to it (duel.switchCooldown between switches).

@@ -1,6 +1,7 @@
 import { track } from './stats';
 import { GameLoop } from './core/loop';
 import { Input } from './core/input';
+import { Gamepads } from './core/gamepad';
 import { touchFrameEnd } from './ui/touchControls';
 import { hashSeed, Rng } from './core/rng';
 import { createGround } from './ground';
@@ -84,6 +85,7 @@ async function boot(): Promise<void> {
   const stage = document.getElementById('stage')!;
   const view = new View(stage, CONFIG.map.tileSize);
   const input = new Input(view.hudCanvas);
+  const pads = new Gamepads(input, view.hudCanvas);
   const assets = new Assets();
 
   let status = 'Loading…';
@@ -645,6 +647,10 @@ async function boot(): Promise<void> {
     step(dt) {
       // The match marks the field as the touch stick while it runs; no other screen has one.
       Input.stickZone = null;
+      // The controller reads what the match set last step, then the match sets it again.
+      pads.poll();
+      Input.padAimFrom = null;
+      Input.padInMatch = false;
       screen?.step(dt, input);
       input.endStep();
     },

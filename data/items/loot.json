@@ -57,7 +57,7 @@
         },
         {
           "id": "extraction-voucher",
-          "weight": 0.5
+          "weight": 0.35
         },
         {
           "id": "capture-styler",
@@ -192,7 +192,7 @@
         },
         {
           "id": "extraction-voucher",
-          "weight": 1
+          "weight": 0.7
         },
         {
           "id": "mega-stone",

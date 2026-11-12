@@ -65,17 +65,19 @@ function idleSprite(dex: string): IdleSprite {
     const im = new Image();
     im.src = `${ASSET_ROOT}pokemon/${dex}/Idle-Anim.png`;
     im.onload = () => {
-      // Where the body sits in the first frame (fractions of its height), to centre it in a panel.
+      // How high and low the body goes over every frame (fractions of a frame's height; an idle
+      // that hops rises above its first frame), to keep it inside a panel.
       try {
+        const n = Math.max(1, entry.durations.length);
         const c = document.createElement('canvas');
-        c.width = entry.w;
+        c.width = entry.w * n;
         c.height = entry.h;
         const g = c.getContext('2d') as CanvasRenderingContext2D;
-        g.drawImage(im, 0, 0, entry.w, entry.h, 0, 0, entry.w, entry.h);
-        const px = g.getImageData(0, 0, entry.w, entry.h).data;
+        g.drawImage(im, 0, 0, entry.w * n, entry.h, 0, 0, entry.w * n, entry.h);
+        const px = g.getImageData(0, 0, entry.w * n, entry.h).data;
         let top = entry.h;
         let bottom = 0;
-        for (let y = 0; y < entry.h; y++) for (let x = 0; x < entry.w; x++) if ((px[(y * entry.w + x) * 4 + 3] as number) > 0) {
+        for (let y = 0; y < entry.h; y++) for (let x = 0; x < entry.w * n; x++) if ((px[(y * entry.w * n + x) * 4 + 3] as number) > 0) {
           top = Math.min(top, y);
           bottom = Math.max(bottom, y + 1);
         }
@@ -227,17 +229,17 @@ export class OnlineScreen implements Screen {
       text(v, e.name, cx, py + 36 * s, 14, { align: 'center', color: ink.name, shadow: false, maxWidth: pw - 24 * s });
       if (sp) {
         h.save();
-        const g = h.createRadialGradient(cx, py + 82 * s, 2 * s, cx, py + 82 * s, 44 * s);
+        const g = h.createRadialGradient(cx, py + 100 * s, 2 * s, cx, py + 100 * s, 50 * s);
         g.addColorStop(0, 'rgba(242,194,74,0.55)');
         g.addColorStop(1, 'rgba(242,194,74,0)');
         h.fillStyle = g;
-        h.fillRect(px + 8 * s, py + 50 * s, pw - 16 * s, 64 * s);
+        h.fillRect(px + 8 * s, py + 50 * s, pw - 16 * s, 96 * s);
         h.fillStyle = 'rgba(0,0,0,0.35)';
         h.beginPath();
-        h.ellipse(cx, py + 82 * s + ((sp.bottom - sp.top) / 2) * sp.h * (k + 1) - 2 * s, 22 * s, 6 * s, 0, 0, Math.PI * 2);
+        h.ellipse(cx, py + 100 * s + ((sp.bottom - sp.top) / 2) * sp.h * (k + 1) - 2 * s, 22 * s, 6 * s, 0, 0, Math.PI * 2);
         h.fill();
         h.restore();
-        drawMon(cx, py + 82 * s, k + 1);
+        drawMon(cx, py + 100 * s, k + 1);
         text(v, e.kind === 'wins' ? 'See standings' : eventLine(e), px + 14 * s, py + ph - 14 * s, 10, { color: e.kind === 'wins' ? ink.foot : ink.body, shadow: false, maxWidth: pw * 0.62 });
         text(v, timeLeft, px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: ink.foot, shadow: false });
       } else {
@@ -447,7 +449,7 @@ export class OnlineScreen implements Screen {
       const pw = Math.min(290 * s, right - 20 * s);
       if (pw >= 210 * s) {
         const style = EVENT_STYLE;
-        const ph = (style === 'spot' ? 140 : 104) * s;
+        const ph = (style === 'spot' ? 172 : 104) * s;
         const gap = 12 * s;
         let py = rf.y + rf.h / 2 - ph / 2;
         const px = right - pw;

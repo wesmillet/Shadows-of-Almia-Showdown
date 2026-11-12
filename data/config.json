@@ -321,7 +321,7 @@
     "flySpeed": 2.1,
     "flyLift": 1.2,
     "_flyComment": "Flying keeps a trainer out of battles, so it is timed: flySeconds in the air (a bar over the trainer), refilling over flyRechargeSeconds on the ground; at empty the mount lands, and takes off again only from flyTakeOffAt of the bar.",
-    "flySeconds": 25,
+    "flySeconds": 15,
     "flyRechargeSeconds": 50,
     "flyTakeOffAt": 0.3,
     "_mountsComment": "Mounts and their saddle points. seat: rider height as a fraction of body height (side views); seatDown/seatUp override it facing the camera and away; back: toward the tail in side views; scale: the mount draws this much bigger while ridden. Latios, Raikou, Flygon and Torterra carry trainers.",
@@ -341,11 +341,10 @@
       },
       "0330": {
         "kind": "fly",
-        "seat": 0.62,
-        "seatDown": 0.56,
-        "seatUp": 0.45,
-        "back": 0.18,
-        "scale": 1.15
+        "seat": 0.5,
+        "back": 0.05,
+        "scale": 1.4,
+        "seats": [[0.35, 0], [0.45, 0.08], [0.46, 0.12], [0.5, 0.08], [0.45, 0], [0.5, 0.08], [0.46, 0.12], [0.45, 0.08]]
       },
       "0389": {
         "kind": "ride",

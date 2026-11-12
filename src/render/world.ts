@@ -58,11 +58,12 @@ export function drawSoftShadow(view: View, sx: number, sy: number, radiusTiles: 
   ctx.restore();
 }
 
-export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 1): void {
+/** `at`: draw it at this screen point instead of its own (a mount under its rider). */
+export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 1, at: { x: number; y: number } | null = null): void {
   const ctx = view.ctx;
-  const p = monPos(m, alpha);
-  const sx = Math.round(view.toScreenX(p.x));
-  const sy = Math.round(view.toScreenY(p.y));
+  const p = at ? null : monPos(m, alpha);
+  const sx = at ? Math.round(at.x) : Math.round(view.toScreenX((p as { x: number }).x));
+  const sy = at ? Math.round(at.y) : Math.round(view.toScreenY((p as { y: number }).y));
   const vis = m.visual;
   if (vis.alpha <= 0.01 || vis.scale <= 0.01) return;
   // Drawn at canonical size against the trainers (see drawScale): screen pixels per sprite pixel.
@@ -233,7 +234,9 @@ function drawRider(view: View, t: Trainer, f: { image: CanvasImageSource; sx: nu
   const lift = mt.fly ? CONFIG.riding.flyLift + Math.sin(performance.now() / 380) * 0.08 : 0;
   // Shadow on the ground under the mount (wider than a trainer's).
   drawSoftShadow(view, sx, sy, Math.max(0.45, bodyRadius(mon.species) * (mt.fly ? 1.1 : 1.3)), mt.fly ? 0.22 : 0.3);
-  drawMon(view, mon, alpha, lift, mul);
+  // Drawn under the rider's own point: the mount's position (online, synced on its own) used to
+  // trail the trainer, so the two drifted apart while moving.
+  drawMon(view, mon, alpha, lift, mul, { x: sx, y: sy });
   // The seat: up the body, and back toward the tail when seen side on.
   const [bw, bh] = mon.species.body;
   const dirv = DIR_VECTORS[t.dir] as { x: number; y: number };

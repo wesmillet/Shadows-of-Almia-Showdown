@@ -31,8 +31,9 @@ describe('endgame flying and fainted catches', async () => {
     for (let i = 0; i < 10; i++) m.step(1 / 60);
     expect(p.mount).toBeNull();
     expect(m.toggleRide()).toMatch(/tired/);
+    // Just short of take-off: a moment's rest (half a second) refills it past the mark.
     p.flyLeft = fc.seconds * fc.takeOffAt - 0.05;
-    for (let i = 0; i < 10; i++) m.step(1 / 60);
+    for (let i = 0; i < 30; i++) m.step(1 / 60);
     m.toggleRide();
     expect(p.mount?.fly).toBe(true);
   });

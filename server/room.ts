@@ -426,7 +426,7 @@ export class Room implements RoomHandle {
       const text = runCommand(this.match, p.seat, msg.c, msg.a, (kind, detail) => this.flag(key, kind, detail));
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
-        if (ev.type === 'extracted' && ev.via === 'voucher' && this.mode !== 'private') this.hooks.extracted(key, pcFields(ev.mon), this.id);
+        if (ev.type === 'extracted' && ev.via === 'voucher' && this.mode !== 'private' && !ev.mon.fromPc) this.hooks.extracted(key, pcFields(ev.mon), this.id);
       }
       if (text) p.peer?.send({ t: 'reply', n: msg.n, text, seconds: 1.8 });
       return;

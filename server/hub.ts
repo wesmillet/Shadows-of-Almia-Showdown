@@ -170,10 +170,12 @@ export class Hub {
   /** A signed-in, unbanned account whose role is admin (read from the database each time). */
   /** `dex`, marked shiny ('*') when this signed-in player has that species shiny in their PC. */
   private shinyStarter(c: Client | null | undefined, dex: string): string {
-    if (!c || c.accountId === null || c.guest || /[*^]$/.test(dex)) return dex;
-    // '^' marks an Alpha (they have an Alpha of that line in their PC), then '*' a shiny.
+    if (!c || c.accountId === null || c.guest || /[*^!]$/.test(dex)) return dex;
+    // '!' marks a starter that came from their PC (it can not be kept again: no copies), then '^' an
+    // Alpha (they have an Alpha of that line in their PC), then '*' a shiny.
+    const fromPc = this.o.accounts.pcLines(c.accountId).includes(dex);
     const alpha = this.o.accounts.alphaLines(c.accountId).includes(dex);
-    return `${dex}${alpha ? '^' : ''}${this.o.accounts.ownsShiny(c.accountId, dex) ? '*' : ''}`;
+    return `${dex}${fromPc ? '!' : ''}${alpha ? '^' : ''}${this.o.accounts.ownsShiny(c.accountId, dex) ? '*' : ''}`;
   }
 
   isAdmin(c: Client | null | undefined): boolean {

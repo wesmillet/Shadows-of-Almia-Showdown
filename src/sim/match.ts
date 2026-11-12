@@ -1995,12 +1995,16 @@ export class Match {
    * starting with a Pokémon they own as a shiny).
    */
   makeStarter(dex: string, level: number, owner: Trainer, x: number, y: number): Mon {
-    // Marks after the dex: '^' an Alpha, '*' a shiny (online: a line they own as one).
+    // Marks after the dex: '!' from their PC (never kept again), '^' an Alpha, '*' a shiny (online: a line they own as one).
     const shiny = dex.endsWith('*');
-    const base = shiny ? dex.slice(0, -1) : dex;
+    let base = shiny ? dex.slice(0, -1) : dex;
     const alpha = base.endsWith('^');
-    const m = this.makeMon(alpha ? base.slice(0, -1) : base, level, owner, x, y, shiny);
+    if (alpha) base = base.slice(0, -1);
+    const fromPc = base.endsWith('!');
+    if (fromPc) base = base.slice(0, -1);
+    const m = this.makeMon(base, level, owner, x, y, shiny);
     if (alpha) m.alpha = true;
+    if (fromPc) m.fromPc = true;
     m.moves = starterMoves(m.species, level);
     m.cooldowns = m.moves.map(() => 0);
     return m;
@@ -2968,6 +2972,7 @@ export class Match {
     if (!m) return '';
     if (!this.keepsResults) return 'Nothing leaves a private match: vouchers do nothing here';
     if (p.duelId) return "You can't extract a Pokémon during a battle";
+    if (m.fromPc) return `${m.name} came from your PC: it is already yours`;
     if (!p.party.some((o) => o !== m && !o.fainted && !o.captured)) return "You can't extract your last Pokémon that can fight";
     this.takeItem(p, itemSlot);
     p.party.splice(index, 1);

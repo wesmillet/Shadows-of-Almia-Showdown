@@ -639,6 +639,80 @@ export class Accounts {
     return this.shinyLines(userId).includes(dex);
   }
 
+  /**
+   * Copies of legendaries and Mythicals: for each player, every line they hold more than one of.
+   * The oldest is the original. A later one that came in by a win or an Extraction Voucher while an
+   * older one was already in the PC is `suspect`: most likely their own PC starter kept again (the
+   * bug fixed with the '!' starter mark). Eggs, gifts and rewards are never suspect.
+   */
+  duplicateLegends(): Array<{ userId: number; who: string; line: string; name: string; copies: Array<{ pcId: number; name: string; level: number; shiny: boolean; legendCatch: boolean; via: string; match: string | null; at: number; suspect: boolean; wonder: boolean }> }> {
+    const rows = this.db.prepare('SELECT p.id, p.user_id, p.entry, p.created_at, u.username FROM pc p JOIN users u ON u.id = p.user_id ORDER BY p.created_at, p.id').all() as Array<{ id: number; user_id: number; entry: string; created_at: number; username: string }>;
+    const groups = new Map<string, Array<{ id: number; userId: number; who: string; e: Record<string, unknown>; at: number }>>();
+    for (const r of rows) {
+      let e: Record<string, unknown>;
+      try {
+        e = JSON.parse(r.entry) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      const dex = String(e.evolvedFrom ?? e.dex ?? '');
+      const sp = SPECIES.get(dex) ?? SPECIES.get(String(e.dex ?? ''));
+      if (!sp || (sp.class !== 'legendary' && sp.class !== 'mythical')) continue;
+      const line = nominationBase(String(e.dex)) ?? String(e.dex);
+      const k = `${r.user_id}:${line}`;
+      const g = groups.get(k) ?? [];
+      g.push({ id: Number(r.id), userId: Number(r.user_id), who: r.username, e, at: Number(r.created_at) });
+      groups.set(k, g);
+    }
+    const out: ReturnType<Accounts['duplicateLegends']> = [];
+    for (const [k, g] of groups) {
+      if (g.length < 2) continue;
+      const line = k.split(':')[1] as string;
+      out.push({
+        userId: g[0]!.userId, who: g[0]!.who, line, name: SPECIES.get(line)?.name ?? String(g[0]!.e.name),
+        copies: g.map((c, i) => ({
+          pcId: c.id, name: String(c.e.name ?? ''), level: Number(c.e.level ?? 0), shiny: !!c.e.shiny, legendCatch: !!c.e.legend,
+          via: String(c.e.via ?? ''), match: typeof c.e.match === 'string' ? c.e.match : null, at: c.at,
+          suspect: i > 0 && (c.e.via === 'win' || c.e.via === 'voucher') && !c.e.legend, wonder: this.isPooled(c.id),
+        })),
+      });
+    }
+    return out.sort((a, b) => b.copies.length - a.copies.length);
+  }
+
+  /** An administrator removes one copy found by duplicateLegends (never the oldest, never the last of its line). */
+  removeDuplicateLegend(pcId: number, by: { id: number; name: string }): string | null {
+    const g = this.duplicateLegends().find((d) => d.copies.some((c) => c.pcId === pcId));
+    if (!g) return 'Not a duplicate legendary (any more)';
+    const idx = g.copies.findIndex((c) => c.pcId === pcId);
+    if (idx === 0) return 'That one is the original: keep it';
+    if (g.copies[idx]?.wonder) return 'That one is out on Wonder Trade';
+    const row = this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(pcId, g.userId) as { entry: string } | undefined;
+    if (!row) return 'Already gone';
+    this.atomically(() => {
+      this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc = ? OR want_pc = ?)").run(Date.now(), pcId, pcId);
+      this.logCollection(g.userId, 'remove:duplicate', { pcId, ref: `admin:${by.name}`, detail: JSON.parse(row.entry) });
+      this.db.prepare('DELETE FROM pc WHERE id = ? AND user_id = ?').run(pcId, g.userId);
+    });
+    this.logMod(by, 'remove-duplicate', g.who, JSON.stringify({ pcId, name: g.name }));
+    return null;
+  }
+
+  /** Every line a player has in their PC (each entry's species, what it evolved from, and first forms). */
+  pcLines(userId: number): string[] {
+    const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex, json_extract(entry, '$.evolvedFrom') AS evo FROM pc WHERE user_id = ?").all(userId) as Array<{ dex: string; evo: string | null }>;
+    const out = new Set<string>();
+    for (const r of rows) {
+      for (const d of [r.dex, r.evo]) {
+        if (typeof d !== 'string') continue;
+        out.add(d);
+        const b = nominationBase(d);
+        if (b) out.add(b);
+      }
+    }
+    return [...out];
+  }
+
   /** The starters a player starts as Alphas: each line they have an Alpha of in their PC (first form included). */
   alphaLines(userId: number): string[] {
     const rows = this.db.prepare("SELECT json_extract(entry, '$.dex') AS dex, json_extract(entry, '$.evolvedFrom') AS evo FROM pc WHERE user_id = ? AND json_extract(entry, '$.alpha') IN (1, 'true')").all(userId) as Array<{ dex: string; evo: string | null }>;
@@ -1265,10 +1339,11 @@ export class Accounts {
         const b = await readJson(req);
         const row = this.db.prepare('SELECT party, picks_left, outcome FROM match_players WHERE user_id = ? AND match_id = ?').get(me.id, String(b.match ?? '')) as { party: string; picks_left: number; outcome: string } | undefined;
         if (!row || row.picks_left <= 0) return send(400, { error: 'Nothing to extract from that match' });
-        const party = JSON.parse(row.party) as Array<{ dex: string; name: string; level: number; shiny: boolean; moves: string[]; taken?: boolean }>;
+        const party = JSON.parse(row.party) as Array<{ dex: string; name: string; level: number; shiny: boolean; moves: string[]; taken?: boolean; fromPc?: boolean }>;
         const i = Number(b.index);
         const pick = Number.isInteger(i) ? party[i] : undefined;
         if (!pick || pick.taken) return send(400, { error: 'Pick one of your Pokémon from that match' });
+        if (pick.fromPc) return send(400, { error: `${pick.name} came from your PC: it is already yours` });
         pick.taken = true;
         // The PC entry and the spent pick together, or neither (a crash between them can not leave a pick to spend twice).
         this.db.exec('BEGIN IMMEDIATE');

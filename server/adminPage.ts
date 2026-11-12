@@ -132,13 +132,30 @@ async function records() {
   if (j.error) return fail(j.error);
   const acct = (id, who) => '<a href="#accounts/' + id + '">' + esc(who) + '</a>';
   const mon = (p) => (p.shiny ? '★ ' : '') + esc(p.name) + ' <span class="dim">Lv ' + esc(p.level) + '</span>';
-  $('#main').innerHTML =
+  const d = await api('/api/admin/duplicates');
+  const groups = (d && d.groups) || [];
+  const suspects = [];
+  for (const g of groups) for (const c of g.copies) if (c.suspect && !c.wonder) suspects.push(c.pcId);
+  const dupHtml = '<div class="panel"><h2>Duplicate legendaries (' + groups.length + ')</h2><p class="dim">Players holding more than one of a legendary or Mythical line. The first is the original. <b>Likely copy</b>: came in from a win or an Extraction Voucher while they already had one, so most likely their own PC starter kept again (fixed now). Egg, gift and reward copies are never marked. Removing deletes it from their PC for good (the collection log keeps a record).</p>' +
+    (groups.length ? '<table><tr><th>Player</th><th>Pokémon</th><th>Copy</th><th>How</th><th>When</th><th></th></tr>' + groups.map((g) => g.copies.map((c, i) => '<tr><td>' + (i === 0 ? acct(g.userId, g.who) : '') + '</td><td>' + (c.shiny ? '★ ' : '') + esc(c.name) + ' <span class="dim">Lv ' + esc(c.level) + '</span>' + (c.legendCatch ? ' <span class="tag">caught as a legend</span>' : '') + '</td><td>' + (i === 0 ? '<span class="good">original</span>' : c.suspect ? '<b class="err">likely copy</b>' : 'copy') + '</td><td>' + esc(c.via) + (c.match ? ' <a href="#history/' + esc(c.match) + '">match</a>' : '') + '</td><td class="dim">' + when(c.at) + '</td><td>' + (i === 0 ? '' : c.wonder ? '<span class="dim">on Wonder Trade</span>' : '<button class="act alt" data-dup="' + c.pcId + '">Remove</button>') + '</td></tr>').join('')).join('') + '</table>' +
+      (suspects.length ? '<div class="row"><button class="act" id="dupall">Remove all ' + suspects.length + ' likely copies</button><span id="dupnote" class="err"></span></div>' : '') : '<p class="dim">None.</p>') + '</div>';
+  $('#main').innerHTML = dupHtml +
     '<div class="panel"><h2>Legendaries and shinies by player</h2><p class="dim">Every one that went into a PC (won, Extraction Voucher, egg, gift or reward), even if traded or released since.</p>' +
     (j.people.length ? '<table><tr><th>Player</th><th>Legendaries</th><th>Shinies</th><th>Pokémon kept</th></tr>' + j.people.map((p) => '<tr><td>' + acct(p.id, p.who) + '</td><td data-v="' + p.legends + '">' + p.legends + '</td><td data-v="' + p.shinies + '">' + p.shinies + '</td><td data-v="' + p.total + '">' + p.total + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
     '<div class="panel"><h2>Legendaries (' + j.legends.length + ')</h2>' + (j.legends.length ? '<table><tr><th>When</th><th>Player</th><th>Pokémon</th><th>How</th></tr>' + j.legends.map((l) => '<tr><td>' + when(l.at) + '</td><td>' + acct(l.userId, l.who) + '</td><td>' + (l.shiny ? '★ ' : '') + esc(l.name) + '</td><td>' + esc(l.via) + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
     '<div class="panel"><h2>Shinies (' + j.shinies.length + ')</h2>' + (j.shinies.length ? '<table><tr><th>When</th><th>Player</th><th>Pokémon</th><th>How</th></tr>' + j.shinies.map((l) => '<tr><td>' + when(l.at) + '</td><td>' + acct(l.userId, l.who) + '</td><td>★ ' + esc(l.name) + (l.legend ? ' <span class="dim">(legendary)</span>' : '') + '</td><td>' + esc(l.via) + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
     '<div class="panel"><h2>Most common on winning teams</h2><p class="dim">From the last ' + j.teamsCounted + ' winning teams recorded.</p>' + (j.winningSpecies.length ? '<table><tr><th>Pokémon</th><th>Winning teams</th></tr>' + j.winningSpecies.map((w) => '<tr><td>' + esc(w.name) + '</td><td data-v="' + w.n + '">' + w.n + '</td></tr>').join('') + '</table>' : '<p class="dim">No winning teams recorded yet (recording starts with this update).</p>') + '</div>' +
     '<div class="panel"><h2>Winning teams</h2>' + (j.teams.length ? '<table><tr><th>When</th><th>Winner</th><th>Team</th><th></th></tr>' + j.teams.map((t) => '<tr><td>' + when(t.at) + '</td><td>' + esc(t.name) + (t.human ? '' : ' <span class="dim">(computer)</span>') + '</td><td>' + t.team.map(mon).join(', ') + '</td><td><a href="#history/' + esc(t.id) + '">match</a></td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>';
+  const removeDup = async (ids, label) => {
+    if (!confirm('Remove ' + label + ' from ' + (ids.length === 1 ? 'that PC' : 'those PCs') + ' for good?')) return;
+    const r = await post('/api/admin/duplicates', { ids });
+    const bad = (r.results || []).filter((x) => x.error);
+    if (r.error || bad.length) alert(r.error || bad.map((x) => '#' + x.id + ': ' + x.error).join('; '));
+    records();
+  };
+  for (const b of document.querySelectorAll('[data-dup]')) b.onclick = () => removeDup([Number(b.dataset.dup)], 'this copy');
+  const all = $('#dupall');
+  if (all) all.onclick = () => removeDup(suspects, 'all ' + suspects.length + ' likely copies');
 }
 
 // ---------------------------------------------------------------- Mystery Gift

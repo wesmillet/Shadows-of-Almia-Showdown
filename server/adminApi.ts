@@ -125,6 +125,16 @@ export class AdminApi {
       const r = this.acc.adminResetCode(Number(body.id), { id: me.id, name: me.username });
       return r ? send(200, r) : send(404, { error: 'No such account, or it signs in with Google only' });
     }
+    // Copies of legendaries (a PC starter kept again): listed, and removed one at a time by an administrator.
+    if (path === '/api/admin/duplicates') {
+      if (req.method === 'GET') return send(200, { groups: this.acc.duplicateLegends() });
+      if (req.method !== 'POST') return send(405, { error: 'GET or POST' });
+      if (req.headers['x-almia'] !== '1') return send(403, { error: 'Missing header' });
+      const body = await readBody(req);
+      const ids = (Array.isArray(body.ids) ? body.ids : [body.id]).map(Number).filter((n: number) => Number.isInteger(n)).slice(0, 200);
+      const results = ids.map((id: number) => ({ id, error: this.acc.removeDuplicateLegend(id, { id: me.id, name: me.username }) }));
+      return send(200, { results });
+    }
     // Everything else is read-only: nothing but GET.
     if (req.method !== 'GET') return send(405, { error: 'The admin dashboard is read-only' });
     const db = this.acc.db;

@@ -323,7 +323,8 @@ export class MatchScreen implements Screen {
     const duelSide = this.playerDuelSide();
     // A controller aims with the right stick, a few tiles out from you (or whoever you steer); while
     // you choose who goes out next it is a cursor instead.
-    if (!duelSide?.awaitingPick) {
+    const aiming = this.aimingThrow(duelSide);
+    if (!duelSide?.awaitingPick && !aiming) {
       Input.padAimFrom = () => {
         const f = this.touchFrom();
         const x = v.toScreenX(f.x);
@@ -337,6 +338,15 @@ export class MatchScreen implements Screen {
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
       if (h?.kind !== 'release') this.hud.releaseArmed = -1;
+      // Aiming a send-out: a click on the field throws it there (a battle's opening: sets where the
+      // first one goes); a right click lets go of the pick.
+      if (aiming && !h) {
+        if (c.button === 2) this.throwPick = null;
+        else if (this.throwPick) this.throwPicked(v.toWorld(c.x, c.y));
+        else this.match.duelAim(v.toWorld(c.x, c.y));
+        this.holdBlocked = true;
+        continue;
+      }
       if (!h && !this.match.playerDuel && c.button === 0) {
         // Pokémon mode: click one of your Pokémon out on the field to steer it; click your
         // trainer (or press Esc) to go back.
@@ -451,13 +461,14 @@ export class MatchScreen implements Screen {
     // Holding a mouse button on the field keeps casting that move as it comes off cooldown
     // (not the click that switched modes, nor a dragged item).
     if (this.holdBlocked && !input.mouseDown) this.holdBlocked = false;
-    if (!overHud && !duelSide?.awaitingPick && !this.holdBlocked && !this.drag) {
+    if (!overHud && !duelSide?.awaitingPick && !aiming && !this.holdBlocked && !this.drag) {
       if (input.mouseDown) this.match.playerCast(0);
       if (input.rightDown) this.match.playerCast(1);
     }
     if (this.hud.ping) this.hud.ping.t -= 1 / 60;
     // 1-6 select (or use) that bag slot; moves are the mouse buttons, Q and E. After a knockout in
     // a battle, 1-6 picks who goes next.
+    if (aiming && input.pressed('Escape')) this.throwPick = null;
     if (duelSide?.awaitingPick) {
       for (let i = 0; i < 6; i++) if (input.pressed(`Digit${i + 1}`)) this.pickNext(i);
       // A legendary can still be caught while you choose who goes out next.
@@ -637,9 +648,41 @@ export class MatchScreen implements Screen {
     return d.a.trainer === this.match.player ? d.a : d.b;
   }
 
+  /**
+   * A trainer battle send-out being aimed: the Pokémon picked (after a knockout, or to switch in),
+   * waiting for a click on the field that says where to throw its ball (duel.throwRadius from you).
+   */
+  private throwPick: { index: number } | null = null;
+
+  /** Picking who goes out next (or who switches in): then where to throw it. */
   private pickNext(index: number): void {
-    const msg = this.match.duelPick(index);
+    const side = this.playerDuelSide();
+    const m = this.match.player.party[index];
+    if (!side || !m) return;
+    if (m.fainted || m.captured) return this.say(`${m.name} can't battle`, 1);
+    if (!side.awaitingPick && (!side.mon || m === side.mon)) return;
+    if (!side.awaitingPick && this.match.time < (side.switchReadyAt ?? 0)) return this.say(`You can switch again in ${Math.ceil((side.switchReadyAt ?? 0) - this.match.time)} s`, 1);
+    this.throwPick = { index };
+    this.say(Input.touch ? `Tap where to throw ${m.name}` : `Click where to throw ${m.name}`, 1.6);
+  }
+
+  /** The aimed send-out: thrown at `at` (a point on the ground). */
+  private throwPicked(at: { x: number; y: number }): void {
+    const tp = this.throwPick;
+    this.throwPick = null;
+    if (!tp) return;
+    const msg = this.match.duelPick(tp.index, at);
     if (msg) this.say(msg, 1.2);
+  }
+
+  /** Whether the player is choosing where a send-out lands (a pick waiting for its throw, or a battle's opening). */
+  private aimingThrow(side: DuelSide | null): boolean {
+    if (!side || side.throwing) {
+      this.throwPick = null;
+      return false;
+    }
+    if (this.throwPick && !side.awaitingPick && !side.mon) this.throwPick = null;
+    return !!this.throwPick || (!side.mon && !side.awaitingPick && this.match.playerDuel?.state === 'intro');
   }
 
   /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
@@ -702,8 +745,15 @@ export class MatchScreen implements Screen {
     // Moves go where a button is being dragged, else at the target (or ahead).
     this.match.aim = ui?.aim?.kind === 'move' ? this.touchAimPoint(ui.aim) : this.touchTarget();
     // A tap on the field selects: a wild Pokémon becomes the target, one of yours opens its actions.
+    // Aiming a send-out in a battle, the tap says where its ball goes.
+    const aiming = this.aimingThrow(this.playerDuelSide());
     for (const c of input.takeClicks()) {
       const h = this.hud.hitTest(c.x, c.y);
+      if (aiming && !h) {
+        if (this.throwPick) this.throwPicked(this.ctx.view.toWorld(c.x, c.y));
+        else this.match.duelAim(this.ctx.view.toWorld(c.x, c.y));
+        continue;
+      }
       if (h) {
         // What the canvas still shows on a touch screen: the move-learning card and numbered prompts.
         if (h.kind === 'learn') this.say(this.match.answerLearn(h.index === 2 ? -1 : h.index), 2.2);
@@ -932,7 +982,7 @@ export class MatchScreen implements Screen {
       interact: prompt ? prompt.replace(/^Space · /, '').replace(/ \(move or Space to reel in\)/, '') : null,
       auto: null,
       styler: m.hasStyler(p),
-      pick: side?.awaitingPick ? Math.max(0, side.nextAt - m.time) : null,
+      pick: side?.awaitingPick && !this.throwPick ? Math.max(0, side.nextAt - m.time) : null,
       minimap: ((r) => {
         if (!r) return null;
         const k = this.ctx.input.dpr();
@@ -1475,6 +1525,52 @@ export class MatchScreen implements Screen {
       ctx.rect(v.toScreenX(b.x0), v.toScreenY(b.y0), (b.x1 - b.x0) * v.pxPerTile, (b.y1 - b.y0) * v.pxPerTile);
     } else ctx.ellipse(v.toScreenX(d.cx), v.toScreenY(d.cy), CONFIG.duel.arenaRadius * v.pxPerTile, CONFIG.duel.arenaRadius * v.pxPerTile, 0, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+    // Aiming a send-out: how far the ball can go, and where it would land.
+    const me = d.a.trainer === this.match.player ? d.a : d.b;
+    if (!this.aimingThrow(me)) return;
+    const R = (CONFIG.duel as typeof CONFIG.duel & { throwRadius?: number }).throwRadius ?? 6;
+    const t = me.trainer;
+    const s = v.baseScale;
+    const pulse = 0.5 + 0.5 * Math.sin(this.match.time * 5);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,214,90,0.08)';
+    ctx.strokeStyle = `rgba(255,214,90,${0.65 + 0.25 * pulse})`;
+    ctx.lineWidth = Math.max(2, 3 * s);
+    ctx.setLineDash([12 * s, 7 * s]);
+    ctx.beginPath();
+    ctx.ellipse(v.toScreenX(t.x), v.toScreenY(t.y), R * v.pxPerTile, R * v.pxPerTile, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Where it lands: the cursor (or the spot already chosen), held inside the ring and on open ground.
+    const input = this.ctx.input;
+    const want = Input.touch ? me.aimAt ?? null : this.hud.hitTest(input.mouseX, input.mouseY) ? me.aimAt ?? null : v.toWorld(input.mouseX, input.mouseY);
+    if (want) {
+      const at = this.match.sendOutSpot(d, me, want);
+      const x = v.toScreenX(at.x);
+      const y = v.toScreenY(at.y);
+      const r = (0.45 + 0.08 * pulse) * v.pxPerTile;
+      ctx.strokeStyle = 'rgba(20,14,30,0.85)';
+      ctx.lineWidth = Math.max(3, 5 * s);
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffd65a';
+      ctx.lineWidth = Math.max(2, 2.5 * s);
+      ctx.stroke();
+      // The arc the ball will take.
+      const sx = v.toScreenX(t.x);
+      const sy = v.toScreenY(t.y) - 0.6 * v.pxPerTile;
+      const lift = Math.min(2.2, Math.hypot(at.x - t.x, at.y - t.y) * 0.35) * v.pxPerTile;
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = Math.max(1.5, 2 * s);
+      ctx.setLineDash([4 * s, 6 * s]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo((sx + x) / 2, Math.min(sy, y) - lift, x, y);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -3167,6 +3263,17 @@ export class MatchScreen implements Screen {
     const foeTitle = (foe.trainer as Trainer & { title?: string }).title;
     if (foeTitle) text(v, foeTitle, x + w * 0.78, y + 31 * s, 9, { align: 'center', color: '#8a6a4a', maxWidth: w * 0.36, shadow: false });
     balls(foe.trainer, x + w * 0.78);
+    // Aiming where a send-out lands: a short prompt instead of the list (the ring is on the field).
+    if (this.aimingThrow(me)) {
+      const name = this.throwPick ? this.match.player.party[this.throwPick.index]?.name ?? 'it' : (this.match.player.party.find((m) => !m.fainted && !m.captured)?.name ?? 'your Pokémon');
+      const left = me.awaitingPick ? ` (${Math.max(0, Math.ceil(me.nextAt - this.match.time))})` : '';
+      const how = Input.touch ? 'Tap' : Input.pad ? 'Aim and press A' : 'Click';
+      const msg = this.throwPick ? `${how} where to throw ${name}${left}` : `${how} where ${name} should land`;
+      const tw = Math.min(v.width - 40 * s, 460 * s);
+      panel(v, v.width / 2 - tw / 2, y + 62 * s + 2 * k, tw, 34 * s);
+      text(v, msg, v.width / 2, y + 62 * s + 2 * k + 23 * s, 14, { align: 'center', color: INK.text, shadow: false, maxWidth: tw - 20 * s });
+      return;
+    }
     // On a touch screen the large pick cards (touchControls.ts) stand in for this list.
     if (!me.awaitingPick || Input.touch) return;
     // Choose the next Pokémon.

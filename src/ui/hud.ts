@@ -885,14 +885,11 @@ export class Hud {
       ctx.arc(X(pm.x), Y(pm.y), (4 + ph * 10) * s, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // Visitors: the merchant (gold), Celeste (pink), Hoopa (violet), and any legendary loose (gold ring).
-    for (const n of match.npcs) {
-      if (n.role === 'merchant') pin(n.x, n.y, '#ffe27a', 2.6);
-      else if (n.role === 'ace') pin(n.x, n.y, '#ff9ad5', 2.6);
-    }
+    // No NPCs on the minimap (the merchant, Celeste and Hoopa are found by exploring); a legendary
+    // loose still shows as a gold ring.
     for (const w of match.wilds) {
-      if (w.npc === 'hoopa') pin(w.x, w.y, '#c78bff', 3);
-      else if (w.legend) {
+      if (w.npc) continue;
+      if (w.legend) {
         ctx.save();
         ctx.shadowColor = 'rgba(255,210,80,0.9)';
         ctx.shadowBlur = 6 * s;

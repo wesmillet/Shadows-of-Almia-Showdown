@@ -72,6 +72,7 @@ export type BattleEvent =
   | { type: 'extracted'; mon: Mon; via: 'win' | 'voucher' }
   | { type: 'duel-start'; duel: Duel }
   | { type: 'duel-send'; duel: Duel; mon: Mon; trainer: Trainer }
+  | { type: 'duel-throw'; duel: Duel; mon: Mon; trainer: Trainer }
   | { type: 'duel-end'; duel: Duel; winner: Trainer | null };
 
 /** The white hit flash: two frames (it also runs down through a hit-stop: Match.step). */

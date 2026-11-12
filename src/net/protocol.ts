@@ -11,7 +11,7 @@ import type { SyncPatch } from './sync';
 /** Commands a player can give in a match (each maps to the same Match method the offline game calls). */
 export type CommandName =
   | 'cast' | 'dodge' | 'auto' | 'take' | 'untake' | 'pickLock' | 'cycleLock' | 'swapLead' | 'unequip' | 'learn' | 'release'
-  | 'mega' | 'ride' | 'sell' | 'buy' | 'deposit' | 'withdraw' | 'interact' | 'pickUp' | 'duelPick' | 'stylerLoop' | 'stylerBreak'
+  | 'mega' | 'ride' | 'sell' | 'buy' | 'deposit' | 'withdraw' | 'interact' | 'pickUp' | 'duelPick' | 'duelAim' | 'stylerLoop' | 'stylerBreak'
   | 'snag' | 'snagNo' | 'extract' | 'teach' | 'equip' | 'useItem' | 'discard' | 'throw' | 'behavior';
 
 /** Public matches are all casual (ranked play has been retired). */

@@ -621,7 +621,11 @@ export class MirrorMatch {
     m.deposit = (_t: Trainer, tab: 'items' | 'held', i: number, n?: number) => (n === undefined ? say('deposit', tab, i) : say('deposit', tab, i, n));
     m.withdraw = (_t: Trainer, i: number, n?: number) => (n === undefined ? say('withdraw', i) : say('withdraw', i, n));
     m.pickUp = () => (net.cmd('pickUp'), true);
-    m.duelPick = (i: number) => say('duelPick', i);
+    // Where its ball is thrown rides along (rounded to a tenth of a tile).
+    m.duelPick = (i: number, at: { x: number; y: number } | null = null) => (at ? say('duelPick', i, Math.round(at.x * 10) / 10, Math.round(at.y * 10) / 10) : say('duelPick', i));
+    m.duelAim = (at: { x: number; y: number }) => {
+      net.cmd('duelAim', Math.round(at.x * 10) / 10, Math.round(at.y * 10) / 10);
+    };
     m.stylerLoop = (mon: Mon) => net.cmd('stylerLoop', mon.id);
     m.stylerBreak = (mon: Mon) => net.cmd('stylerBreak', mon.id);
     m.snag = (i: number) => say('snag', i);

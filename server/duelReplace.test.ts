@@ -85,8 +85,29 @@ describe('trainer battle replacements', async () => {
     knockOut(lead);
     expect(step(3, () => side(p).awaitingPick)).toBe(true);
     const last = p.party[p.party.length - 1]!;
-    expect(m.duelPick(p.party.length - 1)).toContain(last.name);
-    expect(side(p).mon).toBe(last);
+    // Thrown where the player clicked: the ball flies, then it comes out there.
+    const at = { x: p.x + 2, y: p.y + 1 };
+    const want = m.sendOutSpot(d, side(p), at);
+    expect(m.duelPick(p.party.length - 1, at)).toContain(last.name);
+    expect(side(p).mon).toBeNull();
+    expect(m.throws.some((th) => th.sendOut?.mon === last)).toBe(true);
+    expect(step(2, () => side(p).mon === last)).toBe(true);
+    expect(Math.hypot(last.x - want.x, last.y - want.y)).toBeLessThan(0.01);
+  });
+
+  it('never throws further than duel.throwRadius, and only onto open ground', () => {
+    const { m, p, step, side, d } = setup(15, [['0004', 30], ['0007', 30]], [['0025', 30]]);
+    expect(step(5, () => !!side(p).mon && d.state === 'fight')).toBe(true);
+    knockOut(side(p).mon!);
+    expect(step(3, () => side(p).awaitingPick)).toBe(true);
+    const R = (CONFIG.duel as typeof CONFIG.duel & { throwRadius?: number }).throwRadius ?? 6;
+    const far = m.sendOutSpot(d, side(p), { x: p.x + 40, y: p.y });
+    expect(Math.hypot(far.x - p.x, far.y - p.y)).toBeLessThanOrEqual(R + 1e-6);
+    // No aim (the timer ran out): a random spot, still in range.
+    for (let i = 0; i < 20; i++) {
+      const r = m.sendOutSpot(d, side(p), null);
+      expect(Math.hypot(r.x - p.x, r.y - p.y)).toBeLessThanOrEqual(R + 1e-6);
+    }
   });
 
   it('a computer trainer sends its next one in party order too', () => {
@@ -138,7 +159,7 @@ describe('trainer battle replacements', async () => {
       const { p, b, d, step, side, ended } = setup(5, [['0092', 30], ['0093', 30]], [['0092', 30]]);
       step(3, () => !!d.a.mon && !!d.b.mon && d.state === 'fight');
       const first = side(p).mon;
-      step(CONFIG.duel.stalemateSeconds + 2, () => { freeze(d); return side(p).mon !== first; });
+      step(CONFIG.duel.stalemateSeconds + 3, () => { freeze(d); return !!side(p).mon && side(p).mon !== first; });
       expect(side(p).mon).not.toBe(first);
       expect(side(p).mon?.species.dex ?? side(p).mon?.dex).toBeDefined();
       expect(ended.length).toBe(0);

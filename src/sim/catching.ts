@@ -136,6 +136,8 @@ export interface Throw {
   wobblesDone: number;
   /** A Pokémon the ball follows in flight (a legendary in its bout), so it lands where it is now. */
   homing?: { x: number; y: number } | null;
+  /** A trainer battle send-out: this Pokémon comes out where the ball lands (it catches nothing). */
+  sendOut?: { duelId: number; mon: Mon } | null;
 }
 
 export function newThrow(thrower: Trainer, from: { x: number; y: number }, to: { x: number; y: number }, ballId: string): Throw {

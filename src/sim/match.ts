@@ -98,6 +98,10 @@ export interface DuelSide {
   awaitingPick: boolean;
   /** Match time the trainer can switch Pokémon again mid-battle (duel.switchCooldown). */
   switchReadyAt?: number;
+  /** Where the player chose to throw their next Pokémon (duel.throwRadius from them), or none: random. */
+  aimAt?: { x: number; y: number } | null;
+  /** A send-out ball is in the air: its Pokémon comes out where it lands. */
+  throwing?: boolean;
   /** Which way the opponent is (unit vector). */
   fx: number;
   fy: number;
@@ -1145,7 +1149,7 @@ export class Match {
 
   /** This trainer's balls that are still flying or rocking (each could become a catch). */
   ballsInFlight(t: Trainer): number {
-    return this.throws.filter((th) => th.thrower === t && th.phase !== 'done').length;
+    return this.throws.filter((th) => th.thrower === t && th.phase !== 'done' && !th.sendOut).length;
   }
 
   private stepThrows(dt: number): void {
@@ -1173,6 +1177,14 @@ export class Match {
     {
       const ev = stepThrow(th, dt);
       if (th.target) th.target.visual = targetVisual(th);
+      if (th.sendOut) {
+        // A trainer battle send-out: no catching, the Pokémon pops out where it lands.
+        if (ev === 'landed') {
+          th.phase = 'done';
+          this.landSendOut(th);
+        }
+        return;
+      }
       if (ev === 'landed') {
         const sh = this.shadowBoutFoe() ?? this.wilds.find((w) => w.shadow && w.legend && !w.captured) ?? null;
         if (sh && Math.hypot(sh.x - th.x, sh.y - th.y) < 2) {
@@ -3967,7 +3979,7 @@ export class Match {
     this.fishing = null;
     const d = this.startDuel(p, host, undefined, { x: L.x, y: L.y });
     // The legend is already out: it does not come from a ball.
-    this.sendOut(d, d.b);
+    this.sendOut(d, d.b, -1, true);
     L.visual.flash = 0;
     L.visual.scale = Math.max(L.visual.scale, 0.6);
     return true;
@@ -4211,21 +4223,106 @@ export class Match {
     }
   }
 
-  /** Sends out party member `index` (or the first able one) for a side of a battle. */
-  private sendOut(duel: Duel, side: DuelSide, index = -1): boolean {
+  /**
+   * Sends out party member `index` (or the first able one) for a side of a battle: thrown in a
+   * Poké Ball to where the player aimed (side.aimAt, at most duel.throwRadius tiles from them) or a
+   * random spot in that range, and it comes out where the ball lands (landSendOut). Nobody can camp
+   * one spot. `instant`: out at once where it stands (a legendary that is already out).
+   */
+  private sendOut(duel: Duel, side: DuelSide, index = -1, instant = false): boolean {
     const t = side.trainer;
+    if (side.throwing) return true;
     const i = index >= 0 ? index : t.party.findIndex((m) => !m.fainted && !m.captured);
     const m = t.party[i];
     if (!m || m.fainted || m.captured) return false;
     t.party.splice(i, 1);
     t.party.unshift(m);
-    const c = CONFIG.duel;
-    let x = side.spotX + side.fx * c.sendOut;
-    let y = side.spotY + side.fy * c.sendOut;
-    if (!canStand(this.ground, x, y, 0.22)) {
-      x = side.spotX;
-      y = side.spotY;
+    const c = CONFIG.duel as typeof CONFIG.duel & { throwRadius?: number; throwSpeed?: number };
+    if (instant) {
+      this.popOut(duel, side, m, m.x, m.y);
+      return true;
     }
+    const to = this.sendOutSpot(duel, side, side.aimAt ?? null);
+    side.aimAt = null;
+    side.throwing = true;
+    side.awaitingPick = false;
+    side.nextAt = Infinity;
+    const th = newThrow(t, { x: t.x, y: t.y }, to, 'poke-ball');
+    th.flight = Math.max(0.3, Math.hypot(to.x - t.x, to.y - t.y) / (c.throwSpeed ?? 12));
+    th.sendOut = { duelId: duel.id, mon: m };
+    this.throws.push(th);
+    this.battle.events.push({ type: 'duel-throw', duel, mon: m, trainer: t });
+    return true;
+  }
+
+  /** The send-out ball landed: its Pokémon comes out there (unless the battle ended meanwhile). */
+  private landSendOut(th: Throw): void {
+    const so = th.sendOut;
+    if (!so) return;
+    const d = this.duels.find((x) => x.id === so.duelId);
+    const side = d ? (d.a.trainer === th.thrower ? d.a : d.b.trainer === th.thrower ? d.b : null) : null;
+    if (side) side.throwing = false;
+    const m = so.mon;
+    if (!d || !side || d.state === 'over' || side.mon || m.fainted || m.captured || !side.trainer.party.includes(m)) return;
+    this.popOut(d, side, m, th.targetX, th.targetY);
+  }
+
+  /**
+   * Where a send-out lands: the aimed point (or a random one) at most duel.throwRadius tiles from
+   * the trainer, inside the battle, on ground a Pokémon can stand on (pulled back toward the
+   * trainer until it is).
+   */
+  sendOutSpot(duel: Duel, side: DuelSide, aim: { x: number; y: number } | null): { x: number; y: number } {
+    const c = CONFIG.duel as typeof CONFIG.duel & { throwRadius?: number };
+    const R = c.throwRadius ?? 6;
+    const t = side.trainer;
+    let x: number;
+    let y: number;
+    if (aim) {
+      x = aim.x;
+      y = aim.y;
+    } else {
+      // A random spot, mostly toward the opponent (a ball thrown behind you looks odd).
+      const a = Math.atan2(side.fy, side.fx) + this.rng.range(-1.2, 1.2);
+      const r = this.rng.range(1.5, R);
+      x = t.x + Math.cos(a) * r;
+      y = t.y + Math.sin(a) * r;
+    }
+    const dx = x - t.x;
+    const dy = y - t.y;
+    const d = Math.hypot(dx, dy);
+    if (d > R) {
+      x = t.x + (dx / d) * R;
+      y = t.y + (dy / d) * R;
+    }
+    // Inside the battle area.
+    if (duel.bounds) {
+      const b = duel.bounds;
+      x = Math.max(b.x0 + 0.6, Math.min(b.x1 - 0.6, x));
+      y = Math.max(b.y0 + 0.6, Math.min(b.y1 - 0.6, y));
+    } else {
+      const ar = CONFIG.duel.arenaRadius - 1;
+      const ex = x - duel.cx;
+      const ey = y - duel.cy;
+      const e = Math.hypot(ex, ey);
+      if (e > ar) {
+        x = duel.cx + (ex / e) * ar;
+        y = duel.cy + (ey / e) * ar;
+      }
+    }
+    // Water or a wall: back toward the trainer until it can stand.
+    for (let k = 0; k <= 10; k++) {
+      const f = 1 - k / 10;
+      const px = t.x + (x - t.x) * f;
+      const py = t.y + (y - t.y) * f;
+      if (canStand(this.ground, px, py, 0.22)) return { x: px, y: py };
+    }
+    return { x: side.spotX, y: side.spotY };
+  }
+
+  /** A Pokémon comes out of its ball at (x, y) for a side of a battle. */
+  private popOut(duel: Duel, side: DuelSide, m: Mon, x: number, y: number): void {
+    side.throwing = false;
     m.stowed = false;
     m.duelId = duel.id;
     m.behavior = 'aggressive';
@@ -4242,15 +4339,28 @@ export class Match {
     side.mon = m;
     side.awaitingPick = false;
     side.nextAt = Infinity;
-    this.battle.events.push({ type: 'duel-send', duel, mon: m, trainer: t });
-    return true;
+    this.battle.events.push({ type: 'duel-send', duel, mon: m, trainer: side.trainer });
   }
 
-  /** The player chooses who goes out next after a knockout. */
-  duelPick(index: number): string {
+  /** Where the player's next send-out in this battle should land (a battle's opening; picks carry their own). */
+  duelAim(at: { x: number; y: number }): void {
+    const duel = this.playerDuel;
+    if (!duel || duel.state === 'over' || !Number.isFinite(at.x) || !Number.isFinite(at.y)) return;
+    const side = duel.a.trainer === this.player ? duel.a : duel.b;
+    if (side.mon || side.throwing) return;
+    side.aimAt = { x: at.x, y: at.y };
+  }
+
+  /**
+   * The player chooses who goes out next after a knockout (or switches mid-battle), and where to
+   * throw it (`at`, a point on the ground; clamped to duel.throwRadius from them). No point: random.
+   */
+  duelPick(index: number, at: { x: number; y: number } | null = null): string {
     const duel = this.playerDuel;
     if (!duel || duel.state === 'over') return '';
     const side = duel.a.trainer === this.player ? duel.a : duel.b;
+    if (side.throwing) return '';
+    side.aimAt = at && Number.isFinite(at.x) && Number.isFinite(at.y) ? { x: at.x, y: at.y } : null;
     if (!side.awaitingPick) return this.duelSwitch(duel, side, index);
     const m = this.player.party[index];
     if (!m || m.fainted || m.captured) return m ? `${m.name} can't battle` : '';
@@ -4810,6 +4920,7 @@ export class Match {
       out.stowed = true;
       out.duelId = undefined;
       this.battle.interrupt(out);
+      side.mon = null;
       this.sendOut(d, side, next);
       swapped = true;
     }

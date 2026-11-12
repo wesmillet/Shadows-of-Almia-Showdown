@@ -163,7 +163,15 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
       return '';
     case 'duelPick': {
       const i = int(a[0], 0, 11);
-      return i === null ? '' : m.duelPick(i);
+      const x = num(a[1]);
+      const y = num(a[2]);
+      return i === null ? '' : m.duelPick(i, x !== null && y !== null ? { x, y } : null);
+    }
+    case 'duelAim': {
+      const x = num(a[0]);
+      const y = num(a[1]);
+      if (x !== null && y !== null) m.duelAim({ x, y });
+      return '';
     }
     case 'stylerLoop':
     case 'stylerBreak': {

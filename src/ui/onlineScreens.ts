@@ -43,6 +43,70 @@ function loadHubLogo(): void {
   im.onload = () => (hubLogo = im);
 }
 
+/**
+ * A Pokémon's idle animation (facing the viewer), for the live-event panel: the sheet and its frame
+ * size and timing from AnimData.xml. Loaded once per dex.
+ */
+type IdleSprite = { img: HTMLImageElement | null; w: number; h: number; durations: number[]; top: number; bottom: number };
+const idleSprites = new Map<string, IdleSprite>();
+function idleSprite(dex: string): IdleSprite {
+  let s = idleSprites.get(dex);
+  if (s) return s;
+  const entry: IdleSprite = { img: null, w: 0, h: 0, durations: [], top: 0, bottom: 1 };
+  s = entry;
+  idleSprites.set(dex, entry);
+  void fetch(`${ASSET_ROOT}pokemon/${dex}/AnimData.xml`).then((r) => r.text()).then((xml) => {
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    const anim = [...doc.querySelectorAll('Anim')].find((a) => a.querySelector('Name')?.textContent === 'Idle');
+    if (!anim) return;
+    entry.w = Number(anim.querySelector('FrameWidth')?.textContent);
+    entry.h = Number(anim.querySelector('FrameHeight')?.textContent);
+    entry.durations = [...anim.querySelectorAll('Duration')].map((d) => Number(d.textContent) || 1);
+    const im = new Image();
+    im.src = `${ASSET_ROOT}pokemon/${dex}/Idle-Anim.png`;
+    im.onload = () => {
+      // Where the body sits in the first frame (fractions of its height), to centre it in a panel.
+      try {
+        const c = document.createElement('canvas');
+        c.width = entry.w;
+        c.height = entry.h;
+        const g = c.getContext('2d') as CanvasRenderingContext2D;
+        g.drawImage(im, 0, 0, entry.w, entry.h, 0, 0, entry.w, entry.h);
+        const px = g.getImageData(0, 0, entry.w, entry.h).data;
+        let top = entry.h;
+        let bottom = 0;
+        for (let y = 0; y < entry.h; y++) for (let x = 0; x < entry.w; x++) if ((px[(y * entry.w + x) * 4 + 3] as number) > 0) {
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y + 1);
+        }
+        if (bottom > top) {
+          entry.top = top / entry.h;
+          entry.bottom = bottom / entry.h;
+        }
+      } catch {
+        // drawn by the frame's middle instead
+      }
+      entry.img = im;
+    };
+  }).catch(() => {});
+  return entry;
+}
+
+/** How live events look on the hub: 'spot' (chosen), the prize in a spotlight; 'card' and 'banner' were the other mockups. */
+const EVENT_STYLE: 'card' | 'banner' | 'spot' = 'spot';
+
+/** The prize Pokémon a kind of live event shows on its panel (the most-wins contest: Pikachu Libre). */
+const EVENT_SPRITE: Record<string, string> = { wins: '0025-libre' };
+
+/** What a live event does, in a line for its panel. */
+function eventLine(e: { kind: string; value: number }): string {
+  if (e.kind === 'xp') return `${e.value}x XP from every match`;
+  if (e.kind === 'shiny') return `Shinies are ${e.value}x as likely`;
+  if (e.kind === 'storm') return e.value >= 1 ? `The storm closes ${e.value}x as fast` : 'The storm closes slower';
+  if (e.kind === 'wins') return 'Most wins in 3 days: top 5 win a Pikachu Libre, a shiny one for 1st';
+  return '';
+}
+
 /** A piece of the island (the castle and the forest lake, assets/ui/hub_bg.png) behind the hub. */
 let hubBg: HTMLImageElement | null = null;
 let hubBgAsked = false;
@@ -117,6 +181,94 @@ export class OnlineScreen implements Screen {
     this.chat = null;
     this.unsubTrades?.();
   }
+
+  /** One live event's panel (see EVENT_STYLE). */
+  private drawEvent(e: { name: string; kind: string; value: number }, px: number, py: number, pw: number, ph: number, style: 'card' | 'banner' | 'spot', hot: boolean, timeLeft: string): void {
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const h = v.hud;
+    const dex = EVENT_SPRITE[e.kind];
+    const dark = style !== 'card';
+    if (style === 'card') {
+      panel(v, px, py, pw, ph, 14);
+    } else {
+      h.save();
+      h.fillStyle = style === 'banner' ? (hot ? 'rgba(58,36,96,0.96)' : 'rgba(40,24,70,0.94)') : 'rgba(22,16,40,0.94)';
+      h.fillRect(px, py, pw, ph);
+      h.strokeStyle = '#f2c24a';
+      h.lineWidth = Math.max(2, Math.round(3 * s));
+      h.strokeRect(px + 1.5 * s, py + 1.5 * s, pw - 3 * s, ph - 3 * s);
+      h.strokeStyle = 'rgba(242,194,74,0.35)';
+      h.lineWidth = Math.max(1, Math.round(s));
+      h.strokeRect(px + 6 * s, py + 6 * s, pw - 12 * s, ph - 12 * s);
+      h.restore();
+    }
+    const ink = dark ? { tag: '#ff9a6a', name: '#f2c24a', body: '#ece4f8', foot: hot ? '#ffe9a8' : '#b9add9' } : { tag: '#c2611a', name: INK.text, body: INK.dim, foot: hot ? '#c2611a' : INK.dim };
+    const sp = dex ? idleSprite(dex) : null;
+    /** The prize, its body centred on (cx, cy). */
+    const drawMon = (cx: number, cy: number, scale: number): void => {
+      if (!sp?.img || !sp.w) return;
+      const total = sp.durations.reduce((a, b) => a + b, 0) || 1;
+      let tick = Math.floor(this.t * 60) % total;
+      let f = 0;
+      while (f < sp.durations.length - 1 && tick >= (sp.durations[f] as number)) tick -= sp.durations[f++] as number;
+      const dw = sp.w * scale;
+      const dh = sp.h * scale;
+      h.save();
+      h.imageSmoothingEnabled = false;
+      h.drawImage(sp.img, f * sp.w, 0, sp.w, sp.h, Math.round(cx - dw / 2), Math.round(cy - dh * ((sp.top + sp.bottom) / 2)), dw, dh);
+      h.restore();
+    };
+    const k = Math.max(2, Math.round(2 * s));
+    if (style === 'spot') {
+      // The prize big in the middle on a gold spotlight, the name over it, time under it.
+      const cx = px + pw / 2;
+      text(v, '★ LIVE EVENT ★', cx, py + 18 * s, 10, { align: 'center', color: ink.tag, shadow: false });
+      text(v, e.name, cx, py + 36 * s, 14, { align: 'center', color: ink.name, shadow: false, maxWidth: pw - 24 * s });
+      if (sp) {
+        h.save();
+        const g = h.createRadialGradient(cx, py + 82 * s, 2 * s, cx, py + 82 * s, 44 * s);
+        g.addColorStop(0, 'rgba(242,194,74,0.55)');
+        g.addColorStop(1, 'rgba(242,194,74,0)');
+        h.fillStyle = g;
+        h.fillRect(px + 8 * s, py + 50 * s, pw - 16 * s, 64 * s);
+        h.fillStyle = 'rgba(0,0,0,0.35)';
+        h.beginPath();
+        h.ellipse(cx, py + 82 * s + ((sp.bottom - sp.top) / 2) * sp.h * (k + 1) - 2 * s, 22 * s, 6 * s, 0, 0, Math.PI * 2);
+        h.fill();
+        h.restore();
+        drawMon(cx, py + 82 * s, k + 1);
+        text(v, e.kind === 'wins' ? 'See standings' : eventLine(e), px + 14 * s, py + ph - 14 * s, 10, { color: e.kind === 'wins' ? ink.foot : ink.body, shadow: false, maxWidth: pw * 0.62 });
+        text(v, timeLeft, px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: ink.foot, shadow: false });
+      } else {
+        text(v, eventLine(e), cx, py + 72 * s, 11, { align: 'center', color: ink.body, shadow: false, maxWidth: pw - 24 * s });
+        text(v, timeLeft, cx, py + ph - 14 * s, 10, { align: 'center', color: ink.foot, shadow: false });
+      }
+      return;
+    }
+    // card / banner: the prize idling on the left, the words on the right.
+    let tx = px + 18 * s;
+    if (sp) {
+      const box = 76 * s;
+      if (dark) {
+        h.save();
+        h.fillStyle = 'rgba(242,194,74,0.14)';
+        h.fillRect(px + 12 * s, py + 12 * s, box, ph - 24 * s);
+        h.restore();
+      }
+      drawMon(px + 12 * s + box / 2, py + ph / 2, k + 1);
+      tx = px + 12 * s + box + 12 * s;
+    }
+    const tw = px + pw - 14 * s - tx;
+    text(v, 'LIVE EVENT', tx, py + 24 * s, 10, { color: ink.tag, shadow: false });
+    text(v, e.name, tx, py + 44 * s, 13, { color: ink.name, shadow: false, maxWidth: tw });
+    const line = e.kind === 'wins' ? 'Most wins: top 5 win a Pikachu Libre' : eventLine(e);
+    text(v, line, tx, py + 64 * s, 10, { color: ink.body, shadow: false, maxWidth: tw });
+    text(v, `${timeLeft}${e.kind === 'wins' ? ' · see standings' : ''}`, tx, py + ph - 16 * s, 10, { color: ink.foot, shadow: false, maxWidth: tw });
+  }
+
+  /** The live-event panels drawn last frame (a contest's opens the leaderboard). */
+  private eventRects: Array<{ x: number; y: number; w: number; h: number; kind: string }> = [];
 
   private unsubTrades: (() => void) | null = null;
   /** Trade offers waiting for this player (the Trade button's badge). */
@@ -202,6 +354,7 @@ export class OnlineScreen implements Screen {
     const on = (c: { x: number; y: number }, k: HubButton) => hit(c.x, c.y, r[k].x, r[k].y, r[k].w, r[k].h);
     for (const c of input.takeClicks()) {
       if (on(c, 'find')) return this.find();
+      if (this.eventRects.some((e) => e.kind === 'wins' && hit(c.x, c.y, e.x, e.y, e.w, e.h))) return this.actions.leaderboards();
       if (on(c, 'back')) return this.actions.back();
       if (on(c, 'board')) return this.actions.leaderboards();
       if (signedIn && on(c, 'trade')) {
@@ -279,12 +432,34 @@ export class OnlineScreen implements Screen {
       h.restore();
     } else heading(v, 'Play Online', null, L.logoY + L.logoH / 2);
     const ev = this.net.events;
+    this.eventRects = [];
     if (ev.length) {
       const left = (t: number) => {
         const m = Math.max(0, Math.round((t - Date.now()) / 60000));
         return m >= 2880 ? `${Math.round(m / 1440)} days left` : m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
       };
-      text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
+      // Live events: panels in the open space left of Find a Match, the first level with it and any
+      // more below (clear of the button row); on a screen too narrow for them, one line above the
+      // trainer card as before.
+      const rf = r.find;
+      const rowX = this.net.me.signedIn ? r.trade.x : r.board.x;
+      const right = Math.min(rf.x, rowX) - 22 * s;
+      const pw = Math.min(290 * s, right - 20 * s);
+      if (pw >= 210 * s) {
+        const style = EVENT_STYLE;
+        const ph = (style === 'spot' ? 140 : 104) * s;
+        const gap = 12 * s;
+        let py = rf.y + rf.h / 2 - ph / 2;
+        const px = right - pw;
+        for (const e of ev) {
+          const hot = e.kind === 'wins' && hit(this.ctx.input.mouseX, this.ctx.input.mouseY, px, py, pw, ph);
+          this.drawEvent(e, px, py, pw, ph, style, hot, left(e.endsAt));
+          this.eventRects.push({ x: px, y: py, w: pw, h: ph, kind: e.kind });
+          py += ph + gap;
+        }
+      } else {
+        text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
+      }
     }
     // Your trainer card.
     const me = this.net.me;

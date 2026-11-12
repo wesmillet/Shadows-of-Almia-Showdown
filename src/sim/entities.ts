@@ -150,6 +150,8 @@ export interface Mon {
   elite?: boolean;
   /** An Alpha: a huge, fully evolved level-75 wild near the Shadow Crystal. */
   alpha?: boolean;
+  /** The Pokémon that inflicted its current status (burn and poison damage is credited to it). */
+  statusBy?: Mon | null;
   /** A starter that came from its trainer's PC: it can not be kept or extracted (that would copy it). */
   fromPc?: boolean;
   /** A shiny: its sheets recoloured with the species' shiny palette. Kept through evolution. */

@@ -568,7 +568,9 @@ export class BattleSystem {
       if (mon.statusTimer <= 0) {
         mon.statusTimer = 2;
         const dmg = Math.max(1, Math.floor(mon.maxHp * (CONFIG.battle.poisonDamageFraction ?? 0.07)));
-        this.applyDamage(mon, dmg, null);
+        // Credited to whoever poisoned it: a team worn out by a wild Pokémon's poison is a wild
+        // knockout (down and back), not an unknown one (which knocked the trainer out of the match).
+        this.applyDamage(mon, dmg, this.statusSource(mon));
         this.events.push({ type: 'tick', target: mon, damage: dmg, source: 'poison' });
       }
     } else if (mon.status === 'burn') {
@@ -576,7 +578,7 @@ export class BattleSystem {
       if (mon.statusTimer <= 0) {
         mon.statusTimer = 2;
         const dmg = Math.max(1, Math.floor(mon.maxHp * CONFIG.battle.burnDamageFraction));
-        this.applyDamage(mon, dmg, null);
+        this.applyDamage(mon, dmg, this.statusSource(mon));
         this.events.push({ type: 'tick', target: mon, damage: dmg, source: 'burn' });
       }
     }
@@ -841,7 +843,7 @@ export class BattleSystem {
       this.events.push({ type: 'thaw', mon: target });
     }
     if (r.effectiveness === 0) return;
-    if (m.status && !target.status && !target.fainted && this.rng.chance(m.status.chance)) this.applyStatus(target, m.status.kind);
+    if (m.status && !target.status && !target.fainted && this.rng.chance(m.status.chance)) this.applyStatus(target, m.status.kind, attacker);
     if (m.stages?.target && this.rng.chance(m.stages.chance)) {
       for (const [stat, delta] of Object.entries(m.stages.target) as Array<['atk' | 'def', number]>) this.changeStage(target, stat, delta);
     }
@@ -898,8 +900,10 @@ export class BattleSystem {
     // doing so unbinds it into Hoopa Unbound (Visitors.hoopaStruck).
     if (b.npc === 'hoopa') return !!a.steered && !!a.owner?.isPlayer;
     if (a.npc === 'hoopa') return false;
-    // A Pokémon calmed by the Capture Styler is nobody's enemy until it wears off.
-    if ((a.calm ?? 0) > 0 || (b.calm ?? 0) > 0) return false;
+    // A wild Pokémon calmed by the Capture Styler (or just released) is nobody's enemy until it wears
+    // off. Only while it has no trainer: calm only wears off in the wild, so a calmed Pokémon caught
+    // straight away used to stay calm for good, a team member nothing could hit and that hit nothing.
+    if (((a.calm ?? 0) > 0 && !a.owner) || ((b.calm ?? 0) > 0 && !b.owner)) return false;
     // A one-on-one battle is sealed off: its two Pokémon fight only each other.
     if (a.duelId || b.duelId) return a.duelId === b.duelId && a.owner !== b.owner;
     // Squads: teammates' Pokémon never fight each other.
@@ -915,7 +919,8 @@ export class BattleSystem {
     if (mon.stages[stat] !== before) this.events.push({ type: 'stages', target: mon, stat, delta });
   }
 
-  applyStatus(mon: Mon, status: StatusKind): void {
+  /** `by`: the Pokémon that inflicted it (burn and poison damage count as its hits). */
+  applyStatus(mon: Mon, status: StatusKind, by: Mon | null = null): void {
     if (mon.status || mon.fainted) return;
     // Type immunities.
     const t = mon.types;
@@ -924,6 +929,7 @@ export class BattleSystem {
     if (status === 'burn' && t.includes('fire')) return;
     if (status === 'paralysis' && t.includes('electric')) return;
     mon.status = status;
+    mon.statusBy = by;
     if (status === 'sleep') {
       mon.statusTimer = this.rng.range(CONFIG.battle.sleepSeconds[0] ?? 3, CONFIG.battle.sleepSeconds[1] ?? 6);
       this.interrupt(mon);
@@ -951,6 +957,12 @@ export class BattleSystem {
       mon.anim.play('Idle');
       this.events.push({ type: 'wake', mon });
     }
+  }
+
+  /** Who a burn or poison is from, for its damage: the inflicting Pokémon, never the victim itself. */
+  private statusSource(mon: Mon): Mon | null {
+    const by = mon.statusBy ?? null;
+    return by && by !== mon ? by : null;
   }
 
   applyDamage(target: Mon, damage: number, by: Mon | null): void {

@@ -1280,6 +1280,9 @@ export class Match {
           w.owner = th.thrower;
           w.wild = false;
           w.aura = false;
+          // Calm (Capture Styler, or just released) and styler loops are for wild Pokémon only.
+          w.calm = 0;
+          w.styler = 0;
           // A strong wild keeps no boss traits once it's yours (its patch, temper and boss XP for
           // whoever knocks it out).
           w.landBoss = false;

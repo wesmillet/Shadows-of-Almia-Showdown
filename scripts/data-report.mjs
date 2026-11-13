@@ -76,6 +76,22 @@ if (has('match_log')) {
     if (w) { if (w.human) humanWins++; else botWins++; }
   }
   out.winners = { humans: humanWins, computer: botWins };
+  // How public matches really ended: a player won, one computer trainer was left, or the room
+  // closed with several computer trainers still standing (the last player went out first).
+  const ends = { playerWon: 0, oneComputerLeft: 0, closedWithSeveralLeft: 0, other: 0 };
+  const realBot = {};
+  for (const r of rows) {
+    if (r.aborted || r.mode === 'private') continue;
+    let l4; try { l4 = JSON.parse(r.trainers); } catch { continue; }
+    const humanWin = l4.some((t) => t.human && t.outcome === 'win');
+    const botsFirst = l4.filter((t) => !t.human && t.place === 1);
+    if (humanWin) ends.playerWon++;
+    else if (botsFirst.length === 1) { ends.oneComputerLeft++; realBot[botsFirst[0].name] = (realBot[botsFirst[0].name] ?? 0) + 1; }
+    else if (botsFirst.length > 1) ends.closedWithSeveralLeft++;
+    else ends.other++;
+  }
+  out.ends = ends;
+  out.realComputerWins = realBot;
 }
 if (has('users')) out.accounts = { total: one('SELECT COUNT(*) n FROM users').n, last7days: one('SELECT COUNT(*) n FROM users WHERE created_at > ?', Date.now() - 7 * 86400_000).n };
 if (has('feedback')) out.feedback = all("SELECT kind, status, COUNT(*) n FROM feedback GROUP BY kind, status");

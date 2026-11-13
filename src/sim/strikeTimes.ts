@@ -28,7 +28,7 @@ export const ANIM_FALLBACKS: Record<string, string[]> = {
 };
 
 /** The actions moves play (and the ones they fall back to): the ones the table records. */
-export const STRIKE_ACTIONS = ['Attack', 'Shoot', 'Charge', 'Strike', 'Swing', 'Double', 'Rotate', 'Hop'] as const;
+export const STRIKE_ACTIONS = ['Attack', 'Shoot', 'Charge', 'Strike', 'Swing', 'Double', 'Rotate', 'Hop', 'Shock'] as const;
 
 const STRIKES = TABLE as unknown as Record<string, Record<string, number | null>>;
 

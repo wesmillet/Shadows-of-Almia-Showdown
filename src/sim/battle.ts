@@ -323,6 +323,12 @@ export function travelDelay(attacker: Mon, target: Mon, m: MoveDef): number {
  * warning ring (battle.telegraph) so a dodge or a step aside can beat them.
  */
 /** A move that drops from the sky onto a spot (Icicle Crash, Rock Slide): marked, and dodged by leaving the mark. */
+/** The action a cast plays: Electric special moves use the Pokémon's Shock pose when its sprite has one. */
+export function castAction(attacker: Mon, m: MoveDef): string {
+  if (m.type === 'electric' && m.category === 'special' && hasAction(attacker.dex, 'Shock')) return 'Shock';
+  return m.anim;
+}
+
 export function isSkyDrop(m: MoveDef): boolean {
   return m.category !== 'status' && m.power > 0 && !!m.fx?.some((p) => p.anchor === 'sky');
 }
@@ -462,7 +468,7 @@ export class BattleSystem {
     const area = makeArea(m, attacker, targetX, targetY);
     attacker.castSeq = (attacker.castSeq ?? 0) + 1;
     attacker.casting = { moveId: id, t: m.cast ?? CONFIG.battle.castSeconds, targetX, targetY, targetId: null };
-    attacker.anim.play(m.anim, { restart: true, loop: false });
+    attacker.anim.play(castAction(attacker, m), { restart: true, loop: false });
     this.events.push({ type: 'cast', attacker, move: m, area });
     return true;
   }
@@ -508,13 +514,13 @@ export class BattleSystem {
       attacker.leap = { t: 0, dur: attacker.casting.t, h: (1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1)) * (m.leapHeight ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
       attacker.anim.play(hasAction(attacker.dex, 'Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
     } else {
-      attacker.anim.play(m.anim, { restart: true, loop: false });
+      attacker.anim.play(castAction(attacker, m), { restart: true, loop: false });
       // The move goes off on the attack animation's strike frame (SpriteCollab's HitFrame), so the
       // swing, the shot and the impact line up; moves with their own wind-up keep it. The strike
       // frame comes from the build-time table (strikeTimes.ts), following the same fallback chain
       // the sprite plays, so it never depends on which sheets have loaded.
       if (m.cast === undefined) {
-        const strike = strikeTime(attacker.dex, m.anim).seconds;
+        const strike = strikeTime(attacker.dex, castAction(attacker, m)).seconds;
         if (strike !== null) attacker.casting.t = Math.max(0.12, Math.min(0.6, strike));
       }
       // A contact move: rush in and strike on arrival.

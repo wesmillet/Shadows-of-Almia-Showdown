@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import TABLE from '../../data/strike-times.json';
 import { buildStrikeTable } from '../../scripts/strike-times';
 import { Rng } from '../core/rng';
-import { BattleSystem } from './battle';
+import { BattleSystem, castAction } from './battle';
 import { CONFIG, MOVES, species, statsAtLevel } from './data';
 import type { Mon } from './entities';
 import { ANIM_FALLBACKS, strikeTime } from './strikeTimes';
@@ -52,7 +52,7 @@ describe('strike-timing table', () => {
         const b = new BattleSystem(new Rng(1));
         if (!b.tryCast(a, 0, 3, 0, null, null)) continue;
         const want = m.cast !== undefined ? m.cast : (() => {
-          const s = strikeTime(dex, m.anim).seconds;
+          const s = strikeTime(dex, castAction(a, m)).seconds;
           return s === null ? CONFIG.battle.castSeconds : Math.max(0.12, Math.min(0.6, s));
         })();
         // (A lunge re-plans its strike around the rush in; contact.test covers that.)

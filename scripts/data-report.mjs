@@ -83,6 +83,20 @@ if (has('pc')) {
   // Duplicate legendaries/Mythicals per player (by species line as stored).
   out.pcEntries = one('SELECT COUNT(*) n FROM pc').n;
 }
+// One player's recent public matches (by their in-game name), for following up a bug report.
+const who = (process.env.REPORT_PLAYER || '').trim().toLowerCase();
+if (who && has('match_log')) {
+  const since = Date.now() - 14 * 86400_000;
+  const rows = all('SELECT id, mode, started_at, ended_at, seconds, winner, aborted, trainers FROM match_log WHERE ended_at > ? ORDER BY ended_at', since);
+  out.player = [];
+  for (const r of rows) {
+    let list; try { list = JSON.parse(r.trainers); } catch { continue; }
+    const me = list.find((t) => String(t.name).toLowerCase() === who);
+    if (!me) continue;
+    const replay = has('replays') ? !!one('SELECT 1 FROM replays WHERE id = ?', r.id) : false;
+    out.player.push({ id: r.id, mode: r.mode, ended: new Date(Number(r.ended_at)).toISOString(), minutes: +(Number(r.seconds) / 60).toFixed(1), winner: r.winner, replay, place: me.place, outcome: me.outcome, stats: me.stats, team: me.team ?? null });
+  }
+}
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));
 console.log('REPORT_JSON_END');

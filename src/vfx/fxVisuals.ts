@@ -337,6 +337,19 @@ export class FxBeam implements MoveVisual {
     this.life = Math.max(this.life, this.t + seconds);
   }
 
+  /** Between pulses: point the beam along a new line now (its life is unchanged). */
+  steer(from: { x: number; y: number }, to: { x: number; y: number }, lift?: number): void {
+    this.o.from = from;
+    this.o.to = to;
+    if (lift !== undefined) this.lift = lift;
+    this.aim();
+  }
+
+  /** How far the beam reaches now (tiles, along the ground). */
+  get reach(): number {
+    return Math.hypot(this.o.to.x - this.o.from.x, this.o.to.y - this.o.from.y);
+  }
+
   /** When the beam was cut off (release), and how long it then takes to fade. */
   private released: { at: number; fade: number } | null = null;
 

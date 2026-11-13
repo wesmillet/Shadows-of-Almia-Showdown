@@ -9,10 +9,21 @@ const BLOCKED = [
   'fuck', 'shit', 'bitch', 'cunt', 'dick', 'cock', 'pussy', 'asshole', 'bastard', 'slut', 'whore', 'faggot', 'fag', 'nigger', 'nigga',
   'retard', 'rape', 'rapist', 'nazi', 'hitler', 'kys', 'killyourself', 'porn', 'sex', 'nude', 'nudes', 'penis', 'vagina', 'cum', 'dildo',
   'tranny', 'chink', 'spic', 'kike', 'wetback', 'pedo', 'pedophile', 'molest',
+  'dumbass', 'jackass', 'smartass', 'fatass', 'asshat', 'ass',
 ];
 
 /** Short words that only count as whole words (so "class" or "assess" are fine). */
-const WHOLE_ONLY = new Set(['fag', 'cum', 'sex', 'kys', 'spic', 'dick', 'cock']);
+const WHOLE_ONLY = new Set(['fag', 'cum', 'sex', 'kys', 'spic', 'dick', 'cock', 'ass']);
+
+/**
+ * Whether one word (as typed) is this whole-only blocked word. 'ass' is matched on its letters
+ * without squashing repeats (squashed it would be "as"): ass, asss, a$$, a.s.s and asses count;
+ * as, class and assess do not.
+ */
+function wholeWord(w: string, bad: string): boolean {
+  if (bad === 'ass') return /^as{2,}(es)?$/.test(normalise(w).replace(/[^a-z]/g, ''));
+  return squash(normalise(w)) === squash(bad);
+}
 
 const LEET: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', $: 's', '!': 'i', '|': 'i', '+': 't' };
 
@@ -42,8 +53,8 @@ export function censor(text: string): string {
   for (const bad of BLOCKED) {
     const target = squash(bad);
     if (WHOLE_ONLY.has(bad)) {
-      if (words.some((w) => squash(w) === target)) out = out.replace(new RegExp(`\\b[^\\s]*${bad.split('').join('[^a-z\\s]*')}[^\\s]*\\b`, 'gi'), (m) => '*'.repeat(m.length));
-      if (words.some((w) => squash(w) === target) && out === text) return '*'.repeat(Math.min(text.length, 12));
+      // Star out just the words that are it (word by word, so 'class' beside it is left alone).
+      if (words.some((w) => wholeWord(w, bad))) out = out.split(/(\s+)/).map((w) => (/\s/.test(w) || !wholeWord(w, bad) ? w : '*'.repeat(w.length))).join('');
       continue;
     }
     if (joined.includes(target)) {

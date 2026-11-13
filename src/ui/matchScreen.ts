@@ -307,6 +307,7 @@ export class MatchScreen implements Screen {
     this.handleInput(input);
     this.match.step(dt, input);
     this.stepStyler(dt, input);
+    this.steerBeams();
     this.consumeEvents();
     for (const n of this.notices) n.t -= dt;
     this.notices = this.notices.filter((n) => n.t > 0);
@@ -2053,6 +2054,41 @@ export class MatchScreen implements Screen {
 
   /** The beam each channelling Pokémon is pouring out, per effect part (spawnFx reuses it pulse to pulse). */
   private channelBeams = new Map<string, FxBeam>();
+  /** Where on its user each channelled beam comes from (mouth, hands, body), to steer it every frame. */
+  private channelOrigins = new Map<string, FxPart['origin']>();
+
+  /**
+   * Channelled beams follow their aim every frame, not only on each damage pulse (a quarter second
+   * apart, which made a beam lag the cursor): the player's own beam follows the cursor itself (at
+   * once, online too), anyone else's follows its channel's direction where that is known.
+   */
+  private steerBeams(): void {
+    if (!this.channelBeams.size) return;
+    const pd = this.match.playerDuel;
+    const mine = pd ? (pd.a.trainer === this.match.player ? pd.a.mon : pd.b.mon) : this.match.actingMon;
+    const aim = this.match.aim;
+    const byId = new Map<number, Mon>();
+    for (const m of this.match.renderMons()) byId.set(m.id, m);
+    for (const [key, beam] of this.channelBeams) {
+      if (!beam.alive) continue;
+      const mon = byId.get(Number(key.split(':')[0]));
+      if (!mon || mon.fainted) continue;
+      let dx: number;
+      let dy: number;
+      if (mon === mine && aim) {
+        dx = aim.x - mon.x;
+        dy = aim.y - mon.y;
+      } else if (mon.channel) {
+        dx = mon.channel.dirX;
+        dy = mon.channel.dirY;
+      } else continue;
+      const d = Math.hypot(dx, dy);
+      if (d < 0.15) continue;
+      const out = this.launch(mon, this.channelOrigins.get(key));
+      const L = Math.max(1.5, beam.reach);
+      beam.steer(out.from, { x: out.from.x + (dx / d) * L, y: out.from.y + (dy / d) * L });
+    }
+  }
 
   private addVfx(v: MoveVisual, part: FxPart): void {
     const layer = part.ground ? this.groundVfx : this.vfx;
@@ -2135,6 +2171,7 @@ export class MatchScreen implements Screen {
             if (pulse) {
               if (this.channelBeams.size > 64) for (const [k2, b2] of this.channelBeams) if (!b2.alive) this.channelBeams.delete(k2);
               this.channelBeams.set(key, beam);
+              this.channelOrigins.set(key, part.origin);
             }
             this.addVfx(beam, part);
           }

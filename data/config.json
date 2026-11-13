@@ -123,8 +123,8 @@
       "tick": 0.25,
       "powerMult": 1.3,
       "turnDegPerSec": 140,
-      "_playerTurnComment": "How fast the player's own beam follows the cursor (degrees a second); everyone else's turns at turnDegPerSec.",
-      "playerTurnDegPerSec": 540
+      "_playerTurnComment": "How fast the player's own beam follows the cursor (degrees a second; this high it follows at once, every step); everyone else's turns at turnDegPerSec.",
+      "playerTurnDegPerSec": 100000
     },
     "_shotDodgeComment": "A shot in flight misses only if its target got more than shotDodgeTiles sideways out of the line it was shot along (plus its body); moving toward or away from the shooter does not dodge it.",
     "shotDodgeTiles": 1.3,

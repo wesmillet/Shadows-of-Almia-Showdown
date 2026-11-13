@@ -30,3 +30,21 @@ describe('glitch copies cleanup', () => {
     expect((a.db.prepare('SELECT COUNT(*) AS n FROM pc WHERE id = 2676').get() as { n: number }).n).toBe(1);
   });
 });
+
+describe('glitch copies sweep', () => {
+  it('removes the swept players’ listed copies, case-insensitive names, once', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'glitch2-'));
+    let a = new Accounts(dir, 'dev');
+    const user = (name: string) => Number(a.db.prepare('INSERT INTO users (username, pass_hash, created_at) VALUES (?, ?, ?)').run(name, 'x', Date.now()).lastInsertRowid);
+    const q = user('Qzarny');
+    const put = (id: number, owner: number, dex: string) =>
+      a.db.prepare('INSERT INTO pc (id, user_id, entry, created_at) VALUES (?, ?, ?, ?)').run(id, owner, JSON.stringify({ dex, name: dex, level: 50, shiny: true, moves: [] }), Date.now());
+    put(2172, q, '0004');
+    put(2442, q, '0215');
+    put(9999, q, '0004');
+    a.db.prepare("DELETE FROM meta WHERE key = 'glitch_copies_sweep_v1'").run();
+    a = new Accounts(dir, 'dev');
+    const ids = (a.db.prepare('SELECT id FROM pc ORDER BY id').all() as Array<{ id: number }>).map((r) => r.id);
+    expect(ids).toEqual([9999]);
+  });
+});

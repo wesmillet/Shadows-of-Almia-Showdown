@@ -832,19 +832,38 @@ export class Accounts {
    * Trade, or it is skipped. Every removal goes in the collection log with the full entry.
    */
   private glitchCopiesOnce(): void {
-    const key = 'glitch_copies_offdwight_v1';
+    // 13 November: Offdwight's 28 (approved first), then the sweep of every account (18 more).
+    this.removeGlitchCopies('glitch_copies_offdwight_v1', [
+      ['offdwight', 2650, '0007'], ['offdwight', 2672, '0007'], ['offdwight', 2676, '0007'], ['offdwight', 2777, '0007'], ['offdwight', 2488, '0246'],
+      ['offdwight', 2523, '0246'], ['offdwight', 2738, '0246'], ['offdwight', 2524, '0813'], ['offdwight', 2736, '0813'], ['offdwight', 2621, '0704'],
+      ['offdwight', 2740, '0704'], ['offdwight', 2556, '0129'], ['offdwight', 2678, '0129'], ['offdwight', 2630, '0374'], ['offdwight', 2703, '0374'],
+      ['offdwight', 2446, '0650'], ['offdwight', 2500, '0004'], ['offdwight', 2447, '0147'], ['offdwight', 2470, '0633'], ['offdwight', 2739, '0393'],
+      ['offdwight', 2704, '0158'], ['offdwight', 2749, '0258'], ['offdwight', 2727, '0885'], ['offdwight', 2705, '0728'], ['offdwight', 2668, '0968'],
+      ['offdwight', 2655, '0968'], ['offdwight', 2486, '0131'], ['offdwight', 2731, '0736'],
+    ]);
+    this.removeGlitchCopies('glitch_copies_sweep_v1', [
+      ['shanharvey', 2494, '0236'], ['shanharvey', 1971, '0401'], ['shanharvey', 2430, '0246'], ['shanharvey', 2577, '0246'], ['shanharvey', 2688, '0147'],
+      ['qzarny', 2172, '0004'], ['qzarny', 2442, '0215'], ['qzarny', 2539, '0885'], ['qzarny', 2769, '0129'], ['clein', 2702, '0004'],
+      ['camdoogs', 1569, '0004'], ['wizardbro', 523, '0004'], ['saiduk', 1739, '0258'], ['pochonew', 1384, '0129'], ['remsouye', 2152, '0782'],
+      ['iris', 2767, '0498'], ['ander02', 2378, '0393'], ['ogoat', 2381, '0816'],
+    ]);
+  }
+
+  /**
+   * Once per key: takes out shiny copies kept through the PC-starter glitch (8 to 12 November: a
+   * shiny starter from a line the player owned could be won and kept again). Each list was checked
+   * against the collection log and approved by the game's owner. An entry must still belong to that
+   * player, be the same species and shiny, and not be out on Wonder Trade, or it is skipped. Every
+   * removal goes in the collection log with the full entry.
+   */
+  private removeGlitchCopies(key: string, copies: Array<[string, number, string]>): void {
     if (this.db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) return;
-    const owner = this.db.prepare('SELECT id FROM users WHERE lower(username) = ?').get('offdwight') as { id: number } | undefined;
-    const copies: Array<[number, string]> = [
-      [2650, '0007'], [2672, '0007'], [2676, '0007'], [2777, '0007'], [2488, '0246'], [2523, '0246'], [2738, '0246'],
-      [2524, '0813'], [2736, '0813'], [2621, '0704'], [2740, '0704'], [2556, '0129'], [2678, '0129'], [2630, '0374'],
-      [2703, '0374'], [2446, '0650'], [2500, '0004'], [2447, '0147'], [2470, '0633'], [2739, '0393'], [2704, '0158'],
-      [2749, '0258'], [2727, '0885'], [2705, '0728'], [2668, '0968'], [2655, '0968'], [2486, '0131'], [2731, '0736'],
-    ];
     let removed = 0;
     const skipped: number[] = [];
+    const players = new Set<string>();
     this.atomically(() => {
-      for (const [pcId, dex] of copies) {
+      for (const [username, pcId, dex] of copies) {
+        const owner = this.db.prepare('SELECT id FROM users WHERE lower(username) = ?').get(username) as { id: number } | undefined;
         const row = owner ? (this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(pcId, owner.id) as { entry: string } | undefined) : undefined;
         let e: { dex?: string; shiny?: unknown } | null = null;
         try {
@@ -859,13 +878,14 @@ export class Accounts {
         this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc = ? OR want_pc = ?)").run(Date.now(), pcId, pcId);
         this.logCollection(owner.id, 'remove:glitch-copy', { pcId, ref: 'admin:pc-starter-glitch', detail: e });
         this.db.prepare('DELETE FROM pc WHERE id = ? AND user_id = ?').run(pcId, owner.id);
+        players.add(username);
         removed++;
       }
       this.db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, JSON.stringify({ at: Date.now(), removed, skipped }));
     });
     if (removed || skipped.length) {
-      console.log(`PC: removed ${removed} glitch copies${skipped.length ? `, skipped ${skipped.length} (${skipped.join(', ')})` : ''}`);
-      this.logMod({ id: null, name: 'cleanup' }, 'remove-glitch-copies', 'Offdwight', JSON.stringify({ removed, skipped }));
+      console.log(`PC (${key}): removed ${removed} glitch copies${skipped.length ? `, skipped ${skipped.length} (${skipped.join(', ')})` : ''}`);
+      this.logMod({ id: null, name: 'cleanup' }, 'remove-glitch-copies', [...players].join(', '), JSON.stringify({ key, removed, skipped }));
     }
   }
 

@@ -1118,7 +1118,7 @@ export class MatchScreen implements Screen {
     const p = this.match.player;
     const a = this.match.aim;
     // Only with a Capture Styler in the bag (a rare find in item balls).
-    if (input.pressed('KeyC') && !this.match.hasStyler(p)) this.say('You need a Capture Styler (a rare find in item balls)', 2);
+    // (The Capture Styler is vaulted for now: no longer in item balls, so C says nothing without one.)
     const holding = input.down('KeyC') && !p.duelId && !!a && this.match.hasStyler(p);
     this.stylerHeld = holding;
     if (!holding || !a) {

@@ -23,7 +23,6 @@ export const KEY_ACTIONS: KeyAction[] = [
   { code: 'Space', label: 'Talk / pick up / fish / dodge' },
   { code: 'Tab', label: 'Target nearest wild' },
   { code: 'KeyF', label: 'Throw a ball' },
-  { code: 'KeyC', label: 'Capture Styler (hold)' },
   { code: 'KeyV', label: 'Ride / land' },
   { code: 'KeyM', label: 'Mega Evolve' },
   { code: 'KeyG', label: 'Held items & TMs' },

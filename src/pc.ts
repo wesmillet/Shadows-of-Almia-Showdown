@@ -51,8 +51,15 @@ export function shownDex(e: PcEntry): string {
 export function shownName(e: PcEntry): string {
   const base = SPECIES.get(e.dex)?.name;
   const shown = SPECIES.get(shownDex(e))?.name;
-  if (/^\d{4}/.test(e.name) || (shown && e.name === base)) return shown ?? e.name;
-  return e.name;
+  // Names never carry 'Shiny', 'Alolan', 'Galarian' and the like (older entries may).
+  const name = plainName(e.name);
+  if (/^\d{4}/.test(name) || (shown && name === base)) return shown ?? name;
+  return name;
+}
+
+/** A Pokémon's name without a 'Shiny', 'Alolan', 'Galarian', 'Hisuian' or 'Paldean' in front. */
+export function plainName(name: string): string {
+  return name.replace(/^(?:(?:Shiny|Alolan|Galarian|Hisuian|Paldean) )+/, '');
 }
 
 /** Stars or unstars a Pokémon in this browser's PC. */

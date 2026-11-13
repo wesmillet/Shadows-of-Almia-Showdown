@@ -391,7 +391,7 @@
     "_trainerComment": "Trainers last trainerToleranceScale times as long as their Pokemon in the storm (16 s, or 8 minutes with a Storm Mask), then pass out: Darkrai drags them into the shadows and they are out of the match. Their exposure drains twice as fast outside the storm.",
     "trainerToleranceScale": 4,
     "stormMaskChance": 0.05,
-    "stormMaskPrice": 20000,
+    "stormMaskPrice": 5000,
     "badDreamsFraction": 0.0625,
     "wakeAfterSecondsOutside": 3,
     "_collapseComment": "Seconds after the final pulse (Darkrai) until the last light goes out: the safe circle closes to nothing, so a final between two who can not hurt each other still ends.",

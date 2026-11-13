@@ -24,6 +24,10 @@ describe('trainer battle shots', async () => {
     for (let i = 0; i < 600 && !(d.a.mon && d.b.mon); i++) m.step(1 / 60);
     const mine = (d.a.trainer === p ? d.a : d.b).mon!;
     const foe = (d.a.trainer === p ? d.b : d.a).mon!;
+    // Send-outs land at a random spot in range: put the shooter back where the trainer stands
+    // (open ground), so the shot's path does not depend on where its ball came down.
+    mine.x = mine.px = p.x;
+    mine.y = mine.py = p.y;
     return { m, mine, foe };
   };
   const fire = (dx: number, dy: number) => {
@@ -37,7 +41,8 @@ describe('trainer battle shots', async () => {
     expect(m.playerCast(0)).toBe('cast');
     const at = { x: foe.x, y: foe.y };
     for (let i = 0; i < 150; i++) {
-      foe.moving = false; foe.casting = null; foe.x = at.x + dx; foe.y = at.y + dy;
+      // The computer's Pokémon does not dodge here: only the shot's path is under test.
+      foe.moving = false; foe.casting = null; foe.dodgeCd = 99; foe.dodge = undefined; foe.x = at.x + dx; foe.y = at.y + dy;
       m.battle.events.length = 0;
       m.step(1 / 60);
       if (m.battle.events.some((e) => e.type === 'text' && e.text === 'Missed!')) missed = true;
@@ -154,7 +159,7 @@ describe('shots along the aim line', async () => {
     foe.x = mine.x + 3; foe.y = mine.y;
     const hp = foe.hp;
     m.battle.castToward(mine, 0, mine.x + aimX, mine.y + aimY);
-    for (let i = 0; i < 150 && foe.hp === hp; i++) { foe.moving = false; foe.casting = null; foe.x = mine.x + 3; foe.y = mine.y; m.step(1 / 60); }
+    for (let i = 0; i < 150 && foe.hp === hp; i++) { foe.moving = false; foe.casting = null; foe.dodgeCd = 99; foe.dodge = undefined; foe.x = mine.x + 3; foe.y = mine.y; m.step(1 / 60); }
     return foe.hp < hp;
   };
   it('aimed short of the foe on the line, it still lands', () => expect(fire(1.5, 0)).toBe(true));

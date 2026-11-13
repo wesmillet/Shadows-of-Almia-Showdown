@@ -278,6 +278,7 @@ export class Accounts {
     this.db.exec(`UPDATE daily_eggs SET hatched_at = COALESCE((SELECT created_at FROM pc WHERE pc.id = daily_eggs.pc_id), at)
       WHERE pc_id IS NOT NULL AND hatched_at IS NULL`);
     this.firstFormsOnce();
+    this.plainNamesOnce();
     // v1: the rare-item chest was on for everyone until now and was saved into every account's
     // chest, so those items come out once (what players stored themselves stays), and chests are
     // cut to their ten slots.
@@ -777,6 +778,29 @@ export class Accounts {
       this.db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('pc_first_forms_v2', ?)").run(String(Date.now()));
     });
     if (changed) console.log(`PC: ${changed} Pokémon put back to their first form`);
+  }
+
+  /** PC names never carry 'Shiny', 'Alolan', 'Galarian' and the like: older entries lose the word, once. */
+  private plainNamesOnce(): void {
+    if (this.db.prepare("SELECT 1 FROM meta WHERE key = 'pc_plain_names_v1'").get()) return;
+    const rows = this.db.prepare("SELECT id, entry FROM pc WHERE json_extract(entry, '$.name') LIKE 'Shiny %' OR json_extract(entry, '$.name') LIKE 'Alolan %' OR json_extract(entry, '$.name') LIKE 'Galarian %' OR json_extract(entry, '$.name') LIKE 'Hisuian %' OR json_extract(entry, '$.name') LIKE 'Paldean %'").all() as Array<{ id: number; entry: string }>;
+    let changed = 0;
+    this.atomically(() => {
+      for (const r of rows) {
+        let e: Record<string, unknown>;
+        try {
+          e = JSON.parse(r.entry) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        const name = String(e.name ?? '').replace(/^(?:(?:Shiny|Alolan|Galarian|Hisuian|Paldean) )+/, '');
+        if (!name || name === e.name) continue;
+        this.db.prepare('UPDATE pc SET entry = ? WHERE id = ?').run(JSON.stringify({ ...e, name }), r.id);
+        changed++;
+      }
+      this.db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('pc_plain_names_v1', ?)").run(String(Date.now()));
+    });
+    if (changed) console.log(`PC: ${changed} names made plain`);
   }
 
   /** A starter achievement's Pokémon into the PC (level 5, the moves it knows there). */

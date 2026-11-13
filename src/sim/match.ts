@@ -670,8 +670,8 @@ export class Match {
       }
     }
     this.rng.shuffle(spots);
-    // Every trainer finds the same near their start: a few Poké Balls, and a Quick Ball (best thrown
-    // before the first pulse). (Only the first player's start used to get them.)
+    // Every trainer finds the same near their start: a few Poké Balls. (Only the first player's start
+    // used to get them.)
     const taken = new Set<{ x: number; y: number }>();
     let id = 0;
     for (const p0 of starts) {
@@ -680,11 +680,14 @@ export class Match {
         taken.add(p);
         this.items.push({ id: nextId++, ball: 'poke', tier: null, contents: [{ id: 'poke-ball', count: 1 }], x: p.x, y: p.y, bob: id++ });
       }
-      const quick = spots.find((p) => !taken.has(p) && Math.hypot(p.x - p0.x, p.y - p0.y) < 12);
-      if (quick) {
-        taken.add(quick);
-        this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 1 }], x: quick.x, y: quick.y, bob: id++ });
-      }
+    }
+    // Quick Balls (best thrown before the first pulse): as many as there are trainers, anywhere on
+    // the island, never by a start (they used to wait by every start).
+    const away = spots.filter((p) => !taken.has(p) && starts.every((p0) => Math.hypot(p.x - p0.x, p.y - p0.y) >= 14));
+    for (let i = 0; i < starts.length && i < away.length; i++) {
+      const q = away[i] as { x: number; y: number };
+      taken.add(q);
+      this.items.push({ id: nextId++, ball: 'quick', tier: null, contents: [{ id: 'quick-ball', count: 1 }], x: q.x, y: q.y, bob: id++ });
     }
     for (let i = 0; i < CONFIG.items.groundItems && i < spots.length; i++) {
       const p = spots[i] as { x: number; y: number };

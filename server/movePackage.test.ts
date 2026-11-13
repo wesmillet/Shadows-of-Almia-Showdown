@@ -32,7 +32,8 @@ describe('move package', async () => {
   });
 
   it('sky moves reach 4 tiles, shots 5', () => {
-    expect(moveReach(move('icicle-crash'))).toBe(4);
+    expect(moveReach(move('icicle-crash'))).toBe(CONFIG.battle.skyReach);
+    expect(CONFIG.battle.skyReach).toBeLessThan(5);
     expect(moveReach(move('shadow-ball'))).toBe(5);
   });
 
@@ -76,5 +77,31 @@ describe('move package', async () => {
     a.channel = { manual: true, moveId: 'flamethrower', left: 1, next: 0.1, pulses: 8, fired: 0, dirX: 1, dirY: 0, aimX: a.x + 3, aimY: a.y } as never;
     const half = m.walkSteered(a, 1, 0, 0.1);
     expect(half / full).toBeCloseTo(CONFIG.battle.channel.walkSpeed, 2);
+  });
+});
+
+describe('sky drops', async () => {
+  const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
+  it('Icicle Crash lands on the marked spot: backing straight away dodges it, standing still does not', () => {
+    for (const leave of [true, false]) {
+      const m = new Match({ ground: world.ground(), rng: new Rng(9), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 0 });
+      const p = m.seats[0]!.trainer;
+      m.items = [];
+      m.wilds = [];
+      const a = m.makeMon('0461', 40, p, p.x, p.y);
+      const b = m.makeMon('0399', 40, null, p.x + 3, p.y);
+      b.wild = true;
+      const before = b.hp;
+      m.battle.inFlight.length = 0;
+      m.battle.events.length = 0;
+      (m.battle as unknown as { resolve: (...x: unknown[]) => void }).resolve(a, move('icicle-crash'), { shape: 'single', tx: b.x, ty: b.y, x: a.x, y: a.y } as never, [b]);
+      expect(m.battle.events.some((e) => e.type === 'telegraph')).toBe(true);
+      const f = m.battle.inFlight[0]!;
+      expect(f.t).toBeGreaterThanOrEqual(CONFIG.battle.skyDrop.minSeconds - 1e-9);
+      if (leave) b.x += 2; // straight away from the attacker, along the line
+      m.battle.stepFlights(f.t + 0.05);
+      if (leave) expect(b.hp).toBe(before);
+      else expect(b.hp).toBeLessThan(before);
+    }
   });
 });

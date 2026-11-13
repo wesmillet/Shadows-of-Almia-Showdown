@@ -138,7 +138,9 @@
     "darkraiBlink": { "every": [1.6, 2.6], "tiles": 2.6, "side": 0.9, "drift": 0.45 },
     "_clashComment": "Beam clash: two foes firing beams straight at each other (within range tiles, each beam within facingDeg of the other Pokemon) lock. Neither beam hits; the meeting point pushes toward the weaker side at pushRate x the strength difference a second (at least minPush), wobbling. The beams last as long as the lock. When the point reaches a Pokemon, the winner's beam breaks through for winMult x one full hit and the loser's beam stops. After maxSeconds the side the point is nearer loses. Steering a beam off its foe breaks the lock.",
     "clash": { "range": 7, "facingDeg": 30, "breakDeg": 45, "pushRate": 0.3, "minPush": 0.06, "maxSeconds": 4.5, "winMult": 1 },
-    "skyReach": 4,
+    "skyReach": 3.5,
+    "_skyDropComment": "Sky drops (Icicle Crash, Rock Slide, Draco Meteor...) fall on the spot the target stood on when cast: a ring of radius tiles marks it, the hit lands after at least minSeconds, and a target that has left the ring by then is missed (backing away counts, not only stepping sideways).",
+    "skyDrop": { "minSeconds": 0.55, "radius": 0.85 },
     "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at speed tiles a second (times its Speed multiplier and the move's dash), covering at most maxTiles (times dash) in at most maxSeconds, following a target that moves, and strikes on arrival. It lands only if the two bodies are then touching (data.contactReach: their radii plus reachSlack): a lunge stopped by a wall, or a target that got away, is a miss. A contact hit or a slam's landing shoves the target knockTiles (times power / 80 within knockScale, times the move's knock) unless it is a boss, a legend, an Alpha, a Shadow Pokémon, mid-leap or much bigger than the attacker; walls stop the shove.",
     "lunge": {
       "speed": 16,

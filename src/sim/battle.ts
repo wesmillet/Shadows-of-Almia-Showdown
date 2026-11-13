@@ -322,6 +322,11 @@ export function travelDelay(attacker: Mon, target: Mon, m: MoveDef): number {
  * non-contact attack with no projectile, nothing falling from the sky and no beam. These get a
  * warning ring (battle.telegraph) so a dodge or a step aside can beat them.
  */
+/** A move that drops from the sky onto a spot (Icicle Crash, Rock Slide): marked, and dodged by leaving the mark. */
+export function isSkyDrop(m: MoveDef): boolean {
+  return m.category !== 'status' && m.power > 0 && !!m.fx?.some((p) => p.anchor === 'sky');
+}
+
 export function isInstant(m: MoveDef): boolean {
   if (m.shape !== 'single' || m.category === 'status' || m.power <= 0 || isContact(m) || m.leap || isChannel(m.id)) return false;
   return !m.fx?.some((p) => p.anchor === 'projectile' || p.anchor === 'sky' || (p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream')));
@@ -355,7 +360,7 @@ export class BattleSystem {
   /** Each beam's leftover fractions of a point, per target (see landHit); gone with the beam. */
   private readonly beamCarry = new WeakMap<object, Map<Mon, number>>();
   /** Hits on their way to their targets (see impactDelay). */
-  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number; tele?: boolean }> = [];
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number; tele?: boolean; radius?: number }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
   shotLine: ShotLine | null = null;
   /** Called with every attack that goes off (the match uses it for the Shadow Crystal; `scale`: a beam pulse's share). */
@@ -690,10 +695,12 @@ export class BattleSystem {
         this.landHit(attacker, target, m, pulse);
         continue;
       }
-      const wait = impactDelay(attacker, target, m);
-      const tele = isInstant(m);
-      if (tele) this.events.push({ type: 'telegraph', x: target.x, y: target.y, radius: CONFIG.battle.telegraph.radius, seconds: wait, move: m });
-      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, fromX: attacker.x, fromY: attacker.y, tele });
+      const sky = isSkyDrop(m);
+      const wait = sky ? Math.max(CONFIG.battle.skyDrop.minSeconds, impactDelay(attacker, target, m)) : impactDelay(attacker, target, m);
+      const tele = isInstant(m) || sky;
+      const radius = sky ? CONFIG.battle.skyDrop.radius : CONFIG.battle.telegraph.radius;
+      if (tele) this.events.push({ type: 'telegraph', x: target.x, y: target.y, radius, seconds: wait, move: m });
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, fromX: attacker.x, fromY: attacker.y, tele, radius });
       else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
@@ -872,7 +879,7 @@ export class BattleSystem {
       }
       // A telegraphed burst lands on its ring: out of it, missed.
       if (f.tele) {
-        if (Math.hypot(f.target.x - f.x, f.target.y - f.y) > CONFIG.battle.telegraph.radius + hitPad(f.target.species)) {
+        if (Math.hypot(f.target.x - f.x, f.target.y - f.y) > (f.radius ?? CONFIG.battle.telegraph.radius) + hitPad(f.target.species)) {
           this.events.push({ type: 'text', mon: f.target, text: 'Missed!' });
           continue;
         }

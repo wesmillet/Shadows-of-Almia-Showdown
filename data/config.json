@@ -73,6 +73,8 @@
     "_alphaComment": "Within alphaRadius tiles of the Shadow Crystal, alphaChance of wild spawns are Alphas, at most alphaPerMatch in a whole match: alphaLevelBonus levels above the wilds around them (at most alphaLevelMax), fully evolved, drawn alphaScale times bigger, worth xpAlphaMultiplier XP. Elsewhere levels climb by up to centerLevelBonus toward the crystal, spread by centerLevelSpread.",
     "_shinyComment": "shinyChance: the chance any wild Pokemon is shiny (every land spawn, every stronger encounter, every fishing bite), if its species has shiny colours. 1 in 2048 (twice the 1 in 4096 of the latest main games) gives a shiny somewhere among a match's 310 or so wild Pokemon and fishing bites about every 7 matches; a trainer who meets 40-60 wilds sees one about every 40 matches. Alphas use shinyChance x alphaShinyMultiplier. A match's shiny boost (server events) multiplies both, once. Events with their own chosen odds (the forest stranger's Zoroark, spawns.json events) do not use this.",
     "shinyChance": 0.00048828125,
+    "_prizeShinyComment": "prizeShinyChance: the chance the Pokemon Ace Trainer Celeste or the Castle Champion hands over is shiny (it was always shiny). Far above the wild rate, well below certain.",
+    "prizeShinyChance": 0.1,
     "alphaShinyMultiplier": 4,
     "alphaChance": 0.07,
     "alphaPerMatch": 1,

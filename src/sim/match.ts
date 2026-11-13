@@ -3665,16 +3665,17 @@ export class Match {
       for (const [id, n] of r.items) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
       const foe = c.foe as Trainer;
       if (spill.length) this.placeBall('cherish', spill, foe.x, foe.y + 1);
-      // The champion's trophy: a shiny Pokémon at your best level.
+      // The champion's trophy: one of his Pokémon at your best level, shiny now and then.
       const pool = CHAMPION_SHINIES.filter((d) => SPECIES.has(d) && SpriteRegistry.hasShiny(d));
       let prize = '';
       if (pool.length && partySize(this.player) < this.partyCap) {
         const best = Math.max(...this.player.party.map((x) => x.level));
-        const mon = this.makeMon(pool[this.rng.int(0, pool.length - 1)] as string, best, this.player, this.player.x + 0.8, this.player.y + 0.5, true);
+        const shiny = this.rng.chance(CONFIG.wild.prizeShinyChance);
+        const mon = this.makeMon(pool[this.rng.int(0, pool.length - 1)] as string, best, this.player, this.player.x + 0.8, this.player.y + 0.5, shiny);
         mon.stowed = true;
         this.player.party.push(mon);
-        prize = ` and a shiny ${mon.name}`;
-      } else if (pool.length) prize = ' (no room in your party for his shiny Pokémon)';
+        prize = ` and ${mon.shiny ? 'a shiny' : 'his'} ${mon.name}`;
+      } else if (pool.length) prize = ' (no room in your party for his Pokémon)';
       this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money}, his items${prize}`, seconds: 4 });
     }
   }

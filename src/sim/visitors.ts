@@ -2,7 +2,7 @@
  * Visitors who roam the island alongside the battle royale:
  *   - the Wandering Merchant, whose stall (Space beside him) sells rare items;
  *   - Ace Trainer Celeste, who takes on anyone who asks (a one-on-one battle with
- *     a strong team); beat her and she hands over a random shiny Pokémon;
+ *     a strong team); beat her and she hands over a random Pokémon (shiny 1 in 10);
  *   - Hoopa, who floats about until the player talks to it, then opens a ring
  *     portal: a legendary comes through as a boss, and when it is worn down to
  *     its last HP it joins whoever beat it;
@@ -695,10 +695,12 @@ export class Visitors {
         pl.money += 2000;
         m.battle.events.push({ type: 'notice', text: 'Celeste: "Your team is full? Then take this." An Extraction Voucher and ₽2000!', seconds: 4 });
       } else {
-        const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8, true);
+        // Shiny only now and then (wild.prizeShinyChance), still far above the wild odds.
+        const shiny = m.rng.chance(CONFIG.wild.prizeShinyChance);
+        const prize = m.makeMon(dex, top, pl, pl.x, pl.y + 0.8, shiny);
         prize.behavior = joinBehavior(pl);
         pl.party.push(prize);
-        m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you a shiny ${prize.name}!`, seconds: 4 });
+        m.battle.events.push({ type: 'notice', text: `Celeste: "You earned this." She gives you ${prize.shiny ? 'a shiny' : 'her'} ${prize.name}!`, seconds: 4 });
       }
     } else {
       // A friendly bout: she patches your team up and you may try again later.

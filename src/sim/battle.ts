@@ -500,7 +500,7 @@ export class BattleSystem {
       // Land in front of the target, not on it: big Pokémon stop further out.
       const back = Math.min(d, 0.45 + bodyRadius(attacker.species) * 1.1);
       const k = d > 0.01 ? (d - back) / d : 0;
-      attacker.leap = { t: 0, dur: attacker.casting.t, h: 1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
+      attacker.leap = { t: 0, dur: attacker.casting.t, h: (1.4 + 0.3 * Math.min(3, attacker.species.heightM ?? 1)) * (m.leapHeight ?? 1), fx: attacker.x, fy: attacker.y, tx: attacker.x + dx * k, ty: attacker.y + dy * k, slam: true };
       attacker.anim.play(hasAction(attacker.dex, 'Hop') ? 'Hop' : m.anim, { restart: true, loop: false });
     } else {
       attacker.anim.play(m.anim, { restart: true, loop: false });

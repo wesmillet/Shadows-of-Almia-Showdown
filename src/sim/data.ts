@@ -250,6 +250,8 @@ export interface MoveDef {
   fx?: FxPart[];
   /** The attacker leaps and lands on the target over the cast (Body Slam, Heavy Slam). */
   leap?: boolean;
+  /** How much higher than usual a leap goes (Lucha Lunge springs high). */
+  leapHeight?: number;
   /** A legendary's signature move: always among the moves its owner knows. */
   signature?: boolean;
   /** Screen shake on impact, 0..1 (heavy moves only). */

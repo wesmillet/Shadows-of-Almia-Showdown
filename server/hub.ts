@@ -156,6 +156,7 @@ export class Hub {
       isAdmin: (peer) => this.isAdmin(peer as Client),
     });
     o.accounts.presence = (id) => this.presence(id);
+    o.accounts.deliverDm = (id, msg) => this.clients.get(`u${id}`)?.send(msg);
     o.accounts.onTradesChanged = (ids) => {
       for (const id of ids) this.clients.get(`u${id}`)?.send({ t: 'trades' });
     };

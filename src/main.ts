@@ -30,6 +30,7 @@ import { BASE_TIERS, STARTER_TIERS, starterChoices } from './sim/starters';
 import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
+import { DmStore, setDmStore } from './ui/dmDialog';
 import { parseReplay, ReplayFeed, ReplayPlayer, setupSpectate } from './ui/watchScreens';
 import { canWear, DEFAULT_LOOK, isFreeLook, isShownLook, lookRequirement, ownsPersonalLook, PERSONAL_LOOKS } from './net/progression';
 import type { PcEntry } from './pc';
@@ -307,6 +308,8 @@ async function boot(): Promise<void> {
   let playingId: string | null = null;
   let watchingId: string | null = null;
   const toaster = net ? new Toaster(net) : null;
+  // Direct messages with friends: unread counts and a note when one comes in (src/ui/dmDialog.ts).
+  if (net) setDmStore(new DmStore(net, (t) => toaster?.show(t, 5)));
   if (net) debug.showdown.net = net;
   // Away for two minutes in a match (no key, click, tap or mouse movement): out of it, disconnected.
   if (net) {

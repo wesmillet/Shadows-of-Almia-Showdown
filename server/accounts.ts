@@ -25,6 +25,8 @@ import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
+import { Dms } from './dms';
+import type { ServerMsg } from '../src/net/protocol';
 import { Feedback } from './feedback';
 import { STARTER_SQL, StarterUnlocks } from './starterUnlocks';
 import { COLLECTION_LOG_SQL } from './collectionLog';
@@ -140,6 +142,8 @@ export class Accounts {
   readonly db: DatabaseSync;
   /** Mystery Gift codes (server/gifts.ts). */
   readonly gifts: Gifts;
+  /** Direct messages between friends (server/dms.ts). */
+  readonly dms: Dms;
   /** Players' bug reports and suggestions (server/feedback.ts). */
   readonly feedback: Feedback;
   /** The running wins contest's board for /api/leaderboard (set by server/main.ts), or null. */
@@ -297,6 +301,12 @@ export class Accounts {
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
     this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex, shiny) => this.giveReward(id, dex, shiny));
     this.gifts = new Gifts(this);
+    this.dms = new Dms({
+      db: this.db,
+      user: (id) => this.user(id) ?? undefined,
+      userByName: (name) => (this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(name) as UserRow | undefined) ?? undefined,
+      areFriends: (a, b) => this.areFriends(a, b),
+    });
     this.feedback = new Feedback(this);
     // Expired sessions go once an hour.
     setInterval(() => this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600_000).unref();
@@ -480,6 +490,8 @@ export class Accounts {
 
   /** Set by main.ts: tell these accounts (when online) their trade offers changed. */
   onTradesChanged: (userIds: number[]) => void = () => {};
+  /** A direct message to hand to a player who is online (set by server/hub.ts). */
+  deliverDm: (userId: number, msg: ServerMsg) => void = () => {};
   /** An account's password was changed or recovered: its game connections close (they sign in again). */
   onSignedOut: (userId: number, reason: string) => void = () => {};
   /** Email for password resets (server/mailer.ts): null when the server has no RESEND_API_KEY. */
@@ -1307,6 +1319,26 @@ export class Accounts {
         if (r.other !== undefined) this.onFriendsChanged([me.id, r.other]);
         return send(200, { ok: r.ok });
       }
+      // Direct messages (server/dms.ts): a conversation, unread counts, sending, marking read.
+      if (req.method === 'GET' && path === '/api/dms') {
+        const r = this.dms.history(me.id, String(url.searchParams.get('with') ?? ''));
+        return send('error' in r ? 404 : 200, r);
+      }
+      if (req.method === 'GET' && path === '/api/dms/unread') return send(200, { unread: this.dms.unread(me.id) });
+      if (req.method === 'POST' && path === '/api/dms/read') {
+        const b = await readJson(req);
+        const other = this.db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(String(b.with ?? '').slice(0, 32)) as { id: number } | undefined;
+        if (other) this.dms.markRead(me.id, Number(other.id));
+        return send(200, { ok: true });
+      }
+      if (req.method === 'POST' && path === '/api/dms/send') {
+        const b = await readJson(req);
+        const r = this.dms.send(me.id, b.to, b.text);
+        if ('error' in r) return send(400, r);
+        this.deliverDm(r.toId, { t: 'dm', ...r.msg });
+        this.deliverDm(me.id, { t: 'dm', ...r.msg });
+        return send(200, { ok: true, msg: r.msg });
+      }
       if (req.method === 'GET' && path === '/api/pc') {
         const rows = this.db.prepare('SELECT id, entry FROM pc WHERE user_id = ? ORDER BY id').all(me.id) as Array<{ id: number; entry: string }>;
         const pooled = this.pooledIds(me.id);
@@ -1451,10 +1483,14 @@ export class Accounts {
       if (req.method === 'POST' && path === '/api/report') {
         if (!this.allow(`report:${me.id}`, 10, 3600_000)) return send(429, { error: 'That is a lot of reports. Try again later' });
         const b = await readJson(req);
-        const target = String(b.name ?? '').slice(0, 32);
+        let target = String(b.name ?? '').slice(0, 32);
         const reason = String(b.reason ?? '').slice(0, 300);
+        // A direct message: only one the reporter sent or got, and its writer is who is reported.
+        const dm = typeof b.dmId === 'number' ? this.dms.forReport(me.id, b.dmId) : null;
+        if (typeof b.dmId === 'number' && !dm) return send(404, { error: 'No such message' });
+        if (dm) target = dm.author;
         if (!target) return send(400, { error: 'Who are you reporting?' });
-        this.db.prepare('INSERT INTO reports (reporter_id, reporter_key, target, reason, chat_id, at) VALUES (?, ?, ?, ?, ?, ?)').run(me.id, `u${me.id}`, target, reason, typeof b.chatId === 'number' ? b.chatId : null, Date.now());
+        this.db.prepare('INSERT INTO reports (reporter_id, reporter_key, target, reason, chat_id, dm_id, at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(me.id, `u${me.id}`, target, reason, typeof b.chatId === 'number' ? b.chatId : null, dm ? dm.id : null, Date.now());
         return send(200, { ok: true });
       }
       return send(404, { error: 'Not found' });

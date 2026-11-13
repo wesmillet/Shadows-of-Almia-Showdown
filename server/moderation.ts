@@ -54,7 +54,7 @@ export function censor(text: string): string {
     const target = squash(bad);
     if (WHOLE_ONLY.has(bad)) {
       // Star out just the words that are it (word by word, so 'class' beside it is left alone).
-      if (words.some((w) => wholeWord(w, bad))) out = out.split(/(\s+)/).map((w) => (/\s/.test(w) || !wholeWord(w, bad) ? w : '*'.repeat(w.length))).join('');
+      if (words.some((w) => wholeWord(w, bad))) out = out.split(/(\s+)/).map((w) => (/\s/.test(w) || !wholeWord(w, bad) ? w : w.replace(/[^.,;:?'"()]/g, '*'))).join('');
       continue;
     }
     if (joined.includes(target)) {

@@ -63,8 +63,10 @@ export class ModApi {
       }
       if (req.method === 'GET' && path === '/api/mod/reports') {
         const open = url.searchParams.get('all') ? '' : 'WHERE r.resolved = 0';
-        const rows = db.prepare(`SELECT r.id, r.target, r.reason, r.at, r.resolved, r.reporter_key, u.username AS by, c.text AS chat FROM reports r
-          LEFT JOIN users u ON u.id = r.reporter_id LEFT JOIN chat c ON c.id = r.chat_id ${open} ORDER BY r.id DESC LIMIT 100`).all();
+        // A reported direct message comes with its text, marked as a DM.
+        const rows = db.prepare(`SELECT r.id, r.target, r.reason, r.at, r.resolved, r.reporter_key, u.username AS by,
+          COALESCE(c.text, CASE WHEN d.id IS NOT NULL THEN '[DM] ' || d.text END) AS chat FROM reports r
+          LEFT JOIN users u ON u.id = r.reporter_id LEFT JOIN chat c ON c.id = r.chat_id LEFT JOIN dms d ON d.id = r.dm_id ${open} ORDER BY r.id DESC LIMIT 100`).all();
         return send(200, { reports: rows });
       }
       if (req.method === 'POST' && path === '/api/mod/resolve') {

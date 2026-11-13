@@ -8,7 +8,8 @@ import type { Input } from '../core/input';
 import type { Connection } from '../net/connection';
 import type { PrivateRules, QueueMode, ServerMsg } from '../net/protocol';
 import { accountDialog, ChatPanel, el, overlayRoot } from './overlay';
-import { recoverDialog, recoveryCodesDialog } from './socialPanel';
+import { recoverDialog, recoveryCodesDialog, friendsDialog } from './socialPanel';
+import { dmStore } from './dmDialog';
 import { openOptions } from './optionsMenu';
 import { showInbox } from './giftDialog';
 import { openStarters } from './startersPanel';
@@ -32,7 +33,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'starters' | 'board' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'friends' | 'starters' | 'board' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -314,10 +315,12 @@ export class OnlineScreen implements Screen {
       find: { x: L.cx - 170 * s, y: y + L.cardH + 26 * s, w: 340 * s, h: 66 * s },
       // Signed in: Trade, Starters (achievements and third-slot nominations), Leaderboard and Options
       // in a row; signed out, Leaderboard and Options.
-      trade: signedIn ? { x: L.cx - 255 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      starters: signedIn ? { x: L.cx - 125 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
-      board: signedIn ? { x: L.cx + 5 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: L.cx - 174 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
-      options: signedIn ? { x: L.cx + 135 * s, y: y + L.cardH + 132 * s, w: 120 * s, h: 44 * s } : { x: L.cx + 6 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      // Signed in, a row of five: Trade, Friends, Starters, Leaderboard, Options.
+      trade: signedIn ? { x: L.cx - 290 * s, y: y + L.cardH + 132 * s, w: 108 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      friends: signedIn ? { x: L.cx - 174 * s, y: y + L.cardH + 132 * s, w: 108 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      starters: signedIn ? { x: L.cx - 58 * s, y: y + L.cardH + 132 * s, w: 108 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      board: signedIn ? { x: L.cx + 58 * s, y: y + L.cardH + 132 * s, w: 116 * s, h: 44 * s } : { x: L.cx - 174 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
+      options: signedIn ? { x: L.cx + 182 * s, y: y + L.cardH + 132 * s, w: 108 * s, h: 44 * s } : { x: L.cx + 6 * s, y: y + L.cardH + 132 * s, w: 168 * s, h: 44 * s },
       back: { x: 24 * s, y: 24 * s, w: 140 * s, h: 44 * s },
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
       // The admin dashboard (only for an account the server made an administrator; the server checks again).
@@ -365,6 +368,11 @@ export class OnlineScreen implements Screen {
           this.busy = false;
           void this.checkTrades();
         });
+        return;
+      }
+      if (signedIn && on(c, 'friends')) {
+        this.busy = true;
+        void friendsDialog(this.net, { watch: (n) => this.actions.watchFriend(n), profile: (n) => this.actions.profile(n) }).then(() => (this.busy = false));
         return;
       }
       if (signedIn && on(c, 'starters')) {
@@ -495,6 +503,11 @@ export class OnlineScreen implements Screen {
     button(v, f.label, r.find.x, r.find.y, r.find.w, r.find.h, f.ok && over('find'), f.ok ? undefined : '#44405a');
     text(v, 'Ten trainers, one island, one winner.', cx, r.find.y + r.find.h + 22 * s, 12, { align: 'center', color: '#cfc6ea', maxWidth: v.width - 60 * s });
     if (me.signedIn) button(v, this.tradesWaiting ? `Trade (${this.tradesWaiting})` : 'Trade', r.trade.x, r.trade.y, r.trade.w, r.trade.h, over('trade'), this.tradesWaiting ? undefined : '#f4e6c8');
+    if (me.signedIn) {
+      // Friends: with friend requests and unread messages waiting.
+      const waiting = (dmStore()?.total ?? 0) + this.net.social.friends.filter((f) => f.relation === 'incoming').length;
+      button(v, waiting ? `Friends (${waiting})` : 'Friends', r.friends.x, r.friends.y, r.friends.w, r.friends.h, over('friends'), waiting ? undefined : '#f4e6c8');
+    }
     if (me.signedIn) button(v, 'Starters', r.starters.x, r.starters.y, r.starters.w, r.starters.h, over('starters'), '#f4e6c8');
     button(v, 'Leaderboard', r.board.x, r.board.y, r.board.w, r.board.h, over('board'), '#f4e6c8');
     button(v, 'Options', r.options.x, r.options.y, r.options.w, r.options.h, over('options'), '#f4e6c8');

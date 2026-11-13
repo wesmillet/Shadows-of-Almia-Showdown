@@ -6,6 +6,7 @@ import type { Connection } from '../net/connection';
 import type { FriendEntry, ServerMsg } from '../net/protocol';
 import { ACHIEVEMENTS, ACHIEVEMENTS_ON, LEVELS_ON } from '../net/progression';
 import { el, overlayRoot } from './overlay';
+import { dmDialog, dmStore } from './dmDialog';
 
 const ACTIVITY: Record<FriendEntry['activity'], [string, string]> = {
   offline: ['Offline', ''],
@@ -52,8 +53,9 @@ export class SocialPanel {
   private body: HTMLDivElement;
   private unsub: () => void;
   private typed = '';
+  private headLabel: HTMLSpanElement | null = null;
 
-  constructor(private readonly net: Connection, private readonly actions: { watch: (name: string) => void; profile: (name: string) => void }) {
+  constructor(private readonly net: Connection, private readonly actions: { watch: (name: string) => void; profile: (name: string) => void }, private readonly opts: { party?: boolean } = {}) {
     this.el = el('div', 'almia-panel almia-side');
     const head = el('div', 'almia-chat-head');
     head.append(el('span', '', 'Friends & party'), el('span', '', '▾'));
@@ -61,9 +63,16 @@ export class SocialPanel {
     this.body = el('div', 'almia-side-body');
     this.el.append(head, this.body);
     overlayRoot().appendChild(this.el);
-    this.unsub = net.on((m) => {
+    const offNet = net.on((m) => {
       if (m.t === 'social' || m.t === 'hello') this.render();
     });
+    // Unread direct messages change the Message buttons and the heading's count.
+    const offDm = dmStore()?.onChange(() => this.render()) ?? (() => {});
+    this.headLabel = head.firstElementChild as HTMLSpanElement;
+    this.unsub = () => {
+      offNet();
+      offDm();
+    };
     this.render();
   }
 
@@ -75,6 +84,8 @@ export class SocialPanel {
   private render(): void {
     const net = this.net;
     const b = this.body;
+    const unread = dmStore()?.total ?? 0;
+    if (this.headLabel) this.headLabel.textContent = unread ? `Friends & party · ${unread} new message${unread === 1 ? '' : 's'}` : 'Friends & party';
     // Keep what was being typed into the add box.
     const prev = b.querySelector('input');
     if (prev) this.typed = prev.value;
@@ -84,9 +95,11 @@ export class SocialPanel {
       b.append(el('div', 'almia-note', 'Sign in to add friends, make a party and watch your friends play.'));
       return;
     }
-    const { friends, party, invites } = net.social;
+    const withParty = this.opts.party !== false;
+    const { friends, invites } = net.social;
+    const party = withParty ? net.social.party : null;
     // Party invites first: they are what is waiting on you.
-    for (const from of invites) {
+    for (const from of withParty ? invites : []) {
       const row = el('div', 'almia-row');
       const nm = el('span', 'nm', `${from} invited you`);
       const yes = el('button', 'almia-small', 'Join');
@@ -183,7 +196,16 @@ export class SocialPanel {
         w.onclick = () => this.actions.watch(f.name);
         row.append(w);
       }
-      if (f.online && canInvite && !inParty.has(f.name)) {
+      // Direct messages: with how many are unread.
+      const store = dmStore();
+      if (store && net.me.signedIn) {
+        const n = Object.entries(store.unread).find(([k]) => k.toLowerCase() === f.name.toLowerCase())?.[1] ?? 0;
+        const msg = el('button', n ? 'almia-small' : 'almia-small alt', n ? `Message (${n})` : 'Message');
+        msg.title = `Message ${f.name}`;
+        msg.onclick = () => void dmDialog(net, store, f.name);
+        row.append(msg);
+      }
+      if (withParty && f.online && canInvite && !inParty.has(f.name)) {
         const inv = el('button', 'almia-small', 'Invite');
         inv.disabled = !!party?.invited.includes(f.name);
         inv.onclick = () => net.send({ t: 'party', a: 'invite', name: f.name });
@@ -236,6 +258,34 @@ export function modal(build: (box: HTMLDivElement, close: () => void) => void, w
     });
     build(box, close);
   });
+}
+
+/**
+ * Friends, from the hub's Friends button: add by name, answer requests, message (direct messages),
+ * see what friends are doing, watch one in a match, open a profile. (Parties are not offered here.)
+ */
+export function friendsDialog(net: Connection, actions: { watch: (name: string) => void; profile: (name: string) => void }): Promise<void> {
+  let panel: SocialPanel | null = null;
+  return modal((box, close) => {
+    box.style.width = 'min(420px, calc(100vw - 32px))';
+    box.append(el('h2', '', 'Friends'));
+    panel = new SocialPanel(net, {
+      watch: (n) => {
+        close();
+        actions.watch(n);
+      },
+      profile: (n) => actions.profile(n),
+    }, { party: false });
+    // The panel is built for the side of the hub: here it sits inside the dialog.
+    panel.el.classList.remove('almia-side');
+    panel.el.style.cssText = 'position:static;max-height:min(460px,62vh);display:flex;flex-direction:column;border:0;box-shadow:none;background:transparent;';
+    (panel.el.firstElementChild as HTMLElement).style.display = 'none';
+    box.append(panel.el);
+    const done = el('button', 'almia-btn alt', 'Close');
+    done.style.cssText = 'width:100%;margin-top:10px;';
+    done.onclick = close;
+    box.append(done);
+  }).then(() => panel?.dispose());
 }
 
 /** All-time wins (ranked play has been retired, and with it the ranked board). */

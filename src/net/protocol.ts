@@ -131,6 +131,8 @@ export type ServerMsg =
   | { t: 'chat'; id?: number; from: string; text: string; at: number; system?: boolean; /** From a moderator. */ mod?: boolean; /** From the game's developer (an admin account): a purple DEV badge. */ dev?: boolean; /** A server-wide announcement. */ announce?: boolean }
   /** A moderator removed a chat message. */
   | { t: 'chatDelete'; id: number }
+  /** A direct message to or from this player (server/dms.ts); a copy goes to the sender too. */
+  | { t: 'dm'; id: number; from: string; to: string; text: string; at: number }
   | { t: 'error'; text: string }
   /**
    * The server is closing this connection (code as on the close frame: 4000 another tab took over,

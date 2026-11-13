@@ -90,6 +90,8 @@ interface Player {
   goneAt: number | null;
   commands: number;
   ended: boolean;
+  /** Where the player finished, fixed when they went out (the end of the match would count them 2nd). */
+  place?: number;
 }
 
 export interface RoomResult {
@@ -437,7 +439,7 @@ export class Room implements RoomHandle {
       if (!p.ended) {
         p.seat.outcome ??= 'loss';
         this.eliminatedOrder.push(key);
-        p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: this.placeOf(p) });
+        p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: p.seat.outcome === 'win' ? 1 : this.wentOut(p) });
       }
       p.ended = true;
       p.peer = null;
@@ -470,7 +472,7 @@ export class Room implements RoomHandle {
       if (p.seat.outcome && !p.ended) {
         p.ended = true;
         if (p.seat.outcome === 'loss') this.eliminatedOrder.push(p.peer?.key ?? '');
-        p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: this.placeOf(p) });
+        p.peer?.send({ t: 'end', outcome: p.seat.outcome, place: p.seat.outcome === 'win' ? 1 : this.wentOut(p) });
       }
     }
     ++this.steps;
@@ -493,7 +495,16 @@ export class Room implements RoomHandle {
   /** Place in the match: 1 for the winner, then by how many trainers were still standing. */
   private placeOf(p: Player): number {
     if (p.seat.outcome === 'win') return 1;
+    // Out already: the place they went out in. Before this, a match's results counted every loser
+    // 2nd (only the winner is still alive when it ends), which also counted every loss as a top 3.
+    if (p.place !== undefined) return p.place;
     return Math.max(2, this.match.allTrainers.filter((t) => t.alive && !t.visitor && !t.challenger && !t.legendBout).length + 1);
+  }
+
+  /** Fixes the player's place as they go out (see placeOf). */
+  private wentOut(p: Player): number {
+    p.place ??= this.placeOf(p);
+    return p.place;
   }
 
   /** Events since the last update for watchers (they all update together, every SEND_EVERY steps). */

@@ -113,6 +113,21 @@ if (who && has('match_log')) {
     out.player.push({ id: r.id, mode: r.mode, ended: new Date(Number(r.ended_at)).toISOString(), minutes: +(Number(r.seconds) / 60).toFixed(1), winner: r.winner, replay, place: me.place, outcome: me.outcome, stats: me.stats, team: me.team ?? null });
   }
 }
+// That player's PC history (collection log) and current PC, for following up a lost-Pokémon or
+// lost-shiny report: what was added, traded, released or rewritten, with the stored species and
+// shiny flag. Game data only.
+if (who && has('users') && has('collection_log')) {
+  const u = one('SELECT id FROM users WHERE lower(username) = ?', who);
+  if (u) {
+    const pick = (d) => { try { const e = typeof d === 'string' ? JSON.parse(d) : d; return e && typeof e === 'object' ? { dex: e.dex, name: e.name, level: e.level, shiny: !!e.shiny, evolvedFrom: e.evolvedFrom, via: e.via } : null; } catch { return null; } };
+    out.collection = all('SELECT action, pc_id, other_name, ref, detail, at FROM collection_log WHERE user_id = ? ORDER BY at DESC LIMIT 200', u.id).map((r) => {
+      let det = null; try { det = r.detail ? JSON.parse(r.detail) : null; } catch {}
+      const d = det && (det.dex || det.name) ? pick(det) : det && det.from ? det : det && det.entry ? pick(det.entry) : null;
+      return { at: new Date(Number(r.at)).toISOString(), action: r.action, pcId: r.pc_id, other: r.other_name, ref: r.ref, mon: d };
+    });
+    out.pcNow = all('SELECT id, entry, created_at FROM pc WHERE user_id = ? ORDER BY id', u.id).map((r) => ({ pcId: r.id, ...pick(r.entry) }));
+  }
+}
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));
 console.log('REPORT_JSON_END');

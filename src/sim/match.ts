@@ -1056,6 +1056,8 @@ export class Match {
         best.owner = t;
         best.wild = false;
         best.fainted = false;
+        // "From your PC" belonged to its old trainer: for the new one it is a fresh Pokémon.
+        best.fromPc = false;
         best.hp = Math.max(1, Math.floor(best.maxHp * 0.5));
         best.status = null;
         best.anim.play('Idle', { restart: true });
@@ -1107,6 +1109,8 @@ export class Match {
     m.owner = p;
     m.wild = false;
     m.fainted = false;
+    // Snagged from another trainer: their PC is not this player's, so it can be kept.
+    m.fromPc = false;
     m.duelId = undefined;
     m.hp = Math.max(1, Math.floor(m.maxHp * 0.5));
     m.status = null;
@@ -2961,6 +2965,8 @@ export class Match {
     // Its held item stays with the trainer (when there is room for it).
     if (m.heldItem && this.giveItem(p, m.heldItem)) m.heldItem = null;
     m.owner = null;
+    // Released, it belongs to no one: caught again it is a new catch (by anyone).
+    m.fromPc = false;
     m.stowed = false;
     m.recall = false;
     m.target = null;

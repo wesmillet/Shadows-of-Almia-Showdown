@@ -34,6 +34,27 @@ describe('PC starters', async () => {
     expect(m2.player.party[0]?.fromPc).toBe(true);
   });
 
+  it("a PC starter snagged by another trainer is theirs to keep", () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(5), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 1 });
+    const p = m.player;
+    const foe = m.trainers.find((t) => t !== p && !t.visitor && !t.challenger)!;
+    const theirs = m.makeMon('0008', 20, foe, foe.x, foe.y);
+    theirs.fromPc = true;
+    foe.party = [theirs];
+    // As if a battle was won with a Snag Machine offer on it.
+    m.snagOffer = { from: foe } as typeof m.snagOffer;
+    p.items = p.items.map(() => null);
+    p.items[0] = { id: 'capture-styler', count: 1 };
+    m.snag(0);
+    expect(p.party).toContain(theirs);
+    expect(theirs.fromPc).toBe(false);
+    // Released and caught back: a new catch, not a PC copy.
+    const own = p.party[0]!;
+    own.fromPc = true;
+    m.release(0);
+    expect(own.fromPc).toBe(false);
+  });
+
   it('finds duplicate legendaries and removes only later copies', () => {
     const a = new Accounts(mkdtempSync(join(tmpdir(), 'dup-')), 'dev');
     const uid = Number(a.db.prepare("INSERT INTO users (username, pass_hash, created_at) VALUES ('Shan', 'x', ?)").run(Date.now()).lastInsertRowid);

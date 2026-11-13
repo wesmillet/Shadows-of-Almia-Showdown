@@ -131,6 +131,17 @@ license, sheets). The current artists per folder, resolved through
 ### 0062-rad Poliwrath (rad)
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,RearUp,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
+### 0063 Abra
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Jab,Strike,SpAttack,Shoot,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+- <@!356635814668664832>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
+- <@!356635814668664832>: EventSleep,Wake,Float,Laying
+
+### 0064 Kadabra
+- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
+
+### 0065 Alakazam
+- CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,SpAttack,Swing,Double,Rotate,Hop
+
 ### 0072 Tentacool
 - CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Slam,Shoot,Twirl,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
 
@@ -1587,6 +1598,22 @@ license, sheets). The current artists per folder, resolved through
 - <@!108260609241423872>: Sad,Crying
 - <@!108260609241423872>: Crying,Inspired,Pain,Surprised,Stunned,Teary-Eyed,Worried
 - <@!1377429093997477928>: Sad^,Joyous^,Happy^,Crying^,Inspired^,Sigh^,Pain^,Shouting^,Surprised^,Stunned^,Angry^,Teary-Eyed^,Dizzy^,Worried^,Determined^
+
+### 0063 Abra
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!702275233125630042>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!411407718839222272>: Sad,Joyous,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
+
+### 0064 Kadabra
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
+- <@!327927398941196289>: Normal,Surprised
+- <@!544245909639397378>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
+- <@!544245909639397378>: Shouting,Surprised,Dizzy,Determined
+- <@!544245909639397378>: Sad,Happy,Crying,Teary-Eyed,Dizzy,Determined
+
+### 0065 Alakazam
+- CHUNSOFT (https://www.spike-chunsoft.com/): Normal,Happy,Surprised
+- <@!861005464682889266>: Sad,Joyous,Crying,Inspired,Sigh,Pain,Shouting,Stunned,Angry,Teary-Eyed,Dizzy,Worried,Determined
 
 ### 0072 Tentacool
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal

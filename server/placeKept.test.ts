@@ -40,3 +40,19 @@ describe('places', async () => {
     expect(r.trainers.find((x) => x.name === 'Early')?.place).toBe(6);
   });
 });
+
+describe('the winner of a room that closes early', async () => {
+  const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
+
+  it('is nobody when several computer trainers are still standing', () => {
+    let report: { winner: string | null } | null = null;
+    const peer = { key: 'g-early-close', name: 'Solo', send: () => {} };
+    const room = new Room(world, [{ name: 'Solo', starter: '0004', peer }], 6, 7, { rareChest: false } as never, (_r: unknown, rep: typeof report) => {
+      report = rep;
+    }, { mode: 'casual' });
+    room.match.eliminate(room.match.seats[0]!.trainer);
+    for (let i = 0; i < 50 && !report; i++) room.step();
+    expect(report).not.toBeNull();
+    expect(report!.winner).toBe('Nobody');
+  });
+});

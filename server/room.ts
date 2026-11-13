@@ -592,7 +592,11 @@ export class Room implements RoomHandle {
         vouchers: outcome === 'win' ? t.items.reduce((n, e) => n + (e?.id === 'extraction-voucher' ? e.count : 0), 0) : 0,
       });
     }
-    const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || this.match.trainers.find((t) => this.botPlaces.get(t) === 1)?.name || 'Nobody';
+    // A computer trainer won only if it is the one left standing. A room that closes because its
+    // last player went out leaves several still standing (all counted 1st above); naming
+    // the first of them the winner made the first name on the list (Rook) look far stronger than the rest.
+    const botWinner = standing.length === 1 ? this.match.trainers.find((t) => t === standing[0])?.name : undefined;
+    const winner = results.filter((r) => r.outcome === 'win').map((r) => r.name).join(' & ') || botWinner || 'Nobody';
     this.releaseWatchers(this.aborted ?? `The match is over: ${winner} won`);
     // Every trainer in it for the admin's match history: players with their results, computer
     // trainers with their places and the stats the match kept for them.

@@ -132,6 +132,12 @@ async function records() {
   if (j.error) return fail(j.error);
   const acct = (id, who) => '<a href="#accounts/' + id + '">' + esc(who) + '</a>';
   const mon = (p) => (p.shiny ? '★ ' : '') + esc(p.name) + ' <span class="dim">Lv ' + esc(p.level) + '</span>';
+  const bots = (await api('/api/admin/bots')) || { bots: [], matches: 0, since: null };
+  const botTable = (key, label) => {
+    const list = bots.bots.slice().sort((a, b) => b[key] - a[key] || b.wins - a.wins).slice(0, 15);
+    return '<div><h3>' + label + '</h3>' + (list.length ? '<table><tr><th>#</th><th>Trainer</th><th>Wins</th><th>Elims</th><th>KOs</th><th>Matches</th><th>Win rate</th></tr>' + list.map((b, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(b.name) + '</td><td>' + b.wins + '</td><td>' + b.eliminations + '</td><td>' + b.knockouts + '</td><td>' + b.matches + '</td><td>' + (b.matches ? Math.round(100 * b.wins / b.matches) + '%' : '') + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>';
+  };
+  const botsHtml = '<div class="panel"><h2>Computer trainers</h2><p class="dim">Every finished public match since ' + (bots.since ? when(bots.since) : 'the log began') + ' (' + bots.matches + ' matches, ' + bots.bots.length + ' computer trainers).</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">' + botTable('wins', 'Most wins') + botTable('eliminations', 'Most eliminations') + '</div></div>';
   const d = await api('/api/admin/duplicates');
   const groups = (d && d.groups) || [];
   const suspects = [];
@@ -139,7 +145,7 @@ async function records() {
   const dupHtml = '<div class="panel"><h2>Duplicate legendaries (' + groups.length + ')</h2><p class="dim">Players holding more than one of a legendary or Mythical line. The first is the original. <b>Likely copy</b>: came in from a win or an Extraction Voucher while they already had one, so most likely their own PC starter kept again (fixed now). Egg, gift and reward copies are never marked. Removing deletes it from their PC for good (the collection log keeps a record).</p>' +
     (groups.length ? '<table><tr><th>Player</th><th>Pokémon</th><th>Copy</th><th>How</th><th>When</th><th></th></tr>' + groups.map((g) => g.copies.map((c, i) => '<tr><td>' + (i === 0 ? acct(g.userId, g.who) : '') + '</td><td>' + (c.shiny ? '★ ' : '') + esc(c.name) + ' <span class="dim">Lv ' + esc(c.level) + '</span>' + (c.legendCatch ? ' <span class="tag">caught as a legend</span>' : '') + '</td><td>' + (i === 0 ? '<span class="good">original</span>' : c.suspect ? '<b class="err">likely copy</b>' : 'copy') + '</td><td>' + esc(c.via) + (c.match ? ' <a href="#history/' + esc(c.match) + '">match</a>' : '') + '</td><td class="dim">' + when(c.at) + '</td><td>' + (i === 0 ? '' : c.wonder ? '<span class="dim">on Wonder Trade</span>' : '<button class="act alt" data-dup="' + c.pcId + '">Remove</button>') + '</td></tr>').join('')).join('') + '</table>' +
       (suspects.length ? '<div class="row"><button class="act" id="dupall">Remove all ' + suspects.length + ' likely copies</button><span id="dupnote" class="err"></span></div>' : '') : '<p class="dim">None.</p>') + '</div>';
-  $('#main').innerHTML = dupHtml +
+  $('#main').innerHTML = botsHtml + dupHtml +
     '<div class="panel"><h2>Legendaries and shinies by player</h2><p class="dim">Every one that went into a PC (won, Extraction Voucher, egg, gift or reward), even if traded or released since.</p>' +
     (j.people.length ? '<table><tr><th>Player</th><th>Legendaries</th><th>Shinies</th><th>Pokémon kept</th></tr>' + j.people.map((p) => '<tr><td>' + acct(p.id, p.who) + '</td><td data-v="' + p.legends + '">' + p.legends + '</td><td data-v="' + p.shinies + '">' + p.shinies + '</td><td data-v="' + p.total + '">' + p.total + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +
     '<div class="panel"><h2>Legendaries (' + j.legends.length + ')</h2>' + (j.legends.length ? '<table><tr><th>When</th><th>Player</th><th>Pokémon</th><th>How</th></tr>' + j.legends.map((l) => '<tr><td>' + when(l.at) + '</td><td>' + acct(l.userId, l.who) + '</td><td>' + (l.shiny ? '★ ' : '') + esc(l.name) + '</td><td>' + esc(l.via) + '</td></tr>').join('') + '</table>' : '<p class="dim">None yet.</p>') + '</div>' +

@@ -653,6 +653,36 @@ export class Accounts {
   }
 
   /**
+   * Computer trainers' records over every finished public match logged (match_log): matches, wins,
+   * eliminations, knockouts and catches per name, and when the log starts.
+   */
+  botRecords(): { since: number | null; matches: number; bots: Array<{ name: string; matches: number; wins: number; eliminations: number; knockouts: number; catches: number }> } {
+    const rows = this.db.prepare("SELECT ended_at, trainers FROM match_log WHERE aborted IS NULL AND mode != 'private'").all() as Array<{ ended_at: number; trainers: string }>;
+    const by = new Map<string, { name: string; matches: number; wins: number; eliminations: number; knockouts: number; catches: number }>();
+    let since: number | null = null;
+    for (const r of rows) {
+      since = since === null ? Number(r.ended_at) : Math.min(since, Number(r.ended_at));
+      let list: MatchLogEntry['trainers'];
+      try {
+        list = JSON.parse(r.trainers) as MatchLogEntry['trainers'];
+      } catch {
+        continue;
+      }
+      for (const t of list) {
+        if (t.human) continue;
+        const b = by.get(t.name) ?? { name: t.name, matches: 0, wins: 0, eliminations: 0, knockouts: 0, catches: 0 };
+        b.matches++;
+        if (t.outcome === 'win') b.wins++;
+        b.eliminations += t.stats?.eliminations ?? 0;
+        b.knockouts += t.stats?.knockouts ?? 0;
+        b.catches += t.stats?.catches ?? 0;
+        by.set(t.name, b);
+      }
+    }
+    return { since, matches: rows.length, bots: [...by.values()] };
+  }
+
+  /**
    * Copies of legendaries and Mythicals: for each player, every line they hold more than one of.
    * The oldest is the original. A later one that came in by a win or an Extraction Voucher while an
    * older one was already in the PC is `suspect`: most likely their own PC starter kept again (the

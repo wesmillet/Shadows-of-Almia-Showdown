@@ -125,6 +125,8 @@ export class AdminApi {
       const r = this.acc.adminResetCode(Number(body.id), { id: me.id, name: me.username });
       return r ? send(200, r) : send(404, { error: 'No such account, or it signs in with Google only' });
     }
+    // Computer trainers' wins and eliminations since the match log began.
+    if (path === '/api/admin/bots') return send(200, this.acc.botRecords());
     // Copies of legendaries (a PC starter kept again): listed, and removed one at a time by an administrator.
     if (path === '/api/admin/duplicates') {
       if (req.method === 'GET') return send(200, { groups: this.acc.duplicateLegends() });

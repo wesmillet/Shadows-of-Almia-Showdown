@@ -283,6 +283,7 @@ export class Accounts {
       WHERE pc_id IS NOT NULL AND hatched_at IS NULL`);
     this.firstFormsOnce();
     this.plainNamesOnce();
+    this.glitchCopiesOnce();
     // v1: the rare-item chest was on for everyone until now and was saved into every account's
     // chest, so those items come out once (what players stored themselves stays), and chests are
     // cut to their ten slots.
@@ -823,6 +824,51 @@ export class Accounts {
   }
 
   /** PC names never carry 'Shiny', 'Alolan', 'Galarian' and the like: older entries lose the word, once. */
+  /**
+   * Once: takes out the shiny copies one player kept through the PC-starter glitch (8 to 12
+   * November: a shiny starter from a line they owned could be won and kept again). The list was
+   * checked against the collection log and approved by the game's owner on 13 November. Each entry
+   * must still be in that player's PC, be the same species and shiny, and not be out on Wonder
+   * Trade, or it is skipped. Every removal goes in the collection log with the full entry.
+   */
+  private glitchCopiesOnce(): void {
+    const key = 'glitch_copies_offdwight_v1';
+    if (this.db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) return;
+    const owner = this.db.prepare('SELECT id FROM users WHERE lower(username) = ?').get('offdwight') as { id: number } | undefined;
+    const copies: Array<[number, string]> = [
+      [2650, '0007'], [2672, '0007'], [2676, '0007'], [2777, '0007'], [2488, '0246'], [2523, '0246'], [2738, '0246'],
+      [2524, '0813'], [2736, '0813'], [2621, '0704'], [2740, '0704'], [2556, '0129'], [2678, '0129'], [2630, '0374'],
+      [2703, '0374'], [2446, '0650'], [2500, '0004'], [2447, '0147'], [2470, '0633'], [2739, '0393'], [2704, '0158'],
+      [2749, '0258'], [2727, '0885'], [2705, '0728'], [2668, '0968'], [2655, '0968'], [2486, '0131'], [2731, '0736'],
+    ];
+    let removed = 0;
+    const skipped: number[] = [];
+    this.atomically(() => {
+      for (const [pcId, dex] of copies) {
+        const row = owner ? (this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(pcId, owner.id) as { entry: string } | undefined) : undefined;
+        let e: { dex?: string; shiny?: unknown } | null = null;
+        try {
+          e = row ? JSON.parse(row.entry) : null;
+        } catch {
+          e = null;
+        }
+        if (!owner || !e || e.dex !== dex || !e.shiny || this.isPooled(pcId)) {
+          skipped.push(pcId);
+          continue;
+        }
+        this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc = ? OR want_pc = ?)").run(Date.now(), pcId, pcId);
+        this.logCollection(owner.id, 'remove:glitch-copy', { pcId, ref: 'admin:pc-starter-glitch', detail: e });
+        this.db.prepare('DELETE FROM pc WHERE id = ? AND user_id = ?').run(pcId, owner.id);
+        removed++;
+      }
+      this.db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, JSON.stringify({ at: Date.now(), removed, skipped }));
+    });
+    if (removed || skipped.length) {
+      console.log(`PC: removed ${removed} glitch copies${skipped.length ? `, skipped ${skipped.length} (${skipped.join(', ')})` : ''}`);
+      this.logMod({ id: null, name: 'cleanup' }, 'remove-glitch-copies', 'Offdwight', JSON.stringify({ removed, skipped }));
+    }
+  }
+
   private plainNamesOnce(): void {
     if (this.db.prepare("SELECT 1 FROM meta WHERE key = 'pc_plain_names_v1'").get()) return;
     const rows = this.db.prepare("SELECT id, entry FROM pc WHERE json_extract(entry, '$.name') LIKE 'Shiny %' OR json_extract(entry, '$.name') LIKE 'Alolan %' OR json_extract(entry, '$.name') LIKE 'Galarian %' OR json_extract(entry, '$.name') LIKE 'Hisuian %' OR json_extract(entry, '$.name') LIKE 'Paldean %'").all() as Array<{ id: number; entry: string }>;

@@ -46,15 +46,24 @@ if (has('match_log')) {
     try { list = JSON.parse(r.trainers); } catch { continue; }
     for (const t of list) {
       if (t.human) continue;
-      const b = (bots[t.name] ??= { name: t.name, matches: 0, wins: 0, elims: 0, kos: 0 });
+      const b = (bots[t.name] ??= { name: t.name, matches: 0, wins: 0, top3: 0, elims: 0, kos: 0 });
       b.matches++;
-      if (t.outcome === 'win') b.wins++;
+      if (t.place === 1) b.wins++;
+      if (t.outcome === 'win') b.top3++;
       b.elims += t.stats?.eliminations ?? 0;
       b.kos += t.stats?.knockouts ?? 0;
     }
   }
   const list = Object.values(bots);
-  out.botsTotal = { trainers: list.length, wins: list.reduce((a, b) => a + b.wins, 0) };
+  out.botsTotal = { trainers: list.length, wins: list.reduce((a, b) => a + b.wins, 0), top3: list.reduce((a, b) => a + b.top3, 0) };
+  // Where humans finish, and how they are knocked out of a match.
+  const places = {};
+  for (const r of rows) {
+    if (r.aborted || r.mode === 'private') continue;
+    let l3; try { l3 = JSON.parse(r.trainers); } catch { continue; }
+    for (const t of l3) if (t.human) { const k = t.place <= 3 ? `place${t.place}` : 'place4plus'; places[k] = (places[k] ?? 0) + 1; }
+  }
+  out.humanPlaces = places;
   out.botsByWins = list.slice().sort((a, b) => b.wins - a.wins || b.elims - a.elims).slice(0, 20);
   out.botsByElims = list.slice().sort((a, b) => b.elims - a.elims || b.wins - a.wins).slice(0, 20);
   // Who wins: humans or computer trainers (finished public matches).
@@ -63,7 +72,7 @@ if (has('match_log')) {
     if (r.aborted || r.mode === 'private') continue;
     let list2;
     try { list2 = JSON.parse(r.trainers); } catch { continue; }
-    const w = list2.find((t) => t.outcome === 'win');
+    const w = list2.find((t) => t.place === 1);
     if (w) { if (w.human) humanWins++; else botWins++; }
   }
   out.winners = { humans: humanWins, computer: botWins };

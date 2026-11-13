@@ -2,7 +2,7 @@
  * Visitors who roam the island alongside the battle royale:
  *   - the Wandering Merchant, whose stall (Space beside him) sells rare items;
  *   - Ace Trainer Celeste, who takes on anyone who asks (a one-on-one battle with
- *     a strong team); beat her and she hands over a random Pokémon (shiny 1 in 10);
+ *     a strong team); beat her and she hands over a random Pokémon (shiny 1 in 50);
  *   - Hoopa, who floats about until the player talks to it, then opens a ring
  *     portal: a legendary comes through as a boss, and when it is worn down to
  *     its last HP it joins whoever beat it;

@@ -213,6 +213,8 @@ export interface Trainer {
   held: Array<InventorySlot | null>;
   /** What this trainer keeps in the town storage chests (one store shared by every chest). */
   storage?: Array<InventorySlot | null>;
+  /** How many of the chest's first slots are saved between games (the rest last this match only). */
+  storageKeep?: number;
   alive: boolean;
   /** Wiped out by wild Pokémon: back in the match at this time (see Match.down). */
   downUntil?: number | null;

@@ -421,6 +421,9 @@ export class Match {
     if (t.storage) return t.storage;
     // The player's chest is kept between games (chestStore).
     const box = chestBox(this.chestStore.load(t));
+    // Only these first slots are saved; the extra ones (config items.matchSlots) last this match.
+    t.storageKeep = box.length;
+    for (let i = 0; i < ((CONFIG.items as { matchSlots?: number }).matchSlots ?? 0); i++) box.push(null);
     // The rare-item chest (src/dev.ts): every rare thing is there, topped back up at the start of
     // each match, beside whatever the player stored themselves.
     if (t.isPlayer && this.rareChest) {
@@ -448,7 +451,7 @@ export class Match {
    */
   private saveChest(t: Trainer, box: Array<InventorySlot | null>): void {
     if (!this.keepsResults || (t.isPlayer && this.rareChest)) return;
-    this.chestStore.save(t, box);
+    this.chestStore.save(t, box.slice(0, t.storageKeep ?? box.length));
   }
 
   /** Whether chest changes this match are saved (not in private matches or with the rare-item chest). */
@@ -467,7 +470,7 @@ export class Match {
       // with only what is still unspent in the bag added back: a voucher used to extract a
       // Pokemon, or a ball thrown, is not refunded.
       const saved = this.chestStore.load(t);
-      const box = saved ? chestBox(saved) : this.storageOf(t);
+      const box = saved ? chestBox(saved) : this.storageOf(t).slice(0, t.storageKeep);
       const held = (id: string) => [...t.items, ...t.held].reduce((k, e) => k + (e?.id === id ? e.count : 0), 0);
       for (const [id, taken] of out) {
         const n = Math.min(taken, held(id));
@@ -499,9 +502,12 @@ export class Match {
     if (!entry) return '';
     const want = count === undefined ? entry.count : Math.max(1, Math.min(entry.count, Math.floor(count)));
     const box = this.storageOf(t);
-    // Chests used to keep ten slots: those old extra slots can only be emptied now.
-    if (box.length > CONFIG.items.storageSlots) return `Your chest now keeps ${CONFIG.items.storageSlots === 1 ? 'one slot' : `${CONFIG.items.storageSlots} slots`}: take out your old items first`;
-    const same = box.find((s) => s?.id === entry.id);
+    const keep = t.storageKeep ?? box.length;
+    // Chests used to keep ten slots: those old extra slots can only be emptied now (the match slots
+    // still take things).
+    const legacy = keep > CONFIG.items.storageSlots;
+    const sameAt = box.findIndex((s, i) => s?.id === entry.id && !(legacy && i < keep));
+    const same = sameAt >= 0 ? box[sameAt] : undefined;
     const name = ITEMS[entry.id]?.name ?? entry.id;
     // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest),
     // and rare items less (config items.chestCaps): what does not fit stays in the bag.
@@ -510,18 +516,20 @@ export class Match {
     if (room <= 0) return cap < CHEST_STACK_MAX ? `The chest holds at most ${cap} ${name}` : 'That stack in the chest is full';
     const n = Math.min(want, room);
     if (n < want && cap >= CHEST_STACK_MAX) return 'That stack in the chest is full';
+    let at = sameAt;
     if (same) same.count += n;
     else {
-      const free = box.indexOf(null);
-      if (free < 0) return 'The chest is full';
-      box[free] = { id: entry.id, count: n };
+      at = box.findIndex((s, i) => s === null && !(legacy && i < keep));
+      if (at < 0) return legacy ? `Your chest now keeps ${CONFIG.items.storageSlots === 1 ? 'one slot' : `${CONFIG.items.storageSlots} slots`}: take out your old items first` : 'The chest is full';
+      box[at] = { id: entry.id, count: n };
     }
     entry.count -= n;
     if (entry.count <= 0) list[slot] = null;
-    this.noteChest(t, entry.id, -n);
+    const kept = at < keep;
+    if (kept) this.noteChest(t, entry.id, -n);
     this.saveChest(t, box);
     const left = n < want ? ` (the chest holds at most ${cap}; ${entry.count} stay in your bag)` : '';
-    return `Stored ${name}${n > 1 ? ` x${n}` : ''}${left}${this.chestKept(t) ? '' : ' (not kept after this match)'}`;
+    return `Stored ${name}${n > 1 ? ` x${n}` : ''}${left}${kept && this.chestKept(t) ? ' (kept between games)' : ' (for this match only)'}`;
   }
 
   /** Takes a chest stack back into the bag (or gear): all of it, or `count` of it (splitting the stack). */
@@ -532,12 +540,16 @@ export class Match {
     const n = count === undefined ? entry.count : Math.max(1, Math.min(entry.count, Math.floor(count)));
     if (!this.giveItem(t, entry.id, n)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     entry.count -= n;
+    const keep = t.storageKeep ?? box.length;
     if (entry.count <= 0) {
       box[slot] = null;
       // An old extra slot (from when chests kept ten) goes away once it is emptied.
-      if (box.length > CONFIG.items.storageSlots) box.splice(slot, 1);
+      if (slot < keep && keep > CONFIG.items.storageSlots) {
+        box.splice(slot, 1);
+        t.storageKeep = keep - 1;
+      }
     }
-    this.noteChest(t, entry.id, n);
+    if (slot < keep) this.noteChest(t, entry.id, n);
     this.saveChest(t, box);
     const name = ITEMS[entry.id]?.name ?? entry.id;
     return `Took ${name}${n > 1 ? ` x${n}` : ''}${entry.count > 0 ? ` (${entry.count} left in the chest)` : ''}`;

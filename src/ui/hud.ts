@@ -79,7 +79,7 @@ export interface HudState {
   /** A won battle with a Snag Machine in the bag: the beaten trainer and their Pokémon to choose from. */
   snag?: { from: string; names: string[] } | null;
   /** The open storage chest: its slots (shared by every town's chest) and the town it stands in. */
-  chest?: { slots: Array<InventorySlot | null>; town: string } | null;
+  chest?: { slots: Array<InventorySlot | null>; keep?: number; town: string } | null;
   aiming: number; // 0..1 catch aim power, 0 = not aiming
   lightingMode: string;
   /** Watching (a spectator or a replay): no bag and no control hints, only what is going on. */
@@ -220,7 +220,7 @@ export class Hud {
   }
 
   /** The storage chest: two rows of slots; bag slots below deposit, chest slots withdraw. */
-  private drawChestPanel(ctx: CanvasRenderingContext2D, st: HudState, chest: { slots: Array<InventorySlot | null>; town: string }): void {
+  private drawChestPanel(ctx: CanvasRenderingContext2D, st: HudState, chest: { slots: Array<InventorySlot | null>; keep?: number; town: string }): void {
     const v = this.view;
     const s = v.baseScale;
     // Up to five a row (a chest keeps one slot now; old ten-slot chests until emptied).
@@ -233,7 +233,10 @@ export class Hud {
     // The window is as wide as the slots (or the title) and the help wraps to that width.
     const w = this.fitWidth(ctx, [[title, 15]], Math.max(gridW + 48 * s, 330 * s));
     const help = this.wrapLines(ctx, (Input.touch ? 'Tap a bag slot to store it · tap a chest slot to take it' : 'Click a bag slot (or 1-6) to store it · click a chest slot (or Shift+1-0) to take it · right-click moves one, Shift-click half'), 9.5, w - 40 * s);
-    const keep = this.wrapLines(ctx, `Every town's chest holds the same thing, kept between games and safe if you're wiped out${chest.slots.length > 1 ? ' · old slots can only be emptied now' : ''} · E to close`, 9.5, w - 40 * s);
+    const kept = Math.min(chest.keep ?? chest.slots.length, chest.slots.length);
+    const extra = chest.slots.length - kept;
+    const keepNote = kept === 1 ? 'The gold slot is kept between games' : `The ${kept} gold slots are kept between games${kept > 1 ? ' (old slots can only be emptied now)' : ''}`;
+    const keep = this.wrapLines(ctx, `${keepNote}${extra > 0 ? `; the other ${extra} last this match` : ''} · every town's chest is the same, and safe if you're wiped out · E to close`, 9.5, w - 40 * s);
     const lineH = 14 * s;
     const textH = (help.length + keep.length) * lineH;
     const h = 44 * s + textH + 10 * s + rows * slot + (rows - 1) * gap + 34 * s;
@@ -264,6 +267,13 @@ export class Hud {
         this.icons.draw(ctx, def.id, sx + slot / 2, sy + slot / 2 - up2, (def.kind === 'ball' ? 0.8 : 1) * (slot - 10 * s), def.tmType);
         if (entry.count > 1) this.countBadge(ctx, entry.count, sx + slot, sy + slot - up2);
         if (hover) hovered = `${def.name}${entry.count > 1 ? ` x${entry.count}` : ''}`;
+      }
+      if (i < kept) {
+        // A saved slot: a gold frame and a small star.
+        ctx.strokeStyle = '#e0a526';
+        ctx.lineWidth = Math.max(2, 2 * s);
+        ctx.strokeRect(sx + 1, sy + 1 - up, slot - 2, slot - 2);
+        this.ink(ctx, '★', sx + slot - 9 * s, sy + 12 * s - up, 9, '#c98a0f', 'center');
       }
       this.chestRects.push({ x: sx, y: sy, w: slot, h: slot });
     });

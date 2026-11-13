@@ -2886,7 +2886,7 @@ export class MatchScreen implements Screen {
         entries: this.shopOpen.stock.map((e) => ({ name: ITEMS[e.id]?.name ?? e.id, price: e.price, affordable: this.match.player.money >= e.price })),
         sellPrice: (id: string) => this.match.sellPrice(id),
       } : null,
-      chest: this.chestOpen !== null ? { slots: this.match.storageOf(this.match.player), town: this.match.chests[this.chestOpen]?.town ?? '' } : null,
+      chest: this.chestOpen !== null ? { slots: this.match.storageOf(this.match.player), keep: this.match.player.storageKeep ?? 1, town: this.match.chests[this.chestOpen]?.town ?? '' } : null,
       lightingMode: this.lighting.mode,
     };
   }

@@ -1,4 +1,4 @@
-/** The storage chest keeps one slot, with rare items capped; old ten-slot chests can only be emptied. */
+/** The storage chest: five slots, one kept between games, with rare items capped; old ten-slot chests can only be emptied. */
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { loadWorld } from './world';
@@ -24,31 +24,40 @@ describe('storage chest', async () => {
     expect(chestCap('poke-ball')).toBe(9999);
   });
 
-  it('one slot: a stack up to its cap goes in, anything else does not', () => {
+  it('five slots: the first is kept between games, the other four last this match', () => {
     const { m, p, out } = setup([]);
-    expect(m.storageOf(p).length).toBe(1);
+    expect(m.storageOf(p).length).toBe(5);
+    expect(p.storageKeep).toBe(1);
     p.items[0] = { id: 'rare-candy', count: 14 };
     p.items[1] = { id: 'potion', count: 2 };
+    p.items[2] = { id: 'poke-ball', count: 5 };
     expect(m.deposit(p, 'items', 0)).toMatch('at most 10');
     expect(p.items[0]?.count).toBe(4);
     expect(out.saved).toEqual([{ id: 'rare-candy', count: 10 }]);
-    expect(m.deposit(p, 'items', 1)).toMatch('full');
+    expect(m.deposit(p, 'items', 1)).toMatch('this match only');
+    expect(m.deposit(p, 'items', 2)).toMatch('this match only');
+    // Only the kept slot is saved.
+    expect(out.saved).toEqual([{ id: 'rare-candy', count: 10 }]);
+    expect(m.storageOf(p).filter(Boolean).length).toBe(3);
     expect(m.withdraw(p, 0)).toMatch('Took');
-    expect(m.storageOf(p)).toEqual([null]);
-    expect(m.deposit(p, 'items', 1)).toMatch('Stored');
+    expect(out.saved).toEqual([null]);
+    p.items[3] = { id: 'super-potion', count: 1 };
+    expect(m.deposit(p, 'items', 3)).toMatch('kept between games');
+    expect(out.saved).toEqual([{ id: 'super-potion', count: 1 }]);
   });
 
-  it('an old ten-slot chest keeps its items, takes nothing new, and shrinks as it is emptied', () => {
+  it('an old ten-slot chest keeps its items, shrinks as it is emptied, and new items go to the match slots', () => {
     const { m, p, out } = setup([{ id: 'extraction-voucher', count: 9 }, { id: 'potion', count: 3 }, { id: 'rare-candy', count: 40 }]);
-    expect(m.storageOf(p).length).toBe(3);
+    expect(m.storageOf(p).length).toBe(7);
     p.items[0] = { id: 'potion', count: 1 };
-    expect(m.deposit(p, 'items', 0)).toMatch('take out your old items first');
+    expect(m.deposit(p, 'items', 0)).toMatch('this match only');
     expect(m.withdraw(p, 1)).toMatch('Took');
     expect(out.saved).toEqual([{ id: 'extraction-voucher', count: 9 }, { id: 'rare-candy', count: 40 }]);
     expect(m.withdraw(p, 0)).toMatch('Took');
     expect(out.saved).toEqual([{ id: 'rare-candy', count: 40 }]);
     expect(m.withdraw(p, 0)).toMatch('Took');
     expect(out.saved).toEqual([null]);
-    expect(m.deposit(p, 'items', 0)).toMatch('Stored');
+    p.items[1] = { id: 'poke-ball', count: 2 };
+    expect(m.deposit(p, 'items', 1)).toMatch('kept between games');
   });
 });

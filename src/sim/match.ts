@@ -1008,7 +1008,7 @@ export class Match {
         if (!m) return 'No Pokémon to use it on';
         if (m.level >= 100) return `${m.name} can't level up any more`;
         const before = m.level;
-        gainXp(m, Math.max(1, xpToNext(m.level) - m.xp));
+        gainXp(m, Math.max(1, xpToNext(m.level) - m.xp), true);
         this.takeItem(t, slot);
         this.battle.events.push({ type: 'xp', mon: m, xp: 0, levels: m.level - before });
         this.learnOnLevelUp(m, before);

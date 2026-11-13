@@ -389,8 +389,10 @@ export function xpForKnockout(target: Mon, dealerLevel = target.level): number {
 }
 
 /** Adds XP, levelling up as needed. Returns the number of levels gained. */
-export function gainXp(m: Mon, amount: number): number {
+export function gainXp(m: Mon, amount: number, exact = false): number {
   if (m.fainted || amount <= 0) return 0;
+  // Computer trainers' Pokémon level a little slower (config trainers.botXpMultiplier).
+  if (!exact && m.owner && !m.owner.isPlayer && !m.wild) amount = Math.max(1, Math.round(amount * ((CONFIG.trainers as { botXpMultiplier?: number }).botXpMultiplier ?? 1)));
   m.xp += amount;
   let gained = 0;
   while (m.xp >= xpToNext(m.level) && m.level < 100) {

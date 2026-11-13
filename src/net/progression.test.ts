@@ -48,14 +48,17 @@ describe('achievements, titles and looks', () => {
     expect(titlesFor(['first_win', 'first_match', 'squad_win'])).toEqual(['Champion', 'Squad Leader']);
   });
 
-  it('offers only the male and female Ranger, free from the start; every other look is hidden', () => {
-    expect(SHOWN_LOOKS).toEqual(['union_00', 'union_03']);
+  it('offers the male and female Ranger free, three earned looks, and hides the rest', () => {
+    expect(SHOWN_LOOKS).toEqual(['union_00', 'union_03', 'union_05', 'civ_09', 'union_06']);
     expect(canWear('union_00', 1, [])).toBe(true);
     expect(canWear('union_03', 1, [])).toBe(true);
     expect(isFreeLook('union_03')).toBe(true);
     // hidden, whatever the level or achievements
     expect(canWear('civ_03', 50, ACHIEVEMENTS.map((a) => a.id))).toBe(false);
-    expect(canWear('union_05', 100, ACHIEVEMENTS.map((a) => a.id))).toBe(false);
+    expect(canWear('union_01', 100, ACHIEVEMENTS.map((a) => a.id))).toBe(false);
+    // earned looks: only with their achievement
+    expect(canWear('union_05', 100, [])).toBe(false);
+    expect(canWear('union_05', 1, ['wins_25'])).toBe(true);
     expect(LEVELS_ON).toBe(false);
   });
 

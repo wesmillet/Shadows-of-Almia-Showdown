@@ -91,7 +91,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'first_match', name: 'First Steps', desc: 'Finish an online match', check: (c) => c.life.matches >= 1 },
   { id: 'first_win', name: 'Last One Standing', desc: 'Win a match', title: 'Champion', check: (c) => c.life.wins >= 1 },
   { id: 'wins_10', name: 'Seasoned', desc: 'Win 10 matches', title: 'Veteran', check: (c) => c.life.wins >= 10 },
-  { id: 'wins_50', name: 'Island Legend', desc: 'Win 50 matches', title: 'Legend of Almia', check: (c) => c.life.wins >= 50 },
+  { id: 'wins_25', name: 'Field Researcher', desc: 'Win 25 matches', look: 'union_05', check: (c) => c.life.wins >= 25 },
+  { id: 'wins_50', name: 'Island Legend', desc: 'Win 50 matches', title: 'Legend of Almia', look: 'civ_09', check: (c) => c.life.wins >= 50 },
   { id: 'squad_win', name: 'Stronger Together', desc: 'Win as a squad', title: 'Squad Leader', check: (c) => !!c.match && c.match.outcome === 'win' && c.match.squad },
   { id: 'top3', name: 'Podium', desc: 'Finish in the top three', check: (c) => !!c.match && c.match.place <= 3 && c.match.field >= 4 },
   { id: 'ko_10', name: 'Unstoppable', desc: '10 knockouts in one match', title: 'Unstoppable', check: (c) => (c.match?.stats.knockouts ?? 0) >= 10 },
@@ -107,7 +108,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   // (The ranked achievements, Ranked Victor, Gold Standard, Diamond Hands and Master Ranger, left with
   // ranked play; any that were earned stay in the database but are no longer shown or worn.)
   { id: 'pc_10', name: 'Starting a Collection', desc: 'Keep 10 Pokémon in your PC', check: (c) => c.pc >= 10 },
-  { id: 'pc_50', name: 'Professor', desc: 'Keep 50 Pokémon in your PC', title: 'Professor', check: (c) => c.pc >= 50 },
+  { id: 'pc_50', name: 'Professor', desc: 'Keep 50 Pokémon in your PC', title: 'Professor', look: 'union_06', check: (c) => c.pc >= 50 },
   { id: 'level_10', name: 'Ace Trainer', desc: 'Reach trainer level 10', title: 'Ace Trainer', check: (c) => c.level >= 10 },
   { id: 'level_25', name: 'Elite', desc: 'Reach trainer level 25', title: 'Elite', check: (c) => c.level >= 25 },
   { id: 'level_50', name: "Almia's Finest", desc: 'Reach trainer level 50', title: "Almia's Finest", check: (c) => c.level >= 50 },
@@ -127,11 +128,13 @@ export function titlesFor(earned: Iterable<string>): string[] {
 
 /**
  * The trainer looks on offer for now: the Ranger, male (the game's own player Ranger) and female,
- * both free for everyone from the start. Every other look is hidden: its art and players' saved
+ * both free for everyone from the start, and three earned ones: the lab coat (union_05) for 25 wins,
+ * the old man (civ_09) for 50 wins and the orange Ranger (union_06) for 50 Pokémon in the PC (their
+ * achievements, below). Every other look is hidden: its art and players' saved
  * picks stay, but it can not be picked or worn (a player saved in one wears DEFAULT_LOOK). Add a
  * look here to bring it back under its old unlock (LOOK_LEVELS, an achievement, a Mystery Gift).
  */
-export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03'];
+export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03', 'union_05', 'civ_09', 'union_06'];
 
 /**
  * Personal looks: worn only by the accounts listed (by account id), shown to everyone who sees them.
@@ -157,15 +160,17 @@ export function isShownLook(look: string): boolean {
   return SHOWN_LOOKS.includes(look);
 }
 
-/** The looks every trainer has from the start: the shown Rangers. */
+/** The looks every trainer has from the start: the male and female Ranger. */
+export const FREE_LOOKS: readonly string[] = ['union_00', 'union_03'];
+
 export function isFreeLook(look: string): boolean {
-  return isShownLook(look);
+  return FREE_LOOKS.includes(look);
 }
 
 /** The other Ranger looks unlock with trainer levels. */
 export const LOOK_LEVELS: Record<string, number> = {
-  union_01: 2, union_02: 3, union_03: 5, union_04: 7, union_05: 10,
-  union_06: 13, union_07: 16, union_08: 20, union_09: 25,
+  union_01: 2, union_02: 3, union_03: 5, union_04: 7,
+  union_07: 16, union_08: 20, union_09: 25,
 };
 
 /** What it takes to wear a look (null: free). */

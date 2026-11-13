@@ -1565,6 +1565,62 @@ export class MatchScreen implements Screen {
   }
 
   /**
+   * Where two beams meet in a clash: a crackling knot in both moves' colours, with sparks thrown
+   * off and short arcs, drawn over the beams.
+   */
+  private drawClashes(v: View): void {
+    const byId = new Map<number, Mon>();
+    let any = false;
+    for (const m of this.match.renderMons()) {
+      byId.set(m.id, m);
+      if (m.channel?.clash) any = true;
+    }
+    if (!any) return;
+    const ctx = v.ctx;
+    const t = this.match.time;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const a of byId.values()) {
+      const cl = a.channel?.clash;
+      if (!cl || cl.with < a.id) continue;
+      const b = byId.get(cl.with);
+      const ca = typeColor(move(a.channel!.moveId).type);
+      const cb = b?.channel ? typeColor(move(b.channel.moveId).type) : '#ffffff';
+      const lift = 0.55 * v.pxPerTile;
+      const x = v.toScreenX(cl.x);
+      const y = v.toScreenY(cl.y) - lift;
+      const R = v.pxPerTile * (0.65 + 0.1 * Math.sin(t * 23) + 0.05 * Math.sin(t * 9.7));
+      for (const [col, k] of [[ca, 1.5], [cb, 1.15], ['#ffffff', 0.55]] as const) {
+        const g = ctx.createRadialGradient(x, y, 0, x, y, R * k);
+        g.addColorStop(0, col);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = col === '#ffffff' ? 0.95 : 0.7;
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, R * k, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Sparks and little arcs flung out sideways from the knot.
+      ctx.lineWidth = Math.max(1.5, 2 * v.baseScale);
+      for (let i = 0; i < 9; i++) {
+        const seed = Math.floor(t * 14) * 13 + i * 7.31;
+        const ang = (Math.sin(seed) * 0.5 + 0.5) * Math.PI * 2;
+        const len = R * (0.9 + 1.4 * (Math.sin(seed * 1.7) * 0.5 + 0.5));
+        ctx.strokeStyle = i % 3 === 0 ? '#ffffff' : i % 2 ? ca : cb;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(ang) * R * 0.4, y + Math.sin(ang) * R * 0.4);
+        const mx = x + Math.cos(ang + 0.35) * len * 0.6;
+        const my = y + Math.sin(ang + 0.35) * len * 0.6;
+        ctx.lineTo(mx, my);
+        ctx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
    * Aiming a send-out: a dotted arc of white balls from the trainer to where the Pokémon will land.
    * No range ring; the landing spot is held within the throw radius and the battle area
    * (match.sendOutSpot). Drawn on the HUD layer, so trees and the night never hide it.
@@ -1824,6 +1880,7 @@ export class MatchScreen implements Screen {
         for (const [key, beam] of this.channelBeams) if (key.startsWith(`${ev.mon.id}:`)) {
           beam.release(0.4);
           this.channelBeams.delete(key);
+          this.beamFullReach.delete(key);
         }
         break;
       case 'hit':
@@ -1892,6 +1949,13 @@ export class MatchScreen implements Screen {
         break;
       case 'dodged':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.4, 'Dodged!', '#e9ddff', 13);
+        break;
+      case 'clash':
+        if (ev.state === 'start') this.floaters.add(ev.x, ev.y - 0.5, 'Clash!', '#fff3c4', 16);
+        else if (ev.state === 'won') {
+          this.floaters.add(ev.a.x, ev.a.y - 0.5, 'Broke through!', '#ffe08a', 15);
+          this.bursts.push({ x: ev.x, y: ev.y, r: 0.9, t0: this.match.time - 0.25, dur: 0.3, color: '#ffffff' });
+        }
         break;
       case 'telegraph':
         this.bursts.push({ x: ev.x, y: ev.y, r: ev.radius, t0: this.match.time, dur: Math.max(0.05, ev.seconds), color: typeColor(ev.move.type) });
@@ -2098,6 +2162,8 @@ export class MatchScreen implements Screen {
   private channelBeams = new Map<string, FxBeam>();
   /** Where on its user each channelled beam comes from (mouth, hands, body), to steer it every frame. */
   private channelOrigins = new Map<string, FxPart['origin']>();
+  /** Each channelled beam's reach before a clash shortened it (steerBeams). */
+  private beamFullReach = new Map<string, number>();
 
   /**
    * Channelled beams follow their aim every frame, not only on each damage pulse (a quarter second
@@ -2127,8 +2193,15 @@ export class MatchScreen implements Screen {
       const d = Math.hypot(dx, dy);
       if (d < 0.15) continue;
       const out = this.launch(mon, this.channelOrigins.get(key));
-      const L = Math.max(1.5, beam.reach);
-      beam.steer(out.from, { x: out.from.x + (dx / d) * L, y: out.from.y + (dy / d) * L });
+      // Locked in a clash: the beam runs only to where the two beams meet.
+      // Locked in a clash: the beam runs only to where the two beams meet, and holds while it lasts.
+      const cl = mon.channel?.clash;
+      if (!cl) this.beamFullReach.set(key, beam.reach);
+      const full = this.beamFullReach.get(key) ?? beam.reach;
+      const L = cl ? Math.max(0.3, Math.hypot(cl.x - out.from.x, cl.y - out.from.y)) : Math.max(1.5, full);
+      const to = { x: out.from.x + (dx / d) * L, y: out.from.y + (dy / d) * L };
+      if (cl) beam.refresh(out.from, to, 0.5);
+      else beam.steer(out.from, to);
     }
   }
 
@@ -2946,6 +3019,7 @@ export class MatchScreen implements Screen {
       extra: this.drawExtraWorld(v),
     });
     this.vfx.draw(v);
+    this.drawClashes(v);
     this.drawMotes(v);
     v.beginLights();
     this.groundVfx.drawLights(v);

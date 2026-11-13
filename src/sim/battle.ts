@@ -37,6 +37,8 @@ export type BattleEvent =
   | { type: 'dodge-start'; mon: Mon }
   | { type: 'channel-start'; mon: Mon; move: MoveDef }
   | { type: 'channel-end'; mon: Mon }
+  /** Two beams lock (start), come apart (break), or one breaks through (won: `a` won, `b` lost). */
+  | { type: 'clash'; a: Mon; b: Mon; x: number; y: number; state: 'start' | 'break' | 'won' }
   | { type: 'styler-loop'; mon: Mon; loops: number; needed: number }
   | { type: 'styler-break'; mon: Mon }
   | { type: 'calmed'; mon: Mon }
@@ -734,6 +736,8 @@ export class BattleSystem {
     mon.dir = dirFromVector(ch.dirX, ch.dirY, mon.dir);
     mon.anim.dir = mon.dir;
     if (mon.casting) mon.casting.t = Math.max(mon.casting.t, 0.05);
+    // Locked against a foe's beam: no pulses, the beam holds, the meeting point is pushed about.
+    if (this.stepClash(mon, dt, candidates)) return;
     ch.left -= dt;
     ch.next -= dt;
     if (ch.next <= 0 && (ch.fired ?? 0) < (ch.pulses ?? 1)) {
@@ -756,6 +760,80 @@ export class BattleSystem {
     }
     // It ends with its last pulse (`left` counts down to that same moment).
     if ((ch.fired ?? 0) >= (ch.pulses ?? 1) || ch.left <= -c.tick) this.endChannel(mon);
+  }
+
+  /**
+   * Beam clash. Two foes firing beams straight at each other lock: neither beam lands, the meeting
+   * point is pushed toward the weaker side, and when it reaches a Pokémon the winner's beam breaks
+   * through. Returns true while `mon`'s beam is locked (its pulses wait).
+   */
+  private stepClash(mon: Mon, dt: number, candidates: () => Iterable<Mon>): boolean {
+    const ch = mon.channel!;
+    const cc = CONFIG.battle.clash;
+    if (mon.shadow) return false;
+    const facing = (a: Mon, b: Mon, deg: number): boolean => {
+      const c = a.channel;
+      if (!c) return false;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const d = Math.hypot(dx, dy) || 1;
+      return (c.dirX * dx + c.dirY * dy) / d >= Math.cos((deg * Math.PI) / 180);
+    };
+    const live = (c: NonNullable<Mon['channel']>): boolean => (c.fired ?? 0) >= 1;
+    if (!ch.clash) {
+      if (!live(ch)) return false;
+      for (const o of candidates()) {
+        const oc = o.channel;
+        if (o === mon || !oc || oc.clash || !live(oc) || o.shadow || o.fainted) continue;
+        if (Math.hypot(o.x - mon.x, o.y - mon.y) > cc.range) continue;
+        if (!facing(mon, o, cc.facingDeg) || !facing(o, mon, cc.facingDeg)) continue;
+        const [a, b] = mon.id < o.id ? [mon, o] : [o, mon];
+        const x = (a.x + b.x) / 2;
+        const y = (a.y + b.y) / 2;
+        a.channel!.clash = { with: b.id, x, y, push: 0.5, t: 0 };
+        b.channel!.clash = { with: a.id, x, y, push: 0.5, t: 0 };
+        this.events.push({ type: 'clash', a, b, x, y, state: 'start' });
+        return true;
+      }
+      return false;
+    }
+    const cl = ch.clash;
+    let other: Mon | undefined;
+    for (const o of candidates()) if (o.id === cl.with) { other = o; break; }
+    const oc = other?.channel;
+    const broken = !other || !oc || !oc.clash || oc.clash.with !== mon.id || other.fainted || Math.hypot(other.x - mon.x, other.y - mon.y) > cc.range + 1.5 || !facing(mon, other, cc.breakDeg) || !facing(other, mon, cc.breakDeg);
+    if (broken) {
+      ch.clash = null;
+      if (oc?.clash?.with === mon.id) oc.clash = null;
+      this.events.push({ type: 'clash', a: mon, b: other ?? mon, x: cl.x, y: cl.y, state: 'break' });
+      return false;
+    }
+    // The lower id moves the shared point; the other just holds.
+    if (mon.id > other!.id) return true;
+    const a = mon;
+    const b = other!;
+    const sa = Math.max(1, expectedDamage(a, b, move(ch.moveId)));
+    const sb = Math.max(1, expectedDamage(b, a, move(oc!.moveId)));
+    const diff = (sa - sb) / (sa + sb);
+    const drift = Math.sign(diff || 1) * Math.max(cc.minPush, Math.abs(diff) * cc.pushRate);
+    cl.t += dt;
+    const wobble = Math.sin(cl.t * 7.3 + a.id) * 0.06 + Math.sin(cl.t * 3.1 + b.id * 1.7) * 0.05;
+    cl.push = Math.max(0, Math.min(1, cl.push + (drift + wobble) * dt));
+    cl.x = a.x + (b.x - a.x) * cl.push;
+    cl.y = a.y + (b.y - a.y) * cl.push;
+    Object.assign(oc!.clash!, { x: cl.x, y: cl.y, push: cl.push, t: cl.t });
+    const done = cl.push >= 0.97 || cl.push <= 0.03 || cl.t >= cc.maxSeconds;
+    if (!done) return true;
+    const aWins = cl.push >= 0.5;
+    const [win, lose] = aWins ? [a, b] : [b, a];
+    ch.clash = null;
+    oc!.clash = null;
+    this.events.push({ type: 'clash', a: win, b: lose, x: cl.x, y: cl.y, state: 'won' });
+    const wm = move(win.channel!.moveId);
+    const breakThrough: MoveDef = { ...wm, stages: undefined };
+    this.resolve(win, breakThrough, makeArea(wm, win, lose.x, lose.y), [lose], { scale: cc.winMult, carry: new Map() });
+    this.endChannel(lose);
+    return mon === win ? false : true;
   }
 
   /** Cuts off whatever a Pokémon is doing: its cast, and a channelled beam (with its end event). */

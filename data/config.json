@@ -373,7 +373,11 @@
     "_comment": "A trainer whose last Pokémon falls to a wild Pokémon comes back after baseSeconds + perMinute for each minute played (up to maxSeconds), at an outpost, with the party healed and every item lost (dropped where they fell). No respawns once the final showdown starts.",
     "baseSeconds": 8,
     "perMinute": 4,
-    "maxSeconds": 25
+    "maxSeconds": 25,
+    "_shieldComment": "After a respawn: seconds of protection (no damage to the party, no battles), ended early by attacking, throwing or walking walkTiles from the spot.",
+    "shield": { "seconds": 5, "walkTiles": 8 },
+    "_botQuietComment": "Computer trainers do not start a battle with a player within outpostTiles of a healer, or for afterRespawnSeconds after that player respawned.",
+    "botQuiet": { "outpostTiles": 8, "afterRespawnSeconds": 10 }
   },
   "crystal": {
     "_comment": "Secret: from the second-to-last darkness pulse on, attacks by trainers' Pokemon that reach the Shadow Crystal (within radius tiles of its middle) wear down its hidden hp (move power x (0.4 + attacking stat / 100) a hit; shown to no one). At 0 it cracks and Darkrai comes out. Darkrai can be caught only below catchBelow of its HP (catch.hardCatch 0491), or knocked out.",

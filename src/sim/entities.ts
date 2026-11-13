@@ -216,6 +216,13 @@ export interface Trainer {
   alive: boolean;
   /** Wiped out by wild Pokémon: back in the match at this time (see Match.down). */
   downUntil?: number | null;
+  /** When this trainer last came back from a wipe-out (Match.respawn). */
+  respawnedAt?: number;
+  /**
+   * Just respawned (config respawn.shield): nothing can hurt their Pokémon and no battle starts with
+   * them until `until`, or sooner if they attack, throw or walk `walk` tiles from (x, y). Null once over.
+   */
+  shield?: { until: number; x: number; y: number } | null;
   /** Seconds spent in the storm (drains outside it); at Match.trainerStormSeconds the trainer collapses. */
   stormT?: number;
   /** Passed out in the storm: Darkrai has them (seconds since); they are out when it ends (match.ts). */

@@ -1565,6 +1565,48 @@ export class MatchScreen implements Screen {
   }
 
   /**
+   * A trainer's respawn shield: a soft shimmering bubble round them and their party, flickering out
+   * in its last second.
+   */
+  private drawShields(v: View): void {
+    const now = this.match.time;
+    const ctx = v.ctx;
+    let saved = false;
+    for (const t of this.match.allTrainers) {
+      const sh = t.shield;
+      if (!sh || !t.alive || t.hidden) continue;
+      if (!saved) {
+        ctx.save();
+        saved = true;
+      }
+      const left = sh.until - now;
+      const flick = left < 1 ? (Math.sin(now * 40) > 0 ? 1 : 0.35) : 1;
+      const x = v.toScreenX(t.x);
+      const y = v.toScreenY(t.y) - 0.55 * v.pxPerTile;
+      const R = v.pxPerTile * (1.05 + 0.04 * Math.sin(now * 4));
+      const g = ctx.createRadialGradient(x, y, R * 0.55, x, y, R);
+      g.addColorStop(0, 'rgba(160,220,255,0)');
+      g.addColorStop(0.85, 'rgba(160,220,255,0.22)');
+      g.addColorStop(1, 'rgba(220,245,255,0.55)');
+      ctx.globalAlpha = flick;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x, y, R, R * 1.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(230,248,255,0.8)';
+      ctx.lineWidth = Math.max(1.5, 1.8 * v.baseScale);
+      ctx.beginPath();
+      const a0 = now * 1.6;
+      ctx.ellipse(x, y, R, R * 1.08, 0, a0, a0 + Math.PI * 0.6);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x, y, R, R * 1.08, 0, a0 + Math.PI, a0 + Math.PI * 1.6);
+      ctx.stroke();
+    }
+    if (saved) ctx.restore();
+  }
+
+  /**
    * Where two beams meet in a clash: a crackling knot in both moves' colours, with sparks thrown
    * off and short arcs, drawn over the beams.
    */
@@ -2083,7 +2125,7 @@ export class MatchScreen implements Screen {
         else this.deathAt = { x: ev.trainer.x, y: ev.trainer.y };
         break;
       case 'respawned':
-        if (ev.trainer.isPlayer) this.say('Back in the fight! Your party is healed, but your items are gone', 3);
+        if (ev.trainer.isPlayer) this.say(`Back in the fight! Your party is healed, but your items are gone. Protected for ${CONFIG.respawn.shield.seconds} s`, 3.5);
         break;
       case 'darkrai-grab':
         this.grabs.push({ trainer: ev.trainer, x: ev.x, y: ev.y, anim: new AnimPlayer(this.match.sprites.get('0491')) });
@@ -3020,6 +3062,7 @@ export class MatchScreen implements Screen {
     });
     this.vfx.draw(v);
     this.drawClashes(v);
+    this.drawShields(v);
     this.drawMotes(v);
     v.beginLights();
     this.groundVfx.drawLights(v);

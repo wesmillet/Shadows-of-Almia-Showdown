@@ -1030,6 +1030,7 @@ export class BattleSystem {
   /** `by`: the Pokémon that inflicted it (burn and poison damage count as its hits). */
   applyStatus(mon: Mon, status: StatusKind, by: Mon | null = null): void {
     if (mon.status || mon.fainted) return;
+    if (mon.owner?.shield && by) return;
     // Type immunities.
     const t = mon.types;
     if (status === 'poison' && (t.includes('poison') || t.includes('steel'))) return;
@@ -1075,6 +1076,8 @@ export class BattleSystem {
 
   applyDamage(target: Mon, damage: number, by: Mon | null): void {
     if (target.fainted) return;
+    // A trainer just back from a wipe-out is shielded for a moment (Match.stepShields).
+    if (target.owner?.shield && by) return;
     // A shadow legendary is never knocked out: at its last HP it yields (snag it, or it dissolves).
     // Every other legendary can be knocked out: catch it with a ball before then.
     if (target.legend && target.shadow && target.hp - damage <= 0) {

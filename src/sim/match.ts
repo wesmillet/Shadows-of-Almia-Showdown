@@ -3885,6 +3885,32 @@ export class Match {
     return t.party.some((m) => !m.fainted && !m.captured);
   }
 
+  /**
+   * A computer trainer leaves a player alone beside a healer, and for a while after the player
+   * respawned (config respawn.botQuiet).
+   */
+  private botLeavesAlone(bot: Trainer, player: Trainer): boolean {
+    if (this.seatOf(bot) || !this.seatOf(player)) return false;
+    const q = CONFIG.respawn.botQuiet;
+    if (player.respawnedAt !== undefined && this.time - player.respawnedAt < q.afterRespawnSeconds) return true;
+    return this.outposts.some((o) => Math.hypot(o.x - player.x, o.y - player.y) <= q.outpostTiles);
+  }
+
+  /**
+   * Respawn shields run out after their seconds, or as soon as their trainer attacks, throws or
+   * walks off (config respawn.shield).
+   */
+  private stepShields(): void {
+    const walk = CONFIG.respawn.shield.walkTiles;
+    for (const t of this.allTrainers) {
+      const sh = t.shield;
+      if (!sh) continue;
+      const acted = t.party.some((m) => !m.stowed && !m.fainted && (m.casting || m.channel || m.lunge));
+      const threw = this.throws.some((th) => th.thrower === t);
+      if (this.time >= sh.until || acted || threw || Math.hypot(t.x - sh.x, t.y - sh.y) >= walk || !t.alive) t.shield = null;
+    }
+  }
+
   /** Two trainers who see each other within startRange start a one-on-one battle. */
   private findDuels(): void {
     const c = CONFIG.duel;
@@ -3895,7 +3921,9 @@ export class Match {
       for (let j = i + 1; j < free.length; j++) {
         const b = free[j] as Trainer;
         if (b.duelId || a.duelId || sameTeam(a, b)) continue;
+        if (a.shield || b.shield) continue;
         if (Math.hypot(a.x - b.x, a.y - b.y) > c.startRange) continue;
+        if (this.botLeavesAlone(a, b) || this.botLeavesAlone(b, a)) continue;
         if (!this.nav.clearLine(a.x, a.y, b.x, b.y)) continue;
         this.startDuel(a, b);
       }
@@ -4407,6 +4435,7 @@ export class Match {
   }
 
   private stepDuels(dt: number): void {
+    this.stepShields();
     this.findDuels();
     for (let i = this.duels.length - 1; i >= 0; i--) {
       const d = this.duels[i] as Duel;
@@ -5141,6 +5170,8 @@ export class Match {
       m.stowed = true;
     }
     this.fieldParty(t);
+    t.respawnedAt = this.time;
+    t.shield = { until: this.time + CONFIG.respawn.shield.seconds, x: t.x, y: t.y };
     this.battle.events.push({ type: 'respawned', trainer: t });
   }
 

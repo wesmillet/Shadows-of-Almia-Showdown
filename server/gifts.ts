@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import type { Accounts } from './accounts';
 import { SPECIES, movesAt } from '../src/sim/data';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
-import { isFreeLook } from '../src/net/progression';
+import { isFreeLook, lookName } from '../src/net/progression';
 import { ITEMS } from '../src/sim/items';
 
 export interface GiftCode {
@@ -46,10 +46,9 @@ const CODE_RE = /^[A-Z0-9-]{4,24}$/;
 /** Wrong codes an account may try in an hour. */
 const TRIES_PER_HOUR = 10;
 
-/** A look's name as the Trainer screen shows it: "Ranger 3" (Union) or "Local 7" (townsfolk). */
+/** A look's name as the Trainer screen shows it (src/net/progression.ts lookName). */
 export function lookLabel(look: string): string {
-  const [kind, n] = look.split('_');
-  return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
+  return lookName(look);
 }
 
 export function normalizeCode(s: unknown): string {

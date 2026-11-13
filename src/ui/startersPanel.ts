@@ -9,6 +9,7 @@ import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES } from '../sim/data';
 import { ASSET_ROOT } from '../sprites/assets';
 import { el, overlayRoot } from './overlay';
+import { ACHIEVEMENTS, LEVELS_ON, lookName } from '../net/progression';
 
 const CSS = `
 .almia-starters { width: min(780px, calc(100vw - 24px)) !important; max-height: calc(100vh - 24px); overflow-y: auto; padding: 14px 16px 16px !important; }
@@ -39,6 +40,12 @@ const CSS = `
 .almia-starters .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; position: sticky; bottom: -16px; background: #f4ecdc; padding: 8px 0 10px; }
 .almia-starters .msg { min-height: 18px; font-size: 13px; color: #b0302a; margin-top: 6px; }
 .almia-starters .msg.ok { color: #2e7d32; }
+.almia-starters .achs { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 6px; }
+.almia-starters .achs > div { border: 2px solid #e0d0b4; background: #fbf5e9; padding: 6px 8px; font-size: 12px; line-height: 1.3; }
+.almia-starters .achs > div.no { opacity: 0.45; }
+.almia-starters .achs .an { font-size: 14px; color: #4a3424; }
+.almia-starters .achs > div.yes .an { color: #c2611a; }
+.almia-starters .achs .rw { color: #2e7d32; margin-top: 2px; }
 `;
 let styled = false;
 
@@ -86,6 +93,8 @@ export function openStarters(net: Connection): Promise<void> {
     });
 
     const load = async (): Promise<void> => {
+      // Fresh earned achievements (the account's own list comes with /api/me).
+      await net.refreshMe().catch(() => undefined);
       const r = await net.api<StartersInfo>('/api/starters');
       if (r.error) {
         message = r.error;
@@ -98,15 +107,28 @@ export function openStarters(net: Connection): Promise<void> {
 
     const draw = (): void => {
       box.replaceChildren();
-      box.appendChild(el('h2', '', 'Starters'));
+      box.appendChild(el('h2', '', 'Starters & Achievements'));
       box.appendChild(el('p', 'sub', 'Your first two starter slots roll from every Pokémon in your PC (Commons until it has some). The third rolls from the Pokémon you star below.'));
       if (!info) {
         box.appendChild(el('p', 'sub', message || 'Loading...'));
         return;
       }
       const data = info;
-      // ---- achievements
-      box.appendChild(el('h3', '', 'Unlocks'));
+      // ---- achievements: earned ones bright, the rest faint with what they take and what they give
+      const have = new Set(net.me.achievements ?? []);
+      const shown = ACHIEVEMENTS.filter((a) => LEVELS_ON || !a.id.startsWith('level_'));
+      box.appendChild(el('h3', '', `Achievements · ${shown.filter((a) => have.has(a.id)).length}/${shown.length}`));
+      const grid = el('div', 'achs');
+      for (const a of shown) {
+        const got = have.has(a.id);
+        const card = el('div', got ? 'yes' : 'no');
+        card.append(el('div', 'an', `${got ? '✓ ' : ''}${a.name}`), el('div', 'sub', a.desc));
+        const gives = [a.title ? `Title: ${a.title}` : '', a.look ? `Look: ${lookName(a.look)}` : ''].filter(Boolean).join(' · ');
+        if (gives) card.append(el('div', 'rw', gives));
+        grid.appendChild(card);
+      }
+      box.appendChild(grid);
+      box.appendChild(el('h3', '', 'Starter unlocks'));
       for (const a of data.achievements) {
         const row = el('div', 'ach');
         const what = el('div', 'what');

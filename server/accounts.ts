@@ -1311,7 +1311,7 @@ export class Accounts {
         const earned = this.earned(me.id);
         return send(200, {
           signedIn: true, google: !!this.google, user: { id: me.id, username: me.username, role: me.role, google: !!me.google_sub, password: !!me.pass_hash }, look: this.wornLook(me.id, prof.look), stats: prof.stats,
-          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: ACHIEVEMENTS_ON ? earned : [],
+          progress: { xp: this.xp(me.id), ...levelOf(this.xp(me.id)) }, title: this.title(me.id), titles: titlesFor(earned), achievements: earned,
           looks: this.gifts.ownedLooks(me.id),
           inbox: me.banned ? [] : this.gifts.inbox(me.id),
           email: { on: !!this.mailer, address: me.email ? maskEmail(me.email) : null, confirmed: !!me.email_verified },

@@ -143,6 +143,19 @@ export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03', 'union_05
  */
 export const PERSONAL_LOOKS: Readonly<Record<string, readonly number[]>> = { wes_00: [1], red_00: [1] };
 
+/** What each look is called on the Trainer screen and in gifts (the rest: "Ranger 3", "Local 7"). */
+export const LOOK_NAMES: Readonly<Record<string, string>> = {
+  union_00: 'Patrol Ranger', union_03: 'Trail Ranger', union_05: 'Field Researcher', civ_09: 'Island Elder', union_06: 'Blaze Ranger',
+  wes_00: 'Shadow Local (yours)', red_00: 'Red (yours)',
+};
+
+export function lookName(look: string): string {
+  const named = LOOK_NAMES[look];
+  if (named) return named;
+  const [kind, n] = look.split('_');
+  return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
+}
+
 /** Can this account wear this personal look? (false for any look that is not personal) */
 export function ownsPersonalLook(look: string, accountId: number | null | undefined): boolean {
   return accountId !== null && accountId !== undefined && !!PERSONAL_LOOKS[look]?.includes(accountId);

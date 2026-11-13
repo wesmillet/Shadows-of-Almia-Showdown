@@ -5,14 +5,13 @@
  */
 import type { Input } from '../core/input';
 import { saveLook } from '../look';
-import { DEFAULT_LOOK, isShownLook, PERSONAL_LOOKS } from '../net/progression';
+import { DEFAULT_LOOK, isShownLook, lookName, PERSONAL_LOOKS } from '../net/progression';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2, text, type GameContext, type Screen } from './screens';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
 /** Names for the looks on offer. */
-const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger', wes_00: 'Shadow Local (yours)', red_00: 'Red (yours)' };
 
 export class CharacterScreen implements Screen {
   private readonly list: string[];
@@ -37,12 +36,9 @@ export class CharacterScreen implements Screen {
     for (const c of this.list) rangers.preview(c);
   }
 
-  /** "Male Ranger" and "Female Ranger" for the two on offer, "Ranger 3" / "Local 7" for the rest. */
+  /** The look's name (src/net/progression.ts LOOK_NAMES), else "Ranger 3" / "Local 7". */
   static label(character: string): string {
-    const named = LOOK_NAMES[character];
-    if (named) return named;
-    const [kind, n] = character.split('_');
-    return `${kind === 'union' ? 'Ranger' : 'Local'} ${Number(n) + 1}`;
+    return lookName(character);
   }
 
   private layout(): { cols: number; cw: number; ch: number; x0: number; y0: number; gap: number } {

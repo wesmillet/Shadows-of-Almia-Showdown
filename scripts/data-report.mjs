@@ -158,6 +158,16 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
     }
     players.set(uid, p);
   }
+  // Trades and Wonder Trades that moved a shiny or a Mythical (each received side, from the log).
+  const MYTHIC = new Set(['0151', '0251', '0385', '0490', '0492', '0494', '0802', '0808']);
+  if (has('collection_log')) {
+    out.tradeReview = all("SELECT user_id, action, other_name, ref, detail, at FROM collection_log WHERE action IN ('trade:in', 'wonder:in') ORDER BY at").map((r) => {
+      let e = null; try { e = JSON.parse(r.detail); } catch {}
+      return e ? { at: new Date(Number(r.at)).toISOString().slice(0, 16), kind: r.action.split(':')[0], to: names.get(r.user_id) ?? String(r.user_id), from: r.other_name, ref: r.ref, name: e.name, dex: e.dex, level: e.level, shiny: !!e.shiny, mythic: MYTHIC.has(String(e.dex).slice(0, 4)) } : null;
+    }).filter((x) => x && (x.shiny || x.mythic));
+  }
+  // The admins' shiny lines (for a shiny-starter question).
+  out.adminShinies = all("SELECT u.username AS name, json_extract(p.entry, '$.dex') AS dex FROM pc p JOIN users u ON u.id = p.user_id WHERE u.role = 'admin' AND json_extract(p.entry, '$.shiny') IN (1, 'true')");
   out.shinySweep = [...players.values()].filter((p) => p.glitch.length || p.later.length).sort((a, b) => b.glitch.length - a.glitch.length || b.later.length - a.later.length);
 }
 console.log('REPORT_JSON_START');

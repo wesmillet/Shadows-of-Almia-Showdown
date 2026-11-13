@@ -152,7 +152,7 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
 }
 
 const tintCache = document.createElement('canvas');
-function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
+export function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
   tintCache.width = src.width;
   tintCache.height = src.height;
   const g = tintCache.getContext('2d')!;
@@ -166,7 +166,7 @@ function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
 }
 
 const flashCache = document.createElement('canvas');
-function flashCanvas(img: CanvasImageSource, sx: number, sy: number, w: number, h: number): HTMLCanvasElement {
+export function flashCanvas(img: CanvasImageSource, sx: number, sy: number, w: number, h: number): HTMLCanvasElement {
   flashCache.width = w;
   flashCache.height = h;
   const g = flashCache.getContext('2d')!;

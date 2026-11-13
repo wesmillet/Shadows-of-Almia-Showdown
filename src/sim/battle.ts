@@ -43,6 +43,8 @@ export type BattleEvent =
   | { type: 'styler-break'; mon: Mon }
   | { type: 'calmed'; mon: Mon }
   | { type: 'darkrai-grab'; trainer: Trainer; x: number; y: number }
+  /** Darkrai blinks from (fromX, fromY) to where it now stands, leaving afterimages. */
+  | { type: 'darkrai-blink'; mon: Mon; fromX: number; fromY: number }
   | { type: 'scene-fx'; id: string; x: number; y: number; scale: number; ground?: boolean; tint?: string; fps?: number; lift?: number; /** Turned this far (radians) about its centre. */ rotation?: number; shake?: number; /** Lugia, Darkrai or Shadow Mewtwo: the only moments the camera shakes. */ epic?: boolean }
   | { type: 'yield'; mon: Mon; by: Mon | null }
   | { type: 'confused'; mon: Mon }

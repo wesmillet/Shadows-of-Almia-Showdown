@@ -3823,6 +3823,9 @@ export class Match {
     this.darkraiPortal = { x: d.x, y: d.y, t: 0 };
   }
 
+  /** Seconds to Darkrai's next blink (stepDarkrai). */
+  private darkraiBlinkIn = 1;
+
   /** Darkrai's portal: opens (line, small, full) over 0.9 s, Darkrai fades out of it, then it closes. */
   darkraiPortal: { x: number; y: number; t: number } | null = null;
   static readonly PORTAL_SECONDS = 3.6;
@@ -3860,7 +3863,30 @@ export class Match {
     // Drift toward the target, never far from the crystal.
     const toC = Math.hypot(d.x - this.centerX, d.y - this.centerY);
     if (bd > 2.6 && toC < 4 && !d.casting) {
-      const k = (1.4 * dt) / bd;
+      // Its base form moves by blinking (config battle.darkraiBlink): a short vanish-and-reappear
+      // toward the target, slightly to one side, with a slow drift between blinks.
+      const bl = CONFIG.battle.darkraiBlink;
+      this.darkraiBlinkIn -= dt;
+      if (this.darkraiBlinkIn <= 0) {
+        this.darkraiBlinkIn = this.rng.range(bl.every[0] as number, bl.every[1] as number);
+        const ux = (target.x - d.x) / bd;
+        const uy = (target.y - d.y) / bd;
+        const step = Math.min(bl.tiles, bd - 2.2);
+        const side = this.rng.range(-bl.side, bl.side);
+        let nx = d.x + ux * step - uy * side;
+        let ny = d.y + uy * step + ux * side;
+        const c = Math.hypot(nx - this.centerX, ny - this.centerY);
+        if (c > 3.9) {
+          nx = this.centerX + ((nx - this.centerX) / c) * 3.9;
+          ny = this.centerY + ((ny - this.centerY) / c) * 3.9;
+        }
+        const fromX = d.x;
+        const fromY = d.y;
+        d.x = d.px = nx;
+        d.y = d.py = ny;
+        this.battle.events.push({ type: 'darkrai-blink', mon: d, fromX, fromY });
+      }
+      const k = (1.4 * bl.drift * dt) / bd;
       d.x += (target.x - d.x) * k;
       d.y += (target.y - d.y) * k;
       if (!d.moving) {

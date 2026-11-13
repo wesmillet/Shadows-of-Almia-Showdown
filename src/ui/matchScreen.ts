@@ -37,7 +37,7 @@ import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
 import { bestRod, canFish, FISHING, hookOrReel, startFishing } from '../sim/fishing';
 import { FxLibrary } from '../vfx/fxLibrary';
 import { Delayed, FxAnim, FxBeam, FxProjectile, type FxAnimOptions } from '../vfx/fxVisuals';
-import { drawSoftShadow, trainerPos } from '../render/world';
+import { drawSoftShadow, flashCanvas, tint, trainerPos } from '../render/world';
 import { INK, panel, rgba, text, touchWording, uiFont, wrapText, type GameContext, type Screen } from './screens';
 
 /** Effects that sim events ask for by id (scene-fx), loaded with the rest. */
@@ -123,6 +123,8 @@ export class MatchScreen implements Screen {
   private endTimer = -1;
   /** Darkrai taking a trainer who passed out in the storm (drawn for GRAB_SECONDS and a little after). */
   private grabs: Array<Grab> = [];
+  /** Darkrai's blink afterimages (darkrai-blink): a frozen frame where it was, fading. */
+  private afterimages: Array<{ x: number; y: number; f: ReturnType<Mon['anim']['current']>; scale: number; t0: number; dur: number }> = [];
   protected readonly icons: ItemIcons;
   /**
    * Online (src/net/mirror.ts): the match is the server's, so Space and throwing things away go
@@ -1480,6 +1482,26 @@ export class MatchScreen implements Screen {
     ctx.restore();
   }
 
+  /** One of Darkrai's blink afterimages: its pose in violet, see-through, fading and drifting up a touch. */
+  private drawAfterimage(v: View, a: (typeof this.afterimages)[number], now: number): void {
+    const q = (now - a.t0) / a.dur;
+    if (q < 0 || q >= 1) return;
+    const f = a.f;
+    const s = v.spriteScale * a.scale;
+    const w = f.w * s;
+    const h = f.h * s;
+    const x = Math.round(v.toScreenX(a.x) - w / 2);
+    const y = Math.round(v.toScreenY(a.y) - h / 2 - q * 0.2 * v.pxPerTile);
+    const ctx = v.ctx;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 0.55 * (1 - q);
+    ctx.drawImage(tint(flashCanvas(f.image, f.sx, f.sy, f.w, f.h), '#7b3cff'), x, y, w, h);
+    ctx.globalAlpha = 0.3 * (1 - q);
+    ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, x, y, w, h);
+    ctx.restore();
+  }
+
   /** Darkrai's entrance portal, standing upright behind it: slit, half open, open, held, then closing. */
   private drawDarkraiPortal(v: View, now: number): void {
     const po = this.match.darkraiPortal;
@@ -2127,6 +2149,19 @@ export class MatchScreen implements Screen {
       case 'respawned':
         if (ev.trainer.isPlayer) this.say(`Back in the fight! Your party is healed, but your items are gone. Protected for ${CONFIG.respawn.shield.seconds} s`, 3.5);
         break;
+      case 'darkrai-blink': {
+        // Two afterimages: where it was, and halfway, each a frozen copy of its pose fading out.
+        const live = ev.mon.anim.current();
+        if (live && !live.placeholder) {
+          // A copy: the player's frame object changes as the animation runs.
+          const f = { ...live };
+          const t0 = performance.now() / 1000;
+          const scale = monScale(ev.mon);
+          this.afterimages.push({ x: ev.fromX, y: ev.fromY, f, scale, t0, dur: 0.7 });
+          this.afterimages.push({ x: (ev.fromX + ev.mon.x) / 2, y: (ev.fromY + ev.mon.y) / 2, f, scale, t0: t0 + 0.04, dur: 0.5 });
+        }
+        break;
+      }
       case 'darkrai-grab':
         this.grabs.push({ trainer: ev.trainer, x: ev.x, y: ev.y, anim: new AnimPlayer(this.match.sprites.get('0491')) });
         break;
@@ -2921,6 +2956,8 @@ export class MatchScreen implements Screen {
       list.push({ y: g.y - 0.6, draw: () => this.drawGrabPool(v, g, now) });
       list.push({ y: g.y - 0.05, draw: () => this.drawGrabDarkrai(v, g, now) });
     }
+    this.afterimages = this.afterimages.filter((a) => now - a.t0 < a.dur);
+    for (const a of this.afterimages) list.push({ y: a.y, draw: () => this.drawAfterimage(v, a, now) });
     for (const it of this.match.items) list.push({ y: it.y - 0.3, draw: () => this.drawGroundItem(v, it) });
     for (const o of this.match.outposts) list.push({ y: o.y - 0.35, draw: () => this.drawOutpostPost(v, o) });
     this.match.chests.forEach((c, i) => list.push({ y: c.y - 0.4, draw: () => this.drawChest(v, c, this.chestLid.get(i) ?? 0) }));

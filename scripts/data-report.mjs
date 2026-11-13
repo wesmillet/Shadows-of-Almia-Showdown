@@ -128,6 +128,38 @@ if (who && has('users') && has('collection_log')) {
     out.pcNow = all('SELECT id, entry, created_at FROM pc WHERE user_id = ? ORDER BY id', u.id).map((r) => ({ pcId: r.id, ...pick(r.entry) }));
   }
 }
+// Shiny sweep (player = SHINY_SWEEP): every account's duplicate shinies, each copy sorted into a
+// glitch copy (a win or voucher pick in the PC-starter glitch window, of a line the player already had
+// shiny) or a later duplicate. Read-only; usernames, PC ids, species and levels only.
+if (who === 'shiny_sweep' && has('pc') && has('users')) {
+  const START = Date.parse('2026-11-08T22:31:00Z');
+  const FIX = Date.parse('2026-11-12T15:30:00Z');
+  const via = new Map();
+  if (has('collection_log')) for (const r of all("SELECT pc_id, action, at FROM collection_log WHERE action LIKE 'add%'")) via.set(r.pc_id, { action: r.action, at: Number(r.at) });
+  const names = new Map(all('SELECT id, username FROM users').map((u) => [u.id, u.username]));
+  const groups = new Map();
+  for (const r of all('SELECT id, user_id, entry, created_at FROM pc')) {
+    let e; try { e = JSON.parse(r.entry); } catch { continue; }
+    if (!e || !e.shiny) continue;
+    const k = r.user_id + '|' + e.dex;
+    if (!groups.has(k)) groups.set(k, []);
+    const v = via.get(r.id);
+    groups.get(k).push({ pcId: r.id, dex: e.dex, name: e.name, level: e.level, at: v ? v.at : Number(r.created_at), how: v ? v.action : 'unknown' });
+  }
+  const players = new Map();
+  for (const [k, list] of groups) {
+    if (list.length < 2) continue;
+    list.sort((a, b) => a.at - b.at || a.pcId - b.pcId);
+    const uid = Number(k.split('|')[0]);
+    const p = players.get(uid) ?? { player: names.get(uid) ?? String(uid), glitch: [], later: [] };
+    for (const x of list.slice(1)) {
+      const row = { pcId: x.pcId, name: x.name, dex: x.dex, level: x.level, at: new Date(x.at).toISOString().slice(0, 16), how: x.how };
+      if (x.at >= START && x.at <= FIX && /add:(win|voucher)/.test(x.how)) p.glitch.push(row); else p.later.push(row);
+    }
+    players.set(uid, p);
+  }
+  out.shinySweep = [...players.values()].filter((p) => p.glitch.length || p.later.length).sort((a, b) => b.glitch.length - a.glitch.length || b.later.length - a.later.length);
+}
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));
 console.log('REPORT_JSON_END');

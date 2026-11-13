@@ -106,6 +106,14 @@
    "frames": 15,
    "anchor": "bottom-center"
   },
+  "red_00": {
+   "file": "red_00.png",
+   "frame_w": 16,
+   "frame_h": 32,
+   "frames": 27,
+   "anchor": "bottom-center",
+   "animations": {"idle_down": [0], "idle_left": [1], "idle_up": [2], "walk_left": [3, 4, 5, 6, 7, 8, 9, 10], "walk_down": [11, 12, 13, 14, 15, 16, 17, 18], "walk_up": [19, 20, 21, 22, 23, 24, 25, 26]}
+  },
   "civ_09": {
    "file": "civ_09.png",
    "frame_w": 22,

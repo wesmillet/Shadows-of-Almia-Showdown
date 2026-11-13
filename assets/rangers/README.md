@@ -21,3 +21,4 @@ Frame order in every sheet (15 frames, left to right, sprite anchored bottom-cen
 
 Right-facing frames are mirrored from the left-facing ones. No named Ranger characters are used.
 - `civ_13`: a nurse, recoloured from civ_03 (pink hair, white apron) for the healers
+- `red_00`: Red, a personal look for the creator's account (src/net/progression.ts PERSONAL_LOOKS). Standing poses from Pokémon Ranger "NPCs (Set 5)" ripped by Ragey (The Spriters Resource); walks generated with PixelLab from those poses. 16x32 cells, 27 frames, with its own animation table in manifest.json (8-frame walks).

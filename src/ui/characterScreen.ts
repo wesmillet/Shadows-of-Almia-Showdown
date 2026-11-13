@@ -12,7 +12,7 @@ import { backdrop, button, heading, hit, INK, panel, skinPiece, skinPx, skinPx2,
 type Rect = { x: number; y: number; w: number; h: number };
 
 /** Names for the looks on offer. */
-const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger', wes_00: 'Shadow Local (yours)' };
+const LOOK_NAMES: Record<string, string> = { union_00: 'Male Ranger', union_03: 'Female Ranger', wes_00: 'Shadow Local (yours)', red_00: 'Red (yours)' };
 
 export class CharacterScreen implements Screen {
   private readonly list: string[];

@@ -139,8 +139,9 @@ export const SHOWN_LOOKS: readonly string[] = ['union_00', 'union_03', 'union_05
 /**
  * Personal looks: worn only by the accounts listed (by account id), shown to everyone who sees them.
  * wes_00: the game's creator, Local 9 in a black jacket and a white ski mask.
+ * red_00: Red (the creator's), from the Pokémon Ranger NPC sheet with PixelLab-made walks.
  */
-export const PERSONAL_LOOKS: Readonly<Record<string, readonly number[]>> = { wes_00: [1] };
+export const PERSONAL_LOOKS: Readonly<Record<string, readonly number[]>> = { wes_00: [1], red_00: [1] };
 
 /** Can this account wear this personal look? (false for any look that is not personal) */
 export function ownsPersonalLook(look: string, accountId: number | null | undefined): boolean {

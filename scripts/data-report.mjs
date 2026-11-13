@@ -11,7 +11,7 @@ const has = (t) => !!one("SELECT 1 FROM sqlite_master WHERE type='table' AND nam
 const out = { at: new Date().toISOString() };
 
 if (has('match_log')) {
-  const rows = all('SELECT id, mode, started_at, ended_at, seconds, humans, bots, aborted, trainers FROM match_log ORDER BY started_at');
+  const rows = all('SELECT id, mode, started_at, ended_at, seconds, winner, humans, bots, aborted, trainers FROM match_log ORDER BY started_at');
   out.matches = { total: rows.length, aborted: rows.filter((r) => r.aborted).length, since: rows[0] ? new Date(Number(rows[0].ended_at)).toISOString() : null };
   // Per day: matches, average length, average humans and computer trainers.
   const days = {};
@@ -48,7 +48,7 @@ if (has('match_log')) {
       if (t.human) continue;
       const b = (bots[t.name] ??= { name: t.name, matches: 0, wins: 0, top3: 0, elims: 0, kos: 0 });
       b.matches++;
-      if (t.place === 1) b.wins++;
+      if (r.winner && t.name === r.winner) b.wins++;
       if (t.outcome === 'win') b.top3++;
       b.elims += t.stats?.eliminations ?? 0;
       b.kos += t.stats?.knockouts ?? 0;
@@ -72,7 +72,7 @@ if (has('match_log')) {
     if (r.aborted || r.mode === 'private') continue;
     let list2;
     try { list2 = JSON.parse(r.trainers); } catch { continue; }
-    const w = list2.find((t) => t.place === 1);
+    const w = list2.find((t) => r.winner && t.name === r.winner);
     if (w) { if (w.human) humanWins++; else botWins++; }
   }
   out.winners = { humans: humanWins, computer: botWins };

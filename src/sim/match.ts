@@ -4540,14 +4540,21 @@ export class Match {
 
   /** One step of a Pokémon the player steers (Pokémon mode or a battle). Shared with the browser like walkTrainer. */
   walkSteered(m: Mon, mx: number, my: number, dt: number): number {
-    const speed = CONFIG.duel.monSpeed * moveSpeed(m);
+    // Firing a beam: it can still walk, at battle.channel.walkSpeed, and keeps facing along the beam.
+    const beam = !!m.channel;
+    const speed = CONFIG.duel.monSpeed * moveSpeed(m) * (beam ? CONFIG.battle.channel.walkSpeed : 1);
     const moved = tryMove(this.ground, m, mx * speed * dt, my * speed * dt, 0.22);
-    m.dir = dirFromVector(mx, my, m.dir);
+    if (!beam) m.dir = dirFromVector(mx, my, m.dir);
     return moved;
   }
 
   /** The player's Pokémon follows the movement keys; 1-4 cast as usual. */
   private stepDuelPlayerMon(m: Mon, dt: number): void {
+    if (m.channel && !incapable(m)) {
+      // Mid-beam: walk (slower) without leaving the beam's pose.
+      if (this.moveX !== 0 || this.moveY !== 0) this.walkSteered(m, this.moveX, this.moveY, dt);
+      return;
+    }
     if (m.casting || incapable(m)) {
       if (m.moving) {
         m.moving = false;

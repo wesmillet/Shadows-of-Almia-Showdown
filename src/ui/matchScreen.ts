@@ -1527,50 +1527,89 @@ export class MatchScreen implements Screen {
     } else ctx.ellipse(v.toScreenX(d.cx), v.toScreenY(d.cy), CONFIG.duel.arenaRadius * v.pxPerTile, CONFIG.duel.arenaRadius * v.pxPerTile, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
-    // Aiming a send-out: how far the ball can go, and where it would land.
+  }
+
+  /** Warning rings for instant moves (battle 'telegraph' events): they close in, then the burst lands. */
+  private bursts: Array<{ x: number; y: number; r: number; t0: number; dur: number; color: string }> = [];
+
+  private drawBursts(v: View): void {
+    if (!this.bursts.length) return;
+    const now = this.match.time;
+    this.bursts = this.bursts.filter((g) => now - g.t0 < g.dur + 0.15 && now >= g.t0 - 0.5);
+    const ctx = v.ctx;
+    ctx.save();
+    for (const g of this.bursts) {
+      const q = Math.min(1, Math.max(0, (now - g.t0) / g.dur));
+      const x = v.toScreenX(g.x);
+      const y = v.toScreenY(g.y);
+      const R = g.r * v.pxPerTile;
+      // The danger zone fills in as the burst nears; an outer ring closes onto it.
+      ctx.globalAlpha = 0.18 + 0.32 * q;
+      ctx.fillStyle = g.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y, R, R * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = g.color;
+      ctx.lineWidth = Math.max(2, 2.5 * v.baseScale);
+      ctx.beginPath();
+      ctx.ellipse(x, y, R, R * 0.55, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      const outer = R * (1 + 1.2 * (1 - q));
+      ctx.globalAlpha = 0.7 * (1 - q * 0.5);
+      ctx.beginPath();
+      ctx.ellipse(x, y, outer, outer * 0.55, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Aiming a send-out: a dotted arc of white balls from the trainer to where the Pokémon will land.
+   * No range ring; the landing spot is held within the throw radius and the battle area
+   * (match.sendOutSpot). Drawn on the HUD layer, so trees and the night never hide it.
+   */
+  private drawThrowAim(v: View): void {
+    const d = this.match.playerDuel;
+    if (!d || d.state === 'over') return;
     const me = d.a.trainer === this.match.player ? d.a : d.b;
     if (!this.aimingThrow(me)) return;
-    const R = (CONFIG.duel as typeof CONFIG.duel & { throwRadius?: number }).throwRadius ?? 6;
-    const t = me.trainer;
-    const s = v.baseScale;
-    const pulse = 0.5 + 0.5 * Math.sin(this.match.time * 5);
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,214,90,0.08)';
-    ctx.strokeStyle = `rgba(255,214,90,${0.65 + 0.25 * pulse})`;
-    ctx.lineWidth = Math.max(2, 3 * s);
-    ctx.setLineDash([12 * s, 7 * s]);
-    ctx.beginPath();
-    ctx.ellipse(v.toScreenX(t.x), v.toScreenY(t.y), R * v.pxPerTile, R * v.pxPerTile, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Where it lands: the cursor (or the spot already chosen), held inside the ring and on open ground.
     const input = this.ctx.input;
     const want = Input.touch ? me.aimAt ?? null : this.hud.hitTest(input.mouseX, input.mouseY) ? me.aimAt ?? null : v.toWorld(input.mouseX, input.mouseY);
-    if (want) {
-      const at = this.match.sendOutSpot(d, me, want);
-      const x = v.toScreenX(at.x);
-      const y = v.toScreenY(at.y);
-      const r = (0.45 + 0.08 * pulse) * v.pxPerTile;
-      ctx.strokeStyle = 'rgba(20,14,30,0.85)';
-      ctx.lineWidth = Math.max(3, 5 * s);
+    if (!want) return;
+    const ctx = v.hud;
+    const t = me.trainer;
+    const s = v.baseScale;
+    const at = this.match.sendOutSpot(d, me, want);
+    const x = v.toScreenX(at.x);
+    const y = v.toScreenY(at.y);
+    const sx = v.toScreenX(t.x);
+    const sy = v.toScreenY(t.y) - 0.6 * v.pxPerTile;
+    const lift = Math.min(2.6, Math.hypot(at.x - t.x, at.y - t.y) * 0.4) * v.pxPerTile;
+    const cx = (sx + x) / 2;
+    const cy = Math.min(sy, y) - lift;
+    ctx.save();
+    // A soft shadow where it lands.
+    ctx.fillStyle = 'rgba(10,6,20,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 0.32 * v.pxPerTile, 0.16 * v.pxPerTile, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Dots marching along the arc, a little bigger near the top.
+    const n = 11;
+    const off = (this.match.time * 1.6) % 1;
+    for (let i = 0; i < n; i++) {
+      const k = (i + off) / n;
+      const px = (1 - k) * (1 - k) * sx + 2 * (1 - k) * k * cx + k * k * x;
+      const py = (1 - k) * (1 - k) * sy + 2 * (1 - k) * k * cy + k * k * y;
+      const r = Math.max(2.5, 3.6 * s) * (0.8 + 0.5 * 4 * k * (1 - k));
+      ctx.fillStyle = 'rgba(25,16,10,0.7)';
       ctx.beginPath();
-      ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = '#ffd65a';
-      ctx.lineWidth = Math.max(2, 2.5 * s);
-      ctx.stroke();
-      // The arc the ball will take.
-      const sx = v.toScreenX(t.x);
-      const sy = v.toScreenY(t.y) - 0.6 * v.pxPerTile;
-      const lift = Math.min(2.2, Math.hypot(at.x - t.x, at.y - t.y) * 0.35) * v.pxPerTile;
-      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-      ctx.lineWidth = Math.max(1.5, 2 * s);
-      ctx.setLineDash([4 * s, 6 * s]);
+      ctx.arc(px, py, r + Math.max(1, 1.2 * s), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fffaf0';
       ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo((sx + x) / 2, Math.min(sy, y) - lift, x, y);
-      ctx.stroke();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -1853,6 +1892,9 @@ export class MatchScreen implements Screen {
         break;
       case 'dodged':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.4, 'Dodged!', '#e9ddff', 13);
+        break;
+      case 'telegraph':
+        this.bursts.push({ x: ev.x, y: ev.y, r: ev.radius, t0: this.match.time, dur: Math.max(0.05, ev.seconds), color: typeColor(ev.move.type) });
         break;
       case 'thaw':
         this.floaters.add(ev.mon.x, ev.mon.y - 0.2, 'Thawed out', '#a8e8ff', 13);
@@ -2465,6 +2507,7 @@ export class MatchScreen implements Screen {
       ctx.restore();
     }
     this.drawThrowTarget(v);
+    this.drawBursts(v);
     this.drawDuelRing(v);
     if (!this.stylerLine.length && !Input.touch) this.drawAim(v);
     this.drawStyler(v);
@@ -2927,6 +2970,7 @@ export class MatchScreen implements Screen {
       this.drawFlyBar(v, alpha);
     } else v.hud.clearRect(0, 0, v.width, v.height);
     this.floaters.draw(v, v.hud);
+    this.drawThrowAim(v);
     if (!this.spectator && !Input.touch) this.drawReticleTop(v);
     this.drawDuelHud(v);
     this.drawFinalIntro(v, frameDt);

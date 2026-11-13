@@ -105,6 +105,7 @@
   "battle": {
     "_channelComment": "Channelled beams: these moves keep firing for channel.seconds after they go off, a pulse every channel.tick seconds, and the user steers the beam (the player with the cursor, others at their target) turning at most channel.turnDegPerSec. The user stands still meanwhile. The whole channel deals powerMult x the move's power, spread over the pulses.",
     "channel": {
+      "walkSpeed": 0.5,
       "moves": [
         "flamethrower",
         "ice-beam",
@@ -128,6 +129,10 @@
     },
     "_shotDodgeComment": "A shot in flight misses only if its target got more than shotDodgeTiles sideways out of the line it was shot along (plus its body); moving toward or away from the shooter does not dodge it.",
     "shotDodgeTiles": 1.3,
+    "_telegraphComment": "Instant moves (single target, no projectile, nothing from the sky, no beam) show a ring of radius tiles for seconds before they burst; a target out of the ring then is missed. contactPower: contact moves' damage multiplier. skyReach: how far a move called down from the sky reaches (shots reach 5).",
+    "telegraph": { "seconds": 0.35, "radius": 0.75 },
+    "contactPower": 1.1,
+    "skyReach": 4,
     "_lungeComment": "Contact moves (physical, one target, not thrown: Tackle, Bite, Close Combat...) lunge: the user rushes at its target at speed tiles a second (times its Speed multiplier and the move's dash), covering at most maxTiles (times dash) in at most maxSeconds, following a target that moves, and strikes on arrival. It lands only if the two bodies are then touching (data.contactReach: their radii plus reachSlack): a lunge stopped by a wall, or a target that got away, is a miss. A contact hit or a slam's landing shoves the target knockTiles (times power / 80 within knockScale, times the move's knock) unless it is a boss, a legend, an Alpha, a Shadow Pokémon, mid-leap or much bigger than the attacker; walls stop the shove.",
     "lunge": {
       "speed": 16,

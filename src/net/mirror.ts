@@ -495,7 +495,7 @@ export class MirrorMatch {
     if (isMon(o)) {
       const mon = o as unknown as Mon;
       const moved = mx || my ? m.walkSteered(mon, mx, my, dt) : 0;
-      if (animate) {
+      if (animate && !mon.channel) {
         setWalking(mon, moved > 1e-4);
       }
       return;

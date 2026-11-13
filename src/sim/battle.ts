@@ -33,6 +33,7 @@ export type BattleEvent =
   | { type: 'heal'; mon: Mon; amount: number; move: MoveDef }
   | { type: 'thaw'; mon: Mon }
   | { type: 'dodged'; mon: Mon }
+  | { type: 'telegraph'; x: number; y: number; radius: number; seconds: number; move: MoveDef }
   | { type: 'dodge-start'; mon: Mon }
   | { type: 'channel-start'; mon: Mon; move: MoveDef }
   | { type: 'channel-end'; mon: Mon }
@@ -143,6 +144,8 @@ export function computeDamage(rng: Rng, attacker: Mon, defender: Mon, m: MoveDef
   let dmg = (((2 * combatLevel(attacker.level)) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
+  // Contact moves take the most risk (they must close in), so they hit a little harder.
+  if (isContact(m)) dmg *= CONFIG.battle.contactPower;
   // Held items.
   const held = attacker.heldItem ? ITEMS[attacker.heldItem] : undefined;
   if (held?.effect === 'choice-band' && m.category === 'physical') dmg *= 1.5;
@@ -174,6 +177,7 @@ export function expectedDamage(attacker: Mon, defender: Mon, m: MoveDef, seen = 
   let dmg = (((2 * combatLevel(attacker.level)) / 5 + 2) * m.power * (a / d)) / 50 + 2;
   if (attacker.types.includes(m.type)) dmg *= CONFIG.battle.stab;
   dmg *= eff;
+  if (isContact(m)) dmg *= CONFIG.battle.contactPower;
   // Someone else's Pokémon (`seen`): what it holds can't be seen, so it isn't counted.
   const held = attacker.heldItem && !seen ? ITEMS[attacker.heldItem] : undefined;
   if (held?.effect === 'choice-band' && m.category === 'physical') dmg *= 1.5;
@@ -268,6 +272,8 @@ export function moveReach(m: MoveDef): number {
       // jumps a little further; anything thrown, shot or called down reaches a good way.
       if (isContact(m)) return 0.6 + CONFIG.battle.lunge.maxTiles * (m.dash ?? 1) + (m.reach ?? 0);
       if (m.leap) return 4.2;
+      // Called down from the sky: hard to dodge, so a shorter reach than a shot.
+      if (m.fx?.some((p) => p.anchor === 'sky')) return CONFIG.battle.skyReach;
       return 5;
   }
 }
@@ -302,7 +308,19 @@ export function travelDelay(attacker: Mon, target: Mon, m: MoveDef): number {
     return wait + Math.max(0.12, Math.abs((carrier.height ?? 6) - lift) / (carrier.speed ?? 14));
   }
   if (m.fx?.some((p) => p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream'))) return BEAM_REACH;
+  // An instant move (Psychic, Earth Power) shows a ring on the ground first and bursts after it.
+  if (isInstant(m)) return CONFIG.battle.telegraph.seconds;
   return 0;
+}
+
+/**
+ * A move that would otherwise land the moment it is cast, out of range of its user: a single-target,
+ * non-contact attack with no projectile, nothing falling from the sky and no beam. These get a
+ * warning ring (battle.telegraph) so a dodge or a step aside can beat them.
+ */
+export function isInstant(m: MoveDef): boolean {
+  if (m.shape !== 'single' || m.category === 'status' || m.power <= 0 || isContact(m) || m.leap || isChannel(m.id)) return false;
+  return !m.fx?.some((p) => p.anchor === 'projectile' || p.anchor === 'sky' || (p.anchor === 'attacker' && (p.mode === 'beam' || p.mode === 'stream')));
 }
 
 /** Seconds a beam takes to reach out to its target (its impacts wait for it too, matchScreen.spawnFx). */
@@ -333,7 +351,7 @@ export class BattleSystem {
   /** Each beam's leftover fractions of a point, per target (see landHit); gone with the beam. */
   private readonly beamCarry = new WeakMap<object, Map<Mon, number>>();
   /** Hits on their way to their targets (see impactDelay). */
-  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number }> = [];
+  inFlight: Array<{ t: number; attacker: Mon; target: Mon; m: MoveDef; x: number; y: number; fromX: number; fromY: number; tele?: boolean }> = [];
   /** Line of fire for shots and area moves (set by the match from its map; none in tests). */
   shotLine: ShotLine | null = null;
   /** Called with every attack that goes off (the match uses it for the Shadow Crystal; `scale`: a beam pulse's share). */
@@ -669,7 +687,9 @@ export class BattleSystem {
         continue;
       }
       const wait = impactDelay(attacker, target, m);
-      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, fromX: attacker.x, fromY: attacker.y });
+      const tele = isInstant(m);
+      if (tele) this.events.push({ type: 'telegraph', x: target.x, y: target.y, radius: CONFIG.battle.telegraph.radius, seconds: wait, move: m });
+      if (wait > 0.04) this.inFlight.push({ t: wait, attacker, target, m, x: target.x, y: target.y, fromX: attacker.x, fromY: attacker.y, tele });
       else this.landHit(attacker, target, m);
     }
     // The user's own stat changes come once per cast, not once per Pokémon hit. A drawback (Close
@@ -768,6 +788,15 @@ export class BattleSystem {
       if (!BattleSystem.active(f.target) || !this.isEnemy(f.attacker, f.target)) continue;
       if (f.target.dodge && f.target.dodge.safe > 0) {
         this.events.push({ type: 'dodged', mon: f.target });
+        continue;
+      }
+      // A telegraphed burst lands on its ring: out of it, missed.
+      if (f.tele) {
+        if (Math.hypot(f.target.x - f.x, f.target.y - f.y) > CONFIG.battle.telegraph.radius + hitPad(f.target.species)) {
+          this.events.push({ type: 'text', mon: f.target, text: 'Missed!' });
+          continue;
+        }
+        this.landHit(f.attacker, f.target, f.m);
         continue;
       }
       // Missed only by stepping out of the shot's path: how far the target got sideways from the

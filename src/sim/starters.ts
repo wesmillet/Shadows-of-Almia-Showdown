@@ -113,9 +113,9 @@ export function poolSize(unlocked: readonly string[] = []): number {
 }
 
 /**
- * The daily Egg (online): Uncommon or better, a tier by the starter weights (Uncommon 27, Rare 13,
- * Epic 7, Mythic 3: about 54%, 26%, 14% and 6%), every tier in full whatever the player's pool, then
- * a Pokémon in it.
+ * The daily Egg (online): Uncommon or better, a tier by data/spawns.json eggWeights (Uncommon 27,
+ * Rare 13, Epic 7, Mythic 0.47: about 57%, 27%, 15% and 1%), every tier in full whatever the
+ * player's pool, then a Pokémon in it.
  */
 /** The daily Egg's tier weights (data/spawns.json eggWeights; the starter tiers' own weights otherwise). */
 const EGG_WEIGHTS = (SPAWNS as unknown as { eggWeights?: Record<string, number> }).eggWeights ?? {};

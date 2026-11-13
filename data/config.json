@@ -290,7 +290,7 @@
   },
   "visitors": {
     "_comment": "hoopaChance: the share of matches Hoopa appears in (add ?hoopa=1 to the address, or turn on tester mode with ?dev=1, to force it).",
-    "hoopaChance": 0.1,
+    "hoopaChance": 0.05,
     "_portalComment": "Hoopa's portal legendary comes through at your best level + portalLevelOver, at least portalLevelMin (at most 100). Legendaries in a bout can be caught with balls at legendCatchScale of the ball's usual rate, or join you when worn to their last HP.",
     "portalLevelOver": 20,
     "portalLevelMin": 60,

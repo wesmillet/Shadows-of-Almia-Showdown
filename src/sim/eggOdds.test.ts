@@ -3,14 +3,14 @@ import { Rng } from '../core/rng';
 import { rollEgg, lineBase, nominationBase } from './starters';
 
 describe('daily Egg odds and first stages', () => {
-  it('hatches a Mythic about 2% of the time, never a Common', () => {
+  it('hatches a Mythic about 1% of the time, never a Common', () => {
     const rng = new Rng(11);
     const n = 40000;
     const count: Record<string, number> = {};
     for (let i = 0; i < n; i++) { const t = rollEgg(rng).tier.id; count[t] = (count[t] ?? 0) + 1; }
     expect(count.common ?? 0).toBe(0);
-    expect((count.mythic ?? 0) / n).toBeGreaterThan(0.015);
-    expect((count.mythic ?? 0) / n).toBeLessThan(0.025);
+    expect((count.mythic ?? 0) / n).toBeGreaterThan(0.007);
+    expect((count.mythic ?? 0) / n).toBeLessThan(0.013);
   });
   it('starts Slaking, Tinkaton, Scizor, Kleavor, Musharna and Cofagrigus lines at their first stage', () => {
     expect(lineBase('0289')).toBe('0287');

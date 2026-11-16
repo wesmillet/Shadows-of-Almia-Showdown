@@ -68,3 +68,21 @@ describe('release dupes cleanup', () => {
     expect(log.map((r) => r.ref)).toEqual(['admin:release-dupe']);
   });
 });
+
+describe('snag copies cleanup', () => {
+  it('removes the listed non-shiny snag copies, keeps the original', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'glitch4-'));
+    let a = new Accounts(dir, 'dev');
+    const user = (name: string) => Number(a.db.prepare('INSERT INTO users (username, pass_hash, created_at) VALUES (?, ?, ?)').run(name, 'x', Date.now()).lastInsertRowid);
+    const c = user('clein');
+    const d = user('Drac');
+    const put = (id: number, owner: number, dex: string, level: number) =>
+      a.db.prepare('INSERT INTO pc (id, user_id, entry, created_at) VALUES (?, ?, ?, ?)').run(id, owner, JSON.stringify({ dex, name: dex, level, moves: [] }), Date.now());
+    put(4279, c, '0384', 60);
+    put(4513, d, '0384', 94);
+    a.db.prepare("DELETE FROM meta WHERE key = 'snag_copies_v1'").run();
+    a = new Accounts(dir, 'dev');
+    const ids = (a.db.prepare('SELECT id FROM pc ORDER BY id').all() as Array<{ id: number }>).map((r) => r.id);
+    expect(ids).toEqual([4279]);
+  });
+});

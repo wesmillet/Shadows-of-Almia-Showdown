@@ -853,6 +853,13 @@ export class Accounts {
     this.removeGlitchCopies('release_dupes_shiny_v1', [
       ['clein', 4052, '0633', 81], ['offdwight', 4482, '0885', 54],
     ], { shinyOnly: true, ref: 'admin:release-dupe' });
+    // 16 November: copies kept by snagging another player's PC starter (13 to 16 November), approved
+    // by the game's owner. Jirachi only hatches from eggs, so a kept Jirachi from a match is a copy;
+    // each Rayquaza here came from a match with clein, whose own (4279) is the original. Level-checked.
+    this.removeGlitchCopies('snag_copies_v1', [
+      ['camdoogs', 4350, '0384', 51], ['drac', 4513, '0384', 94], ['panda9', 3878, '0385', 88], ['denjiii', 4000, '0385', 61],
+      ['denjiii', 4149, '0385', 64], ['poliwhirl_guy', 4167, '0385', 47], ['clein', 4349, '0385', 10],
+    ], { shinyOnly: false, ref: 'admin:snag-copy' });
   }
 
   /**

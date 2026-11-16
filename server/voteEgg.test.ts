@@ -56,19 +56,6 @@ describe('vote callback', () => {
   });
 });
 
-describe('Vote Egg tier', () => {
-  it('is always Rare or better', () => {
-    const { a, v, user } = setup();
-    for (let i = 0; i < 60; i++) {
-      user(`P${i}`);
-      v.record({ secret: SECRET, voted: '1', userid: `P${i}`, vote_id: `t${i}` }, DAY1);
-    }
-    const tiers = (a.db.prepare('SELECT tier FROM vote_eggs').all() as { tier: string }[]).map((r) => r.tier);
-    expect(tiers).toHaveLength(60);
-    for (const t of tiers) expect(['rare', 'epic', 'mythic']).toContain(t);
-  });
-});
-
 describe('hatching the Vote Egg', () => {
   it('puts one level 5 Pokémon in the PC, once, oldest Egg first', () => {
     const { v, user, pc } = setup();

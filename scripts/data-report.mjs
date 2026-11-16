@@ -208,6 +208,14 @@ if (who.startsWith('dex_') && has('collection_log')) {
     if (!e || !String(e.dex ?? '').startsWith(want)) return null;
     return { at: new Date(Number(r.at)).toISOString().slice(0, 16), player: names2.get(r.user_id) ?? String(r.user_id), action: r.action, pcId: r.pc_id, dex: e.dex, level: e.level, shiny: !!e.shiny, fromPc: !!e.fromPc, ref: r.ref, stillThere: pcNowIds.has(r.pc_id) };
   }).filter(Boolean);
+  // Each win or voucher pick: who else was in that match, and which of them already had this species in their PC then.
+  const holdersAt = all("SELECT p.user_id, p.created_at FROM pc p WHERE json_extract(p.entry, '$.dex') LIKE ?", want + '%');
+  const loggedAt = all("SELECT user_id, at, action FROM collection_log WHERE action LIKE 'add%' OR action IN ('trade:in','wonder:in')").filter(() => true);
+  out.dexPickMatches = out.dexAdds.filter((x) => /add:(win|voucher)/.test(x.action)).map((x) => {
+    const t = Date.parse(x.at + ':00Z') + 60000;
+    const players = has('match_players') ? all('SELECT user_id, outcome FROM match_players WHERE match_id = ?', x.ref) : [];
+    return { pcId: x.pcId, by: x.player, match: x.ref, players: players.map((r) => ({ player: names2.get(r.user_id) ?? String(r.user_id), outcome: r.outcome, hadOne: holdersAt.some((h) => h.user_id === r.user_id && Number(h.created_at) < t - 60000) || out.dexAdds.some((a) => a.player === (names2.get(r.user_id) ?? '') && Date.parse(a.at + ':00Z') < t - 60000 && !/remove|release|out/.test(a.action)) })) };
+  });
   out.dexHolders = all("SELECT u.username AS player, p.id AS pcId, json_extract(p.entry, '$.dex') AS dex, json_extract(p.entry, '$.level') AS level, json_extract(p.entry, '$.shiny') AS shiny, p.created_at FROM pc p JOIN users u ON u.id = p.user_id WHERE json_extract(p.entry, '$.dex') LIKE ? ORDER BY u.username, p.id", want + '%').map((r) => ({ ...r, created_at: new Date(Number(r.created_at)).toISOString().slice(0, 16) }));
 }
 console.log('REPORT_JSON_START');

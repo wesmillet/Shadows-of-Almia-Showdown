@@ -197,9 +197,9 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
   out.adminShinies = all("SELECT u.username AS name, json_extract(p.entry, '$.dex') AS dex FROM pc p JOIN users u ON u.id = p.user_id WHERE u.role = 'admin' AND json_extract(p.entry, '$.shiny') IN (1, 'true')");
   out.shinySweep = [...players.values()].filter((p) => p.glitch.length || p.later.length).sort((a, b) => b.glitch.length - a.glitch.length || b.later.length - a.later.length);
 }
-// One species (player = DEX:0384): every add of it, with who, how, when, and whether it is still in that PC,
+// One species (player = DEX_0384): every add of it, with who, how, when, and whether it is still in that PC,
 // plus each holder's other copies; trades and Wonder Trades of it from the log.
-if (who.startsWith('dex:') && has('collection_log')) {
+if (who.startsWith('dex_') && has('collection_log')) {
   const want = who.slice(4);
   const names2 = new Map(all('SELECT id, username FROM users').map((u) => [u.id, u.username]));
   const pcNowIds = new Set(all("SELECT id FROM pc WHERE json_extract(entry, '$.dex') LIKE ?", want + '%').map((r) => r.id));

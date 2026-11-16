@@ -171,6 +171,8 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
   if (has('collection_log')) {
     const DUPE_FROM = Date.parse('2026-11-13T21:09:00Z');
     const adds = all("SELECT user_id, pc_id, action, detail, at FROM collection_log WHERE action LIKE 'add%' ORDER BY at");
+    const pcRows = all("SELECT p.id, p.user_id, json_extract(p.entry, '$.dex') AS dex, json_extract(p.entry, '$.level') AS level, json_extract(p.entry, '$.shiny') AS shiny FROM pc p").map((x) => ({ ...x, shiny: x.shiny === 1 || x.shiny === 'true' }));
+    out.logActions = all("SELECT action, COUNT(*) AS n FROM collection_log GROUP BY action ORDER BY n DESC");
     const seen = new Map();
     const out2 = new Map();
     for (const r of adds) {
@@ -181,7 +183,10 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
       const had = seen.get(key) ?? 0;
       if (Number(r.at) >= DUPE_FROM && /add:(win|voucher)/.test(r.action) && had > 0) {
         const p = out2.get(r.user_id) ?? { player: names.get(r.user_id) ?? String(r.user_id), repeats: [] };
-        p.repeats.push({ pcId: r.pc_id, name: e.name, dex: base, level: e.level, shiny: !!e.shiny, at: new Date(Number(r.at)).toISOString().slice(0, 16), how: r.action, alreadyHad: had });
+        // Twins: the player's other PC entries of this species that exist now with the same level and shininess.
+        const twins = pcRows.filter((x) => x.user_id === r.user_id && x.id !== r.pc_id && x.dex === base && Number(x.level) === Number(e.level) && !!x.shiny === !!e.shiny).map((x) => x.id);
+        const stillHas = pcRows.some((x) => x.id === r.pc_id);
+        p.repeats.push({ pcId: r.pc_id, name: e.name, dex: base, level: e.level, shiny: !!e.shiny, at: new Date(Number(r.at)).toISOString().slice(0, 16), how: r.action, alreadyHad: had, twins, stillHas });
         out2.set(r.user_id, p);
       }
       seen.set(key, had + 1);

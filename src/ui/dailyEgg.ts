@@ -5,6 +5,11 @@
  * Clicking it hatches it: it wobbles, cracks (Pokémon Emerald's own hatching frames), bursts into
  * shell pieces in a flash, and the Pokémon steps out, sprite and all; it goes to the PC.
  *
+ * The same card, kind 'vote', is the Vote Egg in the opposite corner (server/voteEgg.ts): one bonus Egg a UTC
+ * day for voting for the game on VibeTopList. Until today's is earned, a click opens the vote page
+ * (in a new tab) and the card asks the server again every few seconds for a while, and whenever the
+ * tab comes back into focus. It only shows for signed-in players on a server with voting set up.
+ *
  * Pictures: assets/ui/eggs (scripts/eggs.py).
  */
 import type { Connection } from '../net/connection';
@@ -23,6 +28,10 @@ interface EggState {
   color: string;
   today: { dex: string; name: string; shiny: boolean } | null;
   error?: string;
+  /** Vote Egg only: voting is set up, the player's vote page, and whether today's is earned. */
+  on?: boolean;
+  voteUrl?: string | null;
+  votedToday?: boolean;
 }
 interface Hatched {
   dex: string;
@@ -57,6 +66,8 @@ export class DailyEgg {
   private skew = 0;
   /** When the waiting Egg was last asked about again (ms, this browser's clock). */
   private asked = 0;
+  /** Vote Egg: until when (ms) to keep asking whether the vote has come through. */
+  private watchUntil = 0;
 
   constructor(
     private readonly net: Connection,
@@ -64,20 +75,36 @@ export class DailyEgg {
     private readonly sprites: SpriteRegistry,
     /** Not signed in: a click takes the player online (to sign in). */
     private readonly onSignIn: () => void,
+    readonly kind: 'daily' | 'vote' = 'daily',
   ) {
     void assets.loadImage('ui/eggs/egg_shards.png').then((im) => (this.shards = im));
     void this.refresh();
+    if (kind === 'vote' && typeof window !== 'undefined') {
+      window.addEventListener('focus', () => {
+        if (this.state && !this.state.votedToday) void this.refresh();
+      });
+    }
+  }
+
+  private get base(): string {
+    return this.kind === 'vote' ? '/api/egg/vote' : '/api/egg';
+  }
+
+  /** Shown at all: the Vote Egg only for signed-in players on a server with voting set up. */
+  get visible(): boolean {
+    return this.kind === 'daily' || (this.signedIn && !!this.state?.on);
   }
 
   private async refresh(): Promise<void> {
     const me = await this.net.refreshMe().catch(() => null);
     this.signedIn = !!me?.signedIn;
     if (!this.signedIn) return;
-    const st = await this.net.api<EggState>('/api/egg').catch(() => null);
+    const st = await this.net.api<EggState>(this.base).catch(() => null);
     if (!st || st.error) return;
     if (typeof st.now === 'number') this.skew = st.now - Date.now();
     this.state = st;
     if (st.today) this.showMon(st.today.dex, st.today.shiny);
+    if (st.ready) this.watchUntil = 0;
   }
 
   private egg(tier: string, hatch: boolean): HTMLImageElement | null {
@@ -96,18 +123,27 @@ export class DailyEgg {
     this.mon = a;
   }
 
-  /** The card, bottom left of the home page. */
+  /** The card: bottom left of the home page (the Vote Egg: bottom right). */
   rect(v: View): { x: number; y: number; w: number; h: number } {
     const s = v.baseScale;
     const w = Math.round(210 * s);
     const h = Math.round(232 * s);
-    return { x: Math.round(20 * s), y: Math.round(v.height - h - 20 * s), w, h };
+    // The Daily Egg bottom left; the Vote Egg mirrors it bottom right.
+    const x = this.kind === 'vote' ? Math.round(v.width - w - 20 * s) : Math.round(20 * s);
+    return { x, y: Math.round(v.height - h - 20 * s), w, h };
   }
 
   /** A click on the home page: true when it was the Egg's. */
   click(v: View, x: number, y: number): boolean {
+    if (!this.visible) return false;
     const r = this.rect(v);
     if (!hit(x, y, r.x, r.y, r.w, r.h)) return false;
+    // The Vote Egg before today's is earned: off to the vote page, and watch for the vote landing.
+    if (this.kind === 'vote' && this.state && !this.state.ready && !this.state.votedToday && this.t < 0) {
+      if (this.state.voteUrl) window.open(this.state.voteUrl, '_blank', 'noopener');
+      this.watchUntil = Date.now() + 5 * 60_000;
+      return true;
+    }
     if (!this.signedIn) {
       this.onSignIn();
       return true;
@@ -115,7 +151,7 @@ export class DailyEgg {
     if (this.state?.ready && this.t < 0) {
       this.t = 0;
       this.failed = null;
-      void this.net.api<Hatched>('/api/egg/hatch', {}).then((r) => {
+      void this.net.api<Hatched>(`${this.base}/hatch`, {}).then((r) => {
         if (r.error) {
           this.failed = r.error;
           this.t = -1;
@@ -140,8 +176,13 @@ export class DailyEgg {
       p.vy += 260 * dt;
       p.spin += dt * 8;
     }
-    // The wait is over: ask the server for the new Egg (at most every 20 seconds).
     const st = this.state;
+    // Vote Egg: just voted, so ask every 5 seconds until the Egg turns up (or 5 minutes pass).
+    if (this.kind === 'vote' && this.t < 0 && st && !st.ready && Date.now() < this.watchUntil && Date.now() - this.asked > 5_000) {
+      this.asked = Date.now();
+      void this.refresh();
+    }
+    // The wait is over: ask the server for the new Egg (at most every 20 seconds).
     if (this.t < 0 && st && !st.ready && Date.now() + this.skew >= st.nextAt && Date.now() - this.asked > 20_000) {
       this.asked = Date.now();
       void this.refresh();
@@ -162,7 +203,9 @@ export class DailyEgg {
     if (this.t >= BURST_AT + 1.2 && this.result) {
       // Done: the Egg has hatched.
       const r = this.result;
-      this.state = { ready: false, nextAt: r.nextAt, tier: r.tier, tierName: r.tierName, color: r.color, today: { dex: r.dex, name: r.name, shiny: r.shiny } };
+      this.state = { ...this.state, ready: false, nextAt: r.nextAt, tier: r.tier, tierName: r.tierName, color: r.color, today: { dex: r.dex, name: r.name, shiny: r.shiny } };
+      // A Vote Egg left from an earlier day may still be waiting.
+      if (this.kind === 'vote') void this.refresh();
       this.t = -1;
       this.result = null;
       this.pieces = [];
@@ -170,15 +213,35 @@ export class DailyEgg {
   }
 
   draw(v: View, mx: number, my: number): void {
+    if (!this.visible) return;
     const s = v.baseScale;
     const h = v.hud;
     const r = this.rect(v);
     const over = hit(mx, my, r.x, r.y, r.w, r.h);
     panel(v, r.x, r.y, r.w, r.h, 14);
     const cx = r.x + r.w / 2;
-    text(v, 'Daily Egg', cx, r.y + 30 * s, 17, { align: 'center', color: INK.text, shadow: false });
+    text(v, this.kind === 'vote' ? 'Vote Egg' : 'Daily Egg', cx, r.y + 30 * s, 17, { align: 'center', color: INK.text, shadow: false });
     const st = this.state;
     const tier = st?.tier ?? 'common';
+    // Vote Egg not yet earned today: a faded Egg and an invitation to vote.
+    if (this.kind === 'vote' && st && !st.ready && !st.votedToday && this.t < 0) {
+      const img = this.egg('common', false);
+      const k = Math.max(2, Math.round(3 * s));
+      const floor = r.y + 150 * s;
+      if (img) {
+        h.save();
+        h.imageSmoothingEnabled = false;
+        h.globalAlpha = over ? 0.85 : 0.55;
+        h.translate(Math.round(cx), Math.round(floor));
+        h.rotate(Math.sin(this.clock * 2.2) * 0.05);
+        h.drawImage(img, 0, 0, 32, 32, -16 * k, -30 * k, 32 * k, 32 * k);
+        h.restore();
+      }
+      const waiting = Date.now() < this.watchUntil;
+      text(v, waiting ? 'Waiting for your vote...' : 'Vote for the game', cx, r.y + 178 * s, 12, { align: 'center', color: waiting ? INK.dim : INK.text, shadow: false, maxWidth: r.w - 20 * s });
+      text(v, waiting ? 'it can take a minute' : over ? 'Click to vote!' : 'for a bonus Egg', cx, r.y + 200 * s, 13, { align: 'center', color: over && !waiting ? INK.accent : INK.dim, shadow: false, maxWidth: r.w - 20 * s });
+      return;
+    }
     const floor = r.y + 150 * s; // where the Egg (and the Pokémon) stand
     const k = Math.max(2, Math.round(3 * s));
     const hatching = this.t >= 0;
@@ -252,7 +315,8 @@ export class DailyEgg {
       text(v, `${st.today.shiny ? '★ ' : ''}${st.today.name} · in your PC`, cx, line1, 12, { align: 'center', color: st.today.shiny ? INK.gold : INK.text, shadow: false, maxWidth: r.w - 20 * s });
     }
     const wait = st.nextAt - (Date.now() + this.skew);
-    text(v, wait > 0 ? `Next Egg in ${until(wait)}` : 'Your next Egg is coming...', cx, line2, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 20 * s });
+    const label = this.kind === 'vote' ? `Vote again in ${until(Math.max(60_000, wait))}` : wait > 0 ? `Next Egg in ${until(wait)}` : 'Your next Egg is coming...';
+    text(v, label, cx, line2, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - 20 * s });
   }
 
   /** The Pokémon standing where the Egg was, in its own idle animation. */

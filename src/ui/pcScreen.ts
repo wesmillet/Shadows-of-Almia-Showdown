@@ -48,7 +48,7 @@ const tierInfo = (id: string): { name: string; color: string } => {
 };
 
 const viaLabel = (via: PcEntry['via']): string =>
-  via === 'win' ? 'Victory prize' : via === 'egg' ? 'Daily Egg' : via === 'gift' ? 'Mystery Gift' : via === 'reward' ? 'Starter achievement' : 'Extraction Voucher';
+  via === 'win' ? 'Victory prize' : via === 'egg' ? 'Daily Egg' : via === 'vote' ? 'Vote Egg' : via === 'gift' ? 'Mystery Gift' : via === 'reward' ? 'Starter achievement' : 'Extraction Voucher';
 
 type Glyph = 'heart' | 'heartOutline' | 'star' | 'sparkle';
 

@@ -25,6 +25,7 @@ import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
 import { pcFields } from './pcFields';
 import { Gifts } from './gifts';
+import { VoteEggs } from './voteEgg';
 import { Dms } from './dms';
 import type { ServerMsg } from '../src/net/protocol';
 import { Feedback } from './feedback';
@@ -142,6 +143,7 @@ export class Accounts {
   readonly db: DatabaseSync;
   /** Mystery Gift codes (server/gifts.ts). */
   readonly gifts: Gifts;
+  readonly voteEggs: VoteEggs;
   /** Direct messages between friends (server/dms.ts). */
   readonly dms: Dms;
   /** Players' bug reports and suggestions (server/feedback.ts). */
@@ -302,6 +304,7 @@ export class Accounts {
     this.publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, '') ?? null;
     this.starters = new StarterUnlocks(this.db, (id) => this.profile(id).stats, (id) => this.pcDexes(id), (id, dex, shiny) => this.giveReward(id, dex, shiny));
     this.gifts = new Gifts(this);
+    this.voteEggs = new VoteEggs(this);
     this.dms = new Dms({
       db: this.db,
       user: (id) => this.user(id) ?? undefined,
@@ -935,7 +938,7 @@ export class Accounts {
   }
 
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
-  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift' | 'reward', matchId: string): number {
+  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift' | 'reward' | 'vote', matchId: string): number {
     // Kept at the first stage of its line (pcBase): an evolved Pokémon goes back to its first form.
     const base = firstForm(m);
     const entry = {
@@ -1337,6 +1340,14 @@ export class Accounts {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers }).end(JSON.stringify(body));
     };
     try {
+      // VibeTopList's vote callback (server/voteEgg.ts): a server, not a browser, so before the header
+      // guard. The secret it carries is never logged.
+      if (path === '/api/vote-callback' && (req.method === 'GET' || req.method === 'POST')) {
+        const body = req.method === 'POST' ? await readForm(req).catch(() => ({})) : {};
+        const r = this.voteEggs.record({ ...Object.fromEntries(url.searchParams), ...body });
+        if (r.outcome && r.outcome !== 'duplicate') console.info(`[vote] ${r.outcome}`);
+        return send(r.status, { ok: r.status === 200 });
+      }
       if (req.method === 'POST') {
         // Cross-site forms can not set this header: a simple guard against request forgery.
         if (req.headers['x-almia'] !== '1') return send(403, { error: 'Missing header' });
@@ -1384,6 +1395,16 @@ export class Accounts {
         if (!me) return send(401, { error: 'Sign in for a daily Egg' });
         if (me.banned) return send(403, { error: 'This account is banned' });
         const r = this.hatchEgg(me.id);
+        return 'error' in r ? send(409, r) : send(200, r);
+      }
+      if (req.method === 'GET' && path === '/api/egg/vote') {
+        if (!me) return send(401, { error: 'Sign in for a Vote Egg' });
+        return send(200, this.voteEggs.state(me.id, me.username));
+      }
+      if (req.method === 'POST' && path === '/api/egg/vote/hatch') {
+        if (!me) return send(401, { error: 'Sign in for a Vote Egg' });
+        if (me.banned) return send(403, { error: 'This account is banned' });
+        const r = this.voteEggs.hatch(me.id);
         return 'error' in r ? send(409, r) : send(200, r);
       }
       if (req.method === 'POST' && path === '/api/register') return await this.register(req, res, send);
@@ -1969,6 +1990,25 @@ class BodyTooLarge extends Error {
   constructor() {
     super('body too large');
   }
+}
+
+/** A small request body as fields: JSON, or a form (application/x-www-form-urlencoded). */
+async function readForm(req: IncomingMessage): Promise<Record<string, unknown>> {
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > 8192) throw new BodyTooLarge();
+  }
+  const t = body.trim();
+  if (t.startsWith('{')) {
+    try {
+      const v = JSON.parse(t) as unknown;
+      return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+  return Object.fromEntries(new URLSearchParams(t));
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {

@@ -847,16 +847,12 @@ export class Accounts {
       ['camdoogs', 1569, '0004'], ['wizardbro', 523, '0004'], ['saiduk', 1739, '0258'], ['pochonew', 1384, '0129'], ['remsouye', 2152, '0782'],
       ['iris', 2767, '0498'], ['ander02', 2378, '0393'], ['ogoat', 2381, '0816'],
     ]);
-    // 16 November: release-and-recatch copies (13 to 16 November), approved by the game's owner. Each
-    // is a win or voucher pick after the bug went live with a same-level twin already in that PC, or
-    // one of clein's five extra Lugia (Lugia comes once a match; he keeps his first, 4168), or a
-    // shiny voucher pick of a line Offdwight already had shiny. Level-checked, shiny or not.
-    this.removeGlitchCopies('release_dupes_v1', [
-      ['clein', 4274, '0249', 67], ['clein', 4294, '0249', 60], ['clein', 4368, '0249', 67], ['clein', 4522, '0249', 60], ['clein', 4529, '0249', 64],
-      ['clein', 4556, '0249', 62], ['clein', 4379, '0885', 90], ['clein', 4159, '0371', 84], ['clein', 4262, '0328', 77], ['clein', 4052, '0633', 81],
-      ['offdwight', 4329, '0371', 77], ['offdwight', 4348, '0133', 66], ['offdwight', 4482, '0885', 54], ['shanharvey', 3989, '0704', 80],
-      ['shanharvey', 3905, '0859', 85], ['drac', 4132, '0280', 73], ['justjaymee', 3667, '0322', 85], ['sapomago', 4511, '0123', 67],
-    ], { shinyOnly: false, ref: 'admin:release-dupe' });
+    // 16 November: shiny release-and-recatch copies (13 to 16 November), approved by the game's
+    // owner (non-shiny repeats are left alone). clein's shiny Deino has a same-level twin (3338);
+    // Offdwight's shiny Dreepy is a voucher pick of a line he already had shiny. Level-checked.
+    this.removeGlitchCopies('release_dupes_shiny_v1', [
+      ['clein', 4052, '0633', 81], ['offdwight', 4482, '0885', 54],
+    ], { shinyOnly: true, ref: 'admin:release-dupe' });
   }
 
   /**

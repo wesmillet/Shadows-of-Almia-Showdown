@@ -48,3 +48,23 @@ describe('glitch copies sweep', () => {
     expect(ids).toEqual([9999]);
   });
 });
+
+describe('release dupes cleanup', () => {
+  it('removes listed non-shiny copies at the listed level only, once', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'glitch3-'));
+    let a = new Accounts(dir, 'dev');
+    const user = (name: string) => Number(a.db.prepare('INSERT INTO users (username, pass_hash, created_at) VALUES (?, ?, ?)').run(name, 'x', Date.now()).lastInsertRowid);
+    const c = user('Clein');
+    const put = (id: number, dex: string, level: number) =>
+      a.db.prepare('INSERT INTO pc (id, user_id, entry, created_at) VALUES (?, ?, ?, ?)').run(id, c, JSON.stringify({ dex, name: dex, level, moves: [] }), Date.now());
+    put(4168, '0249', 60); // his first Lugia: kept
+    put(4294, '0249', 60); // listed copy: removed
+    put(4529, '0249', 70); // listed but levelled since: kept
+    a.db.prepare("DELETE FROM meta WHERE key = 'release_dupes_v1'").run();
+    a = new Accounts(dir, 'dev');
+    const ids = (a.db.prepare('SELECT id FROM pc ORDER BY id').all() as Array<{ id: number }>).map((r) => r.id);
+    expect(ids).toEqual([4168, 4529]);
+    const log = a.db.prepare("SELECT ref FROM collection_log WHERE action = 'remove:glitch-copy'").all() as Array<{ ref: string }>;
+    expect(log.map((r) => r.ref)).toEqual(['admin:release-dupe']);
+  });
+});

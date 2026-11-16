@@ -847,6 +847,16 @@ export class Accounts {
       ['camdoogs', 1569, '0004'], ['wizardbro', 523, '0004'], ['saiduk', 1739, '0258'], ['pochonew', 1384, '0129'], ['remsouye', 2152, '0782'],
       ['iris', 2767, '0498'], ['ander02', 2378, '0393'], ['ogoat', 2381, '0816'],
     ]);
+    // 16 November: release-and-recatch copies (13 to 16 November), approved by the game's owner. Each
+    // is a win or voucher pick after the bug went live with a same-level twin already in that PC, or
+    // one of clein's five extra Lugia (Lugia comes once a match; he keeps his first, 4168), or a
+    // shiny voucher pick of a line Offdwight already had shiny. Level-checked, shiny or not.
+    this.removeGlitchCopies('release_dupes_v1', [
+      ['clein', 4274, '0249', 67], ['clein', 4294, '0249', 60], ['clein', 4368, '0249', 67], ['clein', 4522, '0249', 60], ['clein', 4529, '0249', 64],
+      ['clein', 4556, '0249', 62], ['clein', 4379, '0885', 90], ['clein', 4159, '0371', 84], ['clein', 4262, '0328', 77], ['clein', 4052, '0633', 81],
+      ['offdwight', 4329, '0371', 77], ['offdwight', 4348, '0133', 66], ['offdwight', 4482, '0885', 54], ['shanharvey', 3989, '0704', 80],
+      ['shanharvey', 3905, '0859', 85], ['drac', 4132, '0280', 73], ['justjaymee', 3667, '0322', 85], ['sapomago', 4511, '0123', 67],
+    ], { shinyOnly: false, ref: 'admin:release-dupe' });
   }
 
   /**
@@ -856,27 +866,31 @@ export class Accounts {
    * player, be the same species and shiny, and not be out on Wonder Trade, or it is skipped. Every
    * removal goes in the collection log with the full entry.
    */
-  private removeGlitchCopies(key: string, copies: Array<[string, number, string]>): void {
+  private removeGlitchCopies(
+    key: string,
+    copies: Array<[string, number, string, number?]>,
+    opts: { shinyOnly: boolean; ref: string } = { shinyOnly: true, ref: 'admin:pc-starter-glitch' },
+  ): void {
     if (this.db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) return;
     let removed = 0;
     const skipped: number[] = [];
     const players = new Set<string>();
     this.atomically(() => {
-      for (const [username, pcId, dex] of copies) {
+      for (const [username, pcId, dex, level] of copies) {
         const owner = this.db.prepare('SELECT id FROM users WHERE lower(username) = ?').get(username) as { id: number } | undefined;
         const row = owner ? (this.db.prepare('SELECT entry FROM pc WHERE id = ? AND user_id = ?').get(pcId, owner.id) as { entry: string } | undefined) : undefined;
-        let e: { dex?: string; shiny?: unknown } | null = null;
+        let e: { dex?: string; shiny?: unknown; level?: unknown } | null = null;
         try {
           e = row ? JSON.parse(row.entry) : null;
         } catch {
           e = null;
         }
-        if (!owner || !e || e.dex !== dex || !e.shiny || this.isPooled(pcId)) {
+        if (!owner || !e || e.dex !== dex || (opts.shinyOnly && !e.shiny) || (level !== undefined && Number(e.level) !== level) || this.isPooled(pcId)) {
           skipped.push(pcId);
           continue;
         }
         this.db.prepare("UPDATE trades SET status = 'cancelled', closed_at = ? WHERE status = 'open' AND (give_pc = ? OR want_pc = ?)").run(Date.now(), pcId, pcId);
-        this.logCollection(owner.id, 'remove:glitch-copy', { pcId, ref: 'admin:pc-starter-glitch', detail: e });
+        this.logCollection(owner.id, 'remove:glitch-copy', { pcId, ref: opts.ref, detail: e });
         this.db.prepare('DELETE FROM pc WHERE id = ? AND user_id = ?').run(pcId, owner.id);
         players.add(username);
         removed++;

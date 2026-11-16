@@ -68,6 +68,8 @@ export class DailyEgg {
   private asked = 0;
   /** Vote Egg: until when (ms) to keep asking whether the vote has come through. */
   private watchUntil = 0;
+  /** Vote Egg: once today's has hatched, the card shows what came out until this moment (ms), then goes. */
+  private goneAt = 0;
 
   constructor(
     private readonly net: Connection,
@@ -92,7 +94,11 @@ export class DailyEgg {
 
   /** Shown at all: the Vote Egg only for signed-in players on a server with voting set up. */
   get visible(): boolean {
-    return this.kind === 'daily' || (this.signedIn && !!this.state?.on);
+    if (this.kind === 'daily') return true;
+    const st = this.state;
+    if (!this.signedIn || !st?.on) return false;
+    // Today's Vote Egg received: gone until tomorrow (a moment after hatching, to see what came out).
+    return !(st.votedToday && !st.ready && this.t < 0 && Date.now() >= this.goneAt);
   }
 
   private async refresh(): Promise<void> {
@@ -205,7 +211,10 @@ export class DailyEgg {
       const r = this.result;
       this.state = { ...this.state, ready: false, nextAt: r.nextAt, tier: r.tier, tierName: r.tierName, color: r.color, today: { dex: r.dex, name: r.name, shiny: r.shiny } };
       // A Vote Egg left from an earlier day may still be waiting.
-      if (this.kind === 'vote') void this.refresh();
+      if (this.kind === 'vote') {
+        this.goneAt = Date.now() + 5000;
+        void this.refresh();
+      }
       this.t = -1;
       this.result = null;
       this.pieces = [];
@@ -214,6 +223,17 @@ export class DailyEgg {
 
   draw(v: View, mx: number, my: number): void {
     if (!this.visible) return;
+    // The Vote Egg fades out over its last moment once today's has hatched.
+    const st = this.state;
+    const fading = this.kind === 'vote' && !!st?.votedToday && !st.ready && this.t < 0;
+    const alpha = fading ? Math.max(0, Math.min(1, (this.goneAt - Date.now()) / 700)) : 1;
+    v.hud.save();
+    v.hud.globalAlpha = alpha;
+    this.drawCard(v, mx, my);
+    v.hud.restore();
+  }
+
+  private drawCard(v: View, mx: number, my: number): void {
     const s = v.baseScale;
     const h = v.hud;
     const r = this.rect(v);

@@ -80,8 +80,13 @@ function ballBase(ballId: string, ctx: CatchContext): number {
 /** The Quick Ball's first-throw bonus against this target (see ballModifier). */
 
 export function catchChance(target: Mon, modifier: number): number {
-  if (!Number.isFinite(modifier)) return 1;
   const hpFrac = target.maxHp > 0 ? target.hp / target.maxHp : 1;
+  if (!Number.isFinite(modifier)) {
+    // A Master Ball is sure, except on a few legends (Lugia) that must be worn down first (masterBelow).
+    const below = (CONFIG.catch as { hardCatch?: Record<string, { masterBelow?: number }> }).hardCatch?.[(target.dex ?? '').slice(0, 4)]?.masterBelow;
+    if (below === undefined || hpFrac < below) return 1;
+    modifier = 1;
+  }
   const base = 0.12 + 0.78 * (1 - hpFrac);
   const statusBonus = target.status ? (CONFIG.catch.statusBonus as Record<string, number>)[target.status] ?? 1 : 1;
   // A few legends (Lugia) are far harder: a fraction of the usual chance, and a low ceiling.

@@ -28,7 +28,7 @@ import { SpriteRegistry } from '../sprites/pokemonSprite';
 
 /** The merchant's stock: rare things the town stalls do not carry (evolution stones are the towns' to sell). */
 const MERCHANT_STOCK: Array<[string, number]> = [
-  ['rare-candy', 1200], ['super-rod', 4000], ['master-ball', 8000], ['extraction-voucher', 6000],
+  ['rare-candy', 1200], ['super-rod', 4000], ['master-ball', 15000], ['extraction-voucher', 6000],
   ['leftovers', 2200], ['life-orb', 2600], ['max-revive', 8000],
 ];
 

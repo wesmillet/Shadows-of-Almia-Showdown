@@ -197,6 +197,19 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
   out.adminShinies = all("SELECT u.username AS name, json_extract(p.entry, '$.dex') AS dex FROM pc p JOIN users u ON u.id = p.user_id WHERE u.role = 'admin' AND json_extract(p.entry, '$.shiny') IN (1, 'true')");
   out.shinySweep = [...players.values()].filter((p) => p.glitch.length || p.later.length).sort((a, b) => b.glitch.length - a.glitch.length || b.later.length - a.later.length);
 }
+// One species (player = DEX:0384): every add of it, with who, how, when, and whether it is still in that PC,
+// plus each holder's other copies; trades and Wonder Trades of it from the log.
+if (who.startsWith('dex:') && has('collection_log')) {
+  const want = who.slice(4);
+  const names2 = new Map(all('SELECT id, username FROM users').map((u) => [u.id, u.username]));
+  const pcNowIds = new Set(all("SELECT id FROM pc WHERE json_extract(entry, '$.dex') LIKE ?", want + '%').map((r) => r.id));
+  out.dexAdds = all("SELECT user_id, pc_id, action, ref, detail, at FROM collection_log WHERE (action LIKE 'add%' OR action IN ('trade:in','wonder:in','release','remove:glitch-copy','remove:duplicate')) ORDER BY at").map((r) => {
+    let e = null; try { e = JSON.parse(r.detail); } catch {}
+    if (!e || !String(e.dex ?? '').startsWith(want)) return null;
+    return { at: new Date(Number(r.at)).toISOString().slice(0, 16), player: names2.get(r.user_id) ?? String(r.user_id), action: r.action, pcId: r.pc_id, dex: e.dex, level: e.level, shiny: !!e.shiny, fromPc: !!e.fromPc, ref: r.ref, stillThere: pcNowIds.has(r.pc_id) };
+  }).filter(Boolean);
+  out.dexHolders = all("SELECT u.username AS player, p.id AS pcId, json_extract(p.entry, '$.dex') AS dex, json_extract(p.entry, '$.level') AS level, json_extract(p.entry, '$.shiny') AS shiny, p.created_at FROM pc p JOIN users u ON u.id = p.user_id WHERE json_extract(p.entry, '$.dex') LIKE ? ORDER BY u.username, p.id", want + '%').map((r) => ({ ...r, created_at: new Date(Number(r.created_at)).toISOString().slice(0, 16) }));
+}
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));
 console.log('REPORT_JSON_END');

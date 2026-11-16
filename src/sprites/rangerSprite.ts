@@ -14,6 +14,9 @@ import charactersJson from '../../data/characters.json';
 import { Assets, imagePixels, warnOnce } from './assets';
 
 export type Facing4 = 'up' | 'down' | 'left' | 'right';
+/** Facing for each Dir8 (0 = down, clockwise as in DIR_VECTORS). */
+const FACING8 = ['down', 'downright', 'right', 'upright', 'up', 'upleft', 'left', 'downleft'] as const;
+const FACING4_OF8: readonly Facing4[] = ['down', 'right', 'right', 'right', 'up', 'left', 'left', 'left'];
 
 export interface AlmiaCharacter {
   file: string;
@@ -75,22 +78,42 @@ export class RangerSheet {
     return this.foot;
   }
 
+  /** The clip for a name if this sheet has it, directly or as its left-facing twin flipped. */
+  private find(name: string): { frames: number[]; flip: boolean } | null {
+    const m = this.manifest;
+    if (!m) return null;
+    const table = this.def?.animations ?? m.animations;
+    const direct = table[name];
+    if (direct && direct.length) return { frames: direct, flip: false };
+    const mirrored = m.mirror?.[name] ?? (name.endsWith('right') ? name.replace(/right$/, 'left') : undefined);
+    const alt = mirrored ? table[mirrored] : undefined;
+    if (alt && alt.length) return { frames: alt, flip: true };
+    return null;
+  }
+
   /** Frame indices for an animation, resolving mirrored right-facing entries. */
   private clip(name: string): { frames: number[]; flip: boolean } {
     const m = this.manifest;
     if (!m) return { frames: [0], flip: false };
-    const table = this.def?.animations ?? m.animations;
-    const direct = table[name];
-    if (direct && direct.length) return { frames: direct, flip: false };
-    const mirrored = m.mirror?.[name];
-    const alt = mirrored ? table[mirrored] : undefined;
-    if (alt && alt.length) return { frames: alt, flip: true };
+    const found = this.find(name);
+    if (found) return found;
     const fallback = m.animations.idle_down ?? [0];
     return { frames: fallback, flip: false };
   }
 
+  /**
+   * Frame for an eight-way direction (Dir8). Sheets with diagonal clips (idle_downleft, walk_upleft,
+   * ...; the right-hand ones are the left ones flipped) use them; the rest face the nearest side.
+   */
+  frameDir(dir: number, phase: number, moving: boolean): SheetRect {
+    const d = ((dir % 8) + 8) % 8;
+    const f8 = FACING8[d] as string;
+    if (f8.length > 5 && this.find(`${moving ? 'walk' : 'idle'}_${f8}`)) return this.frame(f8, phase, moving);
+    return this.frame(FACING4_OF8[d] as Facing4, phase, moving);
+  }
+
   /** Frame for a facing and a walk-cycle phase in [0, 1); `moving` false gives the idle pose. */
-  frame(facing: Facing4, phase: number, moving: boolean): SheetRect {
+  frame(facing: Facing4 | string, phase: number, moving: boolean): SheetRect {
     const def = this.def;
     if (!def || !this.image) {
       const w = def?.frame_w ?? 22;

@@ -202,7 +202,7 @@ export function drawTrainer(view: View, t: Trainer, rangers: RangerSprites, alph
   const sheet = rangers.get(t.role);
   // On a ladder trainers climb facing the cliff, up or down, with the back-view walk cycle.
   const climbing = ground?.onLadder?.(Math.floor(p.x), Math.floor(p.y)) ?? false;
-  const f = sheet.frame(climbing ? 'up' : dir8To4(t.dir), t.walkPhase, t.moving);
+  const f = climbing ? sheet.frame('up', t.walkPhase, t.moving) : sheet.frameDir(t.dir, t.walkPhase, t.moving);
   if (t.mount) return drawRider(view, t, f, sx, sy, s, alpha);
   if (t.grabbed != null) {
     // In Darkrai's grip: after a moment the trainer is pulled down into the shadow pool, darkening.

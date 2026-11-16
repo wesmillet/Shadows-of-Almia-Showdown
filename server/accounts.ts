@@ -1495,7 +1495,7 @@ export class Accounts {
         const i = Number(b.index);
         const pick = Number.isInteger(i) ? party[i] : undefined;
         if (!pick || pick.taken) return send(400, { error: 'Pick one of your Pokémon from that match' });
-        if (pick.fromPc) return send(400, { error: `${pick.name} came from your PC: it is already yours` });
+        if (pick.fromPc) return send(400, { error: `${pick.name} came from a trainer's PC, so it can't be kept` });
         pick.taken = true;
         // The PC entry and the spent pick together, or neither (a crash between them can not leave a pick to spend twice).
         this.db.exec('BEGIN IMMEDIATE');

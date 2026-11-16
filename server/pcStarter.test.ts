@@ -24,7 +24,7 @@ describe('PC starters', async () => {
     // A second Pokémon, and a voucher: the PC starter still can not go.
     p.party.push(m.makeMon('0004', 5, p, p.x, p.y));
     p.items[0] = { id: 'extraction-voucher', count: 1 };
-    expect(m.extractWithVoucher(0, 0)).toMatch(/came from your PC/);
+    expect(m.extractWithVoucher(0, 0)).toMatch(/came from a trainer's PC/);
     expect(p.party).toHaveLength(2);
     expect(p.items[0]?.count).toBe(1);
     // Alpha and PC marks together.
@@ -34,25 +34,25 @@ describe('PC starters', async () => {
     expect(m2.player.party[0]?.fromPc).toBe(true);
   });
 
-  it("a PC starter snagged by another trainer is theirs to keep", () => {
+  it('a PC Pokémon stays marked when snagged, or released and caught back (no copies)', () => {
     const m = new Match({ ground: world.ground(), rng: new Rng(5), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 1 });
     const p = m.player;
     const foe = m.trainers.find((t) => t !== p && !t.visitor && !t.challenger)!;
     const theirs = m.makeMon('0008', 20, foe, foe.x, foe.y);
     theirs.fromPc = true;
     foe.party = [theirs];
-    // As if a battle was won with a Snag Machine offer on it.
     m.snagOffer = { from: foe } as typeof m.snagOffer;
     p.items = p.items.map(() => null);
     p.items[0] = { id: 'capture-styler', count: 1 };
     m.snag(0);
     expect(p.party).toContain(theirs);
-    expect(theirs.fromPc).toBe(false);
-    // Released and caught back: a new catch, not a PC copy.
+    expect(theirs.fromPc).toBe(true);
+    // Released and caught back: still the PC one, so it can not be kept.
     const own = p.party[0]!;
     own.fromPc = true;
     m.release(0);
-    expect(own.fromPc).toBe(false);
+    expect(own.fromPc).toBe(true);
+    expect(own.owner).toBeNull();
   });
 
   it('finds duplicate legendaries and removes only later copies', () => {

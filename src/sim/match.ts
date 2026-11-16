@@ -1068,8 +1068,8 @@ export class Match {
         best.owner = t;
         best.wild = false;
         best.fainted = false;
-        // "From your PC" belonged to its old trainer: for the new one it is a fresh Pokémon.
-        best.fromPc = false;
+        // A Pokémon from a PC stays marked whoever holds it: the original is still in that PC, so
+        // keeping this one would make a copy.
         best.hp = Math.max(1, Math.floor(best.maxHp * 0.5));
         best.status = null;
         best.anim.play('Idle', { restart: true });
@@ -1121,8 +1121,7 @@ export class Match {
     m.owner = p;
     m.wild = false;
     m.fainted = false;
-    // Snagged from another trainer: their PC is not this player's, so it can be kept.
-    m.fromPc = false;
+    // Snagged: a Pokémon from a PC stays marked (its original is still in that trainer's PC).
     m.duelId = undefined;
     m.hp = Math.max(1, Math.floor(m.maxHp * 0.5));
     m.status = null;
@@ -2977,8 +2976,8 @@ export class Match {
     // Its held item stays with the trainer (when there is room for it).
     if (m.heldItem && this.giveItem(p, m.heldItem)) m.heldItem = null;
     m.owner = null;
-    // Released, it belongs to no one: caught again it is a new catch (by anyone).
-    m.fromPc = false;
+    // Released, a Pokémon from a PC keeps its mark: caught again (by anyone) it is still a copy of the
+    // one in that PC, so it can not be kept (release, walk off and recatch was a duplication bug).
     m.stowed = false;
     m.recall = false;
     m.target = null;
@@ -3008,7 +3007,7 @@ export class Match {
     if (!m) return '';
     if (!this.keepsResults) return 'Nothing leaves a private match: vouchers do nothing here';
     if (p.duelId) return "You can't extract a Pokémon during a battle";
-    if (m.fromPc) return `${m.name} came from your PC: it is already yours`;
+    if (m.fromPc) return `${m.name} came from a trainer's PC, so it can't be kept`;
     if (!p.party.some((o) => o !== m && !o.fainted && !o.captured)) return "You can't extract your last Pokémon that can fight";
     this.takeItem(p, itemSlot);
     p.party.splice(index, 1);

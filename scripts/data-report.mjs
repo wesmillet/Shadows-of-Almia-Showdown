@@ -166,6 +166,28 @@ if (who === 'shiny_sweep' && has('pc') && has('users')) {
       return e ? { at: new Date(Number(r.at)).toISOString().slice(0, 16), kind: r.action.split(':')[0], to: names.get(r.user_id) ?? String(r.user_id), from: r.other_name, ref: r.ref, name: e.name, dex: e.dex, level: e.level, shiny: !!e.shiny, mythic: MYTHIC.has(String(e.dex).slice(0, 4)) } : null;
     }).filter((x) => x && (x.shiny || x.mythic));
   }
+  // Release-and-recatch dupes (live from 13 Nov 21:09 UTC until the fix): win or voucher picks of a
+  // species the player already had in their PC (same first form) when it was picked.
+  if (has('collection_log')) {
+    const DUPE_FROM = Date.parse('2026-11-13T21:09:00Z');
+    const adds = all("SELECT user_id, pc_id, action, detail, at FROM collection_log WHERE action LIKE 'add%' ORDER BY at");
+    const seen = new Map();
+    const out2 = new Map();
+    for (const r of adds) {
+      let e; try { e = JSON.parse(r.detail); } catch { continue; }
+      if (!e || !e.dex) continue;
+      const base = String(e.dex);
+      const key = r.user_id + '|' + base;
+      const had = seen.get(key) ?? 0;
+      if (Number(r.at) >= DUPE_FROM && /add:(win|voucher)/.test(r.action) && had > 0) {
+        const p = out2.get(r.user_id) ?? { player: names.get(r.user_id) ?? String(r.user_id), repeats: [] };
+        p.repeats.push({ pcId: r.pc_id, name: e.name, dex: base, level: e.level, shiny: !!e.shiny, at: new Date(Number(r.at)).toISOString().slice(0, 16), how: r.action, alreadyHad: had });
+        out2.set(r.user_id, p);
+      }
+      seen.set(key, had + 1);
+    }
+    out.repeatPicks = [...out2.values()].sort((a, b) => b.repeats.length - a.repeats.length);
+  }
   // The admins' shiny lines (for a shiny-starter question).
   out.adminShinies = all("SELECT u.username AS name, json_extract(p.entry, '$.dex') AS dex FROM pc p JOIN users u ON u.id = p.user_id WHERE u.role = 'admin' AND json_extract(p.entry, '$.shiny') IN (1, 'true')");
   out.shinySweep = [...players.values()].filter((p) => p.glitch.length || p.later.length).sort((a, b) => b.glitch.length - a.glitch.length || b.later.length - a.later.length);

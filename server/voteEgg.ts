@@ -8,7 +8,8 @@
  *   userid   the ref the link carried: the voter's username
  *   vote_id  VibeTopList's id for the vote (the same on the POST and the GET, and on any retry)
  * A counted vote from a known, unbanned account gives one Vote Egg a UTC day, rolled like the daily
- * Egg (tier by the starter tiers' weights, shiny at the wild odds). Each vote_id is acted on once, so
+ * Egg but Rare or better (the daily Egg's weights without Uncommon: about 64% Rare, 35% Epic, 1.2%
+ * Mythic), shiny at the wild odds. Each vote_id is acted on once, so
  * the POST, the GET and retries never give two. An Egg not hatched the day it was earned waits.
  * VibeTopList lets an IP vote every 12 hours; the day limit keeps it to one Egg a day either way.
  *
@@ -32,6 +33,9 @@ export const VOTE_EGG_SQL = `
     vote_id TEXT PRIMARY KEY, username TEXT, user_id INTEGER, voted INTEGER NOT NULL, outcome TEXT NOT NULL, at INTEGER NOT NULL
   );
 `;
+
+/** The lowest tier a Vote Egg can be. */
+export const VOTE_EGG_MIN_TIER = 'rare';
 
 export type VoteOutcome = 'egg' | 'already-today' | 'not-counted' | 'unknown-user' | 'duplicate';
 
@@ -114,7 +118,7 @@ export class VoteEggs {
       const u = username ? (db.prepare('SELECT id, banned FROM users WHERE username = ? COLLATE NOCASE').get(username) as { id: number; banned: number } | undefined) : undefined;
       if (!u || u.banned) return done('unknown-user');
       const rng = new Rng(randomInt(1, 2 ** 31));
-      const { tier, dex } = rollEgg(rng);
+      const { tier, dex } = rollEgg(rng, VOTE_EGG_MIN_TIER);
       const shiny = SpriteRegistry.hasShiny(dex) && rng.chance(CONFIG.wild.shinyChance);
       const r = db.prepare('INSERT OR IGNORE INTO vote_eggs (user_id, day, dex, shiny, tier, vote_id, at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(u.id, utcDay(now), dex, shiny ? 1 : 0, tier.id, voteId, now);
       return done(Number(r.changes) === 1 ? 'egg' : 'already-today', u.id);

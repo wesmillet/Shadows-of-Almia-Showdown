@@ -120,8 +120,13 @@ export function poolSize(unlocked: readonly string[] = []): number {
 /** The daily Egg's tier weights (data/spawns.json eggWeights; the starter tiers' own weights otherwise). */
 const EGG_WEIGHTS = (SPAWNS as unknown as { eggWeights?: Record<string, number> }).eggWeights ?? {};
 
-export function rollEgg(rng: Rng): { tier: StarterTier; dex: string } {
-  const tiers = STARTER_TIERS.filter((t) => t.dex.length && t.id !== 'common').map((t) => ({ ...t, weight: EGG_WEIGHTS[t.id] ?? t.weight }));
+/**
+ * An Egg's roll: a tier by the egg weights (never Common), then a Pokémon in it. `minTier` drops the
+ * tiers below it (the Vote Egg: 'rare'), keeping the others' weights as they are.
+ */
+export function rollEgg(rng: Rng, minTier?: string): { tier: StarterTier; dex: string } {
+  const from = minTier ? Math.max(0, STARTER_TIERS.findIndex((t) => t.id === minTier)) : 0;
+  const tiers = STARTER_TIERS.filter((t, i) => i >= from && t.dex.length && t.id !== 'common').map((t) => ({ ...t, weight: EGG_WEIGHTS[t.id] ?? t.weight }));
   const r = rollStarter(rng, tiers);
   return { tier: STARTER_TIERS.find((t) => t.id === r.tier.id) ?? r.tier, dex: r.dex };
 }

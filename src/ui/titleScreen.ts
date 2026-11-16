@@ -80,6 +80,8 @@ export class TitleScreen implements Screen {
   private pcCount = loadPc().length;
   /** The daily Egg card (when this build has a game server). */
   private readonly egg: DailyEgg | null;
+  /** The Vote Egg card, bottom right (signed-in players, when the server has voting set up). */
+  private readonly voteEgg: DailyEgg | null;
   private readonly fx: FxLibrary;
   private readonly vfx = new VfxLayer();
   private readonly groundVfx = new VfxLayer();
@@ -124,6 +126,7 @@ export class TitleScreen implements Screen {
     private readonly net: Connection | null = null,
   ) {
     this.egg = net && onOnline ? new DailyEgg(net, assets, sprites, () => this.leave(onOnline)) : null;
+    this.voteEgg = net && onOnline ? new DailyEgg(net, assets, sprites, () => this.leave(onOnline), 'vote') : null;
     this.lighting = new Lighting(ctx.view);
     this.fx = new FxLibrary(assets);
     this.fx.preload(Object.values(FX));
@@ -422,8 +425,10 @@ export class TitleScreen implements Screen {
     const on = this.onOnline;
     const o = this.onlineRect();
     this.egg?.step(dt);
+    this.voteEgg?.step(dt);
     for (const c of input.takeClicks()) {
       if (this.egg?.click(this.ctx.view, c.x, c.y)) continue;
+      if (this.voteEgg?.click(this.ctx.view, c.x, c.y)) continue;
       if (on && hit(c.x, c.y, o.x, o.y, o.w, o.h)) this.leave(on);
       else if (!on && hit(c.x, c.y, b.x, b.y, b.w, b.h)) this.leave(this.onStart);
       else {
@@ -1072,6 +1077,7 @@ export class TitleScreen implements Screen {
     ];
     for (const [label, r] of rows) button(v, label, r.x, r.y, r.w, r.h, hit(mx, my, r.x, r.y, r.w, r.h), '#f4e6c8');
     this.egg?.draw(v, mx, my);
+    this.voteEgg?.draw(v, mx, my);
     // Build stamp, top right: which deploy this browser has loaded.
     const stamp = `Version ${__BUILD__}`;
     const sm = strip(v, stamp, 0, -9999, 11);

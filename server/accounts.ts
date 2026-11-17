@@ -1001,7 +1001,8 @@ export class Accounts {
     for (const r of results) {
       if (!r.key.startsWith('u')) continue;
       const userId = Number(r.key.slice(1));
-      const picks = (r.outcome === 'win' ? 1 : 0) + r.vouchers;
+      // No more picks than Pokémon they could go to (one from a trainer's PC can't be kept).
+      const picks = Math.min((r.outcome === 'win' ? 1 : 0) + r.vouchers, (r.party as Array<{ fromPc?: boolean }>).filter((m) => m && !m.fromPc).length);
       this.db.prepare('INSERT OR REPLACE INTO match_players (match_id, user_id, place, outcome, stats, party, picks_left, rating_delta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(matchId, userId, r.place, r.outcome, JSON.stringify(r.stats), JSON.stringify(r.party), picks, ratingDeltas.get(r.key) ?? null);
       const p = this.profile(userId);
@@ -1522,8 +1523,19 @@ export class Accounts {
         return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
       }
       if (req.method === 'GET' && path === '/api/extract') {
-        const row = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 1').get(me.id) as { match_id: string; party: string; picks_left: number; outcome: string } | undefined;
-        return send(200, row ? { match: row.match_id, party: JSON.parse(row.party), picks: row.picks_left, outcome: row.outcome } : { match: null });
+        // The latest match with a pick left and a Pokémon it can still go to. One whose party has none left
+        // to keep (all kept already, or from a trainer's PC) is closed, so its keep menu stops coming back.
+        const rows = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 5').all(me.id) as Array<{ match_id: string; party: string; picks_left: number; outcome: string }>;
+        for (const row of rows) {
+          const party = JSON.parse(row.party) as Array<{ taken?: boolean; fromPc?: boolean }>;
+          const open = party.filter((m) => m && !m.taken && !m.fromPc).length;
+          if (open === 0) {
+            this.db.prepare('UPDATE match_players SET picks_left = 0 WHERE user_id = ? AND match_id = ?').run(me.id, row.match_id);
+            continue;
+          }
+          return send(200, { match: row.match_id, party, picks: Math.min(row.picks_left, open), outcome: row.outcome });
+        }
+        return send(200, { match: null });
       }
       if (req.method === 'POST' && path === '/api/extract') {
         const b = await readJson(req);
@@ -1545,7 +1557,9 @@ export class Accounts {
           }
           const pcId = this.addToPc(me.id, pick, row.outcome === 'win' ? 'win' : 'voucher', String(b.match));
           (pick as { pcId?: number }).pcId = pcId;
-          this.db.prepare('UPDATE match_players SET picks_left = picks_left - 1, party = ? WHERE user_id = ? AND match_id = ?').run(JSON.stringify(party), me.id, String(b.match));
+          // Nothing left it could go to: the rest of the picks lapse.
+          const open = party.filter((m) => m && !m.taken && !m.fromPc).length;
+          this.db.prepare('UPDATE match_players SET picks_left = CASE WHEN ? = 0 THEN 0 ELSE picks_left - 1 END, party = ? WHERE user_id = ? AND match_id = ?').run(open, JSON.stringify(party), me.id, String(b.match));
           this.db.exec('COMMIT');
         } catch (e) {
           this.db.exec('ROLLBACK');

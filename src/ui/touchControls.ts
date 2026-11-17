@@ -245,6 +245,12 @@ function dragButton(
   };
   el.addEventListener('pointerup', (e) => end(e, false));
   el.addEventListener('pointercancel', (e) => end(e, true));
+  // A phone can drop the capture (a second finger, the stick, a system gesture) without telling the
+  // button its finger lifted: without these the button kept waiting for that finger and ignored every
+  // later press until the page was reloaded (moving and attacking at once "got stuck").
+  el.addEventListener('lostpointercapture', (e) => end(e, true));
+  window.addEventListener('pointerup', (e) => end(e, false));
+  window.addEventListener('pointercancel', (e) => end(e, true));
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
@@ -596,7 +602,11 @@ export class TouchUi {
       });
       s.appendChild(b);
     };
-    if (f.battle) s.appendChild(h('div', 'sub', 'Party changes wait until the battle is over.'));
+    // In a trainer battle: switch to it (then tap where to throw it), as a click on its card does on a computer.
+    if (f.battle) {
+      if (!m.fainted && !m.out && !m.roaming) act(`Switch to ${m.name}`, 'out');
+      else s.appendChild(h('div', 'sub', m.fainted ? `${m.name} can't battle.` : 'Other party changes wait until the battle is over.'));
+    }
     else if (!m.fainted && !m.roaming) {
       if (!m.out && m.ride !== 'riding') act('Send out', 'out');
       if (m.out && f.bench) act('Recall', 'recall');

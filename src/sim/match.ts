@@ -11,7 +11,7 @@ import { AnimPlayer, SpriteRegistry } from '../sprites/pokemonSprite';
 import { decide, partyHpFraction, type AiWorld } from './ai';
 import { botStarter, botState, botTick, duelBegins, duelHands, pilotLead, setCatchTarget, shopAt, shopFor, spares, THROW_ONLY_BALLS, throwOnlyTarget, wantsCatch } from './bot';
 import { BattleSystem, type BattleEvent } from './battle';
-import { ballModifier, newThrow, rollCatch, stepThrow, targetVisual, type Throw } from './catching';
+import { ballBelow, ballModifier, newThrow, rollCatch, stepThrow, targetVisual, tooStrongForBalls, type Throw } from './catching';
 import { type MoveDef, CONFIG, MOVES, MOVE_SLOTS, SPAWNS, SPECIES, bodyRadius, canLearnTm, hitPad, move, movesAt, pickMoves, movesLearnedBetween, moveSpeed, SIGNATURE_LEVEL, signatureMoves, starterMoves, species, statLevel, statsAtLevel, tmRefusal } from './data';
 import { inDarkness, newDarkness, stepDarkness, type DarknessState } from './darkness';
 import type { GroundItem, InventorySlot, Mon, Trainer } from './entities';
@@ -22,7 +22,7 @@ import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
 import { areaContains, makeArea, moveReach, type Area } from './battle';
-import { SHOPS, challengerLevel, inArena, koMoney, stallStock, type Challenge, type MapNpc, type Shop } from './town';
+import { SHOPS, challengerLevel, drawTeam, inArena, koMoney, rewardTms, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
 import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
@@ -619,7 +619,9 @@ export class Match {
     const lvl = challengerLevel(this.player);
     const foe = this.makeTrainer(SHOPS.challenger.name, 'challenger', false, c.npc.x, c.npc.y);
     foe.challenger = true;
-    for (const dex of SHOPS.challenger.party) {
+    const ch = SHOPS.challenger;
+    const team = ch.ranged && ch.melee ? drawTeam(this.rng, ch.ranged, ch.melee, ch.teamSize ?? 6, (d) => SPECIES.has(d)) : ch.party;
+    for (const dex of team) {
       const m = this.makeMon(dex, lvl, foe, foe.x, foe.y + 1);
       m.behavior = 'aggressive';
       foe.party.push(m);
@@ -995,6 +997,14 @@ export class Match {
         down.y = t.y;
         down.behavior = joinBehavior(t);
         down.anim.play('Idle', { restart: true });
+        // In a trainer battle it waits in its ball for its turn: standing beside the trainer outside the
+        // battle, wild Pokémon could hit it and the darkness could lull it to sleep and finish it off.
+        if (t.duelId) {
+          down.stowed = true;
+          down.target = null;
+          down.inDark = false;
+          down.drowsy = 0;
+        }
         this.takeItem(t, slot);
         healed();
         return `${down.name} was revived!`;
@@ -1147,6 +1157,17 @@ export class Match {
     return -1;
   }
 
+  /** A Pokémon too healthy for balls (Lugia above 10%) that a ball aimed at `to` (or homing on `follow`) would reach. */
+  private tooStrongNear(to: { x: number; y: number }, follow: Mon | null): Mon | null {
+    if (follow && tooStrongForBalls(follow)) return follow;
+    const bout = this.legendBoutFoe();
+    for (const w of bout ? [...this.wilds, bout] : this.wilds) {
+      if (!BattleSystem.active(w) || !tooStrongForBalls(w)) continue;
+      if (Math.hypot(w.x - to.x, w.y - to.y) < 2.5) return w;
+    }
+    return null;
+  }
+
   /** Throws the ball in `slot` toward a point; the ball is spent either way. */
   /** `follow`: a Pokémon the ball homes in on while it flies (a legendary in its bout dodges about). */
   throwBall(t: Trainer, slot: number, to: { x: number; y: number }, follow: Mon | null = null): boolean {
@@ -1156,6 +1177,12 @@ export class Match {
     // Balls still in the air count: each one may yet add a Pokémon (two quick throws at five used to make seven).
     if (partySize(t) + this.ballsInFlight(t) >= this.partyCap) {
       this.battle.events.push({ type: 'notice', text: partySize(t) >= this.partyCap ? `Your party is full (${this.partyCap}). Release one from its card to make room` : 'Wait for your last ball: your party only has room for one more', seconds: 2.4 });
+      return false;
+    }
+    // A Pokémon that must be worn down first (Lugia below 10%): no ball leaves the hand.
+    const strong = this.tooStrongNear(to, follow);
+    if (strong) {
+      this.battle.events.push({ type: 'notice', text: `${strong.name} is too strong to catch. Weaken it below ${Math.round((ballBelow(strong) ?? 0) * 100)}% HP first`, seconds: 2.4 });
       return false;
     }
     this.takeItem(t, slot);
@@ -1232,6 +1259,13 @@ export class Match {
         if (best.aura) {
           th.phase = 'done';
           this.battle.events.push({ type: 'text', mon: best, text: 'The darkness repels the ball!' });
+          return;
+        }
+        // Still too strong (it healed, or moved under a ball thrown at something else): the ball bounces and is given back.
+        if (tooStrongForBalls(best)) {
+          th.phase = 'done';
+          this.battle.events.push({ type: 'text', mon: best, text: 'The Poké Ball bounced off! Weaken it first' });
+          this.giveItem(th.thrower, th.ballId, 1);
           return;
         }
         // Hit: the target reels, then gets pulled into the ball. The ball's rule is judged where it lands.
@@ -2677,13 +2711,14 @@ export class Match {
    * anything else tracks the Pokémon it is fighting.
    */
   private steerChannels(): void {
-    const mine = this.playerDuel ? (this.playerDuel.a.trainer === this.player ? this.playerDuel.a.mon : this.playerDuel.b.mon) : this.actingMon;
     for (const m of this.mons()) {
       const ch = m.channel;
       if (!ch) continue;
-      if (m === mine && this.aim && ch.manual) {
-        ch.aimX = this.aim.x;
-        ch.aimY = this.aim.y;
+      // A beam its player fired follows that player's own aim (every seat online, not only the first).
+      const aim = ch.manual && m.owner ? this.seatOf(m.owner)?.aim : null;
+      if (aim) {
+        ch.aimX = aim.x;
+        ch.aimY = aim.y;
       } else if (m.target && BattleSystem.active(m.target)) {
         ch.aimX = m.target.x;
         ch.aimY = m.target.y;
@@ -3661,7 +3696,8 @@ export class Match {
       const r = SHOPS.challenger.reward;
       this.player.money += r.money;
       const spill: InventorySlot[] = [];
-      for (const [id, n] of r.items) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
+      const tms = rewardTms(this.rng, SHOPS.challenger.rewardTms, TM_LIST.map((t) => t.id));
+      for (const [id, n] of [...r.items, ...tms.map((id) => [id, 1] as [string, number])]) if (!this.giveItem(this.player, id, n)) spill.push({ id, count: n });
       const foe = c.foe as Trainer;
       if (spill.length) this.placeBall('cherish', spill, foe.x, foe.y + 1);
       // The champion's trophy: one of his Pokémon at your best level, shiny now and then.
@@ -3675,7 +3711,7 @@ export class Match {
         this.player.party.push(mon);
         prize = ` and ${mon.shiny ? 'a shiny' : 'his'} ${mon.name}`;
       } else if (pool.length) prize = ' (no room in your party for his Pokémon)';
-      this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money}, his items${prize}`, seconds: 4 });
+      this.battle.events.push({ type: 'notice', text: `You beat the ${SHOPS.challenger.name}! +₽${r.money}, his items${tms.length ? `, ${tms.length} TMs` : ''}${prize}`, seconds: 4 });
     }
   }
 
@@ -4186,15 +4222,26 @@ export class Match {
    */
   private finalWinBonus(winner: Trainer, loser: Trainer): void {
     const fw = (CONFIG.duel as typeof CONFIG.duel & { finalWin?: { remaining: number; heal: number; protectSeconds: number } }).finalWin ?? { remaining: 3, heal: 0.5, protectSeconds: 20 };
-    // Every win: the winner's standing Pokémon recover winHeal of their HP.
-    const winHeal = (CONFIG.duel as typeof CONFIG.duel & { winHeal?: number }).winHeal ?? 0.5;
+    // Every win: the winner's standing Pokémon recover winHeal of their HP; with winRevive, the
+    // fainted ones are revived too (back in their balls) and the whole team is cured.
+    const duelCfg = CONFIG.duel as typeof CONFIG.duel & { winHeal?: number; winRevive?: boolean };
+    const winHeal = duelCfg.winHeal ?? 0.5;
     for (const m of winner.party) {
-      if (m.captured || m.fainted) continue;
+      if (m.captured) continue;
+      if (m.fainted) {
+        if (!duelCfg.winRevive) continue;
+        m.fainted = false;
+        m.hp = 0;
+        m.stowed = true;
+        m.target = null;
+        m.anim.play('Idle', { restart: true });
+      }
       m.hp = Math.min(m.maxHp, m.hp + Math.round(m.maxHp * winHeal));
+      if (duelCfg.winRevive && m.status) this.battle.cureStatus(m);
     }
     const left = this.allTrainers.filter((t) => t.alive && !t.visitor && !t.legendBout && !t.challenger).length;
     if (left > fw.remaining) {
-      this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: 'Victory! Your team recovers', seconds: 2.5 }));
+      this.withSeat(winner, () => this.battle.events.push({ type: 'notice', text: duelCfg.winRevive ? 'Victory! Your whole team is revived and healed' : 'Victory! Your team recovers', seconds: 2.5 }));
       return;
     }
     // The last few: on top of that, a while nobody can challenge you, and the loser's bag.

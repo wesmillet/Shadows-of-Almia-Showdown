@@ -93,11 +93,12 @@
   "townItemPrice": 1500,
   "challenger": {
     "name": "Castle Champion",
-    "party": [
-      "0448",
-      "0445",
-      "0130"
-    ],
+    "_poolComment": "The champion's team: teamSize Pokémon, half drawn from ranged and half from melee (12 in all), so no two bouts are the same. party lists the whole pool (sprites are loaded from it). rewardTms: how many random TMs a win also gives [min, max].",
+    "party": ["0065", "0094", "0635", "0579", "0700", "0230", "0448", "0445", "0130", "0376", "0248", "0149"],
+    "ranged": ["0065", "0094", "0635", "0579", "0700", "0230"],
+    "melee": ["0448", "0445", "0130", "0376", "0248", "0149"],
+    "teamSize": 6,
+    "rewardTms": [2, 3],
     "levelOver": 3,
     "minLevel": 10,
     "reward": {

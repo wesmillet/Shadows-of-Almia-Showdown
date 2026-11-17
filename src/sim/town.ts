@@ -60,6 +60,10 @@ interface ShopsData {
   challenger: {
     name: string;
     party: string[];
+    ranged?: string[];
+    melee?: string[];
+    teamSize?: number;
+    rewardTms?: [number, number];
     levelOver: number;
     minLevel: number;
     retrySeconds: number;
@@ -98,4 +102,33 @@ export function challengerLevel(player: Trainer): number {
 
 export function inArena(a: Arena, x: number, y: number, pad = 0): boolean {
   return x >= a.x0 - pad && x <= a.x1 + pad && y >= a.y0 - pad && y <= a.y1 + pad;
+}
+
+/**
+ * A team of `size` drawn from a ranged and a melee pool, half from each (any odd one from ranged),
+ * in a random order. Species missing from the game are skipped.
+ */
+export function drawTeam(rng: { int(a: number, b: number): number }, ranged: string[], melee: string[], size: number, has: (dex: string) => boolean): string[] {
+  const pick = (pool: string[], n: number): string[] => {
+    const left = pool.filter(has);
+    const out: string[] = [];
+    while (out.length < n && left.length) out.push(left.splice(rng.int(0, left.length - 1), 1)[0] as string);
+    return out;
+  };
+  const team = [...pick(ranged, Math.ceil(size / 2)), ...pick(melee, Math.floor(size / 2))];
+  for (let i = team.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [team[i], team[j]] = [team[j] as string, team[i] as string];
+  }
+  return team;
+}
+
+/** `[min, max]` random TMs (different ones) for a fight's reward. */
+export function rewardTms(rng: { int(a: number, b: number): number }, range: [number, number] | undefined, tms: string[]): string[] {
+  if (!range || !tms.length) return [];
+  const n = rng.int(range[0], range[1]);
+  const left = [...tms];
+  const out: string[] = [];
+  while (out.length < n && left.length) out.push(left.splice(rng.int(0, left.length - 1), 1)[0] as string);
+  return out;
 }

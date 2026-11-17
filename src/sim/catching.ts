@@ -81,12 +81,7 @@ function ballBase(ballId: string, ctx: CatchContext): number {
 
 export function catchChance(target: Mon, modifier: number): number {
   const hpFrac = target.maxHp > 0 ? target.hp / target.maxHp : 1;
-  if (!Number.isFinite(modifier)) {
-    // A Master Ball is sure, except on a few legends (Lugia) that must be worn down first (masterBelow).
-    const below = (CONFIG.catch as { hardCatch?: Record<string, { masterBelow?: number }> }).hardCatch?.[(target.dex ?? '').slice(0, 4)]?.masterBelow;
-    if (below === undefined || hpFrac < below) return 1;
-    modifier = 1;
-  }
+  if (!Number.isFinite(modifier)) return 1;
   const base = 0.12 + 0.78 * (1 - hpFrac);
   const statusBonus = target.status ? (CONFIG.catch.statusBonus as Record<string, number>)[target.status] ?? 1 : 1;
   // A few legends (Lugia) are far harder: a fraction of the usual chance, and a low ceiling.
@@ -248,4 +243,20 @@ export function ballWobble(th: Throw): number {
   if (th.phase !== 'wobble') return 0;
   const k = th.phaseT / PHASE_SECONDS.wobble;
   return Math.sin(k * Math.PI * 2) * WOBBLE_RADIANS * (1 - k * 0.3);
+}
+
+/**
+ * The share of its HP a Pokémon must be below before any ball can be thrown at it (Lugia: 10%), or
+ * null when balls always can be. Shadow forms have their own rule.
+ */
+export function ballBelow(target: Mon): number | null {
+  if (target.shadow) return null;
+  const v = (CONFIG.catch as { hardCatch?: Record<string, { ballBelow?: number }> }).hardCatch?.[target.dex ?? '']?.ballBelow;
+  return typeof v === 'number' ? v : null;
+}
+
+/** Too healthy for a ball to be thrown at it (see ballBelow). */
+export function tooStrongForBalls(target: Mon): boolean {
+  const below = ballBelow(target);
+  return below !== null && target.maxHp > 0 && target.hp / target.maxHp >= below;
 }

@@ -20,7 +20,8 @@ import { activeParty, partySize } from './entities';
 import type { Match } from './match';
 import { joinBehavior } from './party';
 import { canStand, tryMove } from './movement';
-import type { Shop } from './town';
+import { drawTeam, rewardTms, type Shop } from './town';
+import { TM_LIST } from './items';
 import { TownsfolkCrew } from './townsfolk';
 import { formAtLevel } from './evolution';
 import type { Rng } from '../core/rng';
@@ -28,12 +29,17 @@ import { SpriteRegistry } from '../sprites/pokemonSprite';
 
 /** The merchant's stock: rare things the town stalls do not carry (evolution stones are the towns' to sell). */
 const MERCHANT_STOCK: Array<[string, number]> = [
-  ['rare-candy', 1200], ['super-rod', 4000], ['master-ball', 15000], ['extraction-voucher', 6000],
+  ['rare-candy', 1200], ['super-rod', 4000], ['master-ball', 25000], ['extraction-voucher', 6000],
   ['leftovers', 2200], ['life-orb', 2600], ['max-revive', 8000],
 ];
 
 /** Celeste's team. */
-const ACE_TEAM = ['0445', '0448', '0130'];
+// Celeste's team: six drawn from these, three ranged and three melee, so no two bouts are the same.
+const ACE_RANGED = ['0282', '0196', '0350', '0407', '0818', '0936'];
+const ACE_MELEE = ['0212', '0373', '0461', '0475', '0784', '0998'];
+const ACE_TEAM = [...ACE_RANGED, ...ACE_MELEE];
+/** How many random TMs beating Celeste also gives [min, max]. */
+const ACE_TMS: [number, number] = [2, 3];
 
 /**
  * Every species Celeste may give: the game's ordinary species, all of them. Left out: legendary and
@@ -310,8 +316,7 @@ export class Visitors {
     const lvl = Math.min(100, Math.max(15, Math.max(...m.player.party.map((x) => x.level)) + 3));
     const foe = m.makeTrainer('Ace Trainer Celeste', 'ace', false, a.npc.x, a.npc.y);
     foe.visitor = true;
-    for (const dex of ACE_TEAM) {
-      if (!SPECIES.has(dex)) continue;
+    for (const dex of drawTeam(m.rng, ACE_RANGED, ACE_MELEE, 6, (d) => SPECIES.has(d))) {
       const mon = m.makeMon(dex, lvl, foe, foe.x, foe.y + 1);
       mon.behavior = 'aggressive';
       foe.party.push(mon);
@@ -683,6 +688,11 @@ export class Visitors {
     }
     if (won) {
       this.aceState = 'won';
+      // And 2 or 3 TMs (into the bag, or a ball at her feet when it is full).
+      const tms = rewardTms(m.rng, ACE_TMS, TM_LIST.map((t) => t.id));
+      const spill = tms.filter((id) => !m.giveItem(pl, id, 1)).map((id) => ({ id, count: 1 }));
+      if (spill.length) m.placeBall('cherish', spill, pl.x, pl.y + 1);
+      if (tms.length) m.battle.events.push({ type: 'notice', text: `Celeste hands you ${tms.length} TMs!`, seconds: 3 });
       // A random shiny from every eligible ordinary species (each equally likely), met at the form its
       // level reaches (a level 40 pick of Charmander is a Charizard) when that form can be shiny too.
       const top = Math.max(1, ...pl.party.map((x) => x.level));

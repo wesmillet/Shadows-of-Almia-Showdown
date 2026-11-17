@@ -221,14 +221,14 @@ if (who.startsWith('dex_') && has('collection_log')) {
 // Name search (player = FIND_text): usernames close to it, with sign-up and last match dates. Names only.
 if (who.startsWith('find_') && has('users')) {
   const q = who.slice(5).replace(/[^a-z0-9]/g, '');
-  const lev = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+  // const lev = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
   let lastPlay = new Map(); try { lastPlay = new Map(all('SELECT user_id, MAX(at) AS t FROM collection_log GROUP BY user_id').map((r) => [r.user_id, r.t])); } catch {}
-  out.nameSearch = all('SELECT id, username, created_at FROM users').map((u) => {
-    const n = String(u.username).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const score = n.includes(q) || q.includes(n) ? 0 : Math.min(lev(n, q), ...[3, 4, 5, 6].filter((k) => k <= q.length).map((k) => Math.min(...Array.from({ length: Math.max(1, n.length - k + 1) }, (_, i) => lev(n.slice(i, i + k), q.slice(0, k))))) + 1);
+  // Everyone who joined in the last 3 days, names only (matching is done by whoever reads the report).
+  const since = Date.now() - 3 * 86400000;
+  out.nameSearch = all('SELECT id, username, created_at FROM users WHERE created_at >= ? ORDER BY created_at', since).map((u) => {
     const t = lastPlay.get(u.id);
-    return { username: u.username, score, joined: new Date(Number(u.created_at)).toISOString().slice(0, 10), lastActive: t ? new Date(Number(t)).toISOString().slice(0, 10) : null };
-  }).sort((a, b) => a.score - b.score).slice(0, 15);
+    return { username: u.username, joined: new Date(Number(u.created_at)).toISOString().slice(0, 16), lastActive: t ? new Date(Number(t)).toISOString().slice(0, 16) : null };
+  });
 }
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));

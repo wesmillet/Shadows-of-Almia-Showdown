@@ -87,7 +87,7 @@ export interface HudState {
 }
 
 /** Name, level and HP above a wild or enemy Pokémon (drawn on the HUD canvas so it stays crisp). */
-export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, scale: number, color = '#fff', badge: CanvasImageSource | null = null): void {
+export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: number, sx: number, top: number, name: string, level: number, frac: number, scale: number, color = '#fff', badge: CanvasImageSource | null = null, owned = false): void {
   // On a touch screen (a phone, small and further from the eye) the label is a third larger.
   const baseScale = Input.touch ? scale * 1.3 : scale;
   const w = 20 * px;
@@ -110,6 +110,38 @@ export function drawInfoBar(ui: PixelUi, ctx: CanvasRenderingContext2D, px: numb
     const tw = ctx.measureText(label).width;
     ctx.drawImage(badge, sx - tw / 2 - bw - 4 * baseScale, y - 3 * baseScale - bh + 3 * baseScale, bw, bh);
   }
+  // Already in your PC: a small Poké Ball after the label.
+  if (owned) drawOwnedBall(ctx, sx + ctx.measureText(label).width / 2 + 9.5 * baseScale, y - 7 * baseScale, 5.5 * baseScale);
+}
+
+/** A small Poké Ball (red top, white bottom, black band and button) centred on (cx, cy). */
+export function drawOwnedBall(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.save();
+  ctx.lineWidth = Math.max(1.5, r * 0.26);
+  ctx.strokeStyle = '#111';
+  ctx.fillStyle = '#e8352c';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fafafa';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - r, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.stroke();
+  ctx.fillStyle = '#fafafa';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** The button that casts each move slot (Q and E work too). */

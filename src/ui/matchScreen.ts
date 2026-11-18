@@ -28,6 +28,7 @@ import { Floaters } from '../vfx/floaters';
 import { phaseLabel } from '../sim/darkness';
 import { BEHAVIOR_LABEL, isRoaming } from '../sim/party';
 import { ballKind, ballWobble, type Throw } from '../sim/catching';
+import { lineOwned } from '../sim/starters';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import { extractToPc } from '../pc';
@@ -691,6 +692,8 @@ export class MatchScreen implements Screen {
   /** The wild Pokémon under the cursor, or the nearest one within two tiles of it. */
   /** The Alpha mark (assets/ui/alpha.png), shown by an Alpha's name. */
   private alphaBadge: HTMLImageElement | null = null;
+  /** The lines already in the player's PC (online, signed in): wild Pokémon of these get a Poké Ball by their name. */
+  ownedLines: Set<string> | null = null;
   /** Darkrai's portal: three 36x50 frames (closed slit, half open, open). */
   private portalSheet: HTMLImageElement | null = null;
   /** Hoopa's portal: eight 64x64 frames of a blue ring standing upright (assets/fx/hoopa_portal.png), and its storm (purple) copy. */
@@ -3625,7 +3628,9 @@ export class MatchScreen implements Screen {
       const base = m.boss ? `${m.name} ★` : m.shadow ? m.name : m.legend ? `Legendary ${m.name}` : m.name;
       // A shiny shows by its colours and the name's tint, not a word in its name.
       const label = base;
-      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : '#fff', m.alpha ? this.alphaBadge : null);
+      // A wild Pokémon whose line is already in your PC: a Poké Ball after its name.
+      const owned = !!(this.ownedLines && m.wild && !m.owner && lineOwned(this.ownedLines, m.dex ?? ''));
+      drawInfoBar(this.ui, v.hud, px, sx, top, label, m.level, m.hp / m.maxHp, v.baseScale, m.shadow ? '#c48bff' : m.legend ? '#ffcf4a' : m.alpha ? '#ff6b6b' : m.shiny ? '#9ff3ff' : '#fff', m.alpha ? this.alphaBadge : null, owned);
     }
     // Names over the roaming visitors when close.
     for (const n of this.match.npcs) {

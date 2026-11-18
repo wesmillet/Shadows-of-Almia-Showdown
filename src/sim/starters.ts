@@ -333,3 +333,15 @@ export function firstForm(m: { dex: string; name: string; level: number; moves: 
   // A name that was just the species' name becomes the first form's; any other name is kept.
   return { dex, name: !oldName || m.name === oldName ? sp.name : m.name, moves: movesAt(sp, m.level), from: m.dex };
 }
+
+/** The lines a PC holds (each entry's line base, kept form included), for "already in your PC" checks. */
+export function ownedLineSet(pc: Iterable<{ dex: string; evolvedFrom?: string | null }>): Set<string> {
+  const out = new Set<string>();
+  for (const e of pc) for (const d of [e.dex, e.evolvedFrom]) if (typeof d === 'string') out.add(nominationBase(d) ?? d);
+  return out;
+}
+
+/** Whether a Pokémon's line is among `lines` (from ownedLineSet). */
+export function lineOwned(lines: Set<string>, dex: string): boolean {
+  return lines.has(nominationBase(dex) ?? dex);
+}

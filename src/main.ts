@@ -26,7 +26,7 @@ import { QueueMini } from './ui/queueMini';
 import { Connection, serverBase } from './net/connection';
 import { MirrorMatch } from './net/mirror';
 import type { ServerMsg } from './net/protocol';
-import { BASE_TIERS, STARTER_TIERS, starterChoices } from './sim/starters';
+import { BASE_TIERS, STARTER_TIERS, ownedLineSet, starterChoices } from './sim/starters';
 import { loadPc } from './pc';
 import { LobbyScreen, OnlineEndScreen, OnlineScreen, PrivateLobbyScreen, type HubActions } from './ui/onlineScreens';
 import { joinCodeDialog, leaderboardDialog, profileDialog, replaysDialog, Toaster } from './ui/socialPanel';
@@ -544,6 +544,12 @@ async function boot(): Promise<void> {
     };
     debug.showdown.screen = screen;
     game.setScreen(screen);
+    // Which lines are already in this player's PC: wild Pokémon of those lines get a Poké Ball by their name.
+    if (net.me.signedIn) {
+      void net.api<{ pc?: Array<{ dex: string; evolvedFrom?: string }> }>('/api/pc').then((r) => {
+        if (r.pc) screen.ownedLines = ownedLineSet(r.pc);
+      }).catch(() => undefined);
+    }
   };
 
   /** Watching a live match (a few seconds behind). */

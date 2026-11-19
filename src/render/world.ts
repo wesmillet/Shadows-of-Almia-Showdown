@@ -86,6 +86,8 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
   // Shrink toward the ground point so the Pokémon is pulled into the ball from its feet; a leap lifts it on an arc.
   const leapLift = m.leap ? m.leap.h * Math.sin(Math.PI * Math.min(1, m.leap.t / m.leap.dur)) * view.pxPerTile : 0;
   const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * scaleMul * 0.15 - leapLift - lift * view.pxPerTile;
+  const orbit = !!m.species.orbit && !m.fainted;
+  if (orbit) drawOrbit(ctx, m, sx, sy, s, 0);
   if (m.shadow) {
     // Shadow Lugia (its own Shadow sprites): a pulsing black aura with a violet rim.
     const pulse = 0.75 + 0.25 * Math.sin(m.anim.time * 3 + m.id);
@@ -110,6 +112,7 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
     ctx.drawImage(f.image, f.sx, f.sy, f.w, f.h, dx, dy, f.w * s, f.h * s);
   }
   if (embers) drawEmbers(ctx, m, sx, sy, s, 1);
+  if (orbit) drawOrbit(ctx, m, sx, sy, s, 1);
   if (m.shiny && !m.fainted) drawSparkle(ctx, m.id, dx, dy, f.w * s, f.h * s, view.baseScale);
   if (m.flash > 0 && !m.fainted) {
     // Two-frame white flash: draw the frame again through a white tint.
@@ -438,6 +441,61 @@ function drawSparkle(ctx: CanvasRenderingContext2D, id: number, x: number, y: nu
 
 const EMBER_LIFE = 1.6;
 const EMBERS_PER_LAYER = 9;
+
+/** Moonstone crescents, as pixel art: o rim, a shadow, b body, c light (centre at cx, cy). */
+const MOON_ART: Record<number, { rows: string[]; cx: number; cy: number }> = {
+  2: { cx: 3, cy: 3, rows: ['...o..', '..oao.', '.obaao', 'obcao.', '.obaao', '..oao.', '...o..'] },
+  3: { cx: 4, cy: 4, rows: ['....o..', '..ooao.', '.obbaao', '.obbao.', 'obcbo..', '.obbao.', '.obbaao', '..ooao.', '....o..'] },
+};
+const MOON_COL: Record<string, string> = { o: '#221646', a: '#58409e', b: '#9674e2', c: '#ece2ff' };
+const moonSprites = new Map<number, HTMLCanvasElement>();
+function moonSprite(r: number): HTMLCanvasElement {
+  let c = moonSprites.get(r);
+  if (!c) {
+    const art = MOON_ART[r] as { rows: string[] };
+    c = document.createElement('canvas');
+    c.width = art.rows[0]?.length ?? 1;
+    c.height = art.rows.length;
+    const g = c.getContext('2d') as CanvasRenderingContext2D;
+    art.rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      const col = MOON_COL[ch];
+      if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+    }));
+    moonSprites.set(r, c);
+  }
+  return c;
+}
+
+/** One trip round, seconds. */
+const ORBIT_SECONDS = 1.8;
+
+/**
+ * Stones circling a Pokémon (its species' `orbit`): on the game's clock rather than the sprite's,
+ * so the orbit never restarts when it turns, stops, starts or attacks, and is the same size facing
+ * any way. Layer 0 is the far side (drawn before the sprite, so the body hides it), layer 1 the near.
+ */
+function drawOrbit(ctx: CanvasRenderingContext2D, m: Mon, sx: number, sy: number, s: number, layer: 0 | 1): void {
+  const n = m.species.orbit?.count ?? 0;
+  if (n <= 0) return;
+  const now = performance.now() / 1000;
+  const [bw, bh] = m.species.body;
+  const rx = bw / 2 + 6;
+  const cy = sy - (bh / 2 + 2) * s;
+  const px = Math.max(1, s);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  for (let i = 0; i < n; i++) {
+    const a = (2 * Math.PI * now) / ORBIT_SECONDS + (i * 2 * Math.PI) / n + m.id;
+    if ((Math.sin(a) < 0) !== (layer === 0)) continue;
+    const r = n > 1 && i >= 2 ? 2 : n > 1 ? 3 : 2;
+    const art = MOON_ART[r] as { cx: number; cy: number };
+    const img = moonSprite(r);
+    const x = sx + rx * Math.cos(a) * s;
+    const y = cy + (5 * Math.sin(a) + 2 * Math.sin(a * 2 + i)) * s;
+    ctx.drawImage(img, Math.round((x - art.cx * s) / px) * px, Math.round((y - art.cy * s) / px) * px, img.width * s, img.height * s);
+  }
+  ctx.restore();
+}
 
 /**
  * An Alpha's embers: art-pixel squares that leave the body, drift up and sway, cooling from

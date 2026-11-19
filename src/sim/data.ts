@@ -48,6 +48,11 @@ export interface SpeciesDef {
   stone?: string;
   /** Legendary or Mythical (PokeAPI's is_legendary / is_mythical); absent for ordinary species. */
   class?: 'legendary' | 'mythical';
+  /**
+   * Stones circling it (Moonstone forms): how many. The game draws them on its own clock, so they
+   * keep one steady orbit through turns, stops, starts and attacks (src/render/world.ts drawOrbit).
+   */
+  orbit?: { count: number };
 }
 
 /** The moves a Pokémon of this species knows at `level`: its signature moves first, then the newest attacks it has reached (MOVE_SLOTS of them). */

@@ -114,6 +114,14 @@
    "anchor": "bottom-center",
    "animations": {"idle_down": [0], "idle_left": [1], "idle_up": [2], "walk_left": [3, 4, 5, 6, 7, 8, 9, 10], "walk_down": [11, 12, 13, 14, 15, 16, 17, 18], "walk_up": [19, 20, 21, 22, 23, 24, 25, 26], "idle_downleft": [27], "idle_upleft": [28], "walk_downleft": [29, 30, 31, 32, 33, 34, 35, 36], "walk_upleft": [37, 38, 39, 40, 41, 42, 43, 44]}
   },
+  "steven_00": {
+   "file": "steven_00.png",
+   "frame_w": 18,
+   "frame_h": 34,
+   "frames": 30,
+   "anchor": "bottom-center",
+   "animations": {"idle_down": [0], "idle_left": [1], "idle_up": [2], "idle_downleft": [3], "idle_upleft": [4], "walk_left": [5, 6, 7, 8, 9], "walk_down": [10, 11, 12, 13, 14], "walk_up": [15, 16, 17, 18, 19], "walk_downleft": [20, 21, 22, 23, 24], "walk_upleft": [25, 26, 27, 28, 29]}
+  },
   "civ_09": {
    "file": "civ_09.png",
    "frame_w": 22,

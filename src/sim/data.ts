@@ -53,6 +53,8 @@ export interface SpeciesDef {
    * keep one steady orbit through turns, stops, starts and attacks (src/render/world.ts drawOrbit).
    */
   orbit?: { count: number };
+  /** Phantom forms (Abyssal Cradily, Lileep): a fading outline of where it just was trails it (drawPhantom). */
+  phantom?: boolean;
 }
 
 /** The moves a Pokémon of this species knows at `level`: its signature moves first, then the newest attacks it has reached (MOVE_SLOTS of them). */

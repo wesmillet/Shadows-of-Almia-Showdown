@@ -8,6 +8,7 @@ import { CONFIG, bodyRadius, drawScale, monScale } from '../sim/data';
 import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
+import type { FrameRect } from '../sprites/pokemonSprite';
 import type { View } from './view';
 import { uiFont } from '../ui/screens';
 import type { DecorItem, GroundRenderer } from '../ground/types';
@@ -88,6 +89,7 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
   const dy = sy - (f.h * s) / 2 - (1 - vis.scale) * f.h * view.spriteScale * monScale(m) * scaleMul * 0.15 - leapLift - lift * view.pxPerTile;
   const orbit = !!m.species.orbit && !m.fainted;
   if (orbit) drawOrbit(ctx, m, sx, sy, s, 0);
+  if (m.species.phantom && !at && !m.fainted) drawPhantom(view, m, p as { x: number; y: number }, f, s, sy - dy);
   if (m.shadow) {
     // Shadow Lugia (its own Shadow sprites): a pulsing black aura with a violet rim.
     const pulse = 0.75 + 0.25 * Math.sin(m.anim.time * 3 + m.id);
@@ -441,6 +443,67 @@ function drawSparkle(ctx: CanvasRenderingContext2D, id: number, x: number, y: nu
 
 const EMBER_LIFE = 1.6;
 const EMBERS_PER_LAYER = 9;
+
+/** Phantom trail: how long a trace lasts, how many show, and the colour of the outline. */
+const PHANTOM_SECONDS = 0.4;
+const PHANTOM_STEPS = 3;
+const PHANTOM_COLOUR = '#60ecec';
+const trails = new Map<number, { seen: number; marks: Array<{ x: number; y: number; t: number; f: FrameRect; s: number; up: number }> }>();
+const outlines = new WeakMap<CanvasImageSource, Map<string, HTMLCanvasElement>>();
+
+/** A frame's outline: one art pixel just outside its silhouette (cached per frame). */
+function outlineOf(f: FrameRect): HTMLCanvasElement {
+  let byImage = outlines.get(f.image);
+  if (!byImage) { byImage = new Map(); outlines.set(f.image, byImage); }
+  const key = `${f.sx},${f.sy},${f.w},${f.h}`;
+  let c = byImage.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = f.w + 2;
+    c.height = f.h + 2;
+    const g = c.getContext('2d') as CanvasRenderingContext2D;
+    for (const [ox, oy] of [[0, 1], [2, 1], [1, 0], [1, 2]] as const) g.drawImage(f.image, f.sx, f.sy, f.w, f.h, ox, oy, f.w, f.h);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = PHANTOM_COLOUR;
+    g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'destination-out';
+    g.drawImage(f.image, f.sx, f.sy, f.w, f.h, 1, 1, f.w, f.h);
+    g.globalCompositeOperation = 'source-over';
+    byImage.set(key, c);
+  }
+  return c;
+}
+
+/**
+ * A phantom form's trail (its species' `phantom`): outlines of the frames it showed a moment ago,
+ * where it was then (world position, so the camera moving does not drag them), fading out. Only
+ * while it is moving: standing still, the traces sit under it and are not drawn.
+ */
+function drawPhantom(view: View, m: Mon, p: { x: number; y: number }, f: FrameRect, s: number, up: number): void {
+  const now = performance.now() / 1000;
+  let tr = trails.get(m.id);
+  if (!tr) { tr = { seen: now, marks: [] }; trails.set(m.id, tr); }
+  tr.seen = now;
+  tr.marks = tr.marks.filter((k) => now - k.t <= PHANTOM_SECONDS);
+  const ctx = view.ctx;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  for (let i = PHANTOM_STEPS; i >= 1; i--) {
+    const want = now - (i * PHANTOM_SECONDS) / (PHANTOM_STEPS + 1);
+    let best: (typeof tr.marks)[number] | null = null;
+    for (const k of tr.marks) if (!best || Math.abs(k.t - want) < Math.abs(best.t - want)) best = k;
+    if (!best || Math.hypot(best.x - p.x, best.y - p.y) < 0.12) continue;
+    const o = outlineOf(best.f);
+    const bx = Math.round(view.toScreenX(best.x)) - (best.f.w * best.s) / 2 - best.s;
+    const by = Math.round(view.toScreenY(best.y)) - best.up - best.s;
+    ctx.globalAlpha = m.visual.alpha * 0.75 * (1 - i / (PHANTOM_STEPS + 1));
+    ctx.drawImage(o, bx, by, o.width * best.s, o.height * best.s);
+  }
+  ctx.restore();
+  const last = tr.marks[tr.marks.length - 1];
+  if (!last || now - last.t >= 1 / 30) tr.marks.push({ x: p.x, y: p.y, t: now, f, s, up });
+  if (trails.size > 256) for (const [id, t] of trails) if (now - t.seen > 2) trails.delete(id);
+}
 
 /** Moonstone crescents, as pixel art: o rim, a shadow, b body, c light (centre at cx, cy). */
 const MOON_ART: Record<number, { rows: string[]; cx: number; cy: number }> = {

@@ -19,7 +19,7 @@ import type { InventorySlot, Mon } from '../src/sim/entities';
 import { ITEMS } from '../src/sim/items';
 import { DEV_CHEST } from '../src/dev';
 import { CONFIG, SPECIES, movesAt } from '../src/sim/data';
-import { firstForm, nominationBase, rollEgg, STARTER_TIERS } from '../src/sim/starters';
+import { firstForm, legendKey, nominationBase, rollEgg, STARTER_TIERS } from '../src/sim/starters';
 import { Rng } from '../src/core/rng';
 import { SpriteRegistry } from '../src/sprites/pokemonSprite';
 import { cleanName, isClean } from './moderation';
@@ -405,6 +405,13 @@ export class Accounts {
           this.db.exec('COMMIT');
           return send(400, { error: 'One of those Pokémon is not there any more, so the offer was closed' });
         }
+        // One of each legendary: neither side may end up with a second.
+        const dexOf = (entry: string): string => String((JSON.parse(entry) as { dex?: string }).dex ?? '');
+        const dup = this.legendProblem(t.to_user, dexOf(g.entry), [t.want_pc]) ?? (this.legendProblem(t.from_user, dexOf(w.entry), [t.give_pc]) ? `${nameOf(t.from_user)} already has that legendary: one of each` : null);
+        if (dup) {
+          this.db.exec('ROLLBACK');
+          return send(400, { error: dup });
+        }
         const stamp = (entry: string, from: number): string => JSON.stringify({ ...JSON.parse(entry), fav: undefined, tradedFrom: nameOf(from), tradedAt: new Date().toISOString() });
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.to_user, stamp(g.entry, t.from_user), t.give_pc);
         this.db.prepare('UPDATE pc SET user_id = ?, entry = ? WHERE id = ?').run(t.from_user, stamp(w.entry, t.to_user), t.want_pc);
@@ -458,7 +465,13 @@ export class Accounts {
     let got: Record<string, unknown> | null = null;
     this.db.exec('BEGIN IMMEDIATE');
     try {
-      const waiting = this.db.prepare("SELECT w.id, w.user_id, w.pc_id FROM wonder w JOIN pc p ON p.id = w.pc_id AND p.user_id = w.user_id JOIN users u ON u.id = w.user_id WHERE w.status = 'waiting' AND w.user_id != ? AND u.banned = 0 ORDER BY w.created_at LIMIT 1").get(me.id) as { id: number; user_id: number; pc_id: number } | undefined;
+      // The oldest waiting that leaves neither trainer with a second of a legendary (one of each).
+      const myDex = String((JSON.parse((this.db.prepare('SELECT entry FROM pc WHERE id = ?').get(give.pcId as number) as { entry: string }).entry) as { dex?: string }).dex ?? '');
+      const candidates = this.db.prepare("SELECT w.id, w.user_id, w.pc_id, p.entry FROM wonder w JOIN pc p ON p.id = w.pc_id AND p.user_id = w.user_id JOIN users u ON u.id = w.user_id WHERE w.status = 'waiting' AND w.user_id != ? AND u.banned = 0 ORDER BY w.created_at LIMIT 50").all(me.id) as Array<{ id: number; user_id: number; pc_id: number; entry: string }>;
+      const waiting = candidates.find((c) => {
+        const theirDex = String((JSON.parse(c.entry) as { dex?: string }).dex ?? '');
+        return !this.legendProblem(me.id, theirDex, [give.pcId as number]) && !this.legendProblem(c.user_id, myDex, [c.pc_id]);
+      });
       if (!waiting) {
         this.db.prepare('INSERT INTO wonder (user_id, pc_id, created_at) VALUES (?, ?, ?)').run(me.id, give.pcId as number, now);
       } else {
@@ -635,6 +648,12 @@ export class Accounts {
       return { error: `Your Egg has hatched. The next one is ready in ${eggWait(s2.nextAt - now)}`, nextAt: s2.nextAt, now };
     };
     if (!st.ready) return later();
+    // One of each legendary: one they already own hatches as another.
+    const dex = this.eggDex(userId, row.dex, row.tier);
+    if (dex !== row.dex) {
+      this.db.prepare('UPDATE daily_eggs SET dex = ? WHERE user_id = ? AND day = ? AND pc_id IS NULL').run(dex, userId, row.key);
+      row.dex = dex;
+    }
     const sp = SPECIES.get(row.dex);
     if (!sp) return { error: 'The Egg would not hatch, try again', nextAt: st.nextAt, now };
     try {
@@ -952,6 +971,45 @@ export class Accounts {
       this.logCollection(userId, `add:${via}`, { pcId, ref: matchId, detail: entry });
       return pcId;
     });
+  }
+
+  /**
+   * The legendaries in a player's PC (legendKey: one of each, forms counted apart), leaving out
+   * `except` (a PC entry on its way out, as in a trade).
+   */
+  ownedLegends(userId: number, except: number[] = []): string[] {
+    const rows = this.db.prepare('SELECT id, entry FROM pc WHERE user_id = ?').all(userId) as Array<{ id: number; entry: string }>;
+    const out = new Set<string>();
+    for (const r of rows) {
+      if (except.includes(Number(r.id))) continue;
+      try {
+        const k = legendKey(String((JSON.parse(r.entry) as { dex?: string }).dex ?? ''));
+        if (k) out.add(k);
+      } catch {
+        /* a broken row */
+      }
+    }
+    return [...out];
+  }
+
+  /** Why a player can't take `dex` into their PC (they already own that legendary), or null. */
+  legendProblem(userId: number, dex: string, except: number[] = []): string | null {
+    const k = legendKey(dex);
+    if (!k || !this.ownedLegends(userId, except).includes(k)) return null;
+    return `You already have ${SPECIES.get(k)?.name ?? k}: you can own one of each legendary`;
+  }
+
+  /**
+   * An Egg's Pokémon made one the player may own: a legendary they already have becomes another
+   * of the same tier they don't (or an Epic when they own every one).
+   */
+  eggDex(userId: number, dex: string, tierId: string): string {
+    if (!this.legendProblem(userId, dex)) return dex;
+    const owned = new Set(this.ownedLegends(userId));
+    const tier = STARTER_TIERS.find((t) => t.id === tierId);
+    const free = (tier?.dex ?? []).filter((d) => !owned.has(legendKey(d) ?? ''));
+    const pool = free.length ? free : (STARTER_TIERS.find((t) => t.id === 'epic')?.dex ?? [dex]);
+    return pool[randomInt(0, pool.length)] as string;
   }
 
   /** Runs `fn` as one unit (for other server modules: Mystery Gift). */
@@ -1522,8 +1580,11 @@ export class Accounts {
         // to keep (all kept already, or from a trainer's PC) is closed, so its keep menu stops coming back.
         const rows = this.db.prepare('SELECT match_id, party, picks_left, outcome FROM match_players WHERE user_id = ? AND picks_left > 0 ORDER BY rowid DESC LIMIT 5').all(me.id) as Array<{ match_id: string; party: string; picks_left: number; outcome: string }>;
         for (const row of rows) {
-          const party = JSON.parse(row.party) as Array<{ taken?: boolean; fromPc?: boolean }>;
-          const open = party.filter((m) => m && !m.taken && !m.fromPc).length;
+          const party = JSON.parse(row.party) as Array<{ dex?: string; taken?: boolean; fromPc?: boolean; owned?: boolean }>;
+          // A legendary they already have can't be kept (one of each): marked for the menu.
+          const owned = new Set(this.ownedLegends(me.id));
+          for (const m of party) if (m && !m.taken && owned.has(legendKey(String(m.dex ?? '')) ?? '')) m.owned = true;
+          const open = party.filter((m) => m && !m.taken && !m.fromPc && !m.owned).length;
           if (open === 0) {
             this.db.prepare('UPDATE match_players SET picks_left = 0 WHERE user_id = ? AND match_id = ?').run(me.id, row.match_id);
             continue;
@@ -1541,6 +1602,8 @@ export class Accounts {
         const pick = Number.isInteger(i) ? party[i] : undefined;
         if (!pick || pick.taken) return send(400, { error: 'Pick one of your Pokémon from that match' });
         if (pick.fromPc) return send(400, { error: `${pick.name} came from a trainer's PC, so it can't be kept` });
+        const dup = this.legendProblem(me.id, pick.dex);
+        if (dup) return send(400, { error: dup });
         pick.taken = true;
         // The PC entry and the spent pick together, or neither (a crash between them can not leave a pick to spend twice).
         this.db.exec('BEGIN IMMEDIATE');
@@ -1553,7 +1616,8 @@ export class Accounts {
           const pcId = this.addToPc(me.id, pick, row.outcome === 'win' ? 'win' : 'voucher', String(b.match));
           (pick as { pcId?: number }).pcId = pcId;
           // Nothing left it could go to: the rest of the picks lapse.
-          const open = party.filter((m) => m && !m.taken && !m.fromPc).length;
+          const owned = new Set(this.ownedLegends(me.id));
+          const open = party.filter((m) => m && !m.taken && !m.fromPc && !owned.has(legendKey(m.dex) ?? '')).length;
           this.db.prepare('UPDATE match_players SET picks_left = CASE WHEN ? = 0 THEN 0 ELSE picks_left - 1 END, party = ? WHERE user_id = ? AND match_id = ?').run(open, JSON.stringify(party), me.id, String(b.match));
           this.db.exec('COMMIT');
         } catch (e) {

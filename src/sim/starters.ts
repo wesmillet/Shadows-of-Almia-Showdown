@@ -398,3 +398,14 @@ export function ownedLineSet(pc: Iterable<{ dex: string; evolvedFrom?: string | 
 export function lineOwned(lines: Set<string>, dex: string): boolean {
   return lines.has(nominationBase(dex) ?? dex);
 }
+
+/**
+ * Which legendary a Pokémon counts as for "one of each legendary": its PC form (pcBase, so a
+ * shiny is the same Lugia), or null for an ordinary species. Forms are their own legendaries
+ * (Shadow Lugia is not Lugia).
+ */
+export function legendKey(dex: string): string | null {
+  const d = pcBase(dex.replace(/-shiny$/, ''));
+  const sp = SPECIES.get(d) ?? SPECIES.get(dex);
+  return sp && (sp.class === 'legendary' || sp.class === 'mythical') ? d : null;
+}

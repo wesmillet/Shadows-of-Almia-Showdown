@@ -816,7 +816,7 @@ const party = (net: Connection) => (net.social.party?.members.length ?? 0) > 1;
 
 interface ExtractInfo {
   match: string | null;
-  party?: Array<{ name: string; level: number; shiny: boolean; taken?: boolean; fromPc?: boolean }>;
+  party?: Array<{ name: string; level: number; shiny: boolean; taken?: boolean; fromPc?: boolean; owned?: boolean }>;
   picks?: number;
   outcome?: string;
 }
@@ -905,7 +905,7 @@ export class OnlineEndScreen implements Screen {
       if (!info || !info.picks || this.sending) continue;
       this.pickRects().forEach((r, i) => {
         const m = info.party?.[i];
-        if (m && !m.taken && !m.fromPc && hit(c.x, c.y, r.x, r.y, r.w, r.h)) void this.extract(i);
+        if (m && !m.taken && !m.fromPc && !m.owned && hit(c.x, c.y, r.x, r.y, r.w, r.h)) void this.extract(i);
       });
     }
     if (this.t > 1 && input.pressed('Escape')) this.onDone();
@@ -954,7 +954,7 @@ export class OnlineEndScreen implements Screen {
       this.pickRects().forEach((r, i) => {
         const m = this.info?.party?.[i];
         if (!m) return;
-        button(v, `${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${m.taken ? '  ✓' : m.fromPc ? ' · from your PC' : ''}`, r.x, r.y, r.w, r.h, !m.taken && !m.fromPc && hit(mx, my, r.x, r.y, r.w, r.h), m.taken || m.fromPc ? '#44405a' : '#f4e6c8');
+        button(v, `${m.shiny ? '★ ' : ''}${m.name} Lv ${m.level}${m.taken ? '  ✓' : m.fromPc ? ' · from your PC' : m.owned ? ' · you have one' : ''}`, r.x, r.y, r.w, r.h, !m.taken && !m.fromPc && !m.owned && hit(mx, my, r.x, r.y, r.w, r.h), m.taken || m.fromPc || m.owned ? '#44405a' : '#f4e6c8');
       });
     }
     if (this.note) text(v, this.note, v.width / 2, py + ph - 110 * s, 14, { align: 'center', color: INK.good, shadow: false });

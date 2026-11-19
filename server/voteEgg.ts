@@ -146,6 +146,12 @@ export class VoteEggs {
   hatch(userId: number, now = Date.now()): { dex: string; name: string; shiny: boolean; tier: string; tierName: string; color: string; pcId: number; nextAt: number; now: number } | { error: string } {
     const egg = this.waiting(userId);
     if (!egg) return { error: 'No Vote Egg to hatch. Vote for the game to earn one each day' };
+    // One of each legendary: one they already own hatches as another.
+    const dex = this.acc.eggDex(userId, egg.dex, egg.tier);
+    if (dex !== egg.dex) {
+      this.acc.db.prepare('UPDATE vote_eggs SET dex = ? WHERE user_id = ? AND day = ? AND pc_id IS NULL').run(dex, userId, egg.day);
+      egg.dex = dex;
+    }
     const sp = SPECIES.get(egg.dex);
     if (!sp) return { error: 'The Egg would not hatch, try again' };
     const t = STARTER_TIERS.find((x) => x.id === egg.tier);

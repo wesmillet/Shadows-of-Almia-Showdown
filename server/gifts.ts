@@ -167,6 +167,10 @@ export class Gifts {
     if (row.max_uses !== null && row.uses >= row.max_uses) return { error: 'That code has been used up' };
     const p = JSON.parse(row.payload) as GiftCode['payload'];
     if (row.kind === 'look' && p.look && this.ownedLooks(userId).includes(p.look)) return { error: 'You already have that look' };
+    if (row.kind === 'pokemon' && p.dex) {
+      const dup = this.acc.legendProblem(userId, p.dex);
+      if (dup) return { error: dup };
+    }
     try {
       return this.acc.unit(() => {
         // Counted only while uses remain (two players on the last use: one gets it).
@@ -246,6 +250,10 @@ export class Gifts {
     const row = this.acc.db.prepare('SELECT gift FROM gift_inbox WHERE id = ? AND user_id = ? AND claimed_at IS NULL').get(id, userId) as { gift: string | null } | undefined;
     if (!row) return { error: 'Already claimed' };
     const gift = row.gift ? (JSON.parse(row.gift) as DirectGift) : null;
+    if (gift?.kind === 'pokemon') {
+      const dup = this.acc.legendProblem(userId, gift.dex);
+      if (dup) return { error: dup };
+    }
     try {
       this.acc.unit(() => {
         const took = this.acc.db.prepare('UPDATE gift_inbox SET claimed_at = ? WHERE id = ? AND claimed_at IS NULL').run(now, id);

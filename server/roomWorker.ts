@@ -72,6 +72,7 @@ function create(m: Extract<ToWorker, { op: 'create' }>): void {
     rareChest: m.hooks.rareChest,
     cluster: m.hooks.cluster,
     chestLoad: (key) => m.chests[key] ?? [],
+    legends: (key) => m.legends?.[key] ?? [],
     chestSave: (key, box) => post({ ev: 'chestSave', key, box }),
     extracted: (key, mon, matchId) => post({ ev: 'extracted', key, mon, matchId }),
     flagged: (key, name, matchId, summary) => post({ ev: 'flagged', key, name, matchId, summary }),

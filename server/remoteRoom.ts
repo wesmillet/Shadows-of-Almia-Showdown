@@ -32,7 +32,7 @@ export interface PeerInfo {
 }
 
 export type ToWorker =
-  | { op: 'create'; id: string; spec: Omit<RoomSpec, 'entries'> & { entries: Array<PeerInfo & { starter: string; team?: number }> }; hooks: { rareChest: boolean; cluster?: boolean }; chests: Record<string, InventorySlot[]> }
+  | { op: 'create'; id: string; spec: Omit<RoomSpec, 'entries'> & { entries: Array<PeerInfo & { starter: string; team?: number }> }; hooks: { rareChest: boolean; cluster?: boolean }; chests: Record<string, InventorySlot[]>; legends?: Record<string, string[]> }
   | { op: 'receive'; room: string; key: string; msg: ClientMsg }
   | { op: 'disconnect'; room: string; key: string }
   | { op: 'rejoin'; room: string; peer: PeerInfo }
@@ -324,9 +324,11 @@ export class WorkerPool {
       pw.rooms.set(room.id, room);
       const chests: Record<string, InventorySlot[]> = {};
       for (const e of spec.entries) chests[e.peer.key] = hooks.chestLoad(e.peer.key) ?? [];
+      const legends: Record<string, string[]> = {};
+      for (const e of spec.entries) legends[e.peer.key] = hooks.legends?.(e.peer.key) ?? [];
       // A worker still loading keeps this until it is listening.
       const msg: ToWorker = {
-        op: 'create', id: room.id, chests, hooks: { rareChest: hooks.rareChest, cluster: hooks.cluster },
+        op: 'create', id: room.id, chests, legends, hooks: { rareChest: hooks.rareChest, cluster: hooks.cluster },
         spec: { ...spec, entries: spec.entries.map((e) => ({ ...info(e.peer), starter: e.starter, team: e.team })) },
       };
       pw.worker.postMessage(msg);

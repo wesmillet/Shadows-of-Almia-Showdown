@@ -116,6 +116,8 @@ export interface RoomHooks {
   cluster?: boolean;
   chestLoad(key: string): InventorySlot[] | null;
   chestSave(key: string, box: Array<InventorySlot | null>): void;
+  /** The legendaries already in a signed-in player's PC (one of each: those can't be kept). */
+  legends?(key: string): string[];
   /** A Pokémon a player sent home mid-match with an Extraction Voucher (what its PC entry keeps). */
   extracted(key: string, mon: PcFields, matchId: string): void;
   /** A player's flags passed FLAG_REPORT this match. */
@@ -176,6 +178,7 @@ export class Room implements RoomHandle {
     };
     this.match.seats.forEach((seat, i) => {
       const e = entries[i] as Human & { peer: Peer };
+      if (this.mode !== 'private' && hooks.legends) seat.trainer.ownedLegends = hooks.legends(e.peer.key);
       const enc = new SyncEncoder(this.ids, seat.trainer);
       this.players.set(e.peer.key, { peer: e.peer, seat, view: new PlayerView(this.match, seat), enc, phase: i % SEND_EVERY, pending: [], goneAt: null, commands: 0, ended: false, flags: new Map(), flagScore: 0 });
     });

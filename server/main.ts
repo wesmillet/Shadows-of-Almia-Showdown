@@ -144,9 +144,16 @@ const roomHooks: RoomHooks = {
     const id = accountOf(key);
     if (id !== null) accounts.saveChest(id, box);
   },
+  legends: (key) => {
+    const id = accountOf(key);
+    return id === null ? [] : accounts.ownedLegends(id);
+  },
   extracted: (key, mon, matchId) => {
     const id = accountOf(key);
-    if (id !== null) accounts.addToPc(id, mon, 'voucher', matchId);
+    if (id === null) return;
+    // The match refuses a second of a legendary; this is the last check (one of each).
+    if (accounts.legendProblem(id, mon.dex)) return log(`Extract refused (${key}, ${matchId}): already owns ${mon.dex}`);
+    accounts.addToPc(id, mon, 'voucher', matchId);
   },
   flagged: (key, name, matchId, summary) => {
     log(`Flagged ${name} (${key}) in ${matchId}: ${summary}`);

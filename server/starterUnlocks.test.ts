@@ -46,10 +46,11 @@ describe('starter achievements', () => {
     expect(acc.starters.choose(uid, 'three_matches', '0258')).toMatch('already');
     expect(acc.starters.choose(uid, 'ten_species', '0387')).toMatch('Not unlocked');
     // Nominations: only what the account has; saved; the roll uses them.
-    const uncommon = '0004';
     expect(acc.starters.nominate(uid, ['0255', '0447'])).toMatch('not one you can star');
-    expect(acc.starters.nominate(uid, ['0255', uncommon])).toBeNull();
-    expect(acc.starters.forRoll(uid).sort()).toEqual(['0255', uncommon].sort());
+    // Torchic and Charmander are both Fire: one star per type.
+    expect(acc.starters.nominate(uid, ['0255', '0004'])).toMatch('one star per type');
+    expect(acc.starters.nominate(uid, ['0255'])).toBeNull();
+    expect(acc.starters.forRoll(uid)).toEqual(['0255']);
   });
 
   it('players from before get credit from what was recorded', () => {

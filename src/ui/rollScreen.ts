@@ -87,8 +87,6 @@ export class RollScreen implements Screen {
     private readonly onReroll: (() => void) | null = null,
     /** This player's nominations for the third slot (src/sim/starters.ts). */
     private readonly unlocked: readonly string[] = [],
-    /** Today's pick from their PC: a fourth choice under the reels (press 4). */
-    private readonly daily: string | null = null,
     /** Every species in their PC they can start with: the first two reels roll from these. */
     private readonly pc: readonly string[] = [],
     /** Starters they would start shiny (they own a shiny of the line): drawn shiny. */
@@ -96,7 +94,6 @@ export class RollScreen implements Screen {
     /** Starters they would start as Alphas (they own an Alpha of the line): the Alpha mark on the card. */
     private readonly alphas: ReadonlySet<string> = new Set(),
   ) {
-    if (daily) void this.sprites.preload([daily], undefined, true);
     // The first two reels roll from the PC (Commons without one); the third from the nominations
     // (src/sim/starters.ts starterReels, which the game server also uses to know what a seed offered).
     this.tiers = STARTER_TIERS;
@@ -148,10 +145,6 @@ export class RollScreen implements Screen {
     for (const c of input.takeClicks()) {
       const rr = this.rerollRect();
       if (this.onReroll && hit(c.x, c.y, rr.x, rr.y, rr.w, rr.h)) return this.onReroll();
-      if (this.daily && this.done) {
-        const d = this.dailyRect();
-        if (hit(c.x, c.y, d.x, d.y, d.w, d.h)) return this.onConfirm(this.daily);
-      }
       for (let i = 0; i < CHOICES; i++) {
         const b = this.pickRect(i);
         const k = this.card(i);
@@ -159,16 +152,6 @@ export class RollScreen implements Screen {
       }
     }
     for (let i = 0; i < CHOICES; i++) if (input.pressed(`Digit${i + 1}`)) this.confirm(i);
-    if (this.daily && this.done && input.pressed(`Digit${CHOICES + 1}`)) this.onConfirm(this.daily);
-  }
-
-  /** Today's pick from the PC: a button between the cards and the hints. */
-  private dailyRect(): { x: number; y: number; w: number; h: number } {
-    const v = this.ctx.view;
-    const s = v.baseScale;
-    const p = this.pickRect(0);
-    const w = Math.min(420 * s, v.width - 40 * s);
-    return { x: v.width / 2 - w / 2, y: p.y + p.h + 12 * s, w, h: 44 * s };
   }
 
   /** The Reroll button, top right. */
@@ -229,12 +212,7 @@ export class RollScreen implements Screen {
       : 'Slot 3: Commons until you nominate Pokémon (Starters, in the hub)';
     const first = this.pc.length >= 2 ? `Slots 1 and 2: your PC (${this.pc.length} Pokémon)` : 'Slots 1 and 2: Commons until your PC has Pokémon';
     text(v, `${first} · ${third}`, v.width / 2, v.height - 40 * s, 12, { align: 'center', color: '#9f97bb', maxWidth: v.width - 30 * s });
-    if (this.daily) {
-      const d = this.dailyRect();
-      const name = SPECIES.get(this.daily)?.name ?? this.daily;
-      button(v, this.done ? `${CHOICES + 1}  Today's pick: ${name}` : 'Rolling…', d.x, d.y, d.w, d.h, this.done && hit(mx, my, d.x, d.y, d.w, d.h), this.done ? '#f4e6c8' : '#44405a');
-    }
-    text(v, this.daily ? `Click a card or press 1-${CHOICES + 1} to start with it` : 'Click a card or press 1-3 to start with it', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6', maxWidth: v.width - 30 * s });
+    text(v, 'Click a card or press 1-3 to start with it', v.width / 2, v.height - 16 * s, 12, { align: 'center', color: '#cdbfe6', maxWidth: v.width - 30 * s });
     if (this.onReroll) {
       const rr = this.rerollRect();
       button(v, 'Reroll (R)', rr.x, rr.y, rr.w, rr.h, hit(this.ctx.input.mouseX, this.ctx.input.mouseY, rr.x, rr.y, rr.w, rr.h), '#f4e6c8');

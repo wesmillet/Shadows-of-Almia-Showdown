@@ -157,6 +157,11 @@ export const NOMINATION_BUDGET = 15;
 export const TIER_COST: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 5, mythic: 8 };
 /** Each nomination's weight in the third slot's roll, by tier: stronger tiers come up less often. */
 export const SLOT3_WEIGHT: Record<string, number> = { common: 30, uncommon: 24, rare: 18, epic: 10, mythic: 5 };
+/**
+ * The most a reel may come up Mythic (a legendary), all Mythics together, however many a player
+ * stars or keeps in their PC: legendaries stay hard to roll. data/spawns.json starterMythicCap.
+ */
+export const MYTHIC_REEL_CAP: number = (SPAWNS as unknown as { starterMythicCap?: number }).starterMythicCap ?? 0.02;
 
 /**
  * The Pokémon a PC Pokémon (or an unlock) nominates: the first form of its line, in its normal
@@ -210,21 +215,50 @@ export function nominationCost(dexes: readonly string[]): number {
   return dexes.reduce((n, d) => n + (TIER_COST[tierOf(d)] ?? 1), 0) + empty * (TIER_COST.common ?? 1);
 }
 
+/** The types a starred Pokémon takes up (its first form's): no two stars may share one. */
+export function nominationTypes(dex: string): string[] {
+  return SPECIES.get(dex)?.types ?? [];
+}
+
+/** The first of `dexes` that shares a type with one before it, with that type, or null. */
+export function typeClash(dexes: readonly string[]): { dex: string; other: string; type: string } | null {
+  const seen = new Map<string, string>();
+  for (const d of dexes) {
+    for (const t of nominationTypes(d)) {
+      const other = seen.get(t);
+      if (other !== undefined && other !== d) return { dex: d, other, type: t };
+    }
+    for (const t of nominationTypes(d)) if (!seen.has(t)) seen.set(t, d);
+  }
+  return null;
+}
+
 /** Why a set of nominations is not allowed, or null. */
 export function nominationProblem(dexes: readonly string[], eligible: readonly string[]): string | null {
   if (dexes.length > NOMINATION_SLOTS) return `Star at most ${NOMINATION_SLOTS}`;
   if (new Set(dexes).size !== dexes.length) return 'Each star must be on a different Pokémon';
   const ok = new Set(eligible);
   for (const d of dexes) if (!ok.has(d)) return `${SPECIES.get(d)?.name ?? d} is not one you can star`;
+  const clash = typeClash(dexes);
+  if (clash) {
+    const name = (x: string): string => SPECIES.get(x)?.name ?? x;
+    const type = clash.type.charAt(0).toUpperCase() + clash.type.slice(1);
+    return `${name(clash.dex)} and ${name(clash.other)} are both ${type}: one star per type`;
+  }
   const cost = nominationCost(dexes);
   if (cost > NOMINATION_BUDGET) return `That costs ${cost} points; the budget is ${NOMINATION_BUDGET}`;
   return null;
 }
 
-/** Saved nominations made legal again (a Pokémon no longer owned dropped; the dearest dropped while over budget). */
+/** Saved nominations made legal again (a Pokémon no longer owned dropped, a later star sharing a type dropped, the dearest dropped while over budget). */
 export function usableNominations(saved: readonly string[], eligible: readonly string[]): string[] {
   const ok = new Set(eligible);
-  const out = [...new Set(saved.filter((d) => ok.has(d)))].slice(0, NOMINATION_SLOTS);
+  const out: string[] = [];
+  // In saved order: a star that shares a type with an earlier one is dropped (one star per type).
+  for (const d of new Set(saved.filter((x) => ok.has(x)))) {
+    if (out.length >= NOMINATION_SLOTS) break;
+    if (!typeClash([...out, d])) out.push(d);
+  }
   while (nominationCost(out) > NOMINATION_BUDGET) {
     let worst = 0;
     out.forEach((d, i) => {
@@ -255,11 +289,24 @@ export function slot3Pool(nominations: readonly string[], rng: Rng): string[] {
   return out;
 }
 
-/** Each of the third slot's five with its chance (0..1), in pool order. */
+/**
+ * Each of a reel's Pokémon with its chance (0..1), in pool order: weighted by tier, then the
+ * Mythics together held to MYTHIC_REEL_CAP (the rest share what that frees, so a reel of only
+ * Mythics is the one case it can not hold).
+ */
 export function slot3Odds(pool: readonly string[]): Array<{ dex: string; tier: string; chance: number }> {
   const w = pool.map((d) => SLOT3_WEIGHT[tierOf(d)] ?? 1);
   const total = w.reduce((a, b) => a + b, 0) || 1;
-  return pool.map((d, i) => ({ dex: d, tier: tierOf(d), chance: (w[i] as number) / total }));
+  return capMythic(pool.map((d, i) => ({ dex: d, tier: tierOf(d), chance: (w[i] as number) / total })));
+}
+
+/** Chances (summing to 1) with the Mythics together held to MYTHIC_REEL_CAP, the rest scaled up to match. */
+export function capMythic<T extends { tier: string; chance: number }>(odds: T[]): T[] {
+  const mythic = odds.reduce((n, o) => n + (o.tier === 'mythic' ? o.chance : 0), 0);
+  if (mythic <= MYTHIC_REEL_CAP || mythic >= 1) return odds;
+  const down = MYTHIC_REEL_CAP / mythic;
+  const up = (1 - MYTHIC_REEL_CAP) / (1 - mythic);
+  return odds.map((o) => ({ ...o, chance: o.chance * (o.tier === 'mythic' ? down : up) }));
 }
 
 export interface StarterReel {
@@ -295,7 +342,13 @@ export function starterReels(seed: number, nominations: readonly string[] = [], 
   };
   const reels: StarterReel[] = [];
   for (let r = 0; r < 2; r++) {
-    const freshBox = boxOdds.filter((o) => !taken.has(o.dex));
+    // What is left once the earlier picks are out, the Mythics held to the cap again (taking the
+    // ordinary ones out would otherwise raise their share); with only Mythics left, one comes up
+    // just the cap's share of the time and a Common otherwise.
+    const left = boxOdds.filter((o) => !taken.has(o.dex));
+    const sum = left.reduce((n, o) => n + o.chance, 0) || 1;
+    let freshBox = capMythic(left.map((o) => ({ ...o, chance: o.chance / sum })));
+    if (freshBox.length && freshBox.every((o) => o.tier === 'mythic') && rng.next() >= MYTHIC_REEL_CAP) freshBox = [];
     let pick: { dex: string; tier: StarterTier };
     let cards: Array<{ dex: string; tier: StarterTier }>;
     if (freshBox.length) {

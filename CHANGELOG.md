@@ -20,6 +20,9 @@ Secret features stay out of this file.
 - Healing items have a carry limit: Potion 10, Super Potion 6, Hyper Potion 3, Revive 2, Max Revive 1.
   Shops stop selling past it, and ground balls and a beaten trainer's bag give only what fits.
 - Wild Pokémon whose line is already in your PC show a Poké Ball after their name.
+- Today's starter is gone: the starter roll offers the three rolled Pokémon only.
+- Legendaries are rare on the starter roll however many you own or star: at most 2% a reel.
+- Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
 
 ## November 16
 

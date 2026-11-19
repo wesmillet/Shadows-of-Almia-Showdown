@@ -1512,11 +1512,6 @@ export class Accounts {
         const err = this.starters.choose(me.id, String(b.id ?? ''), String(b.dex ?? ''));
         return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
       }
-      if (req.method === 'POST' && path === '/api/starters/daily') {
-        const b = await readJson(req);
-        const err = this.starters.pickDaily(me.id, b.pcId, Date.now(), me.role === 'admin' && !me.banned);
-        return err ? send(400, { error: err }) : send(200, this.starters.info(me.id));
-      }
       if (req.method === 'POST' && path === '/api/starters/nominate') {
         const b = await readJson(req);
         const err = this.starters.nominate(me.id, b.dexes);

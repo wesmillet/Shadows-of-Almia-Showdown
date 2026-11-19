@@ -11,7 +11,7 @@ import type { Input } from '../core/input';
 import type { Connection } from '../net/connection';
 import type { StartersInfo } from '../sim/starterAchievements';
 import { SPECIES, typeColor } from '../sim/data';
-import { nominationBase, nominationCost, NOMINATION_SLOTS, pcBase, STARTER_TIERS, tierOf } from '../sim/starters';
+import { capMythic, nominationBase, nominationCost, NOMINATION_SLOTS, pcBase, STARTER_TIERS, tierOf, typeClash } from '../sim/starters';
 import { loadPc, setFavLocal, shownDex, shownName, type PcEntry } from '../pc';
 import { drawAlphaBadge } from './alphaBadge';
 import type { Assets } from '../sprites/assets';
@@ -195,7 +195,7 @@ export class PcScreen implements Screen {
 
   private releaseRect(side: Rect): Rect {
     const s = this.ctx.view.baseScale;
-    // Its own row above the Star / Today's starter buttons and their note, right-aligned, clear of
+    // Its own row above the Star button and its note, right-aligned, clear of
     // the name, tags and type pills (it used to sit under the heart, on top of the second type pill).
     const n = this.nomRect(side);
     return { x: side.x + side.w - 18 * s - 96 * s, y: n.y - 60 * s, w: 96 * s, h: 26 * s };
@@ -292,7 +292,7 @@ export class PcScreen implements Screen {
   private canAdd(dex: string): boolean {
     const st = this.starters;
     if (!st || st.nominations.includes(dex)) return false;
-    return st.nominations.length < st.slots && nominationCost([...st.nominations, dex]) <= st.budget;
+    return st.nominations.length < st.slots && nominationCost([...st.nominations, dex]) <= st.budget && !typeClash([...st.nominations, dex]);
   }
 
   /** Each spot's chance in the third slot's roll (an empty spot rolls a random Common). */
@@ -307,7 +307,7 @@ export class PcScreen implements Screen {
     });
     const total = spots.reduce((n, x) => n + wOf(x.tier), 0) || 1;
     for (const x of spots) x.chance = wOf(x.tier) / total;
-    return { spots, used: nominationCost(st.nominations) };
+    return { spots: capMythic(spots), used: nominationCost(st.nominations) };
   }
 
   // ------------------------------------------------------------------ layout
@@ -369,48 +369,7 @@ export class PcScreen implements Screen {
 
   private nomRect(side: Rect): Rect {
     const s = this.ctx.view.baseScale;
-    // Online, the bottom row is split: Star it on the left, Today's starter on the right.
-    const full = side.w - 36 * s;
-    const w = this.net ? (full - 8 * s) / 2 : full;
-    return { x: side.x + 18 * s, y: side.y + side.h - 58 * s, w, h: 42 * s };
-  }
-
-  private dailyRect(side: Rect): Rect {
-    const n = this.nomRect(side);
-    const s = this.ctx.view.baseScale;
-    return { x: n.x + n.w + 8 * s, y: n.y, w: n.w, h: n.h };
-  }
-
-  /** Makes a PC Pokémon today's starter: a fourth choice on the starter roll until midnight UTC. */
-  private pickDaily(e: PcEntry): void {
-    if (!this.net || e.pcId === undefined || this.saving) return;
-    this.saving = true;
-    void this.net.api<StartersInfo>('/api/starters/daily', { pcId: e.pcId }).then((r) => {
-      this.saving = false;
-      if (r.error) this.note = r.error;
-      else {
-        this.starters = r;
-        this.note = `${r.daily?.name ?? 'It'} is today's starter: pick it on the starter roll`;
-      }
-    });
-  }
-
-  /** Administrators may change today's starter as often as they like (to test any Pokémon). */
-  private isAdmin(): boolean {
-    return this.net?.me.user?.role === 'admin';
-  }
-
-  /** The side panel's Today's starter button. */
-  private drawDaily(r: Rect, e: PcEntry): void {
-    const st = this.starters;
-    if (!st || !this.net) return;
-    const v = this.ctx.view;
-    const b = this.dailyRect(r);
-    const mine = st.daily && st.daily.pcId === e.pcId;
-    const can = !mine && (!st.daily || this.isAdmin()) && e.pcId !== undefined;
-    const label = mine ? "Today's starter" : st.daily && !this.isAdmin() ? `Today: ${st.daily.name}` : "Today's starter";
-    const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
-    button(v, label, b.x, b.y, b.w, b.h, over && can, mine ? '#9fd8a8' : can ? undefined : '#44405a');
+    return { x: side.x + 18 * s, y: side.y + side.h - 58 * s, w: side.w - 36 * s, h: 42 * s };
   }
 
   /** The strip's five spots. */
@@ -471,15 +430,6 @@ export class PcScreen implements Screen {
         const rr = this.releaseRect(L.side);
         if (this.net && shown.pcId !== undefined && hit(c.x, c.y, rr.x, rr.y, rr.w, rr.h)) {
           this.release(shownI);
-          continue;
-        }
-        const dr = this.dailyRect(L.side);
-        if (this.net && this.starters && hit(c.x, c.y, dr.x, dr.y, dr.w, dr.h)) {
-          if (this.starters.daily && !this.isAdmin() && this.starters.daily.pcId !== shown.pcId) {
-            const left = Math.max(0, this.starters.dailyResetAt - Date.now());
-            const hrs = Math.floor(left / 3600_000), mins = Math.ceil((left % 3600_000) / 60_000);
-            this.note = `${this.starters.daily.name} is today's starter. New pick in ${hrs ? `${hrs} h ` : ''}${mins} min`;
-          } else if (this.starters.daily?.pcId !== shown.pcId) this.pickDaily(shown);
           continue;
         }
         const nd = this.nomOf(shown);
@@ -851,7 +801,6 @@ export class PcScreen implements Screen {
       text(v, e.moves.map((m) => m.replace(/-/g, ' ')).join(' · '), r.x + pad + kw, y, 11, { color: INK.text, shadow: false, maxWidth: r.w - pad * 2 - kw });
     }
     this.drawNominate(r, e);
-    this.drawDaily(r, e);
     this.drawRelease(r, e);
   }
 
@@ -918,7 +867,7 @@ export class PcScreen implements Screen {
     glyph(h, 'sparkle', r.x + pad + 5 * s, y + 6 * s, 6 * s, '#e8a400');
     text(v, `${shiny} shiny`, r.x + pad + 16 * s, y + 10 * s, 12, { color: INK.text, shadow: false });
     y += 34 * s;
-    const tips = this.starters ? ['Tap a Pokémon to see it,', 'or star it to make it a likelier third starter.'] : ['Tap a Pokémon to see it.'];
+    const tips = this.starters ? ['Tap a Pokémon to see it,', 'or star it (one per type) to make it a likelier third starter.'] : ['Tap a Pokémon to see it.'];
     tips.forEach((t, k) => text(v, t, r.x + r.w / 2, y + 10 * s + k * 18 * s, 12, { align: 'center', color: INK.dim, shadow: false, maxWidth: r.w - pad * 2 }));
   }
 
@@ -941,13 +890,24 @@ export class PcScreen implements Screen {
     let line: string;
     if (on) {
       const k = st.nominations.indexOf(nd);
-      line = `Starred: ${((this.odds().spots[k]?.chance ?? 0) * 100).toFixed(0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
+      const c = this.odds().spots[k]?.chance ?? 0;
+      line = `Starred: ${(c * 100).toFixed(c < 0.1 ? 1 : 0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
     } else if (can) {
       const w = (t: string): number => st.weights[t] ?? 1;
       const next = [...st.nominations, nd];
-      const total = next.reduce((n, d) => n + w(st.eligible.find((x) => x.dex === d)?.tier ?? 'common'), 0) + (st.slots - next.length) * w('common');
-      line = `Star for ${info?.cost ?? 1} pt${(info?.cost ?? 1) === 1 ? '' : 's'}: ${((w(info?.tier ?? 'common') / total) * 100).toFixed(0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
-    } else line = st.nominations.length >= NOMINATION_SLOTS ? 'All five stars are used' : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
+      const tiers = [...next.map((d) => st.eligible.find((x) => x.dex === d)?.tier ?? 'common'), ...Array<string>(st.slots - next.length).fill('common')];
+      const total = tiers.reduce((n, t) => n + w(t), 0) || 1;
+      const mine = capMythic(tiers.map((t) => ({ tier: t, chance: w(t) / total })))[next.length - 1]?.chance ?? 0;
+      line = `Star for ${info?.cost ?? 1} pt${(info?.cost ?? 1) === 1 ? '' : 's'}: ${(mine * 100).toFixed(mine < 0.1 ? 1 : 0)}% chance ${SPECIES.get(nd)?.name ?? nd} is your 3rd starter`;
+    } else {
+      const clash = typeClash([...st.nominations, nd]);
+      const type = clash ? clash.type.charAt(0).toUpperCase() + clash.type.slice(1) : '';
+      line = st.nominations.length >= NOMINATION_SLOTS
+        ? 'All five stars are used'
+        : clash
+          ? `${SPECIES.get(clash.other)?.name ?? clash.other} already holds the ${type} star (one per type)`
+          : `Would use ${nominationCost([...st.nominations, nd])} of ${st.budget} points`;
+    }
     text(v, this.note || line, r.x + r.w / 2, b.y - 10 * s, 11, { align: 'center', color: can ? INK.text : INK.bad, shadow: false, maxWidth: r.w - 24 * s });
     const over = hit(this.ctx.input.mouseX, this.ctx.input.mouseY, b.x, b.y, b.w, b.h);
     button(v, on ? 'Remove star' : 'Star it', b.x, b.y, b.w, b.h, over && can, can ? (on ? CREAM : undefined) : '#44405a');

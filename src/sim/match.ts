@@ -79,6 +79,12 @@ export function chestCap(id: string): number {
   return c === undefined ? CHEST_STACK_MAX : c;
 }
 
+/** The most of an item a trainer can carry (config items.carryCaps; Infinity when uncapped). */
+export function carryCap(id: string): number {
+  const caps = (CONFIG.items as { carryCaps?: Record<string, number> }).carryCaps ?? {};
+  return caps[id] ?? Infinity;
+}
+
 let nextId = 1;
 
 /** One side of a one-on-one trainer battle. */
@@ -537,7 +543,10 @@ export class Match {
     const box = this.storageOf(t);
     const entry = box[slot];
     if (!entry) return '';
-    const n = count === undefined ? entry.count : Math.max(1, Math.min(entry.count, Math.floor(count)));
+    const asked = count === undefined ? entry.count : Math.max(1, Math.min(entry.count, Math.floor(count)));
+    const room = this.carryRoom(t, entry.id);
+    if (room <= 0) return `You can carry at most ${carryCap(entry.id)} ${ITEMS[entry.id]?.name ?? entry.id}`;
+    const n = Math.min(asked, room);
     if (!this.giveItem(t, entry.id, n)) return isGear(entry.id) ? 'No room in your Held & TMs tab' : 'No room in your bag';
     entry.count -= n;
     const keep = t.storageKeep ?? box.length;
@@ -606,6 +615,7 @@ export class Match {
     if (!e) return '';
     const name = ITEMS[e.id]?.name ?? e.id;
     if (p.money < e.price) return `Not enough money for ${name} (₽${e.price})`;
+    if (this.carryRoom(p, e.id) <= 0) return `You can carry at most ${carryCap(e.id)} ${name}`;
     if (!this.giveItem(p, e.id, 1)) return 'Your bag is full';
     p.money -= e.price;
     return `Bought ${name} for ₽${e.price}`;
@@ -749,8 +759,21 @@ export class Match {
     this.items.push({ id: nextId++, ball, tier: null, contents, heal, x, y, bob: this.rng.next() * 6 });
   }
 
-  /** Adds an item to the right tab (bag, or gear for held items and TMs); returns false when it is full. */
+  /** How many more of an item a trainer may carry (healing items have a cap, config items.carryCaps). */
+  carryRoom(t: Trainer, itemId: string): number {
+    const cap = carryCap(itemId);
+    if (cap === Infinity) return Infinity;
+    const tab = isGear(itemId) ? t.held : t.items;
+    const have = tab.reduce((n, s) => n + (s?.id === itemId ? s.count : 0), 0);
+    return Math.max(0, cap - have);
+  }
+
+  /**
+   * Adds an item to the right tab (bag, or gear for held items and TMs); returns false when it is full
+   * or the trainer already carries the most of it allowed (all or nothing: see giveUpTo for a part).
+   */
   giveItem(t: Trainer, itemId: string, count = 1): boolean {
+    if (count > this.carryRoom(t, itemId)) return false;
     const tab = isGear(itemId) ? t.held : t.items;
     // Every item stacks: more of one you already carry joins its slot.
     const slot = tab.find((s) => s?.id === itemId);
@@ -762,6 +785,12 @@ export class Match {
     if (free < 0) return false;
     tab[free] = { id: itemId, count };
     return true;
+  }
+
+  /** Gives as many of `count` as fit (room in the bag and under the carry cap); returns how many it gave. */
+  giveUpTo(t: Trainer, itemId: string, count: number): number {
+    const n = Math.min(count, this.carryRoom(t, itemId));
+    return n > 0 && this.giveItem(t, itemId, n) ? n : 0;
   }
 
   takeItem(t: Trainer, slot: number, tab: 'items' | 'held' = 'items'): InventorySlot | null {
@@ -1418,9 +1447,12 @@ export class Match {
     if (!it.contents) it.contents = [rollLoot(this.rng, it.tier ?? 'common', t.party.map((m) => baseDex(m.megaFrom?.dex ?? m.dex)))];
     const got: InventorySlot[] = [];
     it.contents = it.contents.filter((c) => {
-      if (!this.giveItem(t, c.id, c.count)) return true;
-      got.push(c);
-      return false;
+      // What fits under the carry cap is taken; the rest stays in the ball.
+      const n = this.giveUpTo(t, c.id, c.count);
+      if (n <= 0) return true;
+      got.push({ id: c.id, count: n });
+      c.count -= n;
+      return c.count > 0;
     });
     if (!got.length) return false;
     const healed = !!it.heal;
@@ -4257,9 +4289,11 @@ export class Match {
         for (let i = 0; i < list.length; i++) {
           const it = list[i];
           if (!it) continue;
-          if (this.giveItem(winner, it.id, it.count)) {
-            took += it.count;
-            list[i] = null;
+          const n = this.giveUpTo(winner, it.id, it.count);
+          if (n > 0) {
+            took += n;
+            it.count -= n;
+            if (it.count <= 0) list[i] = null;
           }
         }
       }

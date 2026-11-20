@@ -11,7 +11,7 @@ Secret features stay out of this file.
 - Lugia: no ball can be thrown at it until it is below 10% HP. A Master Ball is a sure catch from there.
 - Master Ball: 25,000 at the Wandering Merchant.
 - Castle Champion and Ace Trainer Celeste each field a full team of six, three ranged and three
-  melee, drawn from twelve, so no two fights are the same. Beating either also gives 2 or 3 TMs.
+  melee, drawn from twelve, so no two fights are the same.
 - Beams follow your aim while you fire them for every player in an online match (before, only one
   player per match could steer).
 - Phones: Switch is back in the party menu during a trainer battle, and the move buttons no

@@ -39,7 +39,8 @@ const ACE_RANGED = ['0282', '0196', '0350', '0407', '0818', '0936'];
 const ACE_MELEE = ['0212', '0373', '0461', '0475', '0784', '0998'];
 const ACE_TEAM = [...ACE_RANGED, ...ACE_MELEE];
 /** How many random TMs beating Celeste also gives [min, max]. */
-const ACE_TMS: [number, number] = [2, 3];
+/** TMs Celeste gives when beaten: none (set [min, max] to give some). */
+const ACE_TMS: [number, number] | undefined = undefined;
 
 /**
  * Every species Celeste may give: the game's ordinary species, all of them. Left out: legendary and

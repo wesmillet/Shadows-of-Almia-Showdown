@@ -1,4 +1,4 @@
-/** The Castle Champion and Ace Trainer Celeste field six (three ranged, three melee, from twelve) and give TMs. */
+/** The Castle Champion and Ace Trainer Celeste field six (three ranged, three melee, from twelve) and give no TMs. */
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { loadWorld } from './world';
@@ -24,7 +24,7 @@ describe('tougher Castle and Ace fights', async () => {
     expect(tms.length).toBeGreaterThanOrEqual(2);
     expect(tms.length).toBeLessThanOrEqual(3);
   });
-  it('the champion sends six; beating him gives 2 or 3 TMs', () => {
+  it('the champion sends six; beating him gives no TMs', () => {
     const m = new Match({ ground: world.ground(), rng: new Rng(3), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 0, keepsResults: true } as never);
     if (!m.challenge) return;
     m.startChallenge();
@@ -35,6 +35,6 @@ describe('tougher Castle and Ace fights', async () => {
     p.held = p.held.map(() => null);
     (m as unknown as { winChallenge(c: unknown): void }).winChallenge(m.challenge);
     const tms = p.held.filter((e) => e && ITEMS[e.id]?.kind === 'tm').reduce((n, e) => n + e!.count, 0);
-    expect(tms).toBeGreaterThanOrEqual(2);
+    expect(tms).toBe(0);
   });
 });

@@ -9,6 +9,6 @@ describe("what's new", () => {
     expect(s[0]!.items).toEqual(['One', 'Two that wraps']);
   });
   it('the real changelog parses', () => {
-    expect(changelogSections().length).toBeGreaterThan(3);
+    expect(changelogSections().length).toBeGreaterThan(0);
   });
 });

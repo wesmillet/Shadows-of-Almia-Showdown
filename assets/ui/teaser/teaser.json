@@ -1,0 +1,283 @@
+{
+ "team": [
+  {
+   "base": "0376",
+   "baseName": "Metagross",
+   "form": "0376-molten",
+   "formName": "Molten Metagross",
+   "w": 38,
+   "h": 30,
+   "ground": 21,
+   "baseDurations": [
+    40,
+    20
+   ],
+   "formDurations": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+   ],
+   "from": [
+    200,
+    40,
+    0
+   ],
+   "to": [
+    255,
+    200,
+    110
+   ]
+  },
+  {
+   "base": "0306",
+   "baseName": "Aggron",
+   "form": "0306-moss",
+   "formName": "Mossback Aggron",
+   "w": 34,
+   "h": 33,
+   "ground": 25,
+   "baseDurations": [
+    40,
+    6,
+    2,
+    6,
+    2,
+    6
+   ],
+   "formDurations": [
+    40,
+    6,
+    2,
+    6,
+    2,
+    6
+   ],
+   "from": [
+    80,
+    200,
+    90
+   ],
+   "to": [
+    250,
+    222,
+    110
+   ]
+  },
+  {
+   "base": "0227",
+   "baseName": "Skarmory",
+   "form": "0227-glacier",
+   "formName": "Glacier Skarmory",
+   "w": 35,
+   "h": 35,
+   "ground": 26,
+   "baseDurations": [
+    40,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "formDurations": [
+    40,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "from": [
+    140,
+    205,
+    255
+   ],
+   "to": [
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "base": "0344",
+   "baseName": "Claydol",
+   "form": "0344-moon",
+   "formName": "Moonstone Claydol",
+   "w": 42,
+   "h": 32,
+   "ground": 26,
+   "baseDurations": [
+    8,
+    8
+   ],
+   "formDurations": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+   ],
+   "from": [
+    185,
+    155,
+    255
+   ],
+   "to": [
+    248,
+    244,
+    255
+   ]
+  },
+  {
+   "base": "0346",
+   "baseName": "Cradily",
+   "form": "0346-abyss",
+   "formName": "Abyssal Cradily",
+   "w": 27,
+   "h": 26,
+   "ground": 19,
+   "baseDurations": [
+    40,
+    4,
+    2,
+    2,
+    2,
+    2,
+    2,
+    10
+   ],
+   "formDurations": [
+    40,
+    4,
+    2,
+    2,
+    2,
+    2,
+    2,
+    10
+   ],
+   "from": [
+    40,
+    120,
+    230
+   ],
+   "to": [
+    120,
+    245,
+    240
+   ]
+  },
+  {
+   "base": "0348",
+   "baseName": "Armaldo",
+   "form": "0348-amber",
+   "formName": "Amber Armaldo",
+   "w": 32,
+   "h": 29,
+   "ground": 22,
+   "baseDurations": [
+    60,
+    10,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    10
+   ],
+   "formDurations": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+   ],
+   "from": [
+    200,
+    110,
+    20
+   ],
+   "to": [
+    255,
+    220,
+    120
+   ]
+  }
+ ],
+ "steven": {
+  "w": 18,
+  "h": 34,
+  "frames": 4
+ }
+}

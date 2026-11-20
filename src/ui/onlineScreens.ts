@@ -110,6 +110,33 @@ function eventLine(e: { kind: string; value: number }): string {
   return '';
 }
 
+/**
+ * The Steven teaser on the hub (where live events show): Steven in a spotlight while his six take
+ * turns changing, like an evolution, into their limited forms. No challenge yet; this only teases.
+ * Assets: assets/ui/teaser (teaser.json and one strip per Pokemon, regular and limited form).
+ */
+const STEVEN_TEASER = true;
+interface TeaserMon { base: string; baseName: string; form: string; formName: string; w: number; h: number; ground: number; baseDurations: number[]; formDurations: number[]; from: number[]; to: number[] }
+const teaser: { team: TeaserMon[]; img: Map<string, HTMLImageElement>; steven: HTMLImageElement | null; asked: boolean } = { team: [], img: new Map(), steven: null, asked: false };
+function loadTeaser(): void {
+  if (teaser.asked) return;
+  teaser.asked = true;
+  void fetch(`${ASSET_ROOT}ui/teaser/teaser.json`).then((r) => r.json()).then((j: { team: TeaserMon[] }) => {
+    for (const m of j.team) for (const d of [m.base, m.form]) {
+      const im = new Image();
+      im.src = `${ASSET_ROOT}ui/teaser/${d}.png`;
+      im.onload = () => teaser.img.set(d, im);
+    }
+    teaser.team = j.team;
+  }).catch(() => undefined);
+  const st = new Image();
+  st.src = `${ASSET_ROOT}ui/teaser/steven.png`;
+  st.onload = () => (teaser.steven = st);
+}
+/** Seconds each of the six gets: regular, the change, then the limited form. */
+const TEASE_EACH = 4.4;
+const teaseCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+
 /** A piece of the island (the castle and the forest lake, assets/ui/hub_bg.png) behind the hub. */
 let hubBg: HTMLImageElement | null = null;
 let hubBgAsked = false;
@@ -268,6 +295,108 @@ export class OnlineScreen implements Screen {
     const line = e.kind === 'wins' ? 'Most wins: top 5 win a Pikachu Libre' : eventLine(e);
     text(v, line, tx, py + 64 * s, 10, { color: ink.body, shadow: false, maxWidth: tw });
     text(v, `${timeLeft}${e.kind === 'wins' ? ' · see standings' : ''}`, tx, py + ph - 16 * s, 10, { color: ink.foot, shadow: false, maxWidth: tw });
+  }
+
+  /** The Steven teaser panel (STEVEN_TEASER), in the live-event style. */
+  private drawTeaser(px: number, py: number, pw: number, ph: number): void {
+    loadTeaser();
+    const v = this.ctx.view;
+    const s = v.baseScale;
+    const h = v.hud;
+    h.save();
+    h.fillStyle = 'rgba(16,18,34,0.95)';
+    h.fillRect(px, py, pw, ph);
+    h.strokeStyle = '#9aa6c8';
+    h.lineWidth = Math.max(2, Math.round(3 * s));
+    h.strokeRect(px + 1.5 * s, py + 1.5 * s, pw - 3 * s, ph - 3 * s);
+    h.strokeStyle = 'rgba(154,166,200,0.35)';
+    h.lineWidth = Math.max(1, Math.round(s));
+    h.strokeRect(px + 6 * s, py + 6 * s, pw - 12 * s, ph - 12 * s);
+    h.restore();
+    const cx = px + pw / 2;
+    text(v, '★ COMING SOON ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
+    text(v, 'Champion Steven', cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
+    const team = teaser.team;
+    if (!team.length) return;
+    const n = team.length;
+    const idx = Math.floor(this.t / TEASE_EACH) % n;
+    const r = this.t % TEASE_EACH;
+    const m = team[idx] as TeaserMon;
+    // phase: the regular Pokemon, its body filling with colour, the two shapes swapping faster and
+    // faster, then the limited form as the colour drains away
+    let showForm = false;
+    let k = 0;
+    if (r < 1.1) k = 0;
+    else if (r < 1.6) k = (r - 1.1) / 0.5;
+    else if (r < 2.6) { k = 1; const q = r - 1.6; showForm = Math.sin(2 * Math.PI * (1.0 * q + 3.2 * q * q)) > 0; }
+    else { showForm = true; k = Math.max(0, 1 - (r - 2.6) / 0.6); }
+    const dex = showForm ? m.form : m.base;
+    const img = teaser.img.get(dex);
+    const durs = showForm ? m.formDurations : m.baseDurations;
+    const scale = Math.max(2, Math.round(2 * s)) + 1;
+    const gy = py + 122 * s;
+    // spotlight and shadow
+    h.save();
+    const g = h.createRadialGradient(cx + 14 * s, gy - 22 * s, 2 * s, cx + 14 * s, gy - 22 * s, 56 * s);
+    g.addColorStop(0, `rgba(${m.to.join(',')},0.38)`);
+    g.addColorStop(1, `rgba(${m.to.join(',')},0)`);
+    h.fillStyle = g;
+    h.fillRect(px + 8 * s, py + 46 * s, pw - 16 * s, 100 * s);
+    h.fillStyle = 'rgba(0,0,0,0.35)';
+    h.beginPath();
+    h.ellipse(cx + 14 * s, gy, 24 * s, 6 * s, 0, 0, Math.PI * 2);
+    h.fill();
+    h.restore();
+    if (img && durs.length) {
+      const total = durs.reduce((a, b) => a + b, 0) || 1;
+      let tick = Math.floor(this.t * 60) % total;
+      let f = 0;
+      while (f < durs.length - 1 && tick >= (durs[f] as number)) tick -= durs[f++] as number;
+      const dw = m.w * scale;
+      const dh = m.h * scale;
+      const dx = Math.round(cx + 14 * s - dw / 2);
+      const dy = Math.round(gy - m.ground * scale);
+      h.save();
+      h.imageSmoothingEnabled = false;
+      h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
+      if (k > 0.01 && teaseCanvas) {
+        teaseCanvas.width = m.w;
+        teaseCanvas.height = m.h;
+        const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
+        c.clearRect(0, 0, m.w, m.h);
+        c.drawImage(img, f * m.w, 0, m.w, m.h, 0, 0, m.w, m.h);
+        c.globalCompositeOperation = 'source-in';
+        const lg = c.createLinearGradient(0, 0, m.w * 0.35, m.h);
+        for (let i = 0; i <= 8; i++) {
+          const u = i / 8;
+          const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9));
+          const col = m.from.map((a, j) => Math.round(a + ((m.to[j] as number) - a) * q));
+          lg.addColorStop(u, `rgb(${col.join(',')})`);
+        }
+        c.fillStyle = lg;
+        c.fillRect(0, 0, m.w, m.h);
+        c.globalCompositeOperation = 'source-over';
+        h.globalAlpha = Math.min(1, k);
+        h.drawImage(teaseCanvas, dx, dy, dw, dh);
+      }
+      h.restore();
+    }
+    // Steven on the left: standing, hand to his chest as the change begins, arms crossed through it
+    if (teaser.steven) {
+      const fr = r < 1.0 ? 0 : r < 1.25 ? 1 : r < 3.6 ? 2 : 3;
+      const ss = Math.max(2, Math.round(2 * s));
+      h.save();
+      h.imageSmoothingEnabled = false;
+      h.fillStyle = 'rgba(0,0,0,0.35)';
+      h.beginPath();
+      h.ellipse(px + 44 * s, gy, 9 * s, 3 * s, 0, 0, Math.PI * 2);
+      h.fill();
+      h.drawImage(teaser.steven, fr * 18, 0, 18, 34, Math.round(px + 44 * s - 9 * ss), Math.round(gy - 33 * ss), 18 * ss, 34 * ss);
+      h.restore();
+    }
+    const label = r < 1.6 ? m.baseName : r < 2.6 ? '???' : m.formName;
+    text(v, label, px + 14 * s, py + ph - 14 * s, 10, { color: r >= 2.6 ? '#ffe9a8' : '#c8cfe6', shadow: false, maxWidth: pw * 0.62 });
+    text(v, `${idx + 1} of ${n}`, px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: '#8e97b8', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */
@@ -443,7 +572,7 @@ export class OnlineScreen implements Screen {
     } else heading(v, 'Play Online', null, L.logoY + L.logoH / 2);
     const ev = this.net.events;
     this.eventRects = [];
-    if (ev.length) {
+    if (ev.length || STEVEN_TEASER) {
       const left = (t: number) => {
         const m = Math.max(0, Math.round((t - Date.now()) / 60000));
         return m >= 2880 ? `${Math.round(m / 1440)} days left` : m >= 120 ? `${Math.round(m / 60)} h left` : `${m} min left`;
@@ -467,8 +596,11 @@ export class OnlineScreen implements Screen {
           this.eventRects.push({ x: px, y: py, w: pw, h: ph, kind: e.kind });
           py += ph + gap;
         }
+        if (STEVEN_TEASER && style === 'spot') this.drawTeaser(px, py, pw, ph);
       } else {
-        text(v, `★ ${ev.map((e) => `${e.name} · ${left(e.endsAt)}`).join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
+        const bits = ev.map((e) => `${e.name} · ${left(e.endsAt)}`);
+        if (STEVEN_TEASER) bits.push('Champion Steven · coming soon');
+        text(v, `★ ${bits.join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
       }
     }
     // Your trainer card.

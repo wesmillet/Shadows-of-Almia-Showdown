@@ -23,6 +23,7 @@ Secret features stay out of this file.
 - Today's starter is gone: the starter roll offers the three rolled Pokémon only.
 - Legendaries are rare on the starter roll however many you own or star: at most 2% a reel.
 - Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
+- A Champion is coming: a panel on the online menu teases Steven and his team.
 - One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg
   that would hatch one hatches another instead. Forms count on their own. Ones you already have stay.
 

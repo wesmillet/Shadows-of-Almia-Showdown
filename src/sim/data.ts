@@ -48,6 +48,8 @@ export interface SpeciesDef {
   stone?: string;
   /** Legendary or Mythical (PokeAPI's is_legendary / is_mythical); absent for ordinary species. */
   class?: 'legendary' | 'mythical';
+  /** Only one trainer's (a limited form: 'steven'). Never a prize, an egg or a wild Pokémon. */
+  exclusive?: string;
   /**
    * Stones circling it (Moonstone forms): how many. The game draws them on its own clock, so they
    * keep one steady orbit through turns, stops, starts and attacks (src/render/world.ts drawOrbit).
@@ -338,9 +340,9 @@ export function shownHeight(heightM: number): number {
 }
 
 /** A Pokémon's draw scale: its species' size, and Alphas bigger still. */
-export function monScale(m: { species: SpeciesDef; alpha?: boolean; boss?: boolean }): number {
+export function monScale(m: { species: SpeciesDef; alpha?: boolean; boss?: boolean; grown?: number }): number {
   // Alphas are drawn alphaScale times bigger; Darkrai, the final boss, towers over everything.
-  return drawScale(m.species) * (m.alpha ? CONFIG.wild.alphaScale : 1) * (m.boss ? 1.8 : 1);
+  return drawScale(m.species) * (m.alpha ? CONFIG.wild.alphaScale : 1) * (m.boss ? 1.8 : 1) * (m.grown ?? 1);
 }
 
 export function drawScale(s: SpeciesDef): number {

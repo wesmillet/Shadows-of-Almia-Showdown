@@ -114,12 +114,14 @@ export interface RoomHooks {
   rareChest: boolean;
   /** Testing only: players start next to each other. */
   cluster?: boolean;
+  /** Steven may challenge a match's winner (src/sim/steven.ts): on everywhere but the live server unless STEVEN=1. */
+  steven?: boolean;
   chestLoad(key: string): InventorySlot[] | null;
   chestSave(key: string, box: Array<InventorySlot | null>): void;
   /** The legendaries already in a signed-in player's PC (one of each: those can't be kept). */
   legends?(key: string): string[];
   /** A Pokémon a player sent home mid-match with an Extraction Voucher (what its PC entry keeps). */
-  extracted(key: string, mon: PcFields, matchId: string): void;
+  extracted(key: string, mon: PcFields, matchId: string, via?: 'voucher' | 'steven'): void;
   /** A player's flags passed FLAG_REPORT this match. */
   flagged?(key: string, name: string, matchId: string, summary: string): void;
 }
@@ -157,6 +159,7 @@ export class Room implements RoomHandle {
     this.match.rareChest = opts.rareChest ?? hooks.rareChest;
     // A private match keeps nothing: no Extraction Voucher reaches a PC and no chest change is saved.
     this.match.keepsResults = this.mode !== 'private';
+    this.match.stevenEnabled = !!hooks.steven && this.mode !== 'private';
     // Testing (DEV_CLUSTER=1, never on the live server): every player starts beside the first.
     if (hooks.cluster && this.match.seats.length > 1) {
       const first = (this.match.seats[0] as Seat).trainer;
@@ -432,6 +435,8 @@ export class Room implements RoomHandle {
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
         if (ev.type === 'extracted' && ev.via === 'voucher' && this.mode !== 'private' && !ev.mon.fromPc) this.hooks.extracted(key, pcFields(ev.mon), this.id);
+        // Beating Steven: his ace's limited form goes home (src/sim/steven.ts).
+        if (ev.type === 'extracted' && ev.via === 'steven' && this.mode !== 'private') this.hooks.extracted(key, pcFields(ev.mon), this.id, 'steven');
       }
       if (text) p.peer?.send({ t: 'reply', n: msg.n, text, seconds: 1.8 });
       return;

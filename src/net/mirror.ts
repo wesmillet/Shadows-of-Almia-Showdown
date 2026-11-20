@@ -380,6 +380,9 @@ export class MirrorMatch {
     vis.aceState = v.aceState ?? 'idle';
     vis.aceFoe = v.aceFoe ?? null;
     vis.aceReadyAt = v.aceReadyAt ?? 0;
+    // Steven (src/sim/steven.ts): the server's view of the challenge, copied onto the mirror's own.
+    const sv = r.steven as ReturnType<Match['steven']['view']> | undefined;
+    if (sv) m.steven.mirror(sv, m);
     m.radar = (r.radar as Match['radar']) ?? [];
     m.trainersLeft = typeof r.trainersLeft === 'number' ? r.trainersLeft : null;
   }
@@ -629,6 +632,7 @@ export class MirrorMatch {
     m.stylerLoop = (mon: Mon) => net.cmd('stylerLoop', mon.id);
     m.stylerBreak = (mon: Mon) => net.cmd('stylerBreak', mon.id);
     m.snag = (i: number) => say('snag', i);
+    m.stevenAnswer = (accept: boolean) => say('steven', accept ? 1 : 0);
     // Kept locally at once (the server's next view agrees), so the prompt closes straight away.
     m.declineSnag = () => {
       seat().snagOffer = null;

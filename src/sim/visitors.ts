@@ -60,7 +60,7 @@ export function celestePrizePool(): string[] {
  */
 export function celesteEligible(dex: string): boolean {
   const sp = SPECIES.get(dex);
-  if (!sp || sp.class || sp.megaOf) return false;
+  if (!sp || sp.class || sp.megaOf || sp.exclusive) return false;
   if (dex.includes('-') && !/-(alola|galar|hisui|paldea)$/.test(dex)) return false;
   return SpriteRegistry.hasShiny(dex);
 }

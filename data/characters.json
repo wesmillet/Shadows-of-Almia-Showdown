@@ -65,6 +65,10 @@
    "character": "union_03",
    "name": "Castle Champion"
   },
+  "steven": {
+   "character": "steven_00",
+   "name": "Steven"
+  },
   "trainer_g": {
    "character": "union_09",
    "name": "Juniper"

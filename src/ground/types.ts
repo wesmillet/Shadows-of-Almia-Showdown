@@ -47,6 +47,9 @@ export interface GroundRenderer {
   /** The map file's name, when the ground comes from one (its painted minimap is maps/<name>_minimap.png). */
   readonly mapName?: string;
   readonly decor: DecorItem[];
+  /** How far movement may reach when the world is wider than the map (the stadium past its edge, src/sim/stadium.ts). */
+  readonly extentCols?: number;
+  readonly extentRows?: number;
   /** Points of interest the generator laid trails between. */
   readonly outposts: Array<{ x: number; y: number }>;
   readonly spawns: Array<{ x: number; y: number }>;

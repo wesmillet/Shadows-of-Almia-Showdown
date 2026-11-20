@@ -71,10 +71,11 @@ function create(m: Extract<ToWorker, { op: 'create' }>): void {
   const hooks: RoomHooks = {
     rareChest: m.hooks.rareChest,
     cluster: m.hooks.cluster,
+    steven: m.hooks.steven,
     chestLoad: (key) => m.chests[key] ?? [],
     legends: (key) => m.legends?.[key] ?? [],
     chestSave: (key, box) => post({ ev: 'chestSave', key, box }),
-    extracted: (key, mon, matchId) => post({ ev: 'extracted', key, mon, matchId }),
+    extracted: (key, mon, matchId, via) => post({ ev: 'extracted', key, mon, matchId, via }),
     flagged: (key, name, matchId, summary) => post({ ev: 'flagged', key, name, matchId, summary }),
   };
   const s = m.spec;

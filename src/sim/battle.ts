@@ -74,7 +74,11 @@ export type BattleEvent =
   | { type: 'ball-burst'; mon: Mon; x: number; y: number }
   | { type: 'learned'; mon: Mon; moveId: string; forgot: string | null }
   | { type: 'released'; mon: Mon }
-  | { type: 'extracted'; mon: Mon; via: 'win' | 'voucher' }
+  | { type: 'extracted'; mon: Mon; via: 'win' | 'voucher' | 'steven' }
+  /** Steven (src/sim/steven.ts): his invitation, the stadium intro, and how it ended. */
+  | { type: 'steven'; stage: 'invite' | 'intro' | 'won' | 'lost' }
+  /** Steven's ace begins its limited form change. */
+  | { type: 'form-start'; mon: Mon }
   | { type: 'duel-start'; duel: Duel }
   | { type: 'duel-send'; duel: Duel; mon: Mon; trainer: Trainer }
   | { type: 'duel-throw'; duel: Duel; mon: Mon; trainer: Trainer }

@@ -24,11 +24,11 @@ export function tryMove(ground: GroundRenderer, m: Mover, dx: number, dy: number
   const sx = m.x;
   const sy = m.y;
   if (dx !== 0) {
-    const nx = Math.min(ground.cols - r, Math.max(r, m.x + dx));
+    const nx = Math.min((ground.extentCols ?? ground.cols) - r, Math.max(r, m.x + dx));
     if (canStand(ground, nx, m.y, r)) m.x = nx;
   }
   if (dy !== 0) {
-    const ny = Math.min(ground.rows - r, Math.max(r, m.y + dy));
+    const ny = Math.min((ground.extentRows ?? ground.rows) - r, Math.max(r, m.y + dy));
     if (canStand(ground, m.x, ny, r)) m.y = ny;
   }
   return Math.hypot(m.x - sx, m.y - sy);

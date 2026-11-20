@@ -12,7 +12,7 @@ import type { SyncPatch } from './sync';
 export type CommandName =
   | 'cast' | 'dodge' | 'auto' | 'take' | 'untake' | 'pickLock' | 'cycleLock' | 'swapLead' | 'unequip' | 'learn' | 'release'
   | 'mega' | 'ride' | 'sell' | 'buy' | 'deposit' | 'withdraw' | 'interact' | 'pickUp' | 'duelPick' | 'duelAim' | 'stylerLoop' | 'stylerBreak'
-  | 'snag' | 'snagNo' | 'extract' | 'teach' | 'equip' | 'useItem' | 'discard' | 'throw' | 'behavior';
+  | 'snag' | 'snagNo' | 'extract' | 'teach' | 'equip' | 'useItem' | 'discard' | 'throw' | 'behavior' | 'steven';
 
 /** Public matches are all casual (ranked play has been retired). */
 export type QueueMode = 'casual';

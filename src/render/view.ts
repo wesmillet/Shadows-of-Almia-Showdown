@@ -128,14 +128,20 @@ export class View {
   }
 
   /** Eases the camera toward a target. Called per render frame. */
-  follow(tx: number, ty: number, dt: number, cols: number, rows: number): void {
+  follow(tx: number, ty: number, dt: number, cols: number, rows: number, x0 = 0, y0 = 0): void {
     const k = 1 - Math.exp(-dt * 8);
+    // A jump to somewhere else entirely (into the stadium and back): cut, don't glide across the sea.
+    if (Math.abs(tx - this.camX) > 40 || Math.abs(ty - this.camY) > 40) {
+      this.camX = tx;
+      this.camY = ty;
+    }
     this.camX = lerp(this.camX, tx, k);
     this.camY = lerp(this.camY, ty, k);
     const halfW = this.width / 2 / this.pxPerTile;
     const halfH = this.height / 2 / this.pxPerTile;
-    this.camX = clamp(this.camX, Math.min(halfW, cols / 2), Math.max(cols - halfW, cols / 2));
-    this.camY = clamp(this.camY, Math.min(halfH, rows / 2), Math.max(rows - halfH, rows / 2));
+    // Kept inside the area shown (the island, or the stadium: x0, y0 is its corner, cols x rows its size).
+    this.camX = clamp(this.camX, x0 + Math.min(halfW, cols / 2), x0 + Math.max(cols - halfW, cols / 2));
+    this.camY = clamp(this.camY, y0 + Math.min(halfH, rows / 2), y0 + Math.max(rows - halfH, rows / 2));
   }
 
   snapTo(x: number, y: number): void {

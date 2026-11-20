@@ -200,6 +200,9 @@ function command(m: Match, seat: Seat, c: CommandName, a: Arg[], flag: Flag): st
     case 'snagNo':
       m.declineSnag();
       return '';
+    case 'steven':
+      // Only the winner Steven invited answers.
+      return seat.trainer === m.steven.who ? m.stevenAnswer(a[0] === 1) : '';
     case 'snag': {
       const i = int(a[0], 0, 11);
       return i === null ? '' : m.snag(i);

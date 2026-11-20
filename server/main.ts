@@ -135,6 +135,7 @@ const accountOf = (key: string): number | null => (key.startsWith('u') ? Number(
 
 const roomHooks: RoomHooks = {
   rareChest: process.env.RARE_CHEST ? process.env.RARE_CHEST === '1' : KIND !== 'live',
+  steven: process.env.STEVEN ? process.env.STEVEN === '1' : KIND !== 'live',
   cluster: KIND !== 'live' && process.env.DEV_CLUSTER === '1',
   chestLoad: (key) => {
     const id = accountOf(key);
@@ -148,12 +149,12 @@ const roomHooks: RoomHooks = {
     const id = accountOf(key);
     return id === null ? [] : accounts.ownedLegends(id);
   },
-  extracted: (key, mon, matchId) => {
+  extracted: (key, mon, matchId, via = 'voucher') => {
     const id = accountOf(key);
     if (id === null) return;
     // The match refuses a second of a legendary; this is the last check (one of each).
     if (accounts.legendProblem(id, mon.dex)) return log(`Extract refused (${key}, ${matchId}): already owns ${mon.dex}`);
-    accounts.addToPc(id, mon, 'voucher', matchId);
+    accounts.addToPc(id, mon, via, matchId);
   },
   flagged: (key, name, matchId, summary) => {
     log(`Flagged ${name} (${key}) in ${matchId}: ${summary}`);

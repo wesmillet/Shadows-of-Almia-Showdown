@@ -141,6 +141,8 @@ export class PlayerView {
     r.outposts = m.outposts;
     r.chests = m.chests;
     r.challenge = m.challenge;
+    // Steven's challenge (src/sim/steven.ts): its stage, for the invitation and the stadium's screens.
+    r.steven = m.steven.view();
     r.shops = m.shops;
     r.visitors = vv;
     r.radar = this.list('radar', dots);

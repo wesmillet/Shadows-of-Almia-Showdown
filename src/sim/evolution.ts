@@ -13,6 +13,9 @@ import type { Mon } from './entities';
 
 export const EVOLVE_SWAP = 1.1;
 export const EVOLVE_SECONDS = 1.9;
+/** A limited form change (Steven's ace): a longer glow in its new colours, then the swap. */
+export const FORM_SWAP = 2.2;
+export const FORM_SECONDS = 3.4;
 
 /** The evolutions open to a species at a level (empty when none is due). */
 export function evolutionsAt(sp: SpeciesDef, level: number): string[] {

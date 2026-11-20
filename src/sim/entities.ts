@@ -147,7 +147,11 @@ export interface Mon {
   /** Capture tween applied when drawing: scale and alpha in [0,1], red flash in [0,1]. */
   visual: { scale: number; alpha: number; flash: number };
   /** Evolving in the field: the species it becomes, seconds in, and whether the swap happened. */
-  evolving: { to: string; t: number; swapped: boolean; mega?: boolean } | null;
+  evolving: { to: string; t: number; swapped: boolean; mega?: boolean; /** A limited form change (Steven's ace): longer, in its new types' colours, then it grows. */ form?: boolean } | null;
+  /** Drawn this much bigger (Steven's ace after its form change). */
+  grown?: number;
+  /** Steven's ace: the limited form it changes into when worn down (CONFIG.steven.transformAt), once. */
+  aceForm?: { to: string; done: boolean };
   /** A land's boss: stays near its lair and only fights what comes close. */
   landBoss?: boolean;
   /** A tougher wild: higher level (often evolved), more XP. */
@@ -287,6 +291,8 @@ export interface Trainer {
   hidden?: boolean;
   /** This side of a battle is a legendary fighting on its own (Match.startLegendBout). */
   legendBout?: boolean;
+  /** Steven: battled in the stadium after a win (src/sim/steven.ts); losing to him is friendly. */
+  champion?: boolean;
 }
 
 /** What a computer trainer is doing with its hands (src/sim/bot.ts). */

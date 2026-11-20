@@ -155,6 +155,14 @@ export class Nav {
    * null when the goal cannot be reached on foot (or is already this tile).
    */
   dir(x: number, y: number, tx: number, ty: number): { x: number; y: number } | null {
+    // Off the island's grid (the stadium, src/sim/stadium.ts: one open field): straight there.
+    if (!this.onGrid(x, y) || !this.onGrid(tx, ty)) {
+      if (this.onGrid(x, y) !== this.onGrid(tx, ty)) return null;
+      const vx = tx - x;
+      const vy = ty - y;
+      const vl = Math.hypot(vx, vy);
+      return vl < 0.05 ? null : { x: vx / vl, y: vy / vl };
+    }
     const next = this.nextTile(x, y, tx, ty);
     if (!next) return null;
     // aim at the next tile's centre so 1-wide ladders and bridges are taken squarely
@@ -206,7 +214,22 @@ export class Nav {
   }
 
   /** True when a straight walk from a to b stays on walkable tiles. */
+  /** Inside the island's grid (the area paths are searched on). */
+  private onGrid(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x < this.ground.cols && y < this.ground.rows;
+  }
+
   clearLine(ax: number, ay: number, bx: number, by: number): boolean {
+    // In the stadium (off the grid): its walls are the only thing in the way.
+    if (!this.onGrid(ax, ay) || !this.onGrid(bx, by)) {
+      const d = Math.hypot(bx - ax, by - ay);
+      const steps = Math.max(1, Math.ceil(d / 0.4));
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        if (!this.ground.walkable(Math.floor(ax + (bx - ax) * t), Math.floor(ay + (by - ay) * t))) return false;
+      }
+      return true;
+    }
     const d = Math.hypot(bx - ax, by - ay);
     const steps = Math.max(1, Math.ceil(d / 0.4));
     for (let i = 1; i <= steps; i++) {

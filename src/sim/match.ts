@@ -23,9 +23,12 @@ import { DEV_CHEST, rareChest } from '../dev';
 import { loadChest, saveChest } from '../chest';
 import { Nav } from './nav';
 import { areaContains, makeArea, moveReach, type Area } from './battle';
+import { withStadium, type Stadium, type StadiumGround } from './stadium';
+import { StevenChallenge, stevenConfig } from './steven';
+import { isDev } from '../dev';
 import { SHOPS, challengerLevel, drawTeam, inArena, koMoney, rewardTms, stallStock, type Challenge, type MapNpc, type Shop } from './town';
 import { Visitors } from './visitors';
-import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
+import { applyEvolution, EVOLVE_SECONDS, EVOLVE_SWAP, FORM_SECONDS, FORM_SWAP, finalForm, formAtLevel, pickEvolution, stoneEvolution } from './evolution';
 import { baseDex, canMega, megaFormOf, stoneFor } from './mega';
 import { startFishing, stepFishing, type FishingState } from './fishing';
 import { newSeat, type MatchOutcome, type Seat } from './seat';
@@ -133,6 +136,8 @@ export interface Duel {
   winner: Trainer | null;
   /** The final battle: the crystal's field is the battle area (a rectangle) instead of the usual ring. */
   bounds?: { x0: number; y0: number; x1: number; y1: number };
+  /** Fought in the stadium (Steven): the camera follows the Pokémon instead of fixing on the field's middle. */
+  stadium?: boolean;
   /** Stalemate watch (stalemate()): the active pair's HP when it last changed, and seconds since. */
   quietHp?: number;
   quietT?: number;
@@ -253,12 +258,28 @@ export class Match {
    * rules, its rare-item chest) reaches a permanent PC or chest.
    */
   keepsResults = true;
+  /**
+   * Steven may challenge the winner (src/sim/steven.ts). The server decides online (STEVEN, on everywhere
+   * but the live server); offline it is on in tester mode or with ?steven=1 in the address.
+   */
+  stevenEnabled = isDev() || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('steven') === '1');
+  readonly steven: StevenChallenge = new StevenChallenge(this);
+  /** The stadium past the island's east edge. */
+  get stadium(): Stadium | null {
+    return (this.ground as Partial<StadiumGround>).stadium ?? null;
+  }
+
+  /** The winner's answer to Steven's invitation. */
+  stevenAnswer(accept: boolean): string {
+    return this.steven.answer(accept);
+  }
   /** Net items each trainer has taken out of their chest this match (by id), refunded if the match is called off. */
   private chestOut = new Map<Trainer, Map<string, number>>();
 
   constructor(deps: MatchDeps, starterDexes: string[], opts: { level?: number; partyCap?: number; humans?: Array<{ name: string; starters: string[]; team?: number }>; rivals?: number; mirror?: boolean; stormSpeed?: number; shinyBoost?: number } = {}) {
     this.partyCap = Math.max(CONFIG.player.partyCap, opts.partyCap ?? 0);
-    this.ground = deps.ground;
+    // The island, with the stadium past its east edge (src/sim/stadium.ts).
+    this.ground = withStadium(deps.ground);
     this.nav = new Nav(this.ground);
     this.rng = deps.rng;
     this.sprites = deps.sprites;
@@ -3152,6 +3173,7 @@ export class Match {
       });
     }
     this.visitors.step(dt);
+    this.steven.step(dt);
     this.stepDodges(dt);
     for (const seat of this.seats) {
       if (!seat.trainer.alive || seat.outcome) continue;
@@ -3261,11 +3283,12 @@ export class Match {
           continue;
         }
         e.t += dt;
-        if (!e.swapped && e.t >= EVOLVE_SWAP) {
+        const swapAt = e.form ? FORM_SWAP : EVOLVE_SWAP;
+        if (!e.swapped && e.t >= swapAt) {
           // The new form's sprites must be in before the swap (or it would vanish while they load).
           const spr = this.sprites.get(e.to, !!m.shiny);
-          if (!spr.loaded && e.t < EVOLVE_SWAP + 4) {
-            e.t = EVOLVE_SWAP - 0.2;
+          if (!spr.loaded && e.t < swapAt + 4) {
+            e.t = swapAt - 0.2;
             continue;
           }
           e.swapped = true;
@@ -3274,10 +3297,13 @@ export class Match {
             m.mega = true;
             m.megaFrom = { dex: m.dex, name: m.name };
           }
-          applyEvolution(m, species(e.to), spr);
+          if (e.to !== m.dex) applyEvolution(m, species(e.to), spr);
+          if (e.form) this.finishFormChange(m);
           this.battle.events.push({ type: 'evolved', mon: m, from });
         }
-        if (e.t >= EVOLVE_SECONDS) m.evolving = null;
+        // A limited form grows into its new size over a moment after the change.
+        if (e.form && e.swapped) m.grown = 1 + (stevenConfig().transformScale - 1) * Math.min(1, (e.t - FORM_SWAP) / 0.9);
+        if (e.t >= (e.form ? FORM_SECONDS : EVOLVE_SECONDS)) m.evolving = null;
       }
     }
   }
@@ -3719,7 +3745,9 @@ export class Match {
       if (t.legendBout && this.throws.some((th) => th.target && t.party.includes(th.target))) continue;
       // Losing a legendary bout is friendly: endDuel patches the team up on the next step. (Before
       // this, the knockout was counted here first and the player was eliminated from the match.)
-      if (t.duelId !== undefined && this.duels.some((d) => d.id === t.duelId && d.state !== 'over' && (d.a.trainer.legendBout || d.b.trainer.legendBout))) continue;
+      if (t.duelId !== undefined && this.duels.some((d) => d.id === t.duelId && d.state !== 'over' && (d.a.trainer.legendBout || d.b.trainer.legendBout || d.a.trainer.champion || d.b.trainer.champion))) continue;
+      // Steven never leaves the match by losing, and his challenger's result is already a win (src/sim/steven.ts).
+      if (t.champion || this.steven.inStadium(t)) continue;
       // Out only when nothing is left standing; members out roaming still count.
       if (t.alive && t.party.length > 0 && !t.party.some((m) => !m.fainted && !m.captured) && !fallingIn(t)) {
         if (t.lastKo === 'wild' && !t.challenger && !t.visitor && !this.finalStarted && !this.over) this.down(t);
@@ -3768,7 +3796,8 @@ export class Match {
     const teamOf = (t: Trainer) => (t.team === undefined ? `t${t.id}` : `team${t.team}`);
     const teamsLeft = new Set(everyone.filter((t) => t.alive).map(teamOf));
     if (teamsLeft.size <= 1 && new Set(everyone.map(teamOf)).size > 1) {
-      for (const seat of this.seats) if (!seat.outcome) seat.outcome = seat.trainer.alive ? 'win' : 'loss';
+      // The winner may be invited to battle Steven first (src/sim/steven.ts): their win waits for that.
+      for (const seat of this.seats) if (!seat.outcome && !(seat.trainer.alive && this.steven.holds(seat))) seat.outcome = seat.trainer.alive ? 'win' : 'loss';
     }
     if (this.seats.every((x) => x.outcome)) this.over = true;
   }
@@ -3854,6 +3883,8 @@ export class Match {
 
   /** Inside the darkness. */
   isDark(x: number, y: number): boolean {
+    // The stadium is a world of its own: the storm never reaches it.
+    if (this.stadium?.contains(x, y)) return false;
     return inDarkness(this.darkness, x, y, this.centerX, this.centerY);
   }
 
@@ -4322,7 +4353,7 @@ export class Match {
    * player's telegraphs and dashes out of most of them, casts more often as it weakens, chains
    * casts when pressed, and at a third of its HP it is enraged (Attack and Speed up, red flash).
    */
-  private stepLegendMon(m: Mon, foe: Mon | null, dt: number): void {
+  private stepLegendMon(m: Mon, foe: Mon | null, dt: number, dodge: readonly number[] = [0.55, 0.7, 0.85]): void {
     const frac = m.hp / m.maxHp;
     const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
     if (phase > (m.legendPhase ?? 0)) {
@@ -4333,12 +4364,15 @@ export class Match {
         this.battle.changeStage(m, 'spe', 1);
         this.battle.events.push({ type: 'scene-fx', id: 'fx_114', x: m.x, y: m.y, scale: 3.6, ground: true, fps: 14, tint: '#5a1f8f', shake: 0.4, epic: true });
       }
-      if (phase === 1) this.battle.events.push({ type: 'notice', text: m.shadow ? `${m.name}'s aura thickens: it shook off its status and moves faster!` : `${m.name} is getting serious!`, seconds: 2.2 });
-      else {
+      // Steven's other five firm up quietly (no banner for each of them).
+      const quiet = !!m.owner?.champion && !m.aceForm;
+      if (phase === 1) {
+        if (!quiet) this.battle.events.push({ type: 'notice', text: m.shadow ? `${m.name}'s aura thickens: it shook off its status and moves faster!` : `${m.name} is getting serious!`, seconds: 2.2 });
+      } else {
         this.battle.changeStage(m, 'atk', 1);
         this.battle.changeStage(m, 'spe', 1);
         m.flash = 0.4;
-        this.battle.events.push({ type: 'notice', text: `${m.name} is enraged!`, seconds: 2.4 });
+        if (!quiet) this.battle.events.push({ type: 'notice', text: `${m.name} is enraged!`, seconds: 2.4 });
         this.battle.events.push({ type: 'scene-fx', id: 'fx_175', x: m.x, y: m.y, scale: 2.4, ground: true, shake: 0.6, tint: '#ff6b6b', epic: m.dex.startsWith('0249') || m.dex.startsWith('0491') || (m.dex.startsWith('0150') && !!m.shadow) });
       }
     }
@@ -4355,7 +4389,7 @@ export class Match {
     }
     if (m.casting || incapable(m)) return;
     if (foe && !m.dodge && (m.dodgeCd ?? 0) <= 0 && this.inHostileTelegraph(m)) {
-      if (this.rng.chance([0.55, 0.7, 0.85][phase] as number)) {
+      if (this.rng.chance(dodge[phase] ?? 0.7)) {
         const side = this.rng.chance(0.5) ? 1 : -1;
         this.startDodge(m, -(foe.y - m.y) * side, (foe.x - m.x) * side);
         m.dodgeCd = [1.4, 1.0, 0.7][phase] as number;
@@ -4387,6 +4421,50 @@ export class Match {
         if (phase >= 1 && this.rng.chance(phase === 2 ? 0.5 : 0.3)) m.busy = 0.25;
       }
     }
+  }
+
+  /**
+   * One of Steven's Pokémon (src/sim/steven.ts). They battle like a legendary (stepLegendMon: strafing,
+   * reading telegraphs, enraged when low). His ace, worn down to CONFIG.steven.transformAt of its HP,
+   * changes into its limited form: it glows in its new types' colours, then heals to full, takes its
+   * new form's stats (times transformStats) and grows (transformScale). Once.
+   */
+  private stepChampionMon(m: Mon, foe: Mon | null, dt: number): void {
+    const c = stevenConfig();
+    const af = m.aceForm;
+    if (af && !af.done && !m.evolving && !m.fainted && m.hp > 0 && m.hp <= m.maxHp * c.transformAt) {
+      af.done = true;
+      this.battle.interrupt(m);
+      m.target = null;
+      m.moving = false;
+      m.dodge = null;
+      // Its new form's sheets load during the glow.
+      const spr = this.sprites.get(af.to, !!m.shiny);
+      void spr.ready.then(() => Promise.all(['Walk', 'Attack', 'Shoot'].map((a) => spr.ensureSheet(a, true))));
+      m.evolving = { to: af.to, t: 0, swapped: false, form: true };
+      m.busy = Math.max(m.busy, FORM_SECONDS);
+      this.battle.events.push({ type: 'form-start', mon: m });
+      return;
+    }
+    if (m.evolving?.form) {
+      // Changing: it stands still and can not act.
+      if (m.moving) this.setMonWalking(m, false);
+      return;
+    }
+    this.stepLegendMon(m, foe, dt, c.dodge ?? [0.4, 0.5, 0.65]);
+  }
+
+  /** The limited form change lands (stepEvolutions): full HP, stronger, cured. */
+  private finishFormChange(m: Mon): void {
+    const c = stevenConfig();
+    const k = c.transformStats;
+    m.stats = { ...m.stats, atk: Math.round(m.stats.atk * k), def: Math.round(m.stats.def * k), spa: Math.round(m.stats.spa * k), spd: Math.round(m.stats.spd * k), spe: Math.round(m.stats.spe * k) };
+    m.maxHp = Math.round(m.stats.hp * k);
+    m.hp = m.maxHp;
+    this.battle.cureStatus(m);
+    m.stages = { atk: 0, def: 0, spe: 0 };
+    m.legendPhase = 0;
+    m.cooldowns = m.moves.map(() => 0);
   }
 
   /**
@@ -4637,6 +4715,7 @@ export class Match {
       const foe = (s === d.a ? d.b : d.a).mon;
       if (s.trainer.isPlayer) this.withSeat(s.trainer, () => this.stepDuelPlayerMon(m, dt));
       else if (s.trainer.legendBout) this.withSeat((s === d.a ? d.b : d.a).trainer, () => this.stepLegendMon(m, foe, dt));
+      else if (s.trainer.champion) this.withSeat((s === d.a ? d.b : d.a).trainer, () => this.stepChampionMon(m, foe, dt));
       else {
         this.stepDuelAiMon(m, foe, dt);
         if (!s.trainer.challenger && !s.trainer.visitor) duelHands(this, s.trainer, m, dt);
@@ -5199,6 +5278,8 @@ export class Match {
    * when an outside one faints or the order changes.
    */
   fieldParty(t: Trainer): void {
+    // Walking out for Steven's battle: everyone stays in their balls until it starts.
+    if (this.steven.state === 'intro' && (this.steven.who === t || this.steven.host === t)) return;
     const limit = (CONFIG.party as typeof CONFIG.party & { fieldLimit?: number }).fieldLimit ?? 99;
     let out = 0;
     for (const m of t.party) {

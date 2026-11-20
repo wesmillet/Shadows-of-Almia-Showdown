@@ -4,8 +4,8 @@
  */
 import { DIR_VECTORS, lerp, dir8To4 } from '../core/math';
 import type { Match } from '../sim/match';
-import { CONFIG, bodyRadius, drawScale, monScale } from '../sim/data';
-import { EVOLVE_SECONDS, EVOLVE_SWAP } from '../sim/evolution';
+import { CONFIG, SPECIES, bodyRadius, drawScale, monScale, typeColor } from '../sim/data';
+import { EVOLVE_SECONDS, EVOLVE_SWAP, FORM_SECONDS, FORM_SWAP } from '../sim/evolution';
 import type { Mon, Trainer } from '../sim/entities';
 import type { RangerSprites } from '../sprites/rangerSprite';
 import type { FrameRect } from '../sprites/pokemonSprite';
@@ -143,17 +143,38 @@ export function drawMon(view: View, m: Mon, alpha: number, lift = 0, scaleMul = 
   if (m.evolving) {
     // Evolution: the body glows white, brighter and faster toward the swap, then fades.
     const e = m.evolving;
-    const k = e.t < EVOLVE_SWAP ? (e.t / EVOLVE_SWAP) * (0.65 + 0.35 * Math.sin(e.t * (8 + 14 * (e.t / EVOLVE_SWAP))))
-      : Math.max(0, 1 - (e.t - EVOLVE_SWAP) / (EVOLVE_SECONDS - EVOLVE_SWAP));
+    const swap = e.form ? FORM_SWAP : EVOLVE_SWAP;
+    const end = e.form ? FORM_SECONDS : EVOLVE_SECONDS;
+    const k = e.t < swap ? (e.t / swap) * (0.65 + 0.35 * Math.sin(e.t * (8 + 14 * (e.t / swap))))
+      : Math.max(0, 1 - (e.t - swap) / (end - swap));
     const c = flashCanvas(f.image, f.sx, f.sy, f.w, f.h);
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, k));
-    ctx.drawImage(c, dx, dy, f.w * s, f.h * s);
+    // A limited form change glows in its new types' colours, sweeping from one to the other.
+    if (e.form) ctx.drawImage(tint(c, formGlow(e.to, e.t)), dx, dy, f.w * s, f.h * s);
+    else ctx.drawImage(c, dx, dy, f.w * s, f.h * s);
     ctx.restore();
   }
   if (tween) ctx.restore();
   ctx.imageSmoothingEnabled = false;
   if (m.status === 'sleep' && !tween) drawZzz(view, sx, sy - m.species.body[1] * s, m.anim.time);
+}
+
+/** The glow colour of a limited form change at `t` seconds: its two types' colours (and white) in turn. */
+function formGlow(dex: string, t: number): string {
+  const types = SPECIES.get(dex)?.types ?? [];
+  const cols = [...types.map((x) => typeColor(x)), '#ffffff'];
+  const p = (t * 2.2) % cols.length;
+  const i = Math.floor(p);
+  const a = hexRgb(cols[i] as string);
+  const b = hexRgb(cols[(i + 1) % cols.length] as string);
+  const f = p - i;
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
+}
+
+function hexRgb(h: string): [number, number, number] {
+  const n = parseInt(h.replace('#', '').slice(0, 6), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 const tintCache = document.createElement('canvas');

@@ -17,7 +17,7 @@ import { openOptions } from './optionsMenu';
 import { settings } from '../settings';
 import { BEAM_REACH, areaContains, makeArea, R, strikeDelay, travelDelay, type Area, type BattleEvent } from '../sim/battle';
 import { SHOPS, type Shop } from '../sim/town';
-import { CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, isContact, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
+import { SPECIES, CONFIG, MOVES, MOVE_SLOTS, bodyRadius, canLearnTm, drawScale, isContact, monScale, move, tmRefusal, typeColor, type FxPart, type MoveDef } from '../sim/data';
 import type { GroundItem, InventorySlot, Mon, Trainer } from '../sim/entities';
 import { incapable, lead } from '../sim/entities';
 import { GRAB_SECONDS, Match, type DuelSide } from '../sim/match';
@@ -32,6 +32,8 @@ import { lineOwned } from '../sim/starters';
 import { Beam, drawPointLight, ImpactBurst, Projectile, RingPulse, ShardBurst, SpriteStripVisual, StatusCloud, VfxLayer, type MoveVisual } from '../vfx/visuals';
 import { drawInfoBar, Hud, type HudState } from './hud';
 import { extractToPc } from '../pc';
+import { drawIntro as drawStevenIntro, drawInvite as drawStevenInvite, drawResult as drawStevenResult, type Rect as StevenRect } from './stevenHud';
+import { stevenConfig } from '../sim/steven';
 import type { PixelUi } from './pixelUi';
 import { ItemIcons } from '../sprites/itemIcons';
 import { BALL_LIST, ITEMS, type BallKind } from '../sim/items';
@@ -318,6 +320,11 @@ export class MatchScreen implements Screen {
 
   protected handleInput(input: Input): void {
     const v = this.ctx.view;
+    // Steven's invitation owns the input until it is answered (src/sim/steven.ts).
+    if (this.stevenInviteOpen()) {
+      this.handleStevenInput(input);
+      return;
+    }
     // Wiped out and waiting to respawn: nothing to do but wait.
     if (this.match.player.downUntil != null) {
       input.takeClicks();
@@ -2042,6 +2049,18 @@ export class MatchScreen implements Screen {
       case 'notice':
         this.say(ev.text, ev.seconds ?? 1.4);
         break;
+      case 'steven':
+        if (ev.stage === 'intro') this.stevenIntro = { t: 0 };
+        else if (ev.stage === 'won' || ev.stage === 'lost') this.stevenResult = { t: 0, won: ev.stage === 'won' };
+        break;
+      case 'form-start': {
+        const m = this.match.steven;
+        const form = SPECIES.get(m.ace?.aceForm?.to ?? ev.mon.aceForm?.to ?? '')?.name ?? 'its true form';
+        this.say(`Steven: "${ev.mon.name}, it's time. Show them ${form === ev.mon.name ? 'everything' : 'your true form'}!"`, 3.2);
+        this.playFx(EXTRA_FX.evolve, { x: ev.mon.x, y: ev.mon.y, lift: 0.5, scale: 3.4, fps: 10 });
+        this.shake = Math.max(this.shake, 0.5);
+        break;
+      }
       case 'final-battle':
         this.finalIntro = { a: ev.a, b: ev.b, aId: ev.aId, bId: ev.bId, t: 0 };
         break;
@@ -3050,10 +3069,14 @@ export class MatchScreen implements Screen {
     let targetZoom = fighting ? CONFIG.duel.zoom : this.debugZoom ?? 1;
     // The final battle on the crystal's field: zoomed so the whole field (both trainers at its
     // ends) is on screen, never closer than a normal battle.
-    if (fighting && duel.bounds) {
-      const b = duel.bounds;
+    // Steven's intro: the whole stadium field, as for its battle.
+    const stIntro = this.match.steven.state === 'intro' && this.match.steven.inStadium(p) ? this.match.stadium : null;
+    if ((fighting && duel.bounds) || stIntro) {
+      const b = (stIntro ? stIntro.field : duel?.bounds) as { x0: number; y0: number; x1: number; y1: number };
       const perTile = v.pxPerTile / v.zoom;
-      const fit = Math.min(v.width / ((b.x1 - b.x0 + 3) * perTile), v.height / ((b.y1 - b.y0 + 5) * perTile));
+      // The stadium's field fills the screen (its walls and front rows of the crowd just in view).
+      const pad = stIntro || duel?.stadium ? [0, 1] : [3, 5];
+      const fit = Math.min(v.width / ((b.x1 - b.x0 + (pad[0] as number)) * perTile), v.height / ((b.y1 - b.y0 + (pad[1] as number)) * perTile));
       targetZoom = Math.max(0.55, Math.min(CONFIG.duel.zoom, fit));
     }
     v.zoom += (targetZoom - v.zoom) * (1 - Math.exp(-frameDt * 3.5));
@@ -3065,11 +3088,14 @@ export class MatchScreen implements Screen {
     if (focus) {
       fx = focus.x;
       fy = focus.y;
+    } else if (stIntro) {
+      fx = (stIntro.field.x0 + stIntro.field.x1) / 2;
+      fy = (stIntro.field.y0 + stIntro.field.y1) / 2;
     } else if (steered && !fighting) {
       // Pokémon mode: the camera rides with the steered Pokémon.
       fx = steered.px + (steered.x - steered.px) * alpha;
       fy = steered.py + (steered.y - steered.py) * alpha;
-    } else if (duel && fighting && duel.bounds) {
+    } else if (duel && fighting && duel.bounds && !duel.stadium) {
       // The final battle: the field's middle.
       fx = (duel.bounds.x0 + duel.bounds.x1) / 2;
       fy = (duel.bounds.y0 + duel.bounds.y1) / 2;
@@ -3079,7 +3105,10 @@ export class MatchScreen implements Screen {
       fx = ma && mb ? (ma.x + mb.x) / 2 : duel.cx;
       fy = ma && mb ? (ma.y + mb.y) / 2 : duel.cy;
     }
-    v.follow(fx, fy, frameDt, this.match.ground.cols, this.match.ground.rows);
+    // In the stadium (Steven), the camera keeps to it; elsewhere to the island.
+    const st = this.match.stadium;
+    if (st && st.contains(fx, fy)) v.follow(fx, fy, frameDt, st.cols, st.rows, st.ox, st.oy);
+    else v.follow(fx, fy, frameDt, this.match.ground.cols, this.match.ground.rows);
     // Heavy hits shake the camera for a moment (offset undone after the frame is drawn).
     this.shake = Math.max(0, this.shake - frameDt * 2.2);
     const shk = settings.shake ? this.shake * this.shake * 0.22 : 0;
@@ -3115,7 +3144,8 @@ export class MatchScreen implements Screen {
       darkCy: v.toScreenY(this.match.centerY),
       darkRadius: lp.darkRadius,
       darkFeather: lp.darkFeather,
-      darkAmount: lp.darkAmount,
+      // Nothing is dark in the stadium.
+      darkAmount: st && st.contains(v.camX, v.camY) ? 0 : lp.darkAmount,
       clearCx: clear ? v.toScreenX(clear.x) : 0,
       clearCy: clear ? v.toScreenY(clear.y) : 0,
       clearRadius: clear ? clear.r * v.pxPerTile : 0,
@@ -3131,6 +3161,7 @@ export class MatchScreen implements Screen {
     if (!this.spectator && !Input.touch) this.drawReticleTop(v);
     this.drawDuelHud(v);
     this.drawFinalIntro(v, frameDt);
+    this.drawSteven(v, frameDt);
     this.drawDowned(v);
     this.drawOverlay(v);
     this.spectator?.draw(v);
@@ -3219,6 +3250,48 @@ export class MatchScreen implements Screen {
    * a red panel slamming together under it, a thick lightning seam where they meet and VS. Kept to
    * the top of the screen, clear of the trainers.
    */
+  /** Steven (src/sim/steven.ts): the stadium intro and the result banner, timed here. */
+  private stevenIntro: { t: number } | null = null;
+  private stevenResult: { t: number; won: boolean } | null = null;
+  private stevenButtons: { yes: StevenRect; no: StevenRect } | null = null;
+
+  /** Steven's invitation is open for this player. */
+  private stevenInviteOpen(): boolean {
+    const st = this.match.steven;
+    return !this.spectator && st.state === 'invite' && !!st.who && st.who.id === this.match.player.id;
+  }
+
+  private handleStevenInput(input: Input): void {
+    let answer: boolean | null = null;
+    if (input.pressed('Space') || input.pressed('Enter')) answer = true;
+    else if (input.pressed('Escape')) answer = false;
+    const b = this.stevenButtons;
+    const inside = (r: StevenRect, x: number, y: number) => x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h;
+    for (const c of input.takeClicks()) {
+      if (b && inside(b.yes, c.x, c.y)) answer = true;
+      else if (b && inside(b.no, c.x, c.y)) answer = false;
+    }
+    if (answer === null) return;
+    const msg = this.match.stevenAnswer(answer);
+    if (msg) this.say(msg, 3);
+  }
+
+  private drawSteven(v: View, dt: number): void {
+    const st = this.match.steven;
+    const c = stevenConfig();
+    this.stevenButtons = this.stevenInviteOpen() ? drawStevenInvite(v, st, this.rangers, this.match.time) : null;
+    if (this.stevenIntro) {
+      this.stevenIntro.t += dt;
+      if (this.stevenIntro.t >= c.introSeconds) this.stevenIntro = null;
+      else drawStevenIntro(v, st, this.match.player.name, this.stevenIntro.t, c.introSeconds);
+    }
+    if (this.stevenResult) {
+      this.stevenResult.t += dt;
+      if (this.stevenResult.t >= c.outroSeconds) this.stevenResult = null;
+      else drawStevenResult(v, st, this.stevenResult.won, this.stevenResult.t, c.outroSeconds);
+    }
+  }
+
   private drawFinalIntro(v: View, dt: number): void {
     const f = this.finalIntro;
     if (!f) return;

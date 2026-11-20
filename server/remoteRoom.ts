@@ -32,7 +32,7 @@ export interface PeerInfo {
 }
 
 export type ToWorker =
-  | { op: 'create'; id: string; spec: Omit<RoomSpec, 'entries'> & { entries: Array<PeerInfo & { starter: string; team?: number }> }; hooks: { rareChest: boolean; cluster?: boolean }; chests: Record<string, InventorySlot[]>; legends?: Record<string, string[]> }
+  | { op: 'create'; id: string; spec: Omit<RoomSpec, 'entries'> & { entries: Array<PeerInfo & { starter: string; team?: number }> }; hooks: { rareChest: boolean; cluster?: boolean; steven?: boolean }; chests: Record<string, InventorySlot[]>; legends?: Record<string, string[]> }
   | { op: 'receive'; room: string; key: string; msg: ClientMsg }
   | { op: 'disconnect'; room: string; key: string }
   | { op: 'rejoin'; room: string; peer: PeerInfo }
@@ -58,7 +58,7 @@ export type FromWorker =
   | { ev: 'send'; key: string; data: string }
   | { ev: 'state'; room: string; state: RoomState }
   | { ev: 'chestSave'; key: string; box: Array<InventorySlot | null> }
-  | { ev: 'extracted'; key: string; mon: PcFields; matchId: string }
+  | { ev: 'extracted'; key: string; mon: PcFields; matchId: string; via?: 'voucher' | 'steven' }
   | { ev: 'flagged'; key: string; name: string; matchId: string; summary: string }
   | { ev: 'end'; room: string; results: RoomResult[]; botPlaces: number[]; trainers?: EndReport['trainers']; seconds?: number; winner?: string | null; flags: EndReport['flags']; aborted: string | null; replay: ReplaySummary | null }
   | { ev: 'error'; room: string; message: string; stack: string; time: number }
@@ -283,7 +283,7 @@ export class WorkerPool {
       case 'chestSave':
         return h.chestSave(m.key, m.box);
       case 'extracted':
-        return h.extracted(m.key, m.mon, m.matchId);
+        return h.extracted(m.key, m.mon, m.matchId, m.via);
       case 'flagged':
         return h.flagged?.(m.key, m.name, m.matchId, m.summary);
       case 'end': {
@@ -328,7 +328,7 @@ export class WorkerPool {
       for (const e of spec.entries) legends[e.peer.key] = hooks.legends?.(e.peer.key) ?? [];
       // A worker still loading keeps this until it is listening.
       const msg: ToWorker = {
-        op: 'create', id: room.id, chests, legends, hooks: { rareChest: hooks.rareChest, cluster: hooks.cluster },
+        op: 'create', id: room.id, chests, legends, hooks: { rareChest: hooks.rareChest, cluster: hooks.cluster, steven: hooks.steven },
         spec: { ...spec, entries: spec.entries.map((e) => ({ ...info(e.peer), starter: e.starter, team: e.team })) },
       };
       pw.worker.postMessage(msg);

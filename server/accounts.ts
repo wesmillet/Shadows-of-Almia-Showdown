@@ -957,7 +957,7 @@ export class Accounts {
   }
 
   /** A Pokémon into the player's PC (an extraction: a win's pick, or an Extraction Voucher). */
-  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift' | 'reward' | 'vote', matchId: string): number {
+  addToPc(userId: number, m: { dex: string; name: string; level: number; shiny?: boolean; alpha?: boolean; legend?: boolean; shadow?: boolean; moves: string[]; heldItem?: string | null }, via: 'win' | 'voucher' | 'egg' | 'gift' | 'reward' | 'vote' | 'steven', matchId: string): number {
     // Kept at the first stage of its line (pcBase): an evolved Pokémon goes back to its first form.
     const base = firstForm(m);
     const entry = {

@@ -1,9 +1,14 @@
 # Changelog
 
-Player-facing changes, newest first. Kept in the repo for now, not shown in the game.
+Player-facing changes, newest first, shown in the game under What's new (online menu).
 Secret features stay out of this file.
 
-## Next update (not live yet)
+Naming: every deploy is an update numbered major.minor. The minor number goes up by one each
+deploy (1.6, 1.7, 1.8...); the major number goes up for a big new chapter (a new region, the
+stadium challenge), and the minor starts again at 0 (2.0). A section being written is titled
+"Update X.Y (not live yet)"; at deploy it becomes "Update X.Y: <date>".
+
+## Update 1.7 (not live yet)
 
 - Winning a trainer battle now revives your whole team and heals it to full, statuses cured.
 - A Pokémon revived during a trainer battle waits in its ball for its turn. Before, it stood outside
@@ -30,7 +35,7 @@ Secret features stay out of this file.
 - One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg
   that would hatch one hatches another instead. Forms count on their own. Ones you already have stay.
 
-## November 16
+## Update 1.6: November 16
 
 - Fixed a duplication bug: a Pokémon brought from a PC stays marked through release, snag and
   recatch, so it can't be kept again by anyone.
@@ -39,7 +44,7 @@ Secret features stay out of this file.
 - Vote Egg: vote for the game on VibeTopList for a bonus Egg each day (same odds as the daily Egg).
 - Red has diagonal poses and walks.
 
-## November 13
+## Update 1.5: November 13
 
 - Earned looks: lab coat at 25 wins, Island Elder at 50 wins, Blaze Ranger at 50 Pokémon in your PC.
 - Looks have names, and achievements show in the Starters panel.
@@ -54,7 +59,7 @@ Secret features stay out of this file.
 - Daily Egg: Mythical odds 0.5%.
 - Places: your place is where you went out.
 
-## November 12
+## Update 1.4: November 12
 
 - Direct messages between friends, and a Friends button on the hub.
 - Abra, Kadabra and Alakazam join the game.
@@ -68,7 +73,7 @@ Secret features stay out of this file.
 - Flygon mount: the rider sits on its back; fly meter 15 seconds.
 - Extraction Vouchers 30% rarer.
 
-## November 11
+## Update 1.3: November 11
 
 - Switch Pokémon mid-battle (15 second cooldown).
 - Struggle when no move can affect the foe, so battles always end.
@@ -77,13 +82,13 @@ Secret features stay out of this file.
 - Single-target shots hit the first foe along the aim line.
 - The auto-battle toggle is gone (your lead picks its own moves out on the field).
 
-## November 10
+## Update 1.2: November 10
 
 - Trainer battle rings are closed: other trainers are held at the edge.
 - Minimap: a red X where you last went down.
 - A Pokémon struck by a ball can't be hit until the ball closes.
 
-## November 9
+## Update 1.1: November 9
 
 - Final Battle: when the last two trainers fight, the battle moves to its own arena with an intro.
 - Legendaries must be caught, not just beaten; caught ones join at level 60.
@@ -95,7 +100,7 @@ Secret features stay out of this file.
 - Shiny starters: owning a shiny of any stage of a line makes that starter shiny.
 - Fixed trainer battles that could not end, and matches that could stall.
 
-## November 8
+## Update 1.0: November 8 (launch)
 
 - Launch: scheduled public matches on the clock.
 - Shiny starters from your PC.

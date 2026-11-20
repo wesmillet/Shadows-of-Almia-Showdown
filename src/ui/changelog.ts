@@ -1,8 +1,8 @@
 /**
  * What's new: the player-facing CHANGELOG.md shown in the game, newest update first, from the
- * online menu. The section still being written ("Next update (not live yet)") is shown as the
- * latest update, since it goes live with the deploy that ships it. Secret features never appear
- * because they are kept out of CHANGELOG.md.
+ * online menu. Updates are numbered (CHANGELOG.md says how); the section still being written
+ * ("Update 1.7 (not live yet)") is shown without the note, since it goes live with its deploy.
+ * Secret features never appear because they are kept out of CHANGELOG.md.
  */
 import changelogText from '../../CHANGELOG.md?raw';
 import { el, overlayRoot } from './overlay';
@@ -32,8 +32,9 @@ export function changelogSections(text: string = changelogText): ChangelogSectio
     const h = /^##\s+(.*)$/.exec(line);
     if (h) {
       const title = (h[1] as string).trim();
-      const unreleased = /not live/i.test(title);
-      out.push({ title: unreleased ? 'Latest update' : title, latest: out.length === 0, items: [] });
+      // "Update 1.7 (not live yet)" goes live with the deploy that ships it: shown as "Update 1.7".
+      const shown = title.replace(/\s*\(not live yet\)\s*$/i, '').trim() || 'Latest update';
+      out.push({ title: shown, latest: out.length === 0, items: [] });
       continue;
     }
     const sec = out[out.length - 1];

@@ -397,8 +397,6 @@ export class OnlineScreen implements Screen {
       h.restore();
     }
     h.restore();
-    text(v, "Steven's team", px + 14 * s, py + ph - 14 * s, 10, { color: '#c8cfe6', shadow: false });
-    text(v, 'New forms', px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: '#8e97b8', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */

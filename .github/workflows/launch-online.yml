@@ -51,21 +51,31 @@ jobs:
             echo "::error::Add the FLY_API_TOKEN secret first (Settings -> Secrets and variables -> Actions)."
             exit 1
           fi
-      - name: Wait until nobody is playing
+      - name: Drain, then wait for the matches running to finish
         if: github.event.inputs.when_busy != 'deploy anyway'
+        env:
+          OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
         run: |
-          # A deploy restarts the server: wait for no matches and nobody queued (a server that does
-          # not answer yet, the first launch, is fine to deploy).
+          # A deploy restarts the server. With OPS_TOKEN set, new matches stop now (players see a notice)
+          # and only the matches already running are waited for. Without it, wait for nobody at all.
+          # Up to 40 minutes; after that it deploys anyway (running matches still get 4 minutes).
+          drained=0
+          if [ -n "$OPS_TOKEN" ]; then
+            if curl -sf --max-time 10 -X POST -H "Authorization: Bearer $OPS_TOKEN" "https://$APP.fly.dev/api/ops/drain" > /dev/null; then
+              drained=1; echo "Draining: no new matches start"
+            else
+              echo "::warning::Drain refused (is OPS_TOKEN the same as the server's?); waiting for nobody playing instead"
+            fi
+          fi
           for i in $(seq 1 40); do
             h=$(curl -sf --max-time 10 "https://$APP.fly.dev/health" || true)
             if [ -z "$h" ]; then echo "No answer from /health: deploying"; exit 0; fi
-            busy=$(echo "$h" | python3 -c 'import json,sys; d=json.load(sys.stdin); q=d.get("queued") or {}; print(int(d.get("rooms",0)) + int(d.get("players",0)) + sum(int(v) for v in q.values()) + int(d.get("privateLobbies",0)))')
-            if [ "$busy" = "0" ]; then echo "Nobody playing: deploying"; exit 0; fi
-            echo "People playing ($h); checking again in a minute"
+            busy=$(echo "$h" | DRAINED=$drained python3 -c 'import json,os,sys; d=json.load(sys.stdin); q=d.get("queued") or {}; r=int(d.get("rooms",0)); print(r if os.environ["DRAINED"]=="1" else r + int(d.get("players",0)) + sum(int(v) for v in q.values()) + int(d.get("privateLobbies",0)))')
+            if [ "$busy" = "0" ]; then echo "No matches running: deploying"; exit 0; fi
+            echo "Still busy ($h); checking again in a minute"
             sleep 60
           done
-          echo "::error::People were playing for 40 minutes; not deployed. Run it again later, or pick 'deploy anyway'."
-          exit 1
+          echo "::warning::Still busy after 40 minutes: deploying anyway (running matches get 4 minutes)"
       - uses: actions/checkout@v4
         with:
           ref: online

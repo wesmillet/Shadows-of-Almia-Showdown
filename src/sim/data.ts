@@ -48,7 +48,7 @@ export interface SpeciesDef {
   stone?: string;
   /** Legendary or Mythical (PokeAPI's is_legendary / is_mythical); absent for ordinary species. */
   class?: 'legendary' | 'mythical';
-  /** Only one trainer's (a limited form: 'steven'). Never a prize, an egg or a wild Pokémon. */
+  /** Only one trainer's (Steven: his team and their limited forms). Never a prize, an egg or a wild Pokémon. */
   exclusive?: string;
   /**
    * Stones circling it (Moonstone forms): how many. The game draws them on its own clock, so they

@@ -317,7 +317,7 @@ export class OnlineScreen implements Screen {
     h.restore();
     const cx = px + pw / 2;
     text(v, '★ A NEW CHALLENGE ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
-    text(v, "Hoenn's strongest trainer...", cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
+    text(v, "Hoenn's finest enters the battle", cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
     const team = teaser.team;
     const gy = py + ph - 40 * s;
     const scale = Math.max(2, Math.round(2 * s));

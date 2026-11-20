@@ -317,7 +317,7 @@ export class OnlineScreen implements Screen {
     h.restore();
     const cx = px + pw / 2;
     text(v, '★ A NEW CHALLENGE ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
-    text(v, 'A powerful trainer from Hoenn arrives', cx, py + 36 * s, 12, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
+    text(v, "Hoenn's strongest trainer...", cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
     const team = teaser.team;
     const gy = py + ph - 40 * s;
     const scale = Math.max(2, Math.round(2 * s));
@@ -326,7 +326,8 @@ export class OnlineScreen implements Screen {
     h.rect(px + 6 * s, py + 46 * s, pw - 12 * s, ph - 52 * s);
     h.clip();
     // The six stand round Steven, veiled: dark shapes outlined in their own moving colours.
-    const spots: Array<[number, number]> = [[-104, -44], [-40, -52], [40, -52], [104, -44], [-72, 0], [72, 0]];
+    // by team order: Metagross, Aggron, Skarmory, Claydol, Cradily, Armaldo
+    const spots: Array<[number, number]> = [[40, -52], [-40, -52], [-104, -44], [104, -44], [-72, 0], [72, 0]];
     // farthest back first, so the nearer ones (Metagross before Aggron) are drawn over them
     const order = team.slice(0, 6).map((m, i) => ({ m, i })).sort((a, b) => (spots[a.i]?.[1] ?? 0) - (spots[b.i]?.[1] ?? 0));
     order.forEach(({ m, i }) => {

@@ -220,11 +220,11 @@
     "_matchSlotsComment": "Extra chest slots that last one match: items in them are safe from wipe-outs but gone when the match ends. Only the first storageSlots are kept between games.",
     "matchSlots": 4,
     "_healCooldownComment": "Seconds a trainer waits between healing items (Potions, Revives) while in a trainer battle or a legendary bout.",
-    "healCooldown": 10,
+    "healCooldown": 20,
     "_chestCapsComment": "The most of one rare item a chest stack can hold (stored in a match; more stays in the bag). megaStone covers every Mega Stone. Stacks already above a cap stay as they are but take no more.",
     "chestCaps": { "rare-candy": 10, "extraction-voucher": 3, "megaStone": 1, "storm-mask": 1 },
     "_carryCapsComment": "The most of a healing item one trainer can carry in the bag. Shops refuse past it, pickups and a beaten trainer's bag give only what fits (the rest stays behind), and the chest gives back only up to it.",
-    "carryCaps": { "potion": 10, "super-potion": 6, "hyper-potion": 3, "revive": 2, "max-revive": 1, "storm-mask": 1 },
+    "carryCaps": { "potion": 10, "super-potion": 6, "hyper-potion": 3, "revive": 1, "max-revive": 1, "storm-mask": 1 },
     "_alphaMegaStoneComment": "The chance an Alpha of a Mega-capable line drops its Mega Stone (item balls also hold one now and then, loot.json).",
     "alphaMegaStoneChance": 0.3
   },

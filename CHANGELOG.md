@@ -17,13 +17,14 @@ Secret features stay out of this file.
 - Phones: Switch is back in the party menu during a trainer battle, and the move buttons no
   longer get stuck after moving and attacking at the same time.
 - The keep menu at the end of a match only shows up when there is a Pokémon you can keep.
-- Healing items have a carry limit: Potion 10, Super Potion 6, Hyper Potion 3, Revive 2, Max Revive 1.
+- Healing items have a carry limit: Potion 10, Super Potion 6, Hyper Potion 3, Revive 1, Max Revive 1.
   Shops stop selling past it, and ground balls and a beaten trainer's bag give only what fits.
 - Wild Pokémon whose line is already in your PC show a Poké Ball after their name.
 - Today's starter is gone: the starter roll offers the three rolled Pokémon only.
 - Legendaries are rare on the starter roll however many you own or star: at most 1% a reel.
 - Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
 - A new challenge is coming: a panel on the online menu teases a powerful trainer from Hoenn.
+- In a trainer battle or a legendary bout, healing items now wait 20 seconds between uses (was 10).
 - Storm Mask: you can carry one and keep one in your chest, the Wandering Merchant sells one a
   match, and it can't be taken from a beaten trainer's bag.
 - One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg

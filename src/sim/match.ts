@@ -1010,7 +1010,7 @@ export class Match {
     const healing = def.kind === 'heal' || def.kind === 'revive';
     if (healing && t.duelId !== undefined && this.time < (t.healReadyAt ?? 0)) return `Wait ${Math.ceil((t.healReadyAt ?? 0) - this.time)} s before another healing item`;
     const healed = (): void => {
-      if (t.duelId !== undefined) t.healReadyAt = this.time + ((CONFIG.items as { healCooldown?: number }).healCooldown ?? 10);
+      if (t.duelId !== undefined) t.healReadyAt = this.time + ((CONFIG.items as { healCooldown?: number }).healCooldown ?? 20);
     };
     switch (def.kind) {
       case 'ball':

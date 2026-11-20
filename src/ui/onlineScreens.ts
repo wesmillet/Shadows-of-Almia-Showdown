@@ -116,7 +116,7 @@ function eventLine(e: { kind: string; value: number }): string {
  * Assets: assets/ui/teaser (teaser.json and one strip per Pokemon, regular and limited form).
  */
 const STEVEN_TEASER = true;
-interface TeaserMon { base: string; baseName: string; form: string; formName: string; w: number; h: number; ground: number; baseDurations: number[]; formDurations: number[]; from: number[]; to: number[] }
+interface TeaserMon { base: string; baseName: string; form: string; w: number; h: number; ground: number; baseDurations: number[]; formDurations: number[]; from: number[]; to: number[] }
 const teaser: { team: TeaserMon[]; img: Map<string, HTMLImageElement>; steven: HTMLImageElement | null; asked: boolean } = { team: [], img: new Map(), steven: null, asked: false };
 function loadTeaser(): void {
   if (teaser.asked) return;
@@ -358,7 +358,38 @@ export class OnlineScreen implements Screen {
       const dy = Math.round(gy - m.ground * scale);
       h.save();
       h.imageSmoothingEnabled = false;
-      h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
+      /** The frame as a flat silhouette in one colour (on the shared canvas). */
+      const flat = (fill: string): HTMLCanvasElement | null => {
+        if (!teaseCanvas) return null;
+        teaseCanvas.width = m.w;
+        teaseCanvas.height = m.h;
+        const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
+        c.clearRect(0, 0, m.w, m.h);
+        c.drawImage(img, f * m.w, 0, m.w, m.h, 0, 0, m.w, m.h);
+        c.globalCompositeOperation = 'source-in';
+        c.fillStyle = fill;
+        c.fillRect(0, 0, m.w, m.h);
+        c.globalCompositeOperation = 'source-over';
+        return teaseCanvas;
+      };
+      if (!showForm) h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
+      else {
+        // The limited form stays veiled: a dark shape rimmed in its colour, the real thing only
+        // glimpsed now and then through the dark.
+        const rim = flat(`rgb(${m.to.join(',')})`);
+        if (rim) {
+          h.globalAlpha = 0.55 + 0.25 * Math.sin(this.t * 3);
+          for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) h.drawImage(rim, dx + ox * scale, dy + oy * scale, dw, dh);
+        }
+        const dark = flat('#11152a');
+        if (dark) {
+          h.globalAlpha = 1;
+          h.drawImage(dark, dx, dy, dw, dh);
+        }
+        h.globalAlpha = Math.max(0, 0.1 + 0.12 * Math.sin(this.t * 1.7 + idx));
+        h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
+        h.globalAlpha = 1;
+      }
       if (k > 0.01 && teaseCanvas) {
         teaseCanvas.width = m.w;
         teaseCanvas.height = m.h;
@@ -394,8 +425,7 @@ export class OnlineScreen implements Screen {
       h.drawImage(teaser.steven, fr * 18, 0, 18, 34, Math.round(px + 44 * s - 9 * ss), Math.round(gy - 33 * ss), 18 * ss, 34 * ss);
       h.restore();
     }
-    const label = r < 1.6 ? m.baseName : r < 2.6 ? '???' : m.formName;
-    text(v, label, px + 14 * s, py + ph - 14 * s, 10, { color: r >= 2.6 ? '#ffe9a8' : '#c8cfe6', shadow: false, maxWidth: pw * 0.62 });
+    text(v, `Steven's ${m.baseName}`, px + 14 * s, py + ph - 14 * s, 10, { color: '#c8cfe6', shadow: false, maxWidth: pw * 0.62 });
     text(v, `${idx + 1} of ${n}`, px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: '#8e97b8', shadow: false });
   }
 

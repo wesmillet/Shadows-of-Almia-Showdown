@@ -3,8 +3,7 @@
   {
    "base": "0376",
    "baseName": "Metagross",
-   "form": "0376-molten",
-   "formName": "Molten Metagross",
+   "form": "form-0376",
    "w": 38,
    "h": 30,
    "ground": 21,
@@ -44,8 +43,7 @@
   {
    "base": "0306",
    "baseName": "Aggron",
-   "form": "0306-moss",
-   "formName": "Mossback Aggron",
+   "form": "form-0306",
    "w": 34,
    "h": 33,
    "ground": 25,
@@ -79,8 +77,7 @@
   {
    "base": "0227",
    "baseName": "Skarmory",
-   "form": "0227-glacier",
-   "formName": "Glacier Skarmory",
+   "form": "form-0227",
    "w": 35,
    "h": 35,
    "ground": 26,
@@ -116,8 +113,7 @@
   {
    "base": "0344",
    "baseName": "Claydol",
-   "form": "0344-moon",
-   "formName": "Moonstone Claydol",
+   "form": "form-0344",
    "w": 42,
    "h": 32,
    "ground": 26,
@@ -177,8 +173,7 @@
   {
    "base": "0346",
    "baseName": "Cradily",
-   "form": "0346-abyss",
-   "formName": "Abyssal Cradily",
+   "form": "form-0346",
    "w": 27,
    "h": 26,
    "ground": 19,
@@ -216,8 +211,7 @@
   {
    "base": "0348",
    "baseName": "Armaldo",
-   "form": "0348-amber",
-   "formName": "Amber Armaldo",
+   "form": "form-0348",
    "w": 32,
    "h": 29,
    "ground": 22,

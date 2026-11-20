@@ -230,6 +230,41 @@ if (who.startsWith('find_') && has('users')) {
     return { username: u.username, joined: new Date(Number(u.created_at)).toISOString().slice(0, 16), lastActive: t ? new Date(Number(t)).toISOString().slice(0, 16) : null };
   });
 }
+// Keeps audit (player = KEEPS_AUDIT): every win or voucher keep since the last deploy (17 Nov 02:18 UTC)
+// of a line the keeper already had, with what the PC entry says (caught as a legend, shadow, item,
+// moves), what the match recorded for that Pokémon, and anything of that line the keeper moved out
+// (trade, Wonder Trade, release) in the 30 minutes before the match started. Read-only, game data only.
+if (who === 'keeps_audit' && has('collection_log') && has('pc')) {
+  const FROM = Date.parse('2026-11-17T02:18:00Z');
+  const names3 = new Map(all('SELECT id, username FROM users').map((u) => [u.id, u.username]));
+  const base4 = (d) => String(d ?? '').slice(0, 4);
+  const log = all("SELECT user_id, pc_id, action, ref, detail, at FROM collection_log ORDER BY at");
+  const lineOf = new Map();
+  const det = (r) => { try { const e = JSON.parse(r.detail); return e && (e.dex ? e : e.entry ? e.entry : e.from ? e.from : null); } catch { return null; } };
+  for (const r of log) { const e = det(r); if (e && e.dex && r.pc_id) lineOf.set(r.pc_id, base4(e.dex)); }
+  const had = new Map();
+  out.keepsAudit = [];
+  for (const r of log) {
+    const e = det(r);
+    if (!e || !e.dex) continue;
+    const k = r.user_id + '|' + base4(e.dex);
+    const n = had.get(k) ?? 0;
+    if (/^add/.test(r.action) || r.action === 'trade:in' || r.action === 'wonder:in') had.set(k, n + 1);
+    if (/^(release|trade:out|wonder:out|remove)/.test(r.action)) had.set(k, Math.max(0, n - 1));
+    if (!(Number(r.at) >= FROM && /add:(win|voucher)/.test(r.action) && n > 0)) continue;
+    const ml = has('match_log') ? one('SELECT started_at, trainers FROM match_log WHERE id = ?', r.ref) : null;
+    const start = ml ? Number(ml.started_at) : Number(r.at) - 900000;
+    let partyMon = null;
+    const mp = has('match_players') ? one('SELECT party FROM match_players WHERE match_id = ? AND user_id = ?', r.ref, r.user_id) : null;
+    if (mp) { try { const party = JSON.parse(mp.party); partyMon = party.find((m) => m && m.pcId === r.pc_id) ?? party.find((m) => m && m.taken && base4(m.dex) === base4(e.dex) && m.level === e.level) ?? null; } catch {} }
+    let team = null;
+    if (ml) { try { const me = JSON.parse(ml.trainers).find((t) => String(t.name).toLowerCase() === String(names3.get(r.user_id) ?? '').toLowerCase()); team = me && me.team ? me.team.map((m) => (typeof m === 'string' ? m : m.name + ' ' + m.level)).join(', ') : null; } catch {} }
+    const movedOut = log.filter((x) => x.user_id === r.user_id && Number(x.at) >= start - 1800000 && Number(x.at) <= Number(r.at) && /^(release|trade:out|wonder:out)/.test(x.action) && (lineOf.get(x.pc_id) === base4(e.dex) || base4((det(x) || {}).dex) === base4(e.dex))).map((x) => ({ action: x.action, at: new Date(Number(x.at)).toISOString().slice(0, 16), pcId: x.pc_id, ref: x.ref }));
+    const backIn = log.filter((x) => x.user_id === r.user_id && Number(x.at) > Number(r.at) && Number(x.at) <= Number(r.at) + 6 * 3600000 && /^(trade:in|wonder:in)/.test(x.action) && base4((det(x) || {}).dex) === base4(e.dex)).map((x) => ({ action: x.action, at: new Date(Number(x.at)).toISOString().slice(0, 16), pcId: x.pc_id, ref: x.ref }));
+    out.keepsAudit.push({ player: names3.get(r.user_id) ?? String(r.user_id), name: e.name, dex: e.dex, level: e.level, shiny: !!e.shiny, legend: !!e.legend, shadow: !!e.shadow, item: e.heldItem ?? null, moves: e.moves ?? null, how: r.action, at: new Date(Number(r.at)).toISOString().slice(0, 16), match: r.ref, matchStart: ml ? new Date(start).toISOString().slice(0, 16) : null, alreadyHad: n, partyMon: partyMon ? { fromPc: !!partyMon.fromPc, legend: !!partyMon.legend, level: partyMon.level } : null, team, movedOut, backIn });
+  }
+  out.keepsAuditSummary = { keeps: out.keepsAudit.length, withMovedOut: out.keepsAudit.filter((x) => x.movedOut.length).length, legendFlag: out.keepsAudit.filter((x) => x.legend).length };
+}
 console.log('REPORT_JSON_START');
 console.log(JSON.stringify(out, null, 1));
 console.log('REPORT_JSON_END');

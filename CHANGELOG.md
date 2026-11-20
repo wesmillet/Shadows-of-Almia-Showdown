@@ -24,6 +24,8 @@ Secret features stay out of this file.
 - Legendaries are rare on the starter roll however many you own or star: at most 2% a reel.
 - Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
 - A new challenge is coming: a panel on the online menu teases a powerful trainer from Hoenn.
+- Storm Mask: you can carry one, the Wandering Merchant sells one a match, and it can't be kept
+  between games or taken from a beaten trainer's bag.
 - One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg
   that would hatch one hatches another instead. Forms count on their own. Ones you already have stay.
 

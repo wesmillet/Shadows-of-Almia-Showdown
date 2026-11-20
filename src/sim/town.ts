@@ -9,6 +9,8 @@ import { ITEMS } from './items';
 export interface ShopEntry {
   id: string;
   price: number;
+  /** How many the stall has this match (unset: as many as anyone buys). */
+  left?: number;
 }
 
 export interface Shop {

@@ -80,6 +80,9 @@ export function chestCap(id: string): number {
   return c === undefined ? CHEST_STACK_MAX : c;
 }
 
+/** The Wandering Merchant's mask: one to a trainer, one sold a match, never kept or handed on. */
+const STORM_MASK = 'storm-mask';
+
 /** The most of an item a trainer can carry (config items.carryCaps; Infinity when uncapped). */
 export function carryCap(id: string): number {
   const caps = (CONFIG.items as { carryCaps?: Record<string, number> }).carryCaps ?? {};
@@ -513,7 +516,10 @@ export class Match {
     // Chests used to keep ten slots: those old extra slots can only be emptied now (the match slots
     // still take things).
     const legacy = keep > CONFIG.items.storageSlots;
-    const sameAt = box.findIndex((s, i) => s?.id === entry.id && !(legacy && i < keep));
+    // A Storm Mask lasts one match: only this match's chest slots take it, never the kept one.
+    const matchOnly = entry.id === STORM_MASK;
+    const off = (i: number): boolean => (legacy && i < keep) || (matchOnly && i < keep);
+    const sameAt = box.findIndex((s, i) => s?.id === entry.id && !off(i));
     const same = sameAt >= 0 ? box[sameAt] : undefined;
     const name = ITEMS[entry.id]?.name ?? entry.id;
     // A stack holds at most CHEST_STACK_MAX (the server refuses bigger ones when it loads a chest),
@@ -526,7 +532,8 @@ export class Match {
     let at = sameAt;
     if (same) same.count += n;
     else {
-      at = box.findIndex((s, i) => s === null && !(legacy && i < keep));
+      at = box.findIndex((s, i) => s === null && !off(i));
+      if (at < 0 && matchOnly) return "A Storm Mask can't be kept between games: no free slot for this match";
       if (at < 0) return legacy ? `Your chest now keeps ${CONFIG.items.storageSlots === 1 ? 'one slot' : `${CONFIG.items.storageSlots} slots`}: take out your old items first` : 'The chest is full';
       box[at] = { id: entry.id, count: n };
     }
@@ -615,10 +622,12 @@ export class Match {
     const e = shop.stock[i];
     if (!e) return '';
     const name = ITEMS[e.id]?.name ?? e.id;
+    if (e.left !== undefined && e.left <= 0) return `${name}: sold out`;
     if (p.money < e.price) return `Not enough money for ${name} (₽${e.price})`;
     if (this.carryRoom(p, e.id) <= 0) return `You can carry at most ${carryCap(e.id)} ${name}`;
     if (!this.giveItem(p, e.id, 1)) return 'Your bag is full';
     p.money -= e.price;
+    if (e.left !== undefined) e.left -= 1;
     return `Bought ${name} for ₽${e.price}`;
   }
 
@@ -4292,7 +4301,7 @@ export class Match {
       for (const list of [loser.items, loser.held]) {
         for (let i = 0; i < list.length; i++) {
           const it = list[i];
-          if (!it) continue;
+          if (!it || it.id === STORM_MASK) continue;  // a Storm Mask is never handed on
           const n = this.giveUpTo(winner, it.id, it.count);
           if (n > 0) {
             took += n;

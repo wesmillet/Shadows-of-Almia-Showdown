@@ -20,7 +20,7 @@ import { activeParty, partySize } from './entities';
 import type { Match } from './match';
 import { joinBehavior } from './party';
 import { canStand, tryMove } from './movement';
-import { drawTeam, rewardTms, type Shop } from './town';
+import { drawTeam, rewardTms, type Shop, type ShopEntry } from './town';
 import { TM_LIST } from './items';
 import { TownsfolkCrew } from './townsfolk';
 import { formAtLevel } from './evolution';
@@ -134,11 +134,11 @@ export class Visitors {
     // The merchant: a stall that walks.
     const ms = spot();
     const merchant = m.makeTrainer('Wandering Merchant', 'merchant', false, ms.x, ms.y);
-    const stock = MERCHANT_STOCK.map(([id, price]) => ({ id, price }));
+    const stock: ShopEntry[] = MERCHANT_STOCK.map(([id, price]) => ({ id, price }));
     // Now and then (stormMaskChance; every match in tester mode) a Storm Mask: the one way to last in
     // the storm. Ultra Ball loot can hold one too (1%: loot.json).
     const dk = CONFIG.darkness as { stormMaskChance?: number; stormMaskPrice?: number };
-    if (isDev() || rng.chance(dk.stormMaskChance ?? 0.05)) stock.unshift({ id: 'storm-mask', price: dk.stormMaskPrice ?? 20000 });
+    if (isDev() || rng.chance(dk.stormMaskChance ?? 0.05)) stock.unshift({ id: 'storm-mask', price: dk.stormMaskPrice ?? 20000, left: 1 });  // one per match
     m.npcs.push(merchant);
     m.shops.push({ npc: merchant, town: 'Wandering', name: 'Wandering Merchant', stock } as Shop);
     this.merchant = { npc: merchant, goal: null, wait: 0 };

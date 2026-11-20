@@ -15,7 +15,6 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 - Winning a trainer battle now revives and heals your whole team.
 - Pokémon revived during a trainer battle now wait safely in their ball.
 - Fixed a glitch where beams could get stuck in a beam clash, and improved beam responsiveness.
-- Lugia is now harder to catch.
 - The Master Ball price has increased.
 - The Castle Champion and Ace Trainer Celeste are now more difficult.
 - Fixed switching Pokémon and stuck move buttons on phones.

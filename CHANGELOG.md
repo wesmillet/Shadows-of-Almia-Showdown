@@ -1,7 +1,7 @@
 # Changelog
 
 Player-facing changes, newest first, shown in the game under What's new (online menu).
-Secret features stay out of this file. Write each line as a clear sentence without revealing too much:
+Secret features stay out of this file. Write each line as one short, clear sentence without revealing too much:
 no exact numbers (say "The Master Ball price has increased"), nothing about what is coming.
 
 Naming: every deploy is an update numbered major.minor. The minor number goes up by one each
@@ -11,23 +11,19 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 
 ## Update 1.7 (not live yet)
 
-- Trainers can now only have one of each legendary. A legendary you already own can't be kept,
-  traded to you or redeemed again, and an Egg that would hatch one hatches something else instead.
-  Different forms count separately.
-- Winning a trainer battle now revives and fully heals your whole team.
-- A Pokémon revived during a trainer battle now waits safely in its ball until it's sent out.
-- Fixed a glitch where beams could get stuck in a beam clash, and improved beam responsiveness so
-  every player can steer their own beam in online matches.
-- Lugia is now harder to catch and can only be caught once it's badly weakened.
+- You can now only have one of each legendary. Different forms count separately.
+- Winning a trainer battle now revives and heals your whole team.
+- Pokémon revived during a trainer battle now wait safely in their ball.
+- Fixed a glitch where beams could get stuck in a beam clash, and improved beam responsiveness.
+- Lugia is now harder to catch.
 - The Master Ball price has increased.
-- Changes were made to the Castle Champion and Ace Trainer Celeste to increase their difficulty.
-- Fixed two phone issues: switching Pokémon during a trainer battle works again, and the move
-  buttons no longer get stuck after moving and attacking at the same time.
-- The keep menu at the end of a match now only appears when there is a Pokémon you can keep.
-- Stacks are now capped for certain items, and shops and loot only give what fits.
-- Healing items now have a longer wait between uses in trainer battles.
-- Wild Pokémon whose line is already in your PC are now marked with a Poké Ball next to their name.
-- Today's starter has been removed. The starter roll now offers only your three rolled Pokémon.
+- The Castle Champion and Ace Trainer Celeste are now more difficult.
+- Fixed switching Pokémon and stuck move buttons on phones.
+- The keep menu now only appears when there is a Pokémon you can keep.
+- Certain items now have capped stacks.
+- Healing items now have a longer cooldown in trainer battles.
+- Wild Pokémon already in your PC are now marked with a Poké Ball.
+- Today's starter has been removed.
 - Legendaries now appear less often on the starter roll.
 - You can now only star one Pokémon of each type.
 

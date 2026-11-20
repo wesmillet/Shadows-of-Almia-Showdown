@@ -13,6 +13,8 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 - Winning a trainer battle now revives your whole team and heals it to full, statuses cured.
 - A Pokémon revived during a trainer battle waits in its ball for its turn. Before, it stood outside
   the battle where wild Pokémon could hit it and the darkness could knock it out.
+- Beam clash: two beams locked together can no longer stay stuck. A clash always ends, and the
+  beams then run their course.
 - Lugia: no ball can be thrown at it until it is below 10% HP. A Master Ball is a sure catch from there.
 - Master Ball: 25,000 at the Wandering Merchant.
 - Castle Champion and Ace Trainer Celeste each field a full team of six, three ranged and three

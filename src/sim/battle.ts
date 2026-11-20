@@ -796,10 +796,10 @@ export class BattleSystem {
     };
     const live = (c: NonNullable<Mon['channel']>): boolean => (c.fired ?? 0) >= 1;
     if (!ch.clash) {
-      if (!live(ch)) return false;
+      if (!live(ch) || ch.noClash) return false;
       for (const o of candidates()) {
         const oc = o.channel;
-        if (o === mon || !oc || oc.clash || !live(oc) || o.shadow || o.fainted) continue;
+        if (o === mon || !oc || oc.clash || oc.noClash || !live(oc) || o.shadow || o.fainted) continue;
         if (Math.hypot(o.x - mon.x, o.y - mon.y) > cc.range) continue;
         if (!facing(mon, o, cc.facingDeg) || !facing(o, mon, cc.facingDeg)) continue;
         const [a, b] = mon.id < o.id ? [mon, o] : [o, mon];
@@ -823,7 +823,18 @@ export class BattleSystem {
       this.events.push({ type: 'clash', a: mon, b: other ?? mon, x: cl.x, y: cl.y, state: 'break' });
       return false;
     }
-    // The lower id moves the shared point; the other just holds.
+    // The lower id moves the shared point; the other just holds. Each side also counts its own time
+    // locked: if the lower id is not stepped (asleep, frozen, out of play), the holder lets go after
+    // maxSeconds and a little more, so a clash can never keep two beams going for good.
+    cl.held = (cl.held ?? 0) + dt;
+    if (cl.held > cc.maxSeconds + 1) {
+      ch.clash = null;
+      ch.noClash = true; // this beam runs its course now, it can not lock again
+      if (oc?.clash?.with === mon.id) oc.clash = null;
+      if (oc) oc.noClash = true;
+      this.events.push({ type: 'clash', a: mon, b: other!, x: cl.x, y: cl.y, state: 'break' });
+      return false;
+    }
     if (mon.id > other!.id) return true;
     const a = mon;
     const b = other!;

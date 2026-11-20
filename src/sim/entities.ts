@@ -68,8 +68,10 @@ export interface Mon {
    * it to point (steered each frame).
    */
   channel?: { moveId: string; left: number; next: number; pulses?: number; fired?: number; dirX: number; dirY: number; aimX: number; aimY: number; manual?: boolean;
-    /** Locked against a foe's beam (battle.clash): the foe's id, where the beams meet, how far along from the lower id's Pokémon (0) to the other's (1), seconds held. */
-    clash?: { with: number; x: number; y: number; push: number; t: number } | null } | null;
+    /** Locked against a foe's beam (battle.clash): the foe's id, where the beams meet, how far along from the lower id's Pokémon (0) to the other's (1), seconds held (t: shared; held: this side's own). */
+    clash?: { with: number; x: number; y: number; push: number; t: number; held?: number } | null;
+    /** A clash this beam was in timed out on one side: it can not lock again (it runs its course). */
+    noClash?: boolean } | null;
   /** The last move was aimed by the player's hand (a beam from it follows the cursor), not by auto-battle or AI. */
   manualCast?: boolean;
   /** Current hostile this Pokémon is focused on (its own targeting). */

@@ -83,4 +83,23 @@ describe('beam clash', async () => {
     expect(b.channel?.clash).toBeFalsy();
     expect(m.battle.events.some((e) => e.type === 'clash' && e.state === 'break')).toBe(true);
   });
+  it('lets go when the other side stops being stepped (asleep, out of play): no beams stuck for good', () => {
+    const { m, a, b } = setup(30, 30);
+    const both = () => [a, b];
+    m.battle.stepMon(a, 0.02, both);
+    m.battle.stepMon(b, 0.02, both);
+    expect(b.channel?.clash).toBeTruthy();
+    // Only the higher id (the side that holds) keeps being stepped.
+    const holder = a.id > b.id ? a : b;
+    let t = 0;
+    while (holder.channel?.clash && t < 30) {
+      m.battle.stepMon(holder, 0.05, both);
+      t += 0.05;
+    }
+    expect(holder.channel?.clash ?? null).toBeNull();
+    expect(t).toBeLessThanOrEqual(CONFIG.battle.clash.maxSeconds + 1.2);
+    // and its beam then runs out normally
+    for (let i = 0; i < 200 && holder.channel; i++) m.battle.stepMon(holder, 0.05, both);
+    expect(holder.channel).toBeFalsy();
+  });
 });

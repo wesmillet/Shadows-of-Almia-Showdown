@@ -13,6 +13,7 @@ import { dmStore } from './dmDialog';
 import { openOptions } from './optionsMenu';
 import { showInbox } from './giftDialog';
 import { openStarters } from './startersPanel';
+import { changelogUnseen, openChangelog } from './changelog';
 import { ACHIEVEMENTS_ON, LEVELS_ON } from '../net/progression';
 import { incomingTrades, openTrades, openTrainerCard } from './tradeMenu';
 import { ASSET_ROOT } from '../sprites/assets';
@@ -33,7 +34,7 @@ export interface HubActions {
   profile: (name: string) => void;
 }
 
-type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'friends' | 'starters' | 'board' | 'options' | 'back' | 'me' | 'privacy' | 'admin';
+type HubButton = 'find' | 'signin' | 'register' | 'signout' | 'trade' | 'friends' | 'starters' | 'board' | 'options' | 'back' | 'me' | 'privacy' | 'admin' | 'news';
 
 /** The game logo, shared by every hub screen once loaded. */
 let hubLogo: HTMLImageElement | null = null;
@@ -481,6 +482,8 @@ export class OnlineScreen implements Screen {
       privacy: { x: L.cx - 40 * s, y: v.height - 30 * s, w: 80 * s, h: 22 * s },
       // The admin dashboard (only for an account the server made an administrator; the server checks again).
       admin: this.net.me.user?.role === 'admin' ? { x: 24 * s, y: 80 * s, w: 180 * s, h: 44 * s } : { x: -999, y: -999, w: 0, h: 0 },
+      // What's new (the changelog), under Back (and the admin button).
+      news: { x: 24 * s, y: (this.net.me.user?.role === 'admin' ? 136 : 80) * s, w: 180 * s, h: 44 * s },
     };
   }
 
@@ -518,6 +521,11 @@ export class OnlineScreen implements Screen {
       if (this.eventRects.some((e) => e.kind === 'wins' && hit(c.x, c.y, e.x, e.y, e.w, e.h))) return this.actions.leaderboards();
       if (on(c, 'back')) return this.actions.back();
       if (on(c, 'board')) return this.actions.leaderboards();
+      if (on(c, 'news')) {
+        this.busy = true;
+        void openChangelog().then(() => (this.busy = false));
+        return;
+      }
       if (signedIn && on(c, 'trade')) {
         this.busy = true;
         void openTrades(this.net).then(() => {
@@ -677,6 +685,17 @@ export class OnlineScreen implements Screen {
     if (this.net.hello?.server === 'demo') text(v, 'DEMO SERVER: progress here is separate', cx, sy + 42 * s, 11, { align: 'center', color: '#ff9a9a' });
     button(v, 'Back (Esc)', r.back.x, r.back.y, r.back.w, r.back.h, over('back'), '#f4e6c8');
     if (me.user?.role === 'admin') button(v, 'Admin dashboard', r.admin.x, r.admin.y, r.admin.w, r.admin.h, over('admin'), '#f4e6c8');
+    button(v, "What's new", r.news.x, r.news.y, r.news.w, r.news.h, over('news'), '#f4e6c8');
+    if (changelogUnseen()) {
+      // a dot until this browser opens the newest update
+      const h = v.hud;
+      h.save();
+      h.fillStyle = '#e8483a';
+      h.beginPath();
+      h.arc(r.news.x + r.news.w - 6 * s, r.news.y + 6 * s, 6 * s, 0, Math.PI * 2);
+      h.fill();
+      h.restore();
+    }
     text(v, 'Privacy', cx, r.privacy.y + 15 * s, 11, { align: 'center', color: over('privacy') ? '#f4ecdc' : '#9f97bb' });
   }
 }

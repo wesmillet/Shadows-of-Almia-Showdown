@@ -72,7 +72,9 @@ export function celestePrize(rng: Rng, top: number): string {
   return celesteEligible(grown) ? grown : picked;
 }
 /** What can come through Hoopa's portal. */
-const PORTAL_LEGENDS = ['0250', '0245', '0381', '0384', '0243', '1007', '1008', '0888', '0889'];
+// Rotated Nov 20 (was Ho-Oh, Suicune, Latios, Rayquaza, Raikou, Koraidon, Miraidon, Zacian, Zamazenta):
+// Articuno, Zapdos, Moltres, Entei, Kyogre, Groudon, Dialga, Palkia, Giratina.
+const PORTAL_LEGENDS = ['0144', '0145', '0146', '0244', '0382', '0383', '0483', '0484', '0487'];
 /** Legendaries with a shiny set of their own (a separate folder) instead of shiny colours. */
 const SHINY_SETS: Record<string, string> = { '0384': '0384-shiny' };
 const LUGIA = '0249';

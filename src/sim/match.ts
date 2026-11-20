@@ -4507,7 +4507,11 @@ export class Match {
     const side = d ? (d.a.trainer === th.thrower ? d.a : d.b.trainer === th.thrower ? d.b : null) : null;
     if (side) side.throwing = false;
     const m = so.mon;
-    if (!d || !side || d.state === 'over' || side.mon || m.fainted || m.captured || !side.trainer.party.includes(m)) return;
+    if (!d || !side || d.state === 'over' || side.mon || m.fainted || m.captured || !side.trainer.party.includes(m)) {
+      // The one thrown can't come out after all: the next one goes (the side would otherwise wait for good).
+      if (side && !side.mon) side.nextAt = this.time;
+      return;
+    }
     this.popOut(d, side, m, th.targetX, th.targetY);
   }
 

@@ -406,6 +406,18 @@ export class OnlineScreen implements Screen {
         c.globalCompositeOperation = 'source-in';
         c.fillStyle = '#05060c';
         c.fillRect(0, 0, 18, 34);
+        // a white shine sweeping across him every few seconds
+        const sweep = (this.t % 3.2) / 0.8;
+        if (sweep < 1) {
+          const band = -14 + sweep * 46;
+          const lg = c.createLinearGradient(band - 3, band - 6, band + 3, band + 6);
+          lg.addColorStop(0, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+          lg.addColorStop(1, 'rgba(255,255,255,0)');
+          c.globalCompositeOperation = 'source-atop';
+          c.fillStyle = lg;
+          c.fillRect(0, 0, 18, 34);
+        }
         c.globalCompositeOperation = 'source-over';
         h.drawImage(teaseCanvas, Math.round(cx - 9 * ss), Math.round(gy + 4 * s - 33 * ss), 18 * ss, 34 * ss);
       }

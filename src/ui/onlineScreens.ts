@@ -133,8 +133,6 @@ function loadTeaser(): void {
   st.src = `${ASSET_ROOT}ui/teaser/steven.png`;
   st.onload = () => (teaser.steven = st);
 }
-/** Seconds each of the six gets: regular, the change, then the limited form. */
-const TEASE_EACH = 4.4;
 const teaseCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
 
 /** A piece of the island (the castle and the forest lake, assets/ui/hub_bg.png) behind the hub. */
@@ -317,116 +315,84 @@ export class OnlineScreen implements Screen {
     text(v, '★ COMING SOON ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
     text(v, 'Champion Steven', cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
     const team = teaser.team;
-    if (!team.length) return;
-    const n = team.length;
-    const idx = Math.floor(this.t / TEASE_EACH) % n;
-    const r = this.t % TEASE_EACH;
-    const m = team[idx] as TeaserMon;
-    // phase: the regular Pokemon, its body filling with colour, the two shapes swapping faster and
-    // faster, then the limited form as the colour drains away
-    let showForm = false;
-    let k = 0;
-    if (r < 1.1) k = 0;
-    else if (r < 1.6) k = (r - 1.1) / 0.5;
-    else if (r < 2.6) { k = 1; const q = r - 1.6; showForm = Math.sin(2 * Math.PI * (1.0 * q + 3.2 * q * q)) > 0; }
-    else { showForm = true; k = Math.max(0, 1 - (r - 2.6) / 0.6); }
-    const dex = showForm ? m.form : m.base;
-    const img = teaser.img.get(dex);
-    const durs = showForm ? m.formDurations : m.baseDurations;
-    const scale = Math.max(2, Math.round(2 * s)) + 1;
-    const gy = py + 122 * s;
-    // spotlight and shadow
+    const gy = py + ph - 40 * s;
+    const scale = Math.max(2, Math.round(2 * s));
     h.save();
-    const g = h.createRadialGradient(cx + 14 * s, gy - 22 * s, 2 * s, cx + 14 * s, gy - 22 * s, 56 * s);
-    g.addColorStop(0, `rgba(${m.to.join(',')},0.38)`);
-    g.addColorStop(1, `rgba(${m.to.join(',')},0)`);
-    h.fillStyle = g;
-    h.fillRect(px + 8 * s, py + 46 * s, pw - 16 * s, 100 * s);
-    h.fillStyle = 'rgba(0,0,0,0.35)';
     h.beginPath();
-    h.ellipse(cx + 14 * s, gy, 24 * s, 6 * s, 0, 0, Math.PI * 2);
-    h.fill();
-    h.restore();
-    if (img && durs.length) {
-      const total = durs.reduce((a, b) => a + b, 0) || 1;
-      let tick = Math.floor(this.t * 60) % total;
+    h.rect(px + 6 * s, py + 46 * s, pw - 12 * s, ph - 52 * s);
+    h.clip();
+    // The six stand round Steven, veiled: dark shapes outlined in their own moving colours.
+    const spots: Array<[number, number]> = [[-104, -44], [-40, -52], [40, -52], [104, -44], [-72, 0], [72, 0]];
+    team.slice(0, 6).forEach((m, i) => {
+      const img = teaser.img.get(m.form);
+      const [ox, oy] = spots[i] as [number, number];
+      if (!img || !teaseCanvas) return;
+      const durs = m.formDurations;
+      const total = durs.reduce((x, y) => x + y, 0) || 1;
+      let tick = Math.floor((this.t + i * 0.37) * 60) % total;
       let f = 0;
       while (f < durs.length - 1 && tick >= (durs[f] as number)) tick -= durs[f++] as number;
-      const dw = m.w * scale;
-      const dh = m.h * scale;
-      const dx = Math.round(cx + 14 * s - dw / 2);
-      const dy = Math.round(gy - m.ground * scale);
+      const W = m.w + 2;
+      const H = m.h + 2;
+      teaseCanvas.width = W;
+      teaseCanvas.height = H;
+      const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
+      c.clearRect(0, 0, W, H);
+      for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]] as const) c.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, m.w, m.h);
+      c.globalCompositeOperation = 'source-in';
+      const lg = c.createLinearGradient(0, 0, W * 0.35, H);
+      for (let k = 0; k <= 8; k++) {
+        const u = k / 8;
+        const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9 - i * 0.15));
+        lg.addColorStop(u, `rgb(${m.from.map((x, j) => Math.round(x + ((m.to[j] as number) - x) * q)).join(',')})`);
+      }
+      c.fillStyle = lg;
+      c.fillRect(0, 0, W, H);
+      c.globalCompositeOperation = 'source-over';
+      // the body inside the outline: dark, the colour showing through only faintly
+      c.save();
+      c.drawImage(img, f * m.w, 0, m.w, m.h, 1, 1, m.w, m.h);
+      c.globalCompositeOperation = 'source-atop';
+      c.fillStyle = 'rgba(13,16,34,0.82)';
+      c.fillRect(1, 1, m.w, m.h);
+      c.restore();
+      const gx = px + pw / 2 + ox * s;
+      const ground = gy + oy * s;
       h.save();
       h.imageSmoothingEnabled = false;
-      /** The frame as a flat silhouette in one colour (on the shared canvas). */
-      const flat = (fill: string): HTMLCanvasElement | null => {
-        if (!teaseCanvas) return null;
-        teaseCanvas.width = m.w;
-        teaseCanvas.height = m.h;
-        const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
-        c.clearRect(0, 0, m.w, m.h);
-        c.drawImage(img, f * m.w, 0, m.w, m.h, 0, 0, m.w, m.h);
-        c.globalCompositeOperation = 'source-in';
-        c.fillStyle = fill;
-        c.fillRect(0, 0, m.w, m.h);
-        c.globalCompositeOperation = 'source-over';
-        return teaseCanvas;
-      };
-      if (!showForm) h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
-      else {
-        // The limited form stays veiled: a dark shape rimmed in its colour, the real thing only
-        // glimpsed now and then through the dark.
-        const rim = flat(`rgb(${m.to.join(',')})`);
-        if (rim) {
-          h.globalAlpha = 0.55 + 0.25 * Math.sin(this.t * 3);
-          for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) h.drawImage(rim, dx + ox * scale, dy + oy * scale, dw, dh);
-        }
-        const dark = flat('#11152a');
-        if (dark) {
-          h.globalAlpha = 1;
-          h.drawImage(dark, dx, dy, dw, dh);
-        }
-        h.globalAlpha = Math.max(0, 0.1 + 0.12 * Math.sin(this.t * 1.7 + idx));
-        h.drawImage(img, f * m.w, 0, m.w, m.h, dx, dy, dw, dh);
-        h.globalAlpha = 1;
-      }
-      if (k > 0.01 && teaseCanvas) {
-        teaseCanvas.width = m.w;
-        teaseCanvas.height = m.h;
-        const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
-        c.clearRect(0, 0, m.w, m.h);
-        c.drawImage(img, f * m.w, 0, m.w, m.h, 0, 0, m.w, m.h);
-        c.globalCompositeOperation = 'source-in';
-        const lg = c.createLinearGradient(0, 0, m.w * 0.35, m.h);
-        for (let i = 0; i <= 8; i++) {
-          const u = i / 8;
-          const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9));
-          const col = m.from.map((a, j) => Math.round(a + ((m.to[j] as number) - a) * q));
-          lg.addColorStop(u, `rgb(${col.join(',')})`);
-        }
-        c.fillStyle = lg;
-        c.fillRect(0, 0, m.w, m.h);
-        c.globalCompositeOperation = 'source-over';
-        h.globalAlpha = Math.min(1, k);
-        h.drawImage(teaseCanvas, dx, dy, dw, dh);
-      }
+      h.fillStyle = 'rgba(0,0,0,0.3)';
+      h.beginPath();
+      h.ellipse(gx, ground, 14 * s, 4 * s, 0, 0, Math.PI * 2);
+      h.fill();
+      h.drawImage(teaseCanvas, Math.round(gx - (W * scale) / 2), Math.round(ground - (m.ground + 1) * scale), W * scale, H * scale);
+      // a soft glow of its colours round it, so the outline reads on the dark panel
+      h.globalCompositeOperation = 'lighter';
+      h.globalAlpha = 0.35 + 0.15 * Math.sin(this.t * 2 + i);
+      h.drawImage(teaseCanvas, Math.round(gx - (W * scale) / 2), Math.round(ground - (m.ground + 1) * scale), W * scale, H * scale);
       h.restore();
-    }
-    // Steven on the left: standing, hand to his chest as the change begins, arms crossed through it
+    });
+    // Steven in the middle: standing, now and then crossing his arms.
     if (teaser.steven) {
-      const fr = r < 1.0 ? 0 : r < 1.25 ? 1 : r < 3.6 ? 2 : 3;
+      const r = this.t % 7;
+      const fr = r < 3.5 ? 0 : r < 3.75 ? 1 : r < 6 ? 2 : 3;
       const ss = Math.max(2, Math.round(2 * s));
       h.save();
       h.imageSmoothingEnabled = false;
+      const g = h.createRadialGradient(cx, gy - 30 * s, 2 * s, cx, gy - 30 * s, 50 * s);
+      g.addColorStop(0, 'rgba(160,190,255,0.30)');
+      g.addColorStop(1, 'rgba(160,190,255,0)');
+      h.fillStyle = g;
+      h.fillRect(cx - 60 * s, gy - 90 * s, 120 * s, 100 * s);
       h.fillStyle = 'rgba(0,0,0,0.35)';
       h.beginPath();
-      h.ellipse(px + 44 * s, gy, 9 * s, 3 * s, 0, 0, Math.PI * 2);
+      h.ellipse(cx, gy + 4 * s, 10 * s, 3 * s, 0, 0, Math.PI * 2);
       h.fill();
-      h.drawImage(teaser.steven, fr * 18, 0, 18, 34, Math.round(px + 44 * s - 9 * ss), Math.round(gy - 33 * ss), 18 * ss, 34 * ss);
+      h.drawImage(teaser.steven, fr * 18, 0, 18, 34, Math.round(cx - 9 * ss), Math.round(gy + 4 * s - 33 * ss), 18 * ss, 34 * ss);
       h.restore();
     }
-    text(v, `Steven's ${m.baseName}`, px + 14 * s, py + ph - 14 * s, 10, { color: '#c8cfe6', shadow: false, maxWidth: pw * 0.62 });
-    text(v, `${idx + 1} of ${n}`, px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: '#8e97b8', shadow: false });
+    h.restore();
+    text(v, "Steven's team", px + 14 * s, py + ph - 14 * s, 10, { color: '#c8cfe6', shadow: false });
+    text(v, 'New forms', px + pw - 14 * s, py + ph - 14 * s, 10, { align: 'right', color: '#8e97b8', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */
@@ -626,7 +592,8 @@ export class OnlineScreen implements Screen {
           this.eventRects.push({ x: px, y: py, w: pw, h: ph, kind: e.kind });
           py += ph + gap;
         }
-        if (STEVEN_TEASER && style === 'spot') this.drawTeaser(px, py, pw, ph);
+        // clear of the trainer card above it
+        if (STEVEN_TEASER && style === 'spot') this.drawTeaser(px, Math.max(py, L.cardY + L.cardH + 10 * s), pw, 204 * s);
       } else {
         const bits = ev.map((e) => `${e.name} · ${left(e.endsAt)}`);
         if (STEVEN_TEASER) bits.push('Champion Steven · coming soon');

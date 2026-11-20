@@ -1,7 +1,8 @@
 # Changelog
 
 Player-facing changes, newest first, shown in the game under What's new (online menu).
-Secret features stay out of this file.
+Secret features stay out of this file. Keep lines short and general: no exact numbers (say
+"Master Ball price increased", "capped stacks for certain items"), nothing about what is coming.
 
 Naming: every deploy is an update numbered major.minor. The minor number goes up by one each
 deploy (1.6, 1.7, 1.8...); the major number goes up for a big new chapter (a new region, the
@@ -10,55 +11,44 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 
 ## Update 1.7 (not live yet)
 
-- Winning a trainer battle now revives your whole team and heals it to full, statuses cured.
-- A Pokémon revived during a trainer battle waits in its ball for its turn. Before, it stood outside
-  the battle where wild Pokémon could hit it and the darkness could knock it out.
-- Beam clash: two beams locked together can no longer stay stuck. A clash always ends, and the
-  beams then run their course.
-- Lugia: no ball can be thrown at it until it is below 10% HP. A Master Ball is a sure catch from there.
-- Master Ball: 25,000 at the Wandering Merchant.
-- Castle Champion and Ace Trainer Celeste each field a full team of six, three ranged and three
-  melee, drawn from twelve, so no two fights are the same.
-- Beams follow your aim while you fire them for every player in an online match (before, only one
-  player per match could steer).
-- Phones: Switch is back in the party menu during a trainer battle, and the move buttons no
-  longer get stuck after moving and attacking at the same time.
-- The keep menu at the end of a match only shows up when there is a Pokémon you can keep.
-- Healing items have a carry limit: Potion 10, Super Potion 6, Hyper Potion 3, Revive 1, Max Revive 1.
-  Shops stop selling past it, and ground balls and a beaten trainer's bag give only what fits.
-- Wild Pokémon whose line is already in your PC show a Poké Ball after their name.
-- Today's starter is gone: the starter roll offers the three rolled Pokémon only.
-- Legendaries are rare on the starter roll however many you own or star: at most 1% a reel.
-- Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
-- A new challenge is coming: a panel on the online menu teases a powerful trainer from Hoenn.
-- In a trainer battle or a legendary bout, healing items now wait 20 seconds between uses (was 10).
-- Storm Mask: you can carry one and keep one in your chest, the Wandering Merchant sells one a
-  match, and it can't be taken from a beaten trainer's bag.
-- One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg
-  that would hatch one hatches another instead. Forms count on their own. Ones you already have stay.
+- Trainers can only have one of each legendary now.
+- Winning a trainer battle revives and heals your whole team.
+- Revived Pokémon wait safely in their ball during a trainer battle.
+- Fixed beams getting stuck in a beam clash.
+- Lugia is harder to catch.
+- Master Ball price increased.
+- Castle Champion and Ace Trainer Celeste: changes made to increase their difficulty.
+- Every player can steer their own beam in online matches.
+- Phones: fixed switching Pokémon in trainer battles and move buttons getting stuck.
+- The keep menu only shows up when there is something to keep.
+- Capped stacks for certain items.
+- Longer wait between healing items in trainer battles.
+- Wild Pokémon you already have in your PC are marked.
+- Today's starter removed.
+- Legendaries are rarer on the starter roll.
+- Stars: one per type.
 
 ## Update 1.6: November 16
 
-- Fixed a duplication bug: a Pokémon brought from a PC stays marked through release, snag and
-  recatch, so it can't be kept again by anyone.
-- Lugia is twice as hard to catch.
-- Master Ball: 15,000 at the Wandering Merchant.
-- Vote Egg: vote for the game on VibeTopList for a bonus Egg each day (same odds as the daily Egg).
+- Fixed a duplication bug.
+- Lugia is harder to catch.
+- Master Ball price increased.
+- Vote Egg: vote for the game on VibeTopList for a bonus Egg each day.
 - Red has diagonal poses and walks.
 
 ## Update 1.5: November 13
 
-- Earned looks: lab coat at 25 wins, Island Elder at 50 wins, Blaze Ranger at 50 Pokémon in your PC.
+- New looks to earn.
 - Looks have names, and achievements show in the Starters panel.
-- Pikachu Libre learns Lucha Lunge at level 30.
+- Pikachu Libre learns Lucha Lunge.
 - Electric special moves play their shock pose.
-- Sky drops (Icicle Crash, Rock Slide...) land on a marked spot and reach 3.5 tiles.
+- Sky drop moves land on a marked spot.
 - Beam clash: two beams fired at each other lock and push; the stronger one breaks through.
-- Storage chest: five slots, the first kept between games.
-- Revives are far rarer and cost more.
-- Celeste's and the Castle Champion's prize Pokémon is shiny 1 time in 50 (it used to always be shiny).
+- Storage chest: one slot is kept between games.
+- Revives are rarer and cost more.
+- Celeste's and the Castle Champion's prize Pokémon is no longer always shiny.
 - Respawn shield after being knocked down.
-- Daily Egg: Mythical odds 0.5%.
+- Daily Egg odds adjusted.
 - Places: your place is where you went out.
 
 ## Update 1.4: November 12
@@ -66,23 +56,23 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 - Direct messages between friends, and a Friends button on the hub.
 - Abra, Kadabra and Alakazam join the game.
 - Controller support.
-- Trainer battles: send-outs are thrown where you aim, and you have 8 seconds to pick.
-- Fixed the invincible Pokémon glitch (a Pokémon nobody could hit or be hit by).
+- Trainer battles: send-outs are thrown where you aim.
+- Fixed the invincible Pokémon glitch.
 - Burn and poison knockouts from wild Pokémon knock you down instead of out of the match.
 - Starters from your PC can't be kept again.
 - Pikachu Libre's stats raised.
-- Ralts and Zorua are Rare.
-- Flygon mount: the rider sits on its back; fly meter 15 seconds.
-- Extraction Vouchers 30% rarer.
+- Ralts and Zorua are rarer.
+- Flygon mount: the rider sits on its back.
+- Extraction Vouchers are rarer.
 
 ## Update 1.3: November 11
 
-- Switch Pokémon mid-battle (15 second cooldown).
+- Switch Pokémon mid-battle.
 - Struggle when no move can affect the foe, so battles always end.
-- Rivals hold fire for 1.5 seconds after a send-out.
-- Space only dodges in a trainer battle (chests and stalls close for it).
+- Rivals wait a moment after a send-out before attacking.
+- Space only dodges in a trainer battle.
 - Single-target shots hit the first foe along the aim line.
-- The auto-battle toggle is gone (your lead picks its own moves out on the field).
+- The auto-battle toggle is gone.
 
 ## Update 1.2: November 10
 
@@ -92,12 +82,12 @@ stadium challenge), and the minor starts again at 0 (2.0). A section being writt
 
 ## Update 1.1: November 9
 
-- Final Battle: when the last two trainers fight, the battle moves to its own arena with an intro.
-- Legendaries must be caught, not just beaten; caught ones join at level 60.
-- Leaderboard: top 10 trainers by wins.
+- Final Battle: the last two trainers fight in their own arena.
+- Legendaries must be caught, not just beaten.
+- Leaderboard: top trainers by wins.
 - Balls work less well on high-level wild Pokémon.
-- One Alpha per match; PC Alphas start as Alphas when rolled.
-- Unused Extraction Vouchers only keep a Pokémon for the winner; everyone else uses them during the match.
+- Alphas are rarer; PC Alphas start as Alphas when rolled.
+- Unused Extraction Vouchers only keep a Pokémon for the winner.
 - Release Pokémon from your PC.
 - Shiny starters: owning a shiny of any stage of a line makes that starter shiny.
 - Fixed trainer battles that could not end, and matches that could stall.

@@ -80,7 +80,7 @@ export function chestCap(id: string): number {
   return c === undefined ? CHEST_STACK_MAX : c;
 }
 
-/** The Wandering Merchant's mask: one to a trainer, one sold a match, never kept or handed on. */
+/** The Wandering Merchant's mask: one to a trainer (bag and chest stack), one sold a match, never handed on. */
 const STORM_MASK = 'storm-mask';
 
 /** The most of an item a trainer can carry (config items.carryCaps; Infinity when uncapped). */
@@ -516,9 +516,7 @@ export class Match {
     // Chests used to keep ten slots: those old extra slots can only be emptied now (the match slots
     // still take things).
     const legacy = keep > CONFIG.items.storageSlots;
-    // A Storm Mask lasts one match: only this match's chest slots take it, never the kept one.
-    const matchOnly = entry.id === STORM_MASK;
-    const off = (i: number): boolean => (legacy && i < keep) || (matchOnly && i < keep);
+    const off = (i: number): boolean => legacy && i < keep;
     const sameAt = box.findIndex((s, i) => s?.id === entry.id && !off(i));
     const same = sameAt >= 0 ? box[sameAt] : undefined;
     const name = ITEMS[entry.id]?.name ?? entry.id;
@@ -533,7 +531,6 @@ export class Match {
     if (same) same.count += n;
     else {
       at = box.findIndex((s, i) => s === null && !off(i));
-      if (at < 0 && matchOnly) return "A Storm Mask can't be kept between games: no free slot for this match";
       if (at < 0) return legacy ? `Your chest now keeps ${CONFIG.items.storageSlots === 1 ? 'one slot' : `${CONFIG.items.storageSlots} slots`}: take out your old items first` : 'The chest is full';
       box[at] = { id: entry.id, count: n };
     }

@@ -161,7 +161,7 @@ export const SLOT3_WEIGHT: Record<string, number> = { common: 30, uncommon: 24, 
  * The most a reel may come up Mythic (a legendary), all Mythics together, however many a player
  * stars or keeps in their PC: legendaries stay hard to roll. data/spawns.json starterMythicCap.
  */
-export const MYTHIC_REEL_CAP: number = (SPAWNS as unknown as { starterMythicCap?: number }).starterMythicCap ?? 0.02;
+export const MYTHIC_REEL_CAP: number = (SPAWNS as unknown as { starterMythicCap?: number }).starterMythicCap ?? 0.01;
 
 /**
  * The Pokémon a PC Pokémon (or an unlock) nominates: the first form of its line, in its normal

@@ -1,4 +1,4 @@
-/** The Storm Mask: one to a trainer, one sold a match, never kept between games or handed on. */
+/** The Storm Mask: one to a trainer (and one in the chest), one sold a match, never handed on. */
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { loadWorld } from './world';
@@ -25,14 +25,13 @@ describe('storm mask', async () => {
     expect(q.money).toBe(99999);
     expect(m.giveItem(p, 'storm-mask', 1)).toBe(false);
   });
-  it('never goes in the slot kept between games', () => {
+  it('can be kept between games, one at most', () => {
     const { m, p } = mk();
     m.giveItem(p, 'storm-mask', 1);
     const slot = p.items.findIndex((e) => e?.id === 'storm-mask');
-    const out = m.deposit(p, 'items', slot);
-    const box = (m as unknown as { storageOf(t: unknown): Array<{ id: string } | null> }).storageOf(p);
-    const keep = p.storageKeep ?? 1;
-    expect(box.slice(0, keep).some((s) => s?.id === 'storm-mask')).toBe(false);
-    expect(out).toMatch(/for this match only|can't be kept/);
+    expect(m.deposit(p, 'items', slot)).toMatch('Stored Storm Mask');
+    m.giveItem(p, 'storm-mask', 1);
+    const again = p.items.findIndex((e) => e?.id === 'storm-mask');
+    expect(m.deposit(p, 'items', again)).toMatch('at most 1');
   });
 });

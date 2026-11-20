@@ -29,7 +29,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Accounts } from './accounts';
 import { ITEMS } from '../src/sim/items';
-import { SPECIES } from '../src/sim/data';
+import { MOVES, SPECIES } from '../src/sim/data';
 
 /** A connected player as the dashboard shows them (hub.ts builds these). */
 export interface OnlineEntry {
@@ -230,13 +230,15 @@ export class AdminApi {
         // legendary and shiny that has gone into a PC (the collection log keeps each one, even if it
         // was traded or released since).
         const won = db.prepare('SELECT id, ended_at, mode, trainers FROM match_log WHERE aborted IS NULL ORDER BY ended_at DESC LIMIT 400').all() as Array<{ id: string; ended_at: number; mode: string; trainers: string }>;
-        const teams: Array<{ id: string; at: number; mode: string; name: string; human: boolean; team: Array<{ dex: string; name: string; level: number; shiny?: boolean }> }> = [];
+        const teams: Array<{ id: string; at: number; mode: string; name: string; human: boolean; team: Array<{ dex: string; name: string; level: number; shiny?: boolean; item?: string; moves?: string[] }> }> = [];
         const used = new Map<string, number>();
         for (const m of won) {
-          const list = safeJson(m.trainers) as unknown as Array<{ name: string; human: boolean; outcome: string; team?: Array<{ dex: string; name: string; level: number; shiny?: boolean }> }> | null;
+          const list = safeJson(m.trainers) as unknown as Array<{ name: string; human: boolean; outcome: string; team?: Array<{ dex: string; name: string; level: number; shiny?: boolean; item?: string; moves?: string[] }> }> | null;
           for (const t of list ?? []) {
             if (t.outcome !== 'win' || !t.team) continue;
-            teams.push({ id: m.id, at: m.ended_at, mode: m.mode, name: t.name, human: t.human, team: t.team });
+            // Held items and moves by their names (recorded since Nov 20; older teams have neither).
+            const team = t.team.map((p) => ({ ...p, ...(p.item ? { item: ITEMS[p.item]?.name ?? p.item } : {}), ...(p.moves ? { moves: p.moves.map((id) => MOVES.get(id)?.name ?? id) } : {}) }));
+            teams.push({ id: m.id, at: m.ended_at, mode: m.mode, name: t.name, human: t.human, team });
             for (const p of t.team) {
               const n = SPECIES.get(p.dex.replace(/-mega.*$/, ''))?.name ?? p.name;
               used.set(n, (used.get(n) ?? 0) + 1);

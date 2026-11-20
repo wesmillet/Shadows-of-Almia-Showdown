@@ -31,8 +31,8 @@ describe('three-slot starter roll', () => {
     let n = 0;
     const N = 20000;
     for (let seed = 1; seed <= N; seed++) if (starterChoices(seed, ['0249', '0255', '0133', '0403', '0129'])[2] === '0249') n++;
-    expect(n / N).toBeGreaterThan(0.013);
-    expect(n / N).toBeLessThan(0.027);
+    expect(n / N).toBeGreaterThan(MYTHIC_REEL_CAP * 0.6);
+    expect(n / N).toBeLessThan(MYTHIC_REEL_CAP * 1.4);
   });
 
   it('a PC full of legendaries still rolls one at most the cap per reel', () => {

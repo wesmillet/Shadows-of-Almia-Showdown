@@ -604,10 +604,10 @@ export class Room implements RoomHandle {
     // Every trainer in it for the admin's match history: players with their results, computer
     // trainers with their places and the stats the match kept for them.
     const byName = new Map(results.map((r) => [r.name, r]));
-    // The winners' teams, for the admin's records (who wins with what).
+    // The winners' teams, for the admin's records (who wins with what): species, level, held item, moves.
     const teamOf = (id: number) => {
       const t = this.match.allTrainers.find((x) => x.id === id);
-      return t ? t.party.filter((m) => !m.captured || m.owner === t).map((m) => ({ dex: m.dex, name: m.name, level: m.level, ...(m.shiny ? { shiny: true } : {}) })) : undefined;
+      return t ? t.party.filter((m) => !m.captured || m.owner === t).map((m) => ({ dex: m.dex, name: m.name, level: m.level, ...(m.shiny ? { shiny: true } : {}), ...(m.heldItem ? { item: m.heldItem } : {}), moves: [...m.moves] })) : undefined;
     };
     const withTeam = <T extends { outcome: 'win' | 'loss' }>(row: T, id: number): T & { team?: ReturnType<typeof teamOf> } => (row.outcome === 'win' && !this.aborted ? { ...row, team: teamOf(id) } : row);
     const trainers: EndReport['trainers'] = this.roster.map((e) => {

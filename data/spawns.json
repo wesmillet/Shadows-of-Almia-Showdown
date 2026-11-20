@@ -386,7 +386,7 @@
     "0808"
   ],
   "_starterBaseComment": "A new player rolls from these tiers only (Common); every Pokémon kept in the PC (won, extracted, traded or hatched from the daily Egg) adds the first form of its line to the pool, in its own tier (src/sim/starters.ts). The daily Egg rolls every tier by these weights.",
-  "starterMythicCap": 0.02,
+  "starterMythicCap": 0.01,
   "starterBaseTiers": [
     "common"
   ],

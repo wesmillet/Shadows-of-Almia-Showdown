@@ -21,11 +21,11 @@ Secret features stay out of this file.
   Shops stop selling past it, and ground balls and a beaten trainer's bag give only what fits.
 - Wild Pokémon whose line is already in your PC show a Poké Ball after their name.
 - Today's starter is gone: the starter roll offers the three rolled Pokémon only.
-- Legendaries are rare on the starter roll however many you own or star: at most 2% a reel.
+- Legendaries are rare on the starter roll however many you own or star: at most 1% a reel.
 - Stars: one per type. Two starred Pokémon can't share a type (a dual type counts both).
 - A new challenge is coming: a panel on the online menu teases a powerful trainer from Hoenn.
-- Storm Mask: you can carry one, the Wandering Merchant sells one a match, and it can't be kept
-  between games or taken from a beaten trainer's bag.
+- Storm Mask: you can carry one and keep one in your chest, the Wandering Merchant sells one a
+  match, and it can't be taken from a beaten trainer's bag.
 - One of each legendary: a legendary you already own can't be kept, traded to you or redeemed again, and an Egg
   that would hatch one hatches another instead. Forms count on their own. Ones you already have stay.
 

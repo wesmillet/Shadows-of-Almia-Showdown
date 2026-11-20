@@ -7,7 +7,7 @@ import { Rng } from '../src/core/rng';
 
 describe('healing item cooldown', async () => {
   const world = await loadWorld(join(import.meta.dirname, '..', 'assets'));
-  it('10 s between Potions in a battle; any time outside one', () => {
+  it('20 s between Potions in a battle; any time outside one', () => {
     const m = new Match({ ground: world.ground(), rng: new Rng(3), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0004'] }], rivals: 0, keepsResults: true } as never);
     const p = m.seats[0]!.trainer;
     const mon = p.party[0]!;
@@ -21,9 +21,9 @@ describe('healing item cooldown', async () => {
     mon.hp = 1;
     expect(m.useItem(p, 0, 0)).toMatch('recovered');
     mon.hp = 1;
-    expect(m.useItem(p, 0, 0)).toMatch(/Wait 10 s/);
+    expect(m.useItem(p, 0, 0)).toMatch(/Wait 20 s/);
     expect(p.items[0]?.count).toBe(6);
-    m.time += 10.1;
+    m.time += 20.1;
     expect(m.useItem(p, 0, 0)).toMatch('recovered');
   });
 });

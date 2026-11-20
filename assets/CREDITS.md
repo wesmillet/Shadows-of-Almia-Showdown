@@ -860,9 +860,6 @@ license, sheets). The current artists per folder, resolved through
 ### 0484 Palkia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Scratch,Rumble,RearUp,Swing,Double,Rotate,Hop
 
-### 0487 Giratina
-- CHUNSOFT (https://www.spike-chunsoft.com/): Walk,Attack,Strike,Shoot,SpAttack,Sleep,Hurt,Idle,Swing,Double,Hop,Charge,Rotate
-
 ### 0488 Cresselia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Idle,Walk,Sleep,Hurt,Attack,Charge,Shoot,Strike,Twirl,Swing,Double,Rotate,Hop
 - <@!544245909639397378>: EventSleep,Wake,Eat,Tumble,Pose,Pull,Pain,Float,DeepBreath,Nod,Sit,LookUp,Sink,Trip,Laying,LeapForth,Head,Cringe,LostBalance,TumbleBack,HitGround,Faint
@@ -2632,13 +2629,6 @@ license, sheets). The current artists per folder, resolved through
 - <@!544245909639397378>: Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
 - <@!544245909639397378>: Happy,Crying,Inspired,Surprised
 - <@!544245909639397378>: Pain,Worried,Determined
-
-### 0487 Giratina
-- CHUNSOFT (https://www.spike-chunsoft.com/): Normal
-- <@!533406104256905257> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Normal,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried
-- <@!533406104256905257> (earlier version): Special3
-- <@!533406104256905257> (earlier version): Angry,Crying,Determined,Dizzy,Happy,Inspired,Joyous,Pain,Sad,Shouting,Sigh,Stunned,Surprised,Teary-Eyed,Worried,Normal
-- <@!350050109741858829>: Sad,Joyous,Special1,Happy,Crying,Inspired,Sigh,Pain,Shouting,Surprised,Stunned,Angry,Teary-Eyed,Dizzy,Special2,Worried,Determined,Special0,Special3
 
 ### 0488 Cresselia
 - CHUNSOFT (https://www.spike-chunsoft.com/): Normal

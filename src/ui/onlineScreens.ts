@@ -116,6 +116,8 @@ function eventLine(e: { kind: string; value: number }): string {
  * Assets: assets/ui/teaser (teaser.json and one strip per Pokemon, regular and limited form).
  */
 const STEVEN_TEASER = true;
+/** true: the six fully covered by their moving colour gradient; false: veiled dark shapes with a gradient outline. */
+const TEASER_SOLID = false;
 interface TeaserMon { base: string; baseName: string; form: string; w: number; h: number; ground: number; baseDurations: number[]; formDurations: number[]; from: number[]; to: number[] }
 const teaser: { team: TeaserMon[]; img: Map<string, HTMLImageElement>; steven: HTMLImageElement | null; asked: boolean } = { team: [], img: new Map(), steven: null, asked: false };
 function loadTeaser(): void {
@@ -346,14 +348,14 @@ export class OnlineScreen implements Screen {
         const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9 - i * 0.15));
         lg.addColorStop(u, `rgb(${m.from.map((x, j) => Math.round(x + ((m.to[j] as number) - x) * q)).join(',')})`);
       }
-      c.fillStyle = lg;
+      c.fillStyle = TEASER_SOLID ? '#0d1022' : lg;
       c.fillRect(0, 0, W, H);
       c.globalCompositeOperation = 'source-over';
-      // the body inside the outline: dark, the colour showing through only faintly
+      // the body inside the outline: veiled (dark, the colour only faint) or solid moving colour
       c.save();
       c.drawImage(img, f * m.w, 0, m.w, m.h, 1, 1, m.w, m.h);
       c.globalCompositeOperation = 'source-atop';
-      c.fillStyle = 'rgba(13,16,34,0.82)';
+      c.fillStyle = TEASER_SOLID ? lg : 'rgba(13,16,34,0.82)';
       c.fillRect(1, 1, m.w, m.h);
       c.restore();
       const gx = px + pw / 2 + ox * s;
@@ -367,7 +369,7 @@ export class OnlineScreen implements Screen {
       h.drawImage(teaseCanvas, Math.round(gx - (W * scale) / 2), Math.round(ground - (m.ground + 1) * scale), W * scale, H * scale);
       // a soft glow of its colours round it, so the outline reads on the dark panel
       h.globalCompositeOperation = 'lighter';
-      h.globalAlpha = 0.35 + 0.15 * Math.sin(this.t * 2 + i);
+      h.globalAlpha = TEASER_SOLID ? 0.12 : 0.35 + 0.15 * Math.sin(this.t * 2 + i);
       h.drawImage(teaseCanvas, Math.round(gx - (W * scale) / 2), Math.round(ground - (m.ground + 1) * scale), W * scale, H * scale);
       h.restore();
     });

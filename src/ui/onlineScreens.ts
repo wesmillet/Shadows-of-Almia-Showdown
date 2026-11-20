@@ -117,7 +117,9 @@ function eventLine(e: { kind: string; value: number }): string {
  */
 const STEVEN_TEASER = true;
 /** true: the six fully covered by their moving colour gradient; false: veiled dark shapes with a gradient outline. */
-const TEASER_SOLID = false;
+const TEASER_SOLID = true;
+/** How fast the six move and their colours drift (1 = game speed). */
+const TEASER_SPEED = 0.5;
 interface TeaserMon { base: string; baseName: string; form: string; w: number; h: number; ground: number; baseDurations: number[]; formDurations: number[]; from: number[]; to: number[] }
 const teaser: { team: TeaserMon[]; img: Map<string, HTMLImageElement>; steven: HTMLImageElement | null; asked: boolean } = { team: [], img: new Map(), steven: null, asked: false };
 function loadTeaser(): void {
@@ -331,7 +333,7 @@ export class OnlineScreen implements Screen {
       if (!img || !teaseCanvas) return;
       const durs = m.formDurations;
       const total = durs.reduce((x, y) => x + y, 0) || 1;
-      let tick = Math.floor((this.t + i * 0.37) * 60) % total;
+      let tick = Math.floor((this.t * TEASER_SPEED + i * 0.37) * 60) % total;
       let f = 0;
       while (f < durs.length - 1 && tick >= (durs[f] as number)) tick -= durs[f++] as number;
       const W = m.w + 2;
@@ -345,7 +347,7 @@ export class OnlineScreen implements Screen {
       const lg = c.createLinearGradient(0, 0, W * 0.35, H);
       for (let k = 0; k <= 8; k++) {
         const u = k / 8;
-        const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9 - i * 0.15));
+        const q = 0.5 + 0.5 * Math.sin(2 * Math.PI * (u * 1.4 - this.t * 0.9 * TEASER_SPEED - i * 0.15));
         lg.addColorStop(u, `rgb(${m.from.map((x, j) => Math.round(x + ((m.to[j] as number) - x) * q)).join(',')})`);
       }
       c.fillStyle = TEASER_SOLID ? '#0d1022' : lg;
@@ -356,6 +358,8 @@ export class OnlineScreen implements Screen {
       c.drawImage(img, f * m.w, 0, m.w, m.h, 1, 1, m.w, m.h);
       c.globalCompositeOperation = 'source-atop';
       c.fillStyle = TEASER_SOLID ? lg : 'rgba(13,16,34,0.82)';
+      // solid: 95% colour, the Pokemon just showing through
+      if (TEASER_SOLID) c.globalAlpha = 0.95;
       c.fillRect(1, 1, m.w, m.h);
       c.restore();
       const gx = px + pw / 2 + ox * s;

@@ -327,7 +327,9 @@ export class OnlineScreen implements Screen {
     h.clip();
     // The six stand round Steven, veiled: dark shapes outlined in their own moving colours.
     const spots: Array<[number, number]> = [[-104, -44], [-40, -52], [40, -52], [104, -44], [-72, 0], [72, 0]];
-    team.slice(0, 6).forEach((m, i) => {
+    // farthest back first, so the nearer ones (Metagross before Aggron) are drawn over them
+    const order = team.slice(0, 6).map((m, i) => ({ m, i })).sort((a, b) => (spots[a.i]?.[1] ?? 0) - (spots[b.i]?.[1] ?? 0));
+    order.forEach(({ m, i }) => {
       const img = teaser.img.get(m.form);
       const [ox, oy] = spots[i] as [number, number];
       if (!img || !teaseCanvas) return;

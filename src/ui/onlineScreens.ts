@@ -134,7 +134,7 @@ function loadTeaser(): void {
     teaser.team = j.team;
   }).catch(() => undefined);
   const st = new Image();
-  st.src = `${ASSET_ROOT}ui/teaser/steven.png`;
+  st.src = `${ASSET_ROOT}ui/teaser/trainer.png`;
   st.onload = () => (teaser.steven = st);
 }
 const teaseCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
@@ -316,8 +316,8 @@ export class OnlineScreen implements Screen {
     h.strokeRect(px + 6 * s, py + 6 * s, pw - 12 * s, ph - 12 * s);
     h.restore();
     const cx = px + pw / 2;
-    text(v, '★ COMING SOON ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
-    text(v, 'Champion Steven', cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
+    text(v, '★ A NEW CHALLENGE ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
+    text(v, 'A powerful trainer from Hoenn arrives', cx, py + 36 * s, 12, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
     const team = teaser.team;
     const gy = py + ph - 40 * s;
     const scale = Math.max(2, Math.round(2 * s));
@@ -395,7 +395,19 @@ export class OnlineScreen implements Screen {
       h.beginPath();
       h.ellipse(cx, gy + 4 * s, 10 * s, 3 * s, 0, 0, Math.PI * 2);
       h.fill();
-      h.drawImage(teaser.steven, fr * 18, 0, 18, 34, Math.round(cx - 9 * ss), Math.round(gy + 4 * s - 33 * ss), 18 * ss, 34 * ss);
+      // blacked out: who it is stays a secret
+      if (teaseCanvas) {
+        teaseCanvas.width = 18;
+        teaseCanvas.height = 34;
+        const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
+        c.clearRect(0, 0, 18, 34);
+        c.drawImage(teaser.steven, fr * 18, 0, 18, 34, 0, 0, 18, 34);
+        c.globalCompositeOperation = 'source-in';
+        c.fillStyle = '#05060c';
+        c.fillRect(0, 0, 18, 34);
+        c.globalCompositeOperation = 'source-over';
+        h.drawImage(teaseCanvas, Math.round(cx - 9 * ss), Math.round(gy + 4 * s - 33 * ss), 18 * ss, 34 * ss);
+      }
       h.restore();
     }
     h.restore();
@@ -602,7 +614,7 @@ export class OnlineScreen implements Screen {
         if (STEVEN_TEASER && style === 'spot') this.drawTeaser(px, Math.max(py, L.cardY + L.cardH + 10 * s), pw, 204 * s);
       } else {
         const bits = ev.map((e) => `${e.name} · ${left(e.endsAt)}`);
-        if (STEVEN_TEASER) bits.push('Champion Steven · coming soon');
+        if (STEVEN_TEASER) bits.push('A new challenge · coming soon');
         text(v, `★ ${bits.join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
       }
     }

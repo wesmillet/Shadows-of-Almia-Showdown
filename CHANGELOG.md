@@ -9,7 +9,7 @@ deploy (1.6, 1.7, 1.8...); the major number goes up for a big new chapter (a new
 stadium challenge), and the minor starts again at 0 (2.0). A section being written is titled
 "Update X.Y (not live yet)"; at deploy it becomes "Update X.Y: <date>".
 
-## Update 1.7 (not live yet)
+## Update 1.7: November 20
 
 - You can now only have one of each legendary. Different forms count separately.
 - Winning a trainer battle now revives and heals your whole team.

@@ -423,7 +423,7 @@ export class OnlineScreen implements Screen {
       }
       h.restore();
     }
-    h.restore();
+    h.restore();    text(v, 'COMING SOON', cx, py + ph - 14 * s, 11, { align: 'center', color: '#8fd0ff', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */

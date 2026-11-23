@@ -436,5 +436,5 @@
     "maxShownM": 6
   },
   "_stevenComment": "Steven, battled in the stadium (src/sim/steven.ts, src/sim/stadium.ts). After a match its winner (one human, playing alone) is invited with `chance`. He fields six Hoenn Pokémon at `level`, the same for everyone; his ace (sent out last) is at aceLevel and, worn down to transformAt of its HP, heals to full and changes into its limited form (stats x transformStats, drawn transformScale times bigger). allFormsChance: all six start in their limited forms. Beat him and the ace's limited form goes to the winner's PC at prizeLevel. Off on the live server unless STEVEN=1.",
-  "steven": { "chance": 1, "level": 65, "aceLevel": 72, "dodge": [0.4, 0.5, 0.65], "maxLevel": 100, "allFormsChance": 0.05, "transformAt": 0.5, "transformStats": 1.25, "transformScale": 1.4, "prizeLevel": 50, "healBefore": true, "inviteSeconds": 15, "introSeconds": 4.5, "outroSeconds": 5, "look": "colosseum", "aceItem": "leftovers" }
+  "steven": { "chance": 1, "level": 80, "aceLevel": 90, "dodge": [0.4, 0.5, 0.65], "maxLevel": 100, "allFormsChance": 0.05, "transformAt": 0.5, "transformStats": 1.25, "transformScale": 1.4, "prizeLevel": 50, "healBefore": true, "inviteSeconds": 15, "introSeconds": 4.5, "outroSeconds": 5, "look": "colosseum", "aceItem": "leftovers" }
 }

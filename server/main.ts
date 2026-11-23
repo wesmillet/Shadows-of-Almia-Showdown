@@ -135,7 +135,8 @@ const accountOf = (key: string): number | null => (key.startsWith('u') ? Number(
 
 const roomHooks: RoomHooks = {
   rareChest: process.env.RARE_CHEST ? process.env.RARE_CHEST === '1' : KIND !== 'live',
-  steven: process.env.STEVEN ? process.env.STEVEN === '1' : KIND !== 'live',
+  // On everywhere; STEVEN=0 switches it off (a kill switch).
+  steven: process.env.STEVEN !== '0',
   cluster: KIND !== 'live' && process.env.DEV_CLUSTER === '1',
   chestLoad: (key) => {
     const id = accountOf(key);
@@ -567,7 +568,7 @@ async function connect(ws: WebSocket, req: IncomingMessage): Promise<void> {
       else ws.send(data);
     },
   };
-  c.send({ t: 'hello', name: c.name, guest: c.guest, server: KIND, build: BUILD });
+  c.send({ t: 'hello', name: c.name, guest: c.guest, server: KIND, build: BUILD, steven: process.env.STEVEN !== '0' });
   chat.history(c);
   hub.connect(c);
   // Last seen, for the admin dashboard: written when an account connects and when it leaves.

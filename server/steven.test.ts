@@ -136,4 +136,13 @@ describe('Steven', async () => {
     expect(m.seats[0]!.outcome).toBe('win');
     expect(m.over).toBe(true);
   });
+  it('a prize from the PC works as a starter and evolves along its own line', () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(3), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0374-molten'] }], rivals: 0 });
+    const mon = m.player.party[0]!;
+    expect(mon.dex).toBe('0374-molten');
+    expect(mon.species.types).toEqual(['steel', 'fire']);
+    expect(mon.moves.length).toBeGreaterThan(0);
+    const next = mon.species.evolves?.[0];
+    expect(next?.to).toBe('0375-molten');
+  });
 });

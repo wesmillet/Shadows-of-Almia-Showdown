@@ -424,7 +424,9 @@ export class OnlineScreen implements Screen {
       }
       h.restore();
     }
-    h.restore();    text(v, 'COMING SOON', cx, py + ph - 14 * s, 11, { align: 'center', color: '#8fd0ff', shadow: false });
+    h.restore();
+    // Once he is live on this server (the server's hello says so): how to meet him, not "coming soon".
+    text(v, this.net.hello?.steven ? 'WIN A MATCH TO FACE HIM' : 'COMING SOON', cx, py + ph - 14 * s, 11, { align: 'center', color: '#8fd0ff', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */
@@ -635,7 +637,7 @@ export class OnlineScreen implements Screen {
         if (STEVEN_TEASER && style === 'spot') this.drawTeaser(px, Math.max(py, L.cardY + L.cardH + 10 * s), pw, 204 * s);
       } else {
         const bits = ev.map((e) => `${e.name} · ${left(e.endsAt)}`);
-        if (STEVEN_TEASER) bits.push('A new challenge · coming soon');
+        if (STEVEN_TEASER) bits.push(this.net.hello?.steven ? 'A new challenge · win a match to face him' : 'A new challenge · coming soon');
         text(v, `★ ${bits.join('   ★ ')}`, L.cx, L.cardY - 6 * s, 14, { align: 'center', color: '#f2c24a', maxWidth: v.width - 80 * s });
       }
     }

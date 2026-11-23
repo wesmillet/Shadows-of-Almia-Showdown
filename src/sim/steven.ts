@@ -10,7 +10,7 @@
  * limited forms. Beating him sends the ace's limited form to the winner's PC. Losing is friendly: the
  * team is patched up and the win stands. Either way the match then ends with the win.
  *
- * Off on the live server until the game's owner turns it on (STEVEN=1); always on in tester mode.
+ * On every server unless switched off (STEVEN=0); offline, in tester mode or with ?steven=1.
  */
 import { CONFIG, SPECIES } from './data';
 import type { Mon, Trainer } from './entities';
@@ -285,6 +285,28 @@ export class StevenChallenge {
     }
     m.withSeat(p, () => m.battle.events.push({ type: 'steven', stage: this.result === 'won' ? 'won' : 'lost' }));
     this.setState('outro');
+  }
+
+  /**
+   * The challenger left the match (or lost their connection) while he waited: the invitation or the
+   * battle is off and their win stands. True when that trainer was his challenger.
+   */
+  abandon(t: Trainer): boolean {
+    if (t !== this.who || this.state === 'none' || this.state === 'done') return false;
+    const m = this.m;
+    const d = this.duel;
+    if (d && d.state !== 'over') {
+      d.state = 'over';
+      d.winner = null;
+      for (const side of [d.a, d.b]) side.trainer.duelId = undefined;
+    }
+    if (this.host) {
+      this.host.alive = false;
+      m.trainers = m.trainers.filter((x) => x !== this.host);
+    }
+    if (!this.result) this.result = 'declined';
+    this.setState('done');
+    return true;
   }
 
   /** The challenger is in the stadium (the screen keeps the camera there, and nothing there is dark). */

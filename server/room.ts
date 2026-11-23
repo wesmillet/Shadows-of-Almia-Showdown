@@ -114,7 +114,7 @@ export interface RoomHooks {
   rareChest: boolean;
   /** Testing only: players start next to each other. */
   cluster?: boolean;
-  /** Steven may challenge a match's winner (src/sim/steven.ts): on everywhere but the live server unless STEVEN=1. */
+  /** Steven may challenge a match's winner (src/sim/steven.ts): on unless STEVEN=0. */
   steven?: boolean;
   chestLoad(key: string): InventorySlot[] | null;
   chestSave(key: string, box: Array<InventorySlot | null>): void;
@@ -435,13 +435,13 @@ export class Room implements RoomHandle {
       for (let i = from; i < this.match.battle.events.length; i++) {
         const ev = this.match.battle.events[i] as BattleEvent;
         if (ev.type === 'extracted' && ev.via === 'voucher' && this.mode !== 'private' && !ev.mon.fromPc) this.hooks.extracted(key, pcFields(ev.mon), this.id);
-        // Beating Steven: his ace's limited form goes home (src/sim/steven.ts).
-        if (ev.type === 'extracted' && ev.via === 'steven' && this.mode !== 'private') this.hooks.extracted(key, pcFields(ev.mon), this.id, 'steven');
       }
       if (text) p.peer?.send({ t: 'reply', n: msg.n, text, seconds: 1.8 });
       return;
     }
     if (msg.t === 'leave') {
+      // Leaving while Steven waits (invited, or in the stadium): the match was already won, so the win stands.
+      if (!p.seat.outcome && this.match.steven.abandon(p.seat.trainer)) p.seat.outcome = 'win';
       // Leaving mid-match: out for good (told so, so the browser can show the result).
       if (!p.seat.outcome && p.seat.trainer.alive) this.match.eliminate(p.seat.trainer);
       if (!p.ended) {
@@ -461,12 +461,24 @@ export class Room implements RoomHandle {
     for (const [key, p] of this.players) {
       // Gone too long: out of the match.
       if (p.goneAt !== null && m.time - p.goneAt > RECONNECT_SECONDS && p.seat.trainer.alive && !p.seat.outcome) {
+        // Gone while Steven waits: the win they already had stands.
+        if (m.steven.abandon(p.seat.trainer)) {
+          p.seat.outcome = 'win';
+          continue;
+        }
         m.eliminate(p.seat.trainer);
         void key;
       }
     }
     for (const p of this.players.values()) takeFrame(p.seat);
     m.step(STEP);
+    // Beating Steven (during the step, not a command): his ace's limited form goes to that player's PC.
+    if (this.mode !== 'private') {
+      for (const ev of m.battle.events) {
+        if (ev.type !== 'extracted' || ev.via !== 'steven') continue;
+        for (const [key, p] of this.players) if (p.seat.trainer === ev.mon.owner) this.hooks.extracted(key, pcFields(ev.mon), this.id, 'steven');
+      }
+    }
     this.events.push(...m.battle.events);
     this.recorder?.collect(m.battle.events);
     m.battle.events.length = 0;

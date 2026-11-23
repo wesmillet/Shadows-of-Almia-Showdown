@@ -60,7 +60,9 @@ describe('Steven', async () => {
     expect(new Set(bases)).toEqual(new Set(STEVEN_TEAM));
     const ace = host.party[5]!;
     expect(ace).toBe(m.steven.ace);
-    expect(ace.level).toBeGreaterThan(host.party[0]!.level);
+    // Fixed levels, whatever the challenger's.
+    expect(host.party.slice(0, 5).every((x) => x.level === stevenConfig().level)).toBe(true);
+    expect(ace.level).toBe(stevenConfig().aceLevel);
     expect(ace.aceForm?.to).toBe(LIMITED_FORM[m.steven.aceBase]);
     // Everyone restored for the battle.
     expect(p.party.every((x) => x.hp === x.maxHp && !x.fainted)).toBe(true);

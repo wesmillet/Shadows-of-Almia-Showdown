@@ -4,7 +4,8 @@
  * When the match comes down to one human playing alone, Steven may invite them (CONFIG.steven.chance,
  * only where the server allows it: Match.stevenEnabled). The winner's result waits while they answer:
  * accepting brings them to the stadium's south tunnel, their team restored; Steven waits at the north
- * end. He sends out six Hoenn Pokémon a few levels above the winner's best, his ace last. Worn down to
+ * end. He sends out six Hoenn Pokémon at a fixed level (CONFIG.steven.level), his ace last and higher
+ * (aceLevel). Worn down to
  * half its HP the ace heals to full and changes into its limited form: new types, stronger, bigger
  * (Match.stepChampionMon, Match.stepEvolutions). Now and then (allFormsChance) all six start in their
  * limited forms. Beating him sends the ace's limited form to the winner's PC. Losing is friendly: the
@@ -34,8 +35,10 @@ export type StevenState = 'none' | 'invite' | 'intro' | 'battle' | 'outro' | 'do
 
 export interface StevenConfig {
   chance: number;
-  levelOver: number;
-  aceLevelOver: number;
+  /** His team's level, the same for every challenger. */
+  level: number;
+  /** His ace's level. */
+  aceLevel: number;
   maxLevel: number;
   allFormsChance: number;
   transformAt: number;
@@ -213,11 +216,10 @@ export class StevenChallenge {
     m.withSeat(p, () => m.battle.events.push({ type: 'steven', stage: 'intro' }));
   }
 
-  /** Six Hoenn Pokémon above the challenger's best level; the ace last (src/sim/steven.ts file comment). */
-  private buildTeam(host: Trainer, p: Trainer): void {
+  /** Six Hoenn Pokémon at a fixed level; the ace last and higher (src/sim/steven.ts file comment). */
+  private buildTeam(host: Trainer, _p: Trainer): void {
     const m = this.m;
     const c = stevenConfig();
-    const best = Math.max(1, ...p.party.filter((x) => !x.captured).map((x) => x.level));
     const team: string[] = STEVEN_TEAM.filter((d) => SPECIES.has(d));
     const aceBase = team[m.rng.int(0, team.length - 1)] as string;
     this.aceBase = aceBase;
@@ -229,7 +231,7 @@ export class StevenChallenge {
       const isAce = base === aceBase;
       const form = LIMITED_FORM[base] as string;
       const dex = this.allForms && SPECIES.has(form) ? form : base;
-      const level = Math.min(c.maxLevel, best + (isAce ? c.aceLevelOver : c.levelOver));
+      const level = Math.min(c.maxLevel, isAce ? c.aceLevel : c.level);
       const mon = m.makeMon(dex, level, host, host.x, host.y + 1);
       mon.behavior = 'aggressive';
       if (isAce) {

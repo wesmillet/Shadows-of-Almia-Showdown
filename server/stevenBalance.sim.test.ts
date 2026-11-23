@@ -18,8 +18,8 @@ describe.skipIf(!RUN)('Steven balance', async () => {
     const lv = Number(process.env.SIM_LEVEL ?? 50);
     const n = Number(process.env.SIM_N ?? 30);
     const over = process.env.SIM_OVER;
-    if (over) (CONFIG as unknown as { steven: { levelOver: number; aceLevelOver: number } }).steven.levelOver = Number(over.split(',')[0]);
-    if (over) (CONFIG as unknown as { steven: { levelOver: number; aceLevelOver: number } }).steven.aceLevelOver = Number(over.split(',')[1]);
+    if (over) (CONFIG as unknown as { steven: { level: number; aceLevel: number } }).steven.level = Number(over.split(',')[0]);
+    if (over) (CONFIG as unknown as { steven: { level: number; aceLevel: number } }).steven.aceLevel = Number(over.split(',')[1]);
     const dg = process.env.SIM_DODGE;
     if (dg) (CONFIG as unknown as { steven: { dodge: number[] } }).steven.dodge = dg.split(',').map(Number);
     for (const [name, team] of Object.entries(TEAMS)) {

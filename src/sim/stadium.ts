@@ -108,7 +108,8 @@ export function withStadium(inner: GroundRenderer): StadiumGround {
   const st = new Stadium(inner.cols, inner.rows);
   // Everything not overridden here (sizes, decor, features, the map's centre) is the island's own.
   const w = Object.create(inner) as StadiumGround & { extentCols: number; extentRows: number };
-  const own = <K extends keyof GroundRenderer>(k: K, v: GroundRenderer[K]) => Object.defineProperty(w, k, { value: v, enumerable: true });
+  // Writable, so a further wrapper (Match.flyGround's Object.create) can still set its own walkable.
+  const own = <K extends keyof GroundRenderer>(k: K, v: GroundRenderer[K]) => Object.defineProperty(w, k, { value: v, enumerable: true, writable: true, configurable: true });
   Object.defineProperty(w, 'stadium', { value: st });
   Object.defineProperty(w, 'extentCols', { value: st.extentCols });
   Object.defineProperty(w, 'extentRows', { value: Math.max(inner.rows, st.extentRows) });

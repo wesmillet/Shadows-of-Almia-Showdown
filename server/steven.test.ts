@@ -138,6 +138,15 @@ describe('Steven', async () => {
     expect(m.seats[0]!.outcome).toBe('win');
     expect(m.over).toBe(true);
   });
+  it('flying still works on the island with the stadium in the world', () => {
+    const m = new Match({ ground: world.ground(), rng: new Rng(4), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0330'] }], rivals: 0 });
+    const p = m.player;
+    expect(m.toggleRide()).toContain('take off');
+    const x0 = p.x;
+    for (let i = 0; i < 10; i++) m.walkTrainer(p, 1, 0, 0.05);
+    expect(p.x).not.toBe(x0);
+  });
+
   it('a prize from the PC works as a starter and evolves along its own line', () => {
     const m = new Match({ ground: world.ground(), rng: new Rng(3), sprites: world.sprites }, [], { humans: [{ name: 'P', starters: ['0374-molten'] }], rivals: 0 });
     const mon = m.player.party[0]!;

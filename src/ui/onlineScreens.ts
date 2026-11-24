@@ -317,8 +317,10 @@ export class OnlineScreen implements Screen {
     h.strokeRect(px + 6 * s, py + 6 * s, pw - 12 * s, ph - 12 * s);
     h.restore();
     const cx = px + pw / 2;
-    text(v, '★ A NEW CHALLENGE ★', cx, py + 18 * s, 10, { align: 'center', color: '#8fd0ff', shadow: false });
-    text(v, "Hoenn's finest enters the battle", cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
+    // Live (the server's hello says Steven is on): he is revealed by name and in full; his team stays veiled.
+    const live = !!this.net.hello?.steven;
+    text(v, live ? '★ NOW LIVE ★' : '★ A NEW CHALLENGE ★', cx, py + 18 * s, 10, { align: 'center', color: live ? '#ffd34a' : '#8fd0ff', shadow: false });
+    text(v, live ? 'Champion Steven awaits' : "Hoenn's finest enters the battle", cx, py + 36 * s, 14, { align: 'center', color: '#e8ecf8', shadow: false, maxWidth: pw - 24 * s });
     const team = teaser.team;
     const gy = py + ph - 40 * s;
     const scale = Math.max(2, Math.round(2 * s));
@@ -397,23 +399,25 @@ export class OnlineScreen implements Screen {
       h.beginPath();
       h.ellipse(cx, gy + 4 * s, 10 * s, 3 * s, 0, 0, Math.PI * 2);
       h.fill();
-      // blacked out: who it is stays a secret
+      // Coming soon: blacked out, who it is stays a secret. Live: Steven himself, with the same shine.
       if (teaseCanvas) {
         teaseCanvas.width = 18;
         teaseCanvas.height = 34;
         const c = teaseCanvas.getContext('2d') as CanvasRenderingContext2D;
         c.clearRect(0, 0, 18, 34);
         c.drawImage(teaser.steven, fr * 18, 0, 18, 34, 0, 0, 18, 34);
-        c.globalCompositeOperation = 'source-in';
-        c.fillStyle = '#05060c';
-        c.fillRect(0, 0, 18, 34);
+        if (!live) {
+          c.globalCompositeOperation = 'source-in';
+          c.fillStyle = '#05060c';
+          c.fillRect(0, 0, 18, 34);
+        }
         // a white shine sweeping across him every few seconds
         const sweep = (this.t % 3.2) / 0.8;
         if (sweep < 1) {
           const band = -14 + sweep * 46;
           const lg = c.createLinearGradient(band - 3, band - 6, band + 3, band + 6);
           lg.addColorStop(0, 'rgba(255,255,255,0)');
-          lg.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+          lg.addColorStop(0.5, live ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.9)');
           lg.addColorStop(1, 'rgba(255,255,255,0)');
           c.globalCompositeOperation = 'source-atop';
           c.fillStyle = lg;
@@ -426,7 +430,7 @@ export class OnlineScreen implements Screen {
     }
     h.restore();
     // Once he is live on this server (the server's hello says so): how to meet him, not "coming soon".
-    text(v, this.net.hello?.steven ? 'WIN A MATCH TO FACE HIM' : 'COMING SOON', cx, py + ph - 14 * s, 11, { align: 'center', color: '#8fd0ff', shadow: false });
+    text(v, live ? 'WIN A MATCH TO FACE HIM' : 'COMING SOON', cx, py + ph - 14 * s, 11, { align: 'center', color: '#8fd0ff', shadow: false });
   }
 
   /** The live-event panels drawn last frame (a contest's opens the leaderboard). */

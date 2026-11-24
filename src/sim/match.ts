@@ -2974,7 +2974,8 @@ export class Match {
   private flyGround(): GroundRenderer {
     const g = this.ground;
     const proxy = Object.create(g) as GroundRenderer;
-    proxy.walkable = (tx: number, ty: number) => g.walkable(tx, ty) || g.biomeAt(tx, ty) === 'water';
+    // Water only on the island's own map: past its edge (toward the stadium pocket) is not sea to fly over.
+    proxy.walkable = (tx: number, ty: number) => g.walkable(tx, ty) || (tx >= 0 && ty >= 0 && tx < g.cols && ty < g.rows && g.biomeAt(tx, ty) === 'water');
     return proxy;
   }
 

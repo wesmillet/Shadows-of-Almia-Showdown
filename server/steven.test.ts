@@ -145,6 +145,10 @@ describe('Steven', async () => {
     const x0 = p.x;
     for (let i = 0; i < 10; i++) m.walkTrainer(p, 1, 0, 0.05);
     expect(p.x).not.toBe(x0);
+    // Flying east over the sea stops at the island's edge: the stadium pocket is not reachable.
+    for (let i = 0; i < 4000; i++) m.walkTrainer(p, 1, 0, 0.05);
+    expect(p.x).toBeLessThanOrEqual(m.ground.cols);
+    expect(m.stadium!.contains(p.x, p.y)).toBe(false);
   });
 
   it('a prize from the PC works as a starter and evolves along its own line', () => {
